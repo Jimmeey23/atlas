@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Activity, ChevronLeft, X, ArrowUpRight } from "lucide-react";
+import { Activity, ChevronLeft, X, ArrowUpRight, Pencil, Trash2 } from "lucide-react";
 import { useStore } from "../state/store";
 import type { Insight } from "../insights/rules";
 import { InsightEditor, useDocuments } from "./IntelligenceWorkspace";
@@ -75,60 +75,68 @@ export function SignalRail({
                     <X size={11} />
                   </button>
                 </div>
-                <button
-                  className="button"
-                  onClick={() =>
-                    window.dispatchEvent(
-                      new CustomEvent("p57-edit-insight", { detail: i }),
-                    )
-                  }
-                >
-                  Edit insight
-                </button>
-                <button
-                  className="button"
-                  onClick={async () => {
-                    try {
-                      const response = await fetch(
-                        "/api/intelligence/documents",
-                        {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            kind: "insight",
-                            title: i.title,
-                            page: i.tab,
-                            body: {
-                              hidden: true,
-                              ruleKey: i.rule + ":" + i.entity,
-                            },
-                          }),
-                        },
-                      );
-                      const data = await response.json();
-                      if (!response.ok) throw new Error(data.error);
-                      window.dispatchEvent(new Event("p57-documents"));
-                    } catch (error) {
-                      setSaveError(String(error));
-                    }
-                  }}
-                >
-                  Delete insight
-                </button>
                 <h3>{i.title}</h3>
                 <p>{i.template}</p>
                 <div className="insight-meta" style={{ marginTop: 9 }}>
                   <span>{fmt("revenue", i.impactINR)} exposure / value</span>
                   <span>n = {i.n}</span>
                 </div>
-                <button
-                  className="insight-action"
-                  onClick={() =>
-                    s.set({ tab: i.tab, transient: i.linkFilters })
-                  }
-                >
-                  Inspect the evidence <ArrowUpRight size={12} />
-                </button>
+                <div className="insight-footer">
+                  <button
+                    className="insight-action"
+                    onClick={() =>
+                      s.set({ tab: i.tab, transient: i.linkFilters })
+                    }
+                  >
+                    Inspect the evidence <ArrowUpRight size={12} />
+                  </button>
+                  <span className="insight-icon-actions">
+                    <button
+                      className="ai-insight-btn"
+                      aria-label={`Edit ${i.title}`}
+                      title="Edit insight"
+                      onClick={() =>
+                        window.dispatchEvent(
+                          new CustomEvent("p57-edit-insight", { detail: i }),
+                        )
+                      }
+                    >
+                      <Pencil size={11} />
+                    </button>
+                    <button
+                      className="ai-insight-btn"
+                      aria-label={`Delete ${i.title}`}
+                      title="Delete insight"
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(
+                            "/api/intelligence/documents",
+                            {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                kind: "insight",
+                                title: i.title,
+                                page: i.tab,
+                                body: {
+                                  hidden: true,
+                                  ruleKey: i.rule + ":" + i.entity,
+                                },
+                              }),
+                            },
+                          );
+                          const data = await response.json();
+                          if (!response.ok) throw new Error(data.error);
+                          window.dispatchEvent(new Event("p57-documents"));
+                        } catch (error) {
+                          setSaveError(String(error));
+                        }
+                      }}
+                    >
+                      <Trash2 size={11} />
+                    </button>
+                  </span>
+                </div>
               </article>
             ))}
             {!relevant.length && (

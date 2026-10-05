@@ -271,10 +271,19 @@ export function Chart({
               ? `SELECT strftime(date_trunc('week',TRY_CAST(date AS DATE)),'%Y-%m-%d') AS month,${metricSQL(["sessions", "fill_rate"], context())},COUNT(*) AS n FROM sessions${w} GROUP BY 1 ORDER BY 1`
               : `SELECT strftime(date_trunc('week',TRY_CAST(date AS DATE)),'%Y-%m-%d') AS month,${metricSQL(["bookings", "effective_attendance"], context())},COUNT(*) FILTER (WHERE booking_outcome='attended') AS booking_attended,COUNT(*) FILTER (WHERE booking_outcome='cancelled') AS booking_cancelled,COUNT(*) FILTER (WHERE booking_outcome='late') AS booking_late_cancelled,COUNT(*) FILTER (WHERE booking_outcome='no_show') AS booking_no_shows,COUNT(*) FILTER (WHERE booking_outcome='pending') AS booking_pending,COUNT(*) AS n FROM (SELECT *,${bookingOutcomeCase} AS booking_outcome FROM bookings${w}) GROUP BY 1 ORDER BY 1`,
           );
-        else if (tab === 4 && !secondary)
+        else if (tab === 4 && !secondary) {
           r = await query(
             `SELECT month,category,${metricSQL(["gross_revenue"], context())},COUNT(*) AS n FROM sales${where(state.filters, "sales")} GROUP BY month,category ORDER BY month`,
           );
+          if (!r.length)
+            r = await query(
+              `SELECT month,'Collections' AS category,${metricSQL(["gross_revenue", "net_revenue"], context())},COUNT(*) AS n FROM sales${where(state.filters, "sales")} GROUP BY month ORDER BY month`,
+            );
+          if (!r.length)
+            r = await query(
+              `SELECT month,'Sessions' AS category,${metricSQL(["revenue", "attendance"], context())},COUNT(*) AS n FROM sessions${where(state.filters, "sessions")} GROUP BY month ORDER BY month`,
+            );
+        }
         else if (tab === 5)
           r = await query(
             `SELECT 'Newcomers' AS stage,COUNT(*) FILTER (WHERE is_new) AS n FROM new${w} UNION ALL SELECT 'Returned',COUNT(*) FILTER (WHERE is_new AND visits_post>0) FROM new${w} UNION ALL SELECT 'Converted',COUNT(*) FILTER (WHERE is_new AND conversion='Converted') FROM new${w} UNION ALL SELECT 'Retained',COUNT(*) FILTER (WHERE is_new AND retention='Retained') FROM new${w}`,

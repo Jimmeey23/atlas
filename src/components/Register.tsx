@@ -1,6 +1,7 @@
 import { usePreferences } from "../state/preferences";
 import { useStore } from "../state/store";
 import type { ReactNode } from "react";
+import { DataInsightAction } from "./DataInsightAction";
 export function Register({
   index,
   title,
@@ -25,7 +26,15 @@ export function Register({
           <h2>{heading}</h2>
           {subtitle && <p>{subtitle}</p>}
         </div>
-        <div className="register-actions">{actions}</div>
+        <div className="register-actions">
+          {actions}
+          <DataInsightAction
+            compact
+            subject={`${heading}`}
+            detail={subtitle}
+            buttonLabel="Summarise"
+          />
+        </div>
       </div>
       {children}
     </section>

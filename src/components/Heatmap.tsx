@@ -29,6 +29,16 @@ export function Heatmap({
         .filter((t) => t !== "Unspecified"),
     [rows, schedule],
   );
+  const maxValue = useMemo(
+    () =>
+      Math.max(
+        1e-9,
+        ...rows
+          .map((r) => Math.abs(Number(r[metric] || 0)))
+          .filter((v) => Number.isFinite(v)),
+      ),
+    [rows, metric],
+  );
   return (
     <div className="chart-surface">
       <ChartControls
@@ -55,7 +65,7 @@ export function Heatmap({
                       5,
                       Math.min(
                         45,
-                        Number(value) * (metric.includes("rate") ? 45 : 1),
+                        (Math.abs(Number(value)) / maxValue) * 45,
                       ),
                     );
               return (

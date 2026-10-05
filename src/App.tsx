@@ -73,6 +73,7 @@ import { DrillPanel } from "./components/DrillPanel";
 import { DataHealth } from "./components/DataHealth";
 import { Secondary } from "./components/Secondary";
 import { exportCSV } from "./components/exports";
+import { DataInsightAction } from "./components/DataInsightAction";
 import { insights as runInsights } from "./insights/engine";
 import type { Insight } from "./insights/rules";
 import { defaults, thresholds, type Thresholds } from "./insights/thresholds";
@@ -275,6 +276,9 @@ export default function App() {
       if (e.key === "Escape") {
         setModal("");
         setDrill(null);
+        setCommand("");
+        if (s.filterOpen || s.signalOpen)
+          s.set({ filterOpen: false, signalOpen: false });
         return;
       }
       if (
@@ -309,6 +313,32 @@ export default function App() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [s]);
+  const loaderLines: Record<number, string[]> = {
+    0: ["Reading the pulse of your studios…", "Balancing revenue against rhythm…", "Polishing the big picture…"],
+    1: ["Counting every seat in the room…", "Measuring the magic per session…", "Warming up the barre…"],
+    2: ["Rearranging the weekly rhythm…", "Hunting for under-loved time slots…", "Lining up the schedule grid…"],
+    3: ["Scoring instructors on fair terms…", "Separating popularity from profit…"],
+    4: ["Following every rupee…", "Reconciling the till…", "Stacking the revenue mix…"],
+    5: ["Tracing first visits to lasting habits…", "Watching newcomers find their feet…"],
+    6: ["Listening for quiet exits…", "Checking the renewal horizon…"],
+    7: ["Turning bookings into attendance…", "Chasing down no-shows…"],
+    8: ["Speeding up first responses…", "Qualifying the pipeline…"],
+    9: ["Counting the regulars…", "Mapping member habits…"],
+    10: ["Balancing excellence and economics…", "Costing the empty room…"],
+    11: ["Auditing every source field…", "Checking the plumbing…"],
+    12: ["Recovering lost seats…", "Timing the late cancels…"],
+    13: ["Waking up the analyst…", "Sharpening the pencils…"],
+  };
+  const [loaderTick, setLoaderTick] = useState(0);
+  useEffect(() => {
+    if (!busy) return;
+    const timer = setInterval(() => setLoaderTick((t) => t + 1), 1800);
+    return () => clearInterval(timer);
+  }, [busy]);
+  const loaderLine =
+    (loaderLines[s.tab] || loaderLines[0])[
+      loaderTick % (loaderLines[s.tab] || loaderLines[0]).length
+    ];
   const onDrill = useCallback((r: TreeRow) => setDrill(r), []);
   const closeDrill = useCallback(() => setDrill(null), []);
   const dismiss = (i: Insight) => {
@@ -349,6 +379,62 @@ export default function App() {
   ]
     .filter((c) => c.name.toLowerCase().includes(command.toLowerCase()))
     .slice(0, 12);
+  const includeWeeklyPattern = [0, 1, 2, 3, 4, 5, 7, 8, 12].includes(s.tab);
+  const weeklyTitle =
+    s.tab === 7
+      ? "When seats go unclaimed"
+      : s.tab === 5
+        ? "The best time for a first visit"
+        : "The weekly pattern";
+  const weeklyMetric =
+    s.tab === 7
+      ? "booking_no_show_rate"
+      : s.tab === 5
+        ? "conversion_rate"
+        : s.tab === 4
+          ? "gross_revenue"
+          : "fill_rate";
+  const heatOptions = [
+    ...new Set([...bp.kpis, ...bp.columns].filter((id) => metrics[id])),
+  ];
+  const [heatMetric, setHeatMetric] = useState(weeklyMetric);
+  useEffect(() => setHeatMetric(weeklyMetric), [s.tab]);
+  const tabSummary = () => {
+    if (!ready || s.tab === 11 || s.tab === 13) return "";
+    const locationScope = s.filters.location?.length
+      ? s.filters.location.join(", ")
+      : "all studios";
+    if (s.tab === 0)
+      return `${locationScope} generated ${fmt("revenue", analysis.total.revenue)} in session-attributed revenue from ${fmt("attendance", analysis.total.attendance)} attended seats across ${fmt("sessions", analysis.total.sessions)} sessions. Average class size is ${fmt("avg_class_size_incl", analysis.total.avg_class_size_incl)} with ${fmt("empty_sessions", analysis.total.empty_sessions)} empty sessions in this scope.`;
+    if (s.tab === 1)
+      return `${fmt("sessions", analysis.total.sessions)} experiences were hosted with average class size ${fmt("avg_class_size_incl", analysis.total.avg_class_size_incl)} and ${fmt("empty_sessions", analysis.total.empty_sessions)} empty sessions. Fill rate is ${fmt("fill_rate", analysis.total.fill_rate)} and realised yield sits at ${fmt("rev_pas", analysis.total.rev_pas)} per attended seat.`;
+    if (s.tab === 7)
+      return `${fmt("bookings", analysis.total.bookings)} bookings were observed. Average class size is ${fmt("booking_avg_class_size", analysis.total.booking_avg_class_size)} with ${fmt("booking_empty_sessions", analysis.total.booking_empty_sessions)} empty sessions. Effective attendance is ${fmt("effective_attendance", analysis.total.effective_attendance)} after cancellations and no-shows.`;
+    if (s.tab === 9)
+      return `${fmt("checkins", analysis.total.checkins)} check-ins were recorded from ${fmt("unique_attendees", analysis.total.unique_attendees)} members. Average class size is ${fmt("attendance_avg_class_size", analysis.total.attendance_avg_class_size)} and ${fmt("attendance_empty_sessions", analysis.total.attendance_empty_sessions)} sessions were empty in the observed check-in footprint.`;
+    return `${fmt(bp.kpis[0], analysis.total[bp.kpis[0]])} is the leading signal for this workspace, with ${fmt("records", analysis.total.n || analysis.count)} contributing records in the current scope.`;
+  };
+  const tabRecommendations = () => {
+    if (!ready || s.tab === 11 || s.tab === 13) return [] as string[];
+    const recommendations: string[] = [];
+    if (analysis.total.empty_sessions != null && Number(analysis.total.empty_sessions) > 0)
+      recommendations.push(
+        `Prioritise recovery of ${fmt("empty_sessions", analysis.total.empty_sessions)} empty sessions by re-timing low-fill slots and pairing with high-intent cohorts.`,
+      );
+    if (analysis.total.booking_empty_sessions != null && Number(analysis.total.booking_empty_sessions) > 0)
+      recommendations.push(
+        `Investigate the ${fmt("booking_empty_sessions", analysis.total.booking_empty_sessions)} booking-linked empty sessions for avoidable no-shows and pre-class reminders.`,
+      );
+    if (analysis.total.attendance_empty_sessions != null && Number(analysis.total.attendance_empty_sessions) > 0)
+      recommendations.push(
+        `Member attendance has ${fmt("attendance_empty_sessions", analysis.total.attendance_empty_sessions)} empty observed sessions; run instructor + time cohort outreach on those windows.`,
+      );
+    if (!recommendations.length)
+      recommendations.push(
+        `Maintain current trajectory and monitor the next comparison cycle to confirm this pattern sustains under similar scope and filters.`,
+      );
+    return recommendations.slice(0, 2);
+  };
   return (
     <div
       className="app"
@@ -506,6 +592,17 @@ export default function App() {
       </nav>
       <div className="workspace">
         {busy && <div className="loader-bar" />}
+        {busy && ready && (
+          <div className="loader-shell" role="status" aria-live="polite">
+            <span className="loader-ring" aria-hidden="true" />
+            <div>
+              <strong>{tabs[s.tab]}</strong>
+              <p key={loaderLine} className="loader-line">
+                {loaderLine}
+              </p>
+            </div>
+          </div>
+        )}
         <main
           id="main"
           ref={main}
@@ -565,6 +662,16 @@ export default function App() {
             version={version}
             onRetry={(key) => void ensureSource(key, true)}
           />
+          {!!tabSummary() && (
+            <div className="tab-summary">
+              <p>{tabSummary()}</p>
+              <ul>
+                {tabRecommendations().map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           {!ready && !error && (
             <div className="notice">
               <Activity size={14} />
@@ -660,8 +767,28 @@ export default function App() {
               )}
               <SavedElements page={s.tab} version={version} />
               {s.tab === 0 && <Pulse data={analysis} />}
+              <div className="metric-strip-head">
+                <div>
+                  <h3>Metric cards</h3>
+                  <p>Snapshot signals for the active scope and filters.</p>
+                </div>
+                <DataInsightAction
+                  compact
+                  subject={`${tabs[s.tab]} · Metric cards`}
+                  detail={`Displayed metrics: ${bp.kpis.map((id) => metrics[id]?.label || id).join(", ")}`}
+                />
+              </div>
               <div
                 className={`metric-strip ${bp.kpis.length > 6 ? "eight" : ""}`}
+                style={
+                  {
+                    "--metric-cols": String(
+                      bp.kpis.length > 6
+                        ? Math.ceil(bp.kpis.length / 2)
+                        : bp.kpis.length,
+                    ),
+                  } as React.CSSProperties
+                }
               >
                 {bp.kpis.map((id) => (
                   <MetricCard
@@ -797,28 +924,54 @@ export default function App() {
               <Register
                 index="05"
                 title={
-                  s.tab === 7
-                    ? "When seats go unclaimed"
-                    : s.tab === 5
-                      ? "The best time for a first visit"
-                      : "The weekly pattern"
+                  includeWeeklyPattern && analysis.heat.length
+                    ? weeklyTitle
+                    : "Data pattern spotlight"
                 }
-                subtitle="Day × time / Click a cell to scope the workspace"
+                subtitle={
+                  includeWeeklyPattern && analysis.heat.length
+                    ? "Day × time / Click a cell to scope the workspace"
+                    : "Alternative view based on available source coverage"
+                }
+                actions={
+                  includeWeeklyPattern && analysis.heat.length ? (
+                    <div className="segmented heat-metric-switch">
+                      {heatOptions.slice(0, 6).map((id) => (
+                        <button
+                          key={id}
+                          className={heatMetric === id ? "active" : ""}
+                          onClick={() => setHeatMetric(id)}
+                        >
+                          {metrics[id].label}
+                        </button>
+                      ))}
+                      {heatOptions.length > 6 && (
+                        <select
+                          aria-label="More heatmap metrics"
+                          value={heatMetric}
+                          onChange={(e) => setHeatMetric(e.target.value)}
+                        >
+                          {heatOptions.map((id) => (
+                            <option key={id} value={id}>
+                              {metrics[id].label}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  ) : undefined
+                }
               >
-                <div className="chart-surface">
-                  <Heatmap
-                    rows={analysis.heat}
-                    metric={
-                      s.tab === 7
-                        ? "booking_no_show_rate"
-                        : s.tab === 5
-                          ? "conversion_rate"
-                          : s.tab === 4
-                            ? "gross_revenue"
-                            : "fill_rate"
-                    }
-                  />
-                </div>
+                {includeWeeklyPattern && analysis.heat.length ? (
+                  <div className="chart-surface">
+                    <Heatmap
+                      rows={analysis.heat}
+                      metric={heatMetric}
+                    />
+                  </div>
+                ) : (
+                  <Chart tab={s.tab} data={analysis} />
+                )}
               </Register>
               <MoMTable rows={analysis.trend} ids={bp.columns.slice(0, 9)} />
               <Register

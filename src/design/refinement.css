@@ -33,10 +33,11 @@
 .brand-copy { font-size: 12px; letter-spacing: .1px; }
 .brand-copy span { font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase; margin-top: 3px; }
 .logo-mark { width: 24px; gap: 5px; transform: rotate(-12deg); }
-.logo-mark i { width: 24px; height: 4px; border-radius: 3px; transform-origin: left center; animation: atlas-logo-wave 3.6s cubic-bezier(.45,0,.2,1) infinite; }
-.logo-mark i:nth-child(2) { width: 17px; background: var(--people); animation-delay: .16s; }
-.logo-mark i:nth-child(3) { width: 10px; background: var(--revenue); animation-delay: .32s; }
-@keyframes atlas-logo-wave { 0%, 65%, 100% { transform: scaleX(1); } 25% { transform: scaleX(.6) translateX(3px); } 42% { transform: scaleX(1.12); } }
+.logo-mark i { width: 24px; height: 4px; border-radius: 3px; transform-origin: center; background: linear-gradient(90deg, var(--attendance), var(--people), var(--attendance)); background-size: 220% 100%; animation: atlas-logo-breathe 4.2s cubic-bezier(.45,0,.15,1) infinite, atlas-logo-sheen 6s linear infinite; }
+.logo-mark i:nth-child(2) { width: 17px; animation-delay: .18s, .3s; }
+.logo-mark i:nth-child(3) { width: 10px; animation-delay: .36s, .6s; }
+@keyframes atlas-logo-breathe { 0%, 62%, 100% { transform: scaleX(1); opacity: 1; } 26% { transform: scaleX(.72); opacity: .85; } 40% { transform: scaleX(1.06); } }
+@keyframes atlas-logo-sheen { from { background-position: 0% 0; } to { background-position: 220% 0; } }
 .tabbar { padding: 8px 28px; gap: 5px; height: 56px; background: var(--surface-1); }
 .tab { height: 38px; padding: 0 12px; border-radius: 8px; font-size: 12px; }
 .tab:hover { background: var(--surface-2); }
@@ -51,12 +52,16 @@
 .canvas { padding: 32px 28px 90px; }
 main h1 { font-size: clamp(28px, 2.5vw, 40px); letter-spacing: -1.4px; font-weight: 700; }
 .metric-strip { gap: 12px; background: transparent; border: 0; overflow: visible; box-shadow: none; margin: 28px 0; }
-.metric-card { border: 1px solid var(--hairline); border-radius: var(--atlas-radius, 12px); padding: 18px 16px 12px; box-shadow: var(--elev-1); overflow: hidden; transition: transform .2s, box-shadow .2s; }
-.metric-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--card-accent, var(--accent)); }
-.metric-card:hover { background: var(--raised); transform: translateY(-2px); box-shadow: var(--elev-2); }
-.metric-value { font-size: clamp(23px, 2vw, 32px); font-weight: 700; letter-spacing: -1px; margin-top: 12px; }
+.metric-card { border: 1px solid color-mix(in srgb, var(--hairline) 55%, transparent); border-radius: var(--atlas-radius, 14px); padding: 12px 14px 9px; overflow: hidden; transition: transform .22s cubic-bezier(.3,.9,.3,1), box-shadow .22s; background: var(--raised); box-shadow: 6px 6px 16px color-mix(in srgb, var(--text-1) 5%, transparent), -4px -4px 12px color-mix(in srgb, var(--raised) 85%, #fff 15%), inset 0 1px 0 color-mix(in srgb, #fff 6%, transparent); }
+.metric-card::before { content: ""; position: absolute; top: 0; left: 14px; right: 14px; height: 1px; background: color-mix(in srgb, var(--card-accent, var(--accent)) 38%, transparent); }
+.metric-card:hover { transform: translateY(-2px); box-shadow: 8px 10px 22px color-mix(in srgb, var(--text-1) 7%, transparent), -4px -4px 12px color-mix(in srgb, var(--raised) 85%, #fff 15%), inset 0 1px 0 color-mix(in srgb, #fff 6%, transparent); }
+.metric-value { font-size: clamp(22px, 1.9vw, 30px); font-weight: 700; letter-spacing: -1px; margin-top: 8px; }
 .metric-label { font-size: 12px; font-weight: 550; }
-.metric-footer { border-top: 1px solid var(--hairline); margin-top: 10px; padding-top: 9px; }
+.metric-footer { border-top: 1px solid color-mix(in srgb, var(--hairline) 65%, transparent); margin-top: 6px; padding-top: 6px; }
+.metric-card .metric-spark { opacity: .8; }
+.metric-card:hover .metric-spark { opacity: 1; }
+.metric-card .metric-spark { height: 20px; margin-top: 3px; }
+.metric-card .metric-delta { margin-top: 4px; }
 .register { padding: 20px; border: 1px solid var(--hairline); border-radius: var(--atlas-radius, 12px); background: var(--raised); box-shadow: var(--elev-1); }
 .register-head { border-bottom: 1px solid var(--hairline); padding-bottom: 16px; }
 .register-title h2 { font-size: 17px; letter-spacing: -.4px; }

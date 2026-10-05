@@ -1,4 +1,4 @@
-import { ArrowUp, Sparkles, MessageSquare, ChartNoAxesCombined, Check, Database } from "lucide-react";
+import { ArrowUp, ArrowUpRight, Sparkles, MessageSquare, ChartNoAxesCombined, Check, Database, Pencil, Trash2, Paperclip, Mic, Square } from "lucide-react";
 import { fmt, formatField } from "../semantics/formats";
 import { metrics } from "../semantics/metrics";
 import { ChatAnswer } from "./ChatAnswer";
@@ -8,6 +8,7 @@ import { usePreferences, hydratePreferences } from "../state/preferences";
 import { useEffect, useRef, useState } from "react";
 import * as echarts from "echarts";
 import { tabs, useStore } from "../state/store";
+import { DataInsightAction } from "./DataInsightAction";
 type Doc = { id: string; kind: string; title: string; page: number; body: any };
 async function api(url: string, options: RequestInit = {}) {
   const r = await fetch("/api/intelligence/" + url, {
@@ -157,6 +158,7 @@ export function InsightEditor() {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [ruleKey, setRuleKey] = useState<string>();
+  const [composerOpen, setComposerOpen] = useState(false);
   useEffect(() => {
     const handler = (event: Event) => {
       const item = (event as CustomEvent).detail;
@@ -165,6 +167,7 @@ export function InsightEditor() {
       setTitle(item.title);
       setText(item.template);
       setSeverity(item.severity);
+      setComposerOpen(true);
     };
     window.addEventListener("p57-edit-insight", handler);
     return () => window.removeEventListener("p57-edit-insight", handler);
@@ -206,7 +209,7 @@ export function InsightEditor() {
         method: "POST",
         body: JSON.stringify({
           message:
-            "Query the data in this scope, identify three actionable insights with evidence, and save them as insights on this page. Include recommendations, denominators and freshness.",
+            "Query the data in this scope and save exactly three high-value insights on this page. Each insight must include: what happened, why it matters now, the business impact context, one concrete recommendation, and denominator/freshness caveats when relevant. Use clear executive language and avoid generic advice.",
           filters: {
             ...useStore.getState().filters,
             cross: useStore.getState().transient,
@@ -232,80 +235,142 @@ export function InsightEditor() {
           <article className="insight" key={d.id}>
             <h3>{d.title}</h3>
             <p>{d.body.text}</p>
-            <button
-              className="button"
-              onClick={() => {
-                setEditing(d);
-                setTitle(d.title);
-                setText(d.body.text || "");
-                setSeverity(d.body.severity || "watch");
-              }}
-            >
-              Edit
-            </button>{" "}
-            <button
-              className="button"
-              onClick={() =>
-                void api("documents/" + d.id, { method: "DELETE" })
-                  .then(changed)
-                  .catch((e) => setNotice(e.message))
-              }
-            >
-              Delete
-            </button>
+            <div className="insight-actions-row">
+              <button
+                className="insight-action"
+                onClick={() =>
+                  useStore.getState().set({
+                    tab: d.page,
+                    transient: Array.isArray(d.body.linkFilters)
+                      ? d.body.linkFilters
+                      : useStore.getState().transient,
+                  })
+                }
+              >
+                Inspect evidence <ArrowUpRight size={11} />
+              </button>
+              <DataInsightAction
+                compact
+                subject={d.title}
+                detail={d.body.text}
+                buttonLabel="Insight summary"
+              />
+            </div>
+            <div className="insight-icon-actions">
+              <button
+                className="ai-insight-btn"
+                aria-label={`Edit ${d.title}`}
+                title="Edit insight"
+                onClick={() => {
+                  setEditing(d);
+                  setTitle(d.title);
+                  setText(d.body.text || "");
+                  setSeverity(d.body.severity || "watch");
+                  setComposerOpen(true);
+                }}
+              >
+                <Pencil size={11} />
+              </button>
+              <button
+                className="ai-insight-btn"
+                aria-label={`Delete ${d.title}`}
+                title="Delete insight"
+                onClick={() =>
+                  void api("documents/" + d.id, { method: "DELETE" })
+                    .then(changed)
+                    .catch((e) => setNotice(e.message))
+                }
+              >
+                <Trash2 size={11} />
+              </button>
+            </div>
           </article>
         ))}
-      <label>
-        Insight title
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          maxLength={200}
-        />
-      </label>
-      <label>
-        Member voice, evidence or recommendation
-        <textarea value={text} onChange={(e) => setText(e.target.value)} />
-      </label>
-      <label>
-        Priority
-        <select value={severity} onChange={(e) => setSeverity(e.target.value)}>
-          {[
-            "watch",
-            "critical",
-            "attention",
-            "opportunity",
-            "context",
-            "positive",
-          ].map((v) => (
-            <option key={v}>{v}</option>
-          ))}
-        </select>
-      </label>
-      <button
-        className="button"
-        disabled={busy || !title.trim() || !text.trim()}
-        onClick={() => void save()}
-      >
-        {editing ? "Save changes" : "Create insight"}
-      </button>{" "}
-      <button
-        className="button"
-        disabled={busy}
-        onClick={() => void generate()}
-      >
-        Generate AI insights
-      </button>
-      {editing && (
+      <div className="insight-composer-bar">
         <button
-          onClick={() => {
-            setEditing(null);
-            setTitle("");
-            setText("");
-          }}
+          className="button"
+          aria-expanded={composerOpen}
+          onClick={() => setComposerOpen(!composerOpen)}
         >
-          Cancel edit
+          {composerOpen ? "Close composer" : "+ New insight"}
         </button>
+        <button
+          className="button primary"
+          disabled={busy}
+          onClick={() => void generate()}
+        >
+          <Sparkles size={13} /> Generate AI insights
+        </button>
+      </div>
+      {composerOpen && (
+        <div className="insight-composer">
+          <label>
+            Insight title
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              maxLength={200}
+              placeholder="A crisp, decision-oriented headline…"
+            />
+          </label>
+          <label>
+            Evidence, member voice or recommendation
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="What changed, why it matters, and what to do next…"
+            />
+          </label>
+          <div className="insight-composer-meta">
+            <span className="small">{text.length} characters</span>
+            {ruleKey && <span className="small">Linked to a rule insight</span>}
+          </div>
+          <div
+            className="severity-pills"
+            role="radiogroup"
+            aria-label="Priority"
+          >
+            {[
+              "watch",
+              "critical",
+              "attention",
+              "opportunity",
+              "context",
+              "positive",
+            ].map((v) => (
+              <button
+                key={v}
+                role="radio"
+                aria-checked={severity === v}
+                className={`severity-pill ${severity === v ? "active" : ""}`}
+                onClick={() => setSeverity(v)}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+          <div className="insight-composer-bar">
+            <button
+              className="button primary"
+              disabled={busy || !title.trim() || !text.trim()}
+              onClick={() => void save()}
+            >
+              {editing ? "Save changes" : "Create insight"}
+            </button>
+            {editing && (
+              <button
+                className="button"
+                onClick={() => {
+                  setEditing(null);
+                  setTitle("");
+                  setText("");
+                }}
+              >
+                Cancel edit
+              </button>
+            )}
+          </div>
+        </div>
       )}
       {notice && (
         <p role="status" className="small">
@@ -384,7 +449,14 @@ function Element({ doc, version }: { doc: Doc; version: number }) {
   const [notice, setNotice] = useState("");
   return (
     <article className="panel intelligence-panel">
-      <h3>{doc.title}</h3>
+      <div className="panel-headline">
+        <h3>{doc.title}</h3>
+        <DataInsightAction
+          compact
+          subject={doc.title}
+          detail="Saved chart/table artifact using the current workspace scope."
+        />
+      </div>
       <ChartControls rows={rows} title={doc.title} />
       <div className="small">
         Live query · {doc.body.pinnedScope ? `fixed scope: ${doc.body.pinnedScope.from || "all dates"} → ${doc.body.pinnedScope.to || "latest"}` : "inherits dashboard filters"} · saved in Supabase
@@ -520,6 +592,50 @@ export function IntelligenceWorkspace({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [memoryText, setMemoryText] = useState("");
+  const [attachments, setAttachments] = useState<{ name: string; note: string }[]>([]);
+  const [recording, setRecording] = useState(false);
+  const recorder = useRef<MediaRecorder | null>(null);
+  const recordStart = useRef(0);
+  const attachFiles = async (files: FileList | null) => {
+    if (!files) return;
+    const next = [...attachments];
+    for (const file of Array.from(files).slice(0, 5)) {
+      if (/^(text\/|application\/(json|csv))/i.test(file.type) || /\.(csv|txt|md|json)$/i.test(file.name)) {
+        const text = (await file.text()).slice(0, 8000);
+        next.push({ name: file.name, note: `Attached file ${file.name}:\n${text}` });
+      } else if (file.type.startsWith("audio/")) {
+        next.push({ name: file.name, note: `[Audio note attached: ${file.name}, ${(file.size / 1024).toFixed(0)} KB — audio transcription is not configured, so treat this as a verbal note reference.]` });
+      } else {
+        next.push({ name: file.name, note: `[File attached: ${file.name} (${file.type || "unknown type"}) — binary content not readable as text.]` });
+      }
+    }
+    setAttachments(next);
+  };
+  const toggleRecording = async () => {
+    if (recording) {
+      recorder.current?.stop();
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const rec = new MediaRecorder(stream);
+      recorder.current = rec;
+      recordStart.current = Date.now();
+      rec.onstop = () => {
+        const seconds = Math.round((Date.now() - recordStart.current) / 1000);
+        setAttachments((a) => [
+          ...a,
+          { name: `Voice note (${seconds}s)`, note: `[Voice note recorded in the studio workspace, ${seconds}s — audio transcription is not configured, treat as a verbal instruction reference.]` },
+        ]);
+        stream.getTracks().forEach((t) => t.stop());
+        setRecording(false);
+      };
+      rec.start();
+      setRecording(true);
+    } catch (e) {
+      setError("Microphone unavailable: " + String(e));
+    }
+  };
   useEffect(() => {
     api("status")
       .then(setStatus)
@@ -535,11 +651,15 @@ export function IntelligenceWorkspace({
   }, []);
   useEffect(() => { end.current?.scrollIntoView({block:"nearest"}); }, [messages, busy]);
   const send = async () => {
-    const message = question.trim();
+    const base = question.trim();
+    const message = [base, ...attachments.map((a) => a.note)]
+      .filter(Boolean)
+      .join("\n\n");
     if (!message || busy) return;
     setBusy(true);
     setError("");
     setQuestion("");
+    setAttachments([]);
     setMessages((m) => [...m, { role: "user", content: message }]);
     try {
       const result = await api(mode, {
@@ -728,31 +848,69 @@ export function IntelligenceWorkspace({
               ))}
             </select>
           </label>}
-          <textarea
-            aria-label="Ask studio intelligence"
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                e.preventDefault();
-                void send();
+          {!!attachments.length && (
+            <div className="chat-attachments">
+              {attachments.map((a, i) => (
+                <span key={a.name + i} className="chat-attachment">
+                  <Paperclip size={10} />
+                  {a.name}
+                  <button
+                    aria-label={`Remove ${a.name}`}
+                    onClick={() => setAttachments(attachments.filter((_, j) => j !== i))}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="chat-input-row">
+            <label className="chat-tool" aria-label="Attach files">
+              <Paperclip size={15} />
+              <input
+                type="file"
+                multiple
+                hidden
+                onChange={(e) => {
+                  void attachFiles(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            <button
+              className={`chat-tool ${recording ? "recording" : ""}`}
+              aria-label={recording ? "Stop voice note" : "Record a voice note"}
+              onClick={() => void toggleRecording()}
+            >
+              {recording ? <Square size={13} /> : <Mic size={15} />}
+            </button>
+            <textarea
+              aria-label="Ask studio intelligence"
+              value={question}
+              rows={1}
+              onChange={(e) => setQuestion(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  void send();
+                }
+              }}
+              placeholder={mode === "ask" ? "Ask about your studio performance…" : "Describe the chart, table or insight to build…"}
+            />
+            <button
+              className="chat-send"
+              aria-label={mode === "ask" ? "Send question" : "Build element"}
+              disabled={
+                busy ||
+                (!question.trim() && !attachments.length) ||
+                (mode === "build" && (!status?.openai || !status?.supabase))
               }
-            }}
-            placeholder={mode === "ask" ? "Ask about your studio performance…" : "Describe the chart, table or insight to build…"}
-          />
-          <button
-            className="chat-send"
-            aria-label={mode === "ask" ? "Send question" : "Build element"}
-            disabled={
-              busy ||
-              !question.trim() ||
-              (mode === "build" && (!status?.openai || !status?.supabase))
-            }
-            onClick={() => void send()}
-          >
-            <ArrowUp size={19}/>
-          </button>
-          <div className="chat-composer-meta"><span>{mode === "ask" ? "Answers with source evidence" : "Validated before saving"}</span><span>⌘ / Ctrl ↵</span></div>
+              onClick={() => void send()}
+            >
+              <ArrowUp size={19}/>
+            </button>
+          </div>
+          <div className="chat-composer-meta"><span>{mode === "ask" ? "Answers with source evidence" : "Validated before saving"}</span><span>Enter to send · Shift+Enter for a new line</span></div>
           </div>
           {error && <p className="chat-error" role="alert">{error}</p>}
           {mode === "build" && status && (!status.openai || !status.supabase) && <p className="chat-error">Connect GPT and saved workspace storage in Agent settings to build elements.</p>}

@@ -37,6 +37,8 @@ export const blueprints: Blueprint[] = [
       "net_revenue",
       "revenue",
       "attendance",
+      "avg_class_size_incl",
+      "empty_sessions",
       "fill_rate",
       "new_clients",
       "conversion_rate",
@@ -45,6 +47,8 @@ export const blueprints: Blueprint[] = [
     columns: [
       "sessions",
       "attendance",
+      "avg_class_size_incl",
+      "empty_sessions",
       "fill_rate",
       "revenue",
       "rev_pas",
@@ -276,6 +280,8 @@ export const blueprints: Blueprint[] = [
     kpis: [
       "bookings",
       "unique_bookers",
+      "booking_avg_class_size",
+      "booking_empty_sessions",
       "cancellation_rate",
       "booking_late_rate",
       "booking_no_show_rate",
@@ -286,6 +292,8 @@ export const blueprints: Blueprint[] = [
     columns: [
       "bookings",
       "unique_bookers",
+      "booking_avg_class_size",
+      "booking_empty_sessions",
       "booking_attendance_rate",
       "cancellation_rate",
       "booking_late_rate",
@@ -350,6 +358,8 @@ export const blueprints: Blueprint[] = [
     kpis: [
       "checkins",
       "unique_attendees",
+      "attendance_avg_class_size",
+      "attendance_empty_sessions",
       "visits_per_member",
       "complimentary_rate",
       "revenue_per_checkin",
@@ -360,6 +370,8 @@ export const blueprints: Blueprint[] = [
     columns: [
       "checkins",
       "unique_attendees",
+      "attendance_avg_class_size",
+      "attendance_empty_sessions",
       "visits_per_member",
       "complimentary_rate",
       "checkin_revenue",

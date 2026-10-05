@@ -11,6 +11,7 @@ import * as echarts from "echarts";
 import { formatField } from "../semantics/formats";
 import { useStore } from "../state/store";
 import { exportCSV } from "./exports";
+import { DataInsightAction } from "./DataInsightAction";
 export function ChartControls({
   rows = [],
   title = "Chart",
@@ -106,6 +107,12 @@ export function ChartControls({
         >
           <Maximize2 size={14} />
         </button>
+        <DataInsightAction
+          compact
+          subject={title}
+          detail="Chart/table controls for the currently displayed section data."
+          buttonLabel="Summarise this view"
+        />
       </div>
       {table && (
         <div className="chart-data-preview">

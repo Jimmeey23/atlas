@@ -900,6 +900,34 @@
     "minSample": 5
   },
   {
+    "id": "booking_avg_class_size",
+    "label": "Average class size",
+    "expression": "COUNT(*) FILTER (WHERE attended)/NULLIF(COUNT(DISTINCT COALESCE(session_id,unique_id1,unique_id2,date||'|'||time||'|'||format||'|'||location)),0)",
+    "sources": [
+      "Bookings.Attended",
+      "Bookings.Session Date"
+    ],
+    "format": "decimal",
+    "domain": "attendance",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "booking_empty_sessions",
+    "label": "Empty sessions",
+    "expression": "COUNT(DISTINCT COALESCE(session_id,unique_id1,unique_id2,date||'|'||time||'|'||format||'|'||location)) - COUNT(DISTINCT CASE WHEN attended THEN COALESCE(session_id,unique_id1,unique_id2,date||'|'||time||'|'||format||'|'||location) END)",
+    "sources": [
+      "Bookings.Attended",
+      "Bookings.Session Date"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
     "id": "cancellation_rate",
     "label": "Cancellation rate",
     "expression": "(COUNT(*) FILTER (WHERE cancelled)) / NULLIF((COUNT(*)),0)",
@@ -1144,6 +1172,34 @@
     "domain": "attendance",
     "aggregation": "sum",
     "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "attendance_avg_class_size",
+    "label": "Average class size",
+    "expression": "COUNT(*) FILTER (WHERE attended)/NULLIF(COUNT(DISTINCT session_id) FILTER (WHERE session_id IS NOT NULL),0)",
+    "sources": [
+      "Checkins.Session ID",
+      "Checkins.Checked In"
+    ],
+    "format": "decimal",
+    "domain": "attendance",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "attendance_empty_sessions",
+    "label": "Empty sessions",
+    "expression": "COUNT(DISTINCT session_id) FILTER (WHERE session_id IS NOT NULL) - COUNT(DISTINCT CASE WHEN attended THEN session_id END)",
+    "sources": [
+      "Checkins.Session ID",
+      "Checkins.Checked In"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": false,
     "minSample": 5
   },
   {
