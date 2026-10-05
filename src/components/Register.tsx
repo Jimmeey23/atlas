@@ -1,0 +1,33 @@
+import { usePreferences } from "../state/preferences";
+import { useStore } from "../state/store";
+import type { ReactNode } from "react";
+export function Register({
+  index,
+  title,
+  subtitle,
+  actions,
+  children,
+}: {
+  index: string;
+  title: string;
+  subtitle?: string;
+  actions?: ReactNode;
+  children: ReactNode;
+}) {
+  const page = useStore((s) => s.tab);
+  const config = usePreferences((s) => s.preferences.page[page]);
+  const heading = config?.sectionTitles?.[index] || title;
+  return (
+    <section className="register" data-index={index}>
+      <div className="register-head">
+        <div className="register-title">
+          <span className="index">{index}</span>
+          <h2>{heading}</h2>
+          {subtitle && <p>{subtitle}</p>}
+        </div>
+        <div className="register-actions">{actions}</div>
+      </div>
+      {children}
+    </section>
+  );
+}

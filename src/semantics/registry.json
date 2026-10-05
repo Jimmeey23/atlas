@@ -1,0 +1,1551 @@
+[
+  {
+    "id": "sessions",
+    "label": "Studio sessions",
+    "expression": "SUM(sessions)",
+    "sources": [
+      "Sessions.SessionID"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "capacity",
+    "label": "Seats offered",
+    "expression": "SUM(capacity)",
+    "sources": [
+      "Sessions.Capacity"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "attendance",
+    "label": "Attendance",
+    "expression": "SUM(checked_in)",
+    "sources": [
+      "Sessions.CheckedIn"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "fill_rate",
+    "label": "Fill rate",
+    "expression": "(SUM(checked_in)) / NULLIF((SUM(capacity)),0)",
+    "sources": [
+      "Sessions.CheckedIn",
+      "Sessions.Capacity"
+    ],
+    "format": "percent",
+    "domain": "attendance",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "booking_fill_rate",
+    "label": "Booking fill",
+    "expression": "(SUM(booked)) / NULLIF((SUM(capacity)),0)",
+    "sources": [
+      "Sessions.Booked",
+      "Sessions.Capacity"
+    ],
+    "format": "percent",
+    "domain": "attendance",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "show_up_rate",
+    "label": "Show-up rate",
+    "expression": "(SUM(checked_in)) / NULLIF((SUM(booked)),0)",
+    "sources": [
+      "Sessions.CheckedIn",
+      "Sessions.Booked"
+    ],
+    "format": "percent",
+    "domain": "attendance",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "booked",
+    "label": "Booked seats",
+    "expression": "SUM(booked)",
+    "sources": [
+      "Sessions.Booked"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "no_shows",
+    "label": "No-shows",
+    "expression": "SUM(booked-checked_in-late_cancelled)",
+    "sources": [
+      "Sessions.Booked",
+      "Sessions.CheckedIn",
+      "Sessions.LateCancelled"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "no_show_rate",
+    "label": "No-show rate",
+    "expression": "(SUM(booked-checked_in-late_cancelled)) / NULLIF((SUM(booked)),0)",
+    "sources": [
+      "Sessions.Booked",
+      "Sessions.CheckedIn",
+      "Sessions.LateCancelled"
+    ],
+    "format": "percent",
+    "domain": "attendance",
+    "aggregation": "weighted",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "late_cancel_rate",
+    "label": "Late-cancel rate",
+    "expression": "(SUM(late_cancelled)) / NULLIF((SUM(booked)),0)",
+    "sources": [
+      "Sessions.LateCancelled",
+      "Sessions.Booked"
+    ],
+    "format": "percent",
+    "domain": "attendance",
+    "aggregation": "weighted",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "avg_class_size_incl",
+    "label": "Average class size",
+    "expression": "(SUM(checked_in)) / NULLIF((SUM(sessions)),0)",
+    "sources": [
+      "Sessions.CheckedIn",
+      "Sessions.SessionID"
+    ],
+    "format": "decimal",
+    "domain": "attendance",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "avg_class_size_excl",
+    "label": "Average size, non-empty",
+    "expression": "SUM(checked_in)/NULLIF(SUM(CASE WHEN checked_in>0 THEN COALESCE(non_empty,sessions) ELSE 0 END),0)",
+    "sources": [
+      "Sessions.CheckedIn"
+    ],
+    "format": "decimal",
+    "domain": "attendance",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "empty_sessions",
+    "label": "Empty sessions",
+    "expression": "SUM(empty)",
+    "sources": [
+      "Sessions.CheckedIn"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "empty_session_rate",
+    "label": "Empty-session rate",
+    "expression": "(SUM(empty)) / NULLIF((SUM(sessions)),0)",
+    "sources": [
+      "Sessions.CheckedIn",
+      "Sessions.SessionID"
+    ],
+    "format": "percent",
+    "domain": "attendance",
+    "aggregation": "weighted",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "unsold_seats",
+    "label": "Unsold seats",
+    "expression": "SUM(capacity)-SUM(checked_in)",
+    "sources": [
+      "Sessions.Capacity",
+      "Sessions.CheckedIn"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "overbooked_sessions",
+    "label": "Overbooked sessions",
+    "expression": "COUNT(*) FILTER (WHERE booked>capacity)",
+    "sources": [
+      "Sessions.Booked",
+      "Sessions.Capacity"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "attendance_cv",
+    "label": "Attendance variability",
+    "expression": "STDDEV_POP(checked_in)/NULLIF(AVG(checked_in),0)",
+    "sources": [
+      "Sessions.CheckedIn"
+    ],
+    "format": "ratio",
+    "domain": "attendance",
+    "aggregation": "weighted",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "revenue",
+    "label": "Session revenue",
+    "expression": "SUM(revenue)",
+    "sources": [
+      "Sessions.Revenue"
+    ],
+    "format": "currency",
+    "domain": "revenue",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "gross_revenue",
+    "label": "Gross revenue",
+    "expression": "SUM(revenue)",
+    "sources": [
+      "Sales.Payment Value"
+    ],
+    "format": "currency",
+    "domain": "revenue",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "net_revenue",
+    "label": "Net of VAT",
+    "expression": "SUM(net)",
+    "sources": [
+      "Sales.Price Excluding VAT In Currency"
+    ],
+    "format": "currency",
+    "domain": "revenue",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "vat",
+    "label": "VAT",
+    "expression": "SUM(vat)",
+    "sources": [
+      "Sales.Payment VAT"
+    ],
+    "format": "currency",
+    "domain": "revenue",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "transactions",
+    "label": "Transactions",
+    "expression": "COUNT(DISTINCT sale_id)",
+    "sources": [
+      "Sales.Sale ID"
+    ],
+    "format": "integer",
+    "domain": "revenue",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "units",
+    "label": "Units sold",
+    "expression": "SUM(units)",
+    "sources": [
+      "Sales.Sale Item Quantity"
+    ],
+    "format": "integer",
+    "domain": "revenue",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "revenue_per_session",
+    "label": "Revenue / session",
+    "expression": "SUM(revenue)/NULLIF(SUM(sessions),0)",
+    "sources": [
+      "Sessions.Revenue",
+      "Sessions.CheckedIn",
+      "Sessions.Capacity"
+    ],
+    "format": "currency",
+    "domain": "revenue",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "rev_pac",
+    "label": "Revenue / attendee",
+    "expression": "SUM(revenue)/NULLIF(SUM(checked_in),0)",
+    "sources": [
+      "Sessions.Revenue",
+      "Sessions.CheckedIn",
+      "Sessions.Capacity"
+    ],
+    "format": "currency",
+    "domain": "revenue",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "rev_pas",
+    "label": "Revenue / seat",
+    "expression": "SUM(revenue)/NULLIF(SUM(capacity),0)",
+    "sources": [
+      "Sessions.Revenue",
+      "Sessions.CheckedIn",
+      "Sessions.Capacity"
+    ],
+    "format": "currency",
+    "domain": "revenue",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "lost_revenue",
+    "label": "Opportunity at current yield",
+    "expression": "(SUM(capacity)-SUM(checked_in))*SUM(revenue)/NULLIF(SUM(checked_in),0)",
+    "sources": [
+      "Sessions.Capacity",
+      "Sessions.CheckedIn",
+      "Sessions.Revenue"
+    ],
+    "format": "currency",
+    "domain": "revenue",
+    "aggregation": "weighted",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "aov",
+    "label": "Average order value",
+    "expression": "SUM(revenue)/NULLIF(COUNT(DISTINCT sale_id),0)",
+    "sources": [
+      "Sales.Payment Value",
+      "Sales.Sale ID",
+      "Sales.Member ID"
+    ],
+    "format": "currency",
+    "domain": "revenue",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "arpu",
+    "label": "Revenue / buyer",
+    "expression": "SUM(revenue)/NULLIF(COUNT(DISTINCT member_id),0)",
+    "sources": [
+      "Sales.Payment Value",
+      "Sales.Sale ID",
+      "Sales.Member ID"
+    ],
+    "format": "currency",
+    "domain": "revenue",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "buyers",
+    "label": "Unique buyers",
+    "expression": "COUNT(DISTINCT member_id)",
+    "sources": [
+      "Sales.Member ID"
+    ],
+    "format": "integer",
+    "domain": "revenue",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "discount_value",
+    "label": "Discount given",
+    "expression": "SUM(discount)",
+    "sources": [
+      "Sales.Discount Value In Currency"
+    ],
+    "format": "currency",
+    "domain": "revenue",
+    "aggregation": "sum",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "discount_rate",
+    "label": "Discount rate",
+    "expression": "(SUM(discount)) / NULLIF((SUM(revenue)+SUM(discount)),0)",
+    "sources": [
+      "Sales.Discount Value In Currency",
+      "Sales.Payment Value"
+    ],
+    "format": "percent",
+    "domain": "revenue",
+    "aggregation": "weighted",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "deferred_revenue",
+    "label": "Deferred balance",
+    "expression": "SUM(money_left)",
+    "sources": [
+      "Sales.Sec. Membership Money Left"
+    ],
+    "format": "currency",
+    "domain": "revenue",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "unused_session_liability",
+    "label": "Unused session liability",
+    "expression": "SUM(COALESCE(classes_left,remaining)*rev_credit)",
+    "sources": [
+      "Sales.Sec. Membership Classes Left",
+      "Sales.Sec. Membership Revenue Per Event Credit Incl VAT"
+    ],
+    "format": "currency",
+    "domain": "risk",
+    "aggregation": "sum",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "membership_rev_share",
+    "label": "Membership revenue share",
+    "expression": "(SUM(revenue) FILTER (WHERE category='Memberships')) / NULLIF((SUM(revenue)),0)",
+    "sources": [
+      "Sales.Cleaned Category",
+      "Sales.Payment Value"
+    ],
+    "format": "percent",
+    "domain": "revenue",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "paid_attendance",
+    "label": "Paid attendance",
+    "expression": "SUM(checked_in)-SUM(non_paid)",
+    "sources": [
+      "Sessions.CheckedIn",
+      "Sessions.NonPaid"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "non_paid_rate",
+    "label": "Non-paid share",
+    "expression": "(SUM(non_paid)) / NULLIF((SUM(checked_in)),0)",
+    "sources": [
+      "Sessions.NonPaid",
+      "Sessions.CheckedIn"
+    ],
+    "format": "percent",
+    "domain": "attendance",
+    "aggregation": "weighted",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "membership_att_share",
+    "label": "Membership attendance share",
+    "expression": "(SUM(memberships)) / NULLIF((SUM(memberships+packages+intro+single)),0)",
+    "sources": [
+      "Sessions.Memberships",
+      "Sessions.Packages",
+      "Sessions.IntroOffers",
+      "Sessions.SingleClasses"
+    ],
+    "format": "percent",
+    "domain": "attendance",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "intro_penetration",
+    "label": "Intro attendances / session",
+    "expression": "(SUM(intro)) / NULLIF((SUM(sessions)),0)",
+    "sources": [
+      "Sessions.IntroOffers",
+      "Sessions.SessionID"
+    ],
+    "format": "decimal",
+    "domain": "attendance",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "new_clients",
+    "label": "Newcomers",
+    "expression": "COUNT(*) FILTER (WHERE is_new)",
+    "sources": [
+      "New.Is New"
+    ],
+    "format": "integer",
+    "domain": "growth",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "conversion_rate",
+    "label": "Trial conversion",
+    "expression": "(COUNT(*) FILTER (WHERE is_new AND conversion='Converted')) / NULLIF((COUNT(*) FILTER (WHERE is_new)),0)",
+    "sources": [
+      "New.Is New",
+      "New.Conversion Status",
+      "New.Visits Post Trial"
+    ],
+    "format": "percent",
+    "domain": "growth",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "second_visit_rate",
+    "label": "Second-visit rate",
+    "expression": "(COUNT(*) FILTER (WHERE is_new AND visits_post>0)) / NULLIF((COUNT(*) FILTER (WHERE is_new)),0)",
+    "sources": [
+      "New.Is New",
+      "New.Conversion Status",
+      "New.Visits Post Trial"
+    ],
+    "format": "percent",
+    "domain": "growth",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "zero_return_rate",
+    "label": "Zero-return rate",
+    "expression": "(COUNT(*) FILTER (WHERE is_new AND visits_post=0)) / NULLIF((COUNT(*) FILTER (WHERE is_new)),0)",
+    "sources": [
+      "New.Is New",
+      "New.Conversion Status",
+      "New.Visits Post Trial"
+    ],
+    "format": "percent",
+    "domain": "growth",
+    "aggregation": "weighted",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "avg_conversion_span",
+    "label": "Days to convert",
+    "expression": "AVG(conversion_days) FILTER (WHERE conversion='Converted')",
+    "sources": [
+      "New.Conversion Span (Days)"
+    ],
+    "format": "days",
+    "domain": "growth",
+    "aggregation": "avg",
+    "higherIsBetter": false,
+    "minSample": 3
+  },
+  {
+    "id": "median_conversion_span",
+    "label": "Median days to convert",
+    "expression": "MEDIAN(conversion_days) FILTER (WHERE conversion='Converted')",
+    "sources": [
+      "New.Conversion Span (Days)"
+    ],
+    "format": "days",
+    "domain": "growth",
+    "aggregation": "median",
+    "higherIsBetter": false,
+    "minSample": 3
+  },
+  {
+    "id": "avg_ltv",
+    "label": "Average lifetime value",
+    "expression": "AVG(ltv)",
+    "sources": [
+      "New.Ltv"
+    ],
+    "format": "currency",
+    "domain": "growth",
+    "aggregation": "avg",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "avg_first_purchase",
+    "label": "Average first purchase",
+    "expression": "AVG(first_purchase)",
+    "sources": [
+      "New.First Purchase Value"
+    ],
+    "format": "currency",
+    "domain": "growth",
+    "aggregation": "avg",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "ltv_to_first_purchase",
+    "label": "LTV / first purchase",
+    "expression": "AVG(ltv)/NULLIF(AVG(first_purchase),0)",
+    "sources": [
+      "New.Ltv",
+      "New.First Purchase Value"
+    ],
+    "format": "ratio",
+    "domain": "growth",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "retention_rate",
+    "label": "Retention rate",
+    "expression": "(COUNT(*) FILTER (WHERE retention='Retained')) / NULLIF((COUNT(*)),0)",
+    "sources": [
+      "New.Retention Status"
+    ],
+    "format": "percent",
+    "domain": "growth",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "active_base",
+    "label": "Active member base",
+    "expression": "CASE WHEN COUNT(lifecycle)>0 THEN COUNT(DISTINCT member_id) FILTER (WHERE lifecycle='Active') ELSE NULL END",
+    "sources": [
+      "New.Lifecycle Status",
+      "New.Member Id"
+    ],
+    "format": "integer",
+    "domain": "growth",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "at_risk_actives",
+    "label": "At-risk active members",
+    "expression": "COUNT(*) FILTER (WHERE lifecycle='Active' AND days_absent>21)",
+    "sources": [
+      "New.Lifecycle Status",
+      "New.Days Since Last Visit"
+    ],
+    "format": "integer",
+    "domain": "risk",
+    "aggregation": "sum",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "visits_post_trial",
+    "label": "Post-trial visits",
+    "expression": "SUM(visits_post)",
+    "sources": [
+      "New.Visits Post Trial"
+    ],
+    "format": "integer",
+    "domain": "growth",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "active_memberships",
+    "label": "Active memberships",
+    "expression": "COUNT(*) FILTER (WHERE status='Active' AND (end_date IS NULL OR end_date >= '{today}'))",
+    "sources": [
+      "Lapsed.Status",
+      "Lapsed.End Date"
+    ],
+    "format": "integer",
+    "domain": "risk",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "churn_rate",
+    "label": "Churn rate",
+    "expression": "(COUNT(*) FILTER (WHERE churned_date IS NOT NULL)) / NULLIF((COUNT(*)),0)",
+    "sources": [
+      "Lapsed.Churned Date"
+    ],
+    "format": "percent",
+    "domain": "risk",
+    "aggregation": "weighted",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "utilisation",
+    "label": "Membership utilisation",
+    "expression": "SUM(session_limit-remaining) FILTER (WHERE session_limit>0 AND remaining BETWEEN 0 AND session_limit)/NULLIF(SUM(session_limit) FILTER (WHERE session_limit>0 AND remaining BETWEEN 0 AND session_limit),0)",
+    "sources": [
+      "Lapsed \u2192 Sessions Limit",
+      "Lapsed \u2192 Remaining Sessions"
+    ],
+    "format": "percent",
+    "domain": "risk",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "zero_usage_memberships",
+    "label": "Unused memberships",
+    "expression": "COUNT(*) FILTER (WHERE completed=0 AND date_diff('day',TRY_CAST(start_date AS DATE),DATE '{today}')>7)",
+    "sources": [
+      "Lapsed.Completed Sessions",
+      "Lapsed.Start Date"
+    ],
+    "format": "integer",
+    "domain": "risk",
+    "aggregation": "sum",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "dormant_actives",
+    "label": "Dormant active memberships",
+    "expression": "COUNT(*) FILTER (WHERE status='Active' AND days_absent>21)",
+    "sources": [
+      "Lapsed.Status",
+      "Lapsed.Days Since Last Visit"
+    ],
+    "format": "integer",
+    "domain": "risk",
+    "aggregation": "sum",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "revenue_at_risk_30d",
+    "label": "Expiring in 30 days",
+    "expression": "SUM(amount_paid) FILTER (WHERE TRY_CAST(end_date AS DATE) BETWEEN DATE '{today}' AND DATE '{today}'+INTERVAL 30 DAY)",
+    "sources": [
+      "Lapsed.Amount Paid",
+      "Lapsed.End Date"
+    ],
+    "format": "currency",
+    "domain": "risk",
+    "aggregation": "sum",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "risk_score",
+    "label": "Member risk score",
+    "expression": "AVG(100*(0.3*(1-LEAST(completed/NULLIF(session_limit,0),1))+0.35*LEAST(days_absent/60,1)+0.15*cancel_rate+0.20*(1-attendance_rate)))",
+    "sources": [
+      "Lapsed.Completed Sessions",
+      "Lapsed.Sessions Limit",
+      "Lapsed.Days Since Last Visit",
+      "Lapsed.Cancellation Rate %",
+      "Lapsed.Attendance Rate %"
+    ],
+    "format": "decimal",
+    "domain": "risk",
+    "aggregation": "avg",
+    "higherIsBetter": false,
+    "minSample": 3
+  },
+  {
+    "id": "memberships_count",
+    "label": "Memberships held",
+    "expression": "COUNT(*)",
+    "sources": [
+      "Lapsed.Member ID"
+    ],
+    "format": "integer",
+    "domain": "risk",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "remaining_sessions",
+    "label": "Remaining sessions",
+    "expression": "SUM(remaining)",
+    "sources": [
+      "Lapsed.Remaining Sessions"
+    ],
+    "format": "integer",
+    "domain": "risk",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "days_absent",
+    "label": "Days since last visit",
+    "expression": "AVG(days_absent)",
+    "sources": [
+      "Lapsed.Days Since Last Visit"
+    ],
+    "format": "days",
+    "domain": "risk",
+    "aggregation": "avg",
+    "higherIsBetter": false,
+    "minSample": 3
+  },
+  {
+    "id": "bookings",
+    "label": "Bookings",
+    "expression": "COUNT(*)",
+    "sources": [
+      "Bookings.Member Id"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "unique_bookers",
+    "label": "Unique bookers",
+    "expression": "COUNT(DISTINCT member_id)",
+    "sources": [
+      "Bookings.Member Id"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "cancellation_rate",
+    "label": "Cancellation rate",
+    "expression": "(COUNT(*) FILTER (WHERE cancelled)) / NULLIF((COUNT(*)),0)",
+    "sources": [
+      "Bookings.Cancellation rate"
+    ],
+    "format": "percent",
+    "domain": "attendance",
+    "aggregation": "weighted",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "booking_late_rate",
+    "label": "Late-cancel rate",
+    "expression": "(COUNT(*) FILTER (WHERE late_cancelled>0)) / NULLIF((COUNT(*)),0)",
+    "sources": [
+      "Bookings.Late-cancel rate"
+    ],
+    "format": "percent",
+    "domain": "attendance",
+    "aggregation": "weighted",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "booking_no_show_rate",
+    "label": "No-show rate",
+    "expression": "(COUNT(*) FILTER (WHERE no_show)) / NULLIF((COUNT(*)),0)",
+    "sources": [
+      "Bookings.No-show rate"
+    ],
+    "format": "percent",
+    "domain": "attendance",
+    "aggregation": "weighted",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "booking_attendance_rate",
+    "label": "Attended share",
+    "expression": "(COUNT(*) FILTER (WHERE attended)) / NULLIF((COUNT(*)),0)",
+    "sources": [
+      "Bookings.Attended share"
+    ],
+    "format": "percent",
+    "domain": "attendance",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "refund_rate",
+    "label": "Refund rate",
+    "expression": "(COUNT(*) FILTER (WHERE refunded)) / NULLIF((COUNT(*)),0)",
+    "sources": [
+      "Bookings.Refund rate"
+    ],
+    "format": "percent",
+    "domain": "attendance",
+    "aggregation": "weighted",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "effective_attendance",
+    "label": "Effective attendance",
+    "expression": "COUNT(*) FILTER (WHERE attended AND NOT COALESCE(cancelled,FALSE) AND NOT COALESCE(late_cancelled>0,FALSE) AND NOT COALESCE(no_show,FALSE))::DOUBLE/NULLIF(COUNT(*),0)",
+    "sources": [
+      "Bookings.Attended",
+      "Bookings.Cancelled",
+      "Bookings.Late Cancelled",
+      "Bookings.No Show"
+    ],
+    "format": "percent",
+    "domain": "attendance",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "booking_lead_time_days",
+    "label": "Booking lead time",
+    "expression": "AVG(lead_time) FILTER (WHERE lead_time>=0)",
+    "sources": [
+      "Bookings.Session Date",
+      "Bookings.Sale Date"
+    ],
+    "format": "days",
+    "domain": "attendance",
+    "aggregation": "avg",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "same_day_share",
+    "label": "Same-day bookings",
+    "expression": "(COUNT(*) FILTER (WHERE lead_time>=0 AND lead_time<1)) / NULLIF((COUNT(*) FILTER (WHERE NOT imported)),0)",
+    "sources": [
+      "Bookings.Session Date",
+      "Bookings.Sale Date"
+    ],
+    "format": "percent",
+    "domain": "attendance",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "revenue_per_booking",
+    "label": "Revenue / booking",
+    "expression": "SUM(revenue) FILTER (WHERE NOT imported)/NULLIF(COUNT(*) FILTER (WHERE NOT imported),0)",
+    "sources": [
+      "Bookings.Sale Value"
+    ],
+    "format": "currency",
+    "domain": "revenue",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "leads",
+    "label": "Leads",
+    "expression": "COUNT(*)",
+    "sources": [
+      "Leads.ID"
+    ],
+    "format": "integer",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "lead_conversion_rate",
+    "label": "Lead win rate",
+    "expression": "(COUNT(*) FILTER (WHERE status='Won')) / NULLIF((COUNT(*)),0)",
+    "sources": [
+      "Leads.Status"
+    ],
+    "format": "percent",
+    "domain": "people",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "response_time_hours",
+    "label": "First response time",
+    "expression": "AVG(response_hours) FILTER (WHERE response_hours>=0)",
+    "sources": [
+      "Leads.Follow Up 1 Date",
+      "Leads.Created At"
+    ],
+    "format": "decimal",
+    "domain": "people",
+    "aggregation": "avg",
+    "higherIsBetter": false,
+    "minSample": 3
+  },
+  {
+    "id": "untouched_leads",
+    "label": "Untouched leads",
+    "expression": "COUNT(*) FILTER (WHERE touches=0 AND date_diff('hour',TRY_CAST(date AS TIMESTAMP),TIMESTAMP '{today}')>48 AND status NOT IN ('Won','Lost'))",
+    "sources": [
+      "Leads.Follow Up 1 Date",
+      "Leads.Created At",
+      "Leads.Status"
+    ],
+    "format": "integer",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": false,
+    "minSample": 3
+  },
+  {
+    "id": "touches",
+    "label": "Average follow-ups",
+    "expression": "AVG(touches)",
+    "sources": [
+      "Leads.Follow Up 1 Date",
+      "Leads.Follow Up 2 Date",
+      "Leads.Follow Up 3 Date",
+      "Leads.Follow Up 4 Date"
+    ],
+    "format": "decimal",
+    "domain": "people",
+    "aggregation": "avg",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "open_leads",
+    "label": "Open pipeline",
+    "expression": "COUNT(*) FILTER (WHERE status NOT IN ('Won','Lost') OR status IS NULL)",
+    "sources": [
+      "Leads.Status"
+    ],
+    "format": "integer",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "pipeline_value",
+    "label": "Estimated pipeline value",
+    "expression": "(COUNT(*) FILTER (WHERE status NOT IN ('Won','Lost') OR status IS NULL))*(COUNT(*) FILTER (WHERE status='Won'))::DOUBLE/NULLIF(COUNT(*),0)*(SELECT AVG(first_purchase) FROM new WHERE is_new)",
+    "sources": [
+      "Leads.Status",
+      "New.First Purchase Value"
+    ],
+    "format": "currency",
+    "domain": "people",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "checkins",
+    "label": "Check-ins",
+    "expression": "COUNT(*) FILTER (WHERE attended)",
+    "sources": [
+      "Checkins.Checked In"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "unique_attendees",
+    "label": "Unique attendees",
+    "expression": "COUNT(DISTINCT member_id) FILTER (WHERE attended)",
+    "sources": [
+      "Checkins.Member ID",
+      "Checkins.Checked In"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "visits_per_member",
+    "label": "Visits / member",
+    "expression": "COUNT(*) FILTER (WHERE attended)/NULLIF(COUNT(DISTINCT member_id) FILTER (WHERE attended),0)",
+    "sources": [
+      "Checkins.Member ID",
+      "Checkins.Checked In"
+    ],
+    "format": "decimal",
+    "domain": "attendance",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "complimentary_rate",
+    "label": "Complimentary share",
+    "expression": "COUNT(*) FILTER (WHERE complimentary AND attended)::DOUBLE/NULLIF(COUNT(*) FILTER (WHERE attended),0)",
+    "sources": [
+      "Checkins.Complementary",
+      "Checkins.Checked In"
+    ],
+    "format": "percent",
+    "domain": "attendance",
+    "aggregation": "weighted",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "revenue_per_checkin",
+    "label": "Revenue / check-in",
+    "expression": "SUM(revenue)/NULLIF(COUNT(*) FILTER (WHERE attended),0)",
+    "sources": [
+      "Checkins.Paid",
+      "Checkins.Checked In"
+    ],
+    "format": "currency",
+    "domain": "revenue",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "teaching_hours",
+    "label": "Recorded teaching hours",
+    "expression": "SUM(duration)/60",
+    "sources": [
+      "Checkins.Duration (Minutes)"
+    ],
+    "format": "decimal",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "revenue_per_hour",
+    "label": "Revenue / recorded hour",
+    "expression": "SUM(revenue)/NULLIF(SUM(duration)/60,0)",
+    "sources": [
+      "Checkins.Paid",
+      "Checkins.Duration (Minutes)"
+    ],
+    "format": "currency",
+    "domain": "people",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "trainers",
+    "label": "Active instructors",
+    "expression": "COUNT(DISTINCT trainer_id)",
+    "sources": [
+      "Teacher Recurring.TrainerID"
+    ],
+    "format": "integer",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "teacher_dependency",
+    "label": "Single-trainer dependence",
+    "expression": "MAX(teacher_dependency)",
+    "sources": [
+      "Recurring.Top5Trainers"
+    ],
+    "format": "percent",
+    "domain": "people",
+    "aggregation": "last",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "trainer_depth",
+    "label": "Trainer depth",
+    "expression": "MAX(trainer_depth)",
+    "sources": [
+      "Recurring.Top5Trainers"
+    ],
+    "format": "integer",
+    "domain": "people",
+    "aggregation": "last",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "payroll_revenue",
+    "label": "Attributed revenue",
+    "expression": "SUM(revenue)",
+    "sources": [
+      "Payroll.Total Paid"
+    ],
+    "format": "currency",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "payroll_cost",
+    "label": "Estimated payroll",
+    "expression": "SUM(sessions)*{rate}",
+    "sources": [
+      "Payroll.Total Sessions",
+      "Settings.rate_per_session"
+    ],
+    "format": "currency",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "contribution",
+    "label": "Estimated contribution",
+    "expression": "SUM(revenue)-SUM(sessions)*{rate}",
+    "sources": [
+      "Payroll.Total Paid",
+      "Payroll.Total Sessions",
+      "Settings.rate_per_session"
+    ],
+    "format": "currency",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "contribution_margin",
+    "label": "Estimated contribution margin",
+    "expression": "(SUM(revenue)-SUM(sessions)*{rate}) / NULLIF((SUM(revenue)),0)",
+    "sources": [
+      "Payroll.Total Paid",
+      "Payroll.Total Sessions",
+      "Settings.rate_per_session"
+    ],
+    "format": "percent",
+    "domain": "people",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "payroll_pct_of_revenue",
+    "label": "Estimated payroll share",
+    "expression": "(SUM(sessions)*{rate}) / NULLIF((SUM(revenue)),0)",
+    "sources": [
+      "Payroll.Total Paid",
+      "Payroll.Total Sessions",
+      "Settings.rate_per_session"
+    ],
+    "format": "percent",
+    "domain": "people",
+    "aggregation": "weighted",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "empty_session_cost",
+    "label": "Cost of empty sessions",
+    "expression": "SUM(empty)*{rate}",
+    "sources": [
+      "Payroll.Total Empty Sessions",
+      "Settings.rate_per_session"
+    ],
+    "format": "currency",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "break_even_class_size",
+    "label": "Break-even class size",
+    "expression": "{rate}/NULLIF(SUM(revenue)/NULLIF(SUM(checked_in),0),0)",
+    "sources": [
+      "Sessions.Revenue",
+      "Sessions.CheckedIn",
+      "Settings.rate_per_session"
+    ],
+    "format": "decimal",
+    "domain": "people",
+    "aggregation": "weighted",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "payroll_conversion",
+    "label": "Instructor trial conversion",
+    "expression": "(SUM(converted)) / NULLIF((SUM(new_count)),0)",
+    "sources": [
+      "Payroll.Converted",
+      "Payroll.New"
+    ],
+    "format": "percent",
+    "domain": "people",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "payroll_retention",
+    "label": "Instructor retention",
+    "expression": "(SUM(retained)) / NULLIF((SUM(new_count)),0)",
+    "sources": [
+      "Payroll.Retained",
+      "Payroll.New"
+    ],
+    "format": "percent",
+    "domain": "people",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "new_handled",
+    "label": "Newcomers taught",
+    "expression": "SUM(new_count)",
+    "sources": [
+      "Payroll.New"
+    ],
+    "format": "integer",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "records",
+    "label": "Source records",
+    "expression": "COUNT(*)",
+    "sources": [
+      "Source.row"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 1
+  },
+  {
+    "id": "draw_premium_pp",
+    "label": "Draw premium vs slot",
+    "expression": "SUM(checked_in)/NULLIF(SUM(capacity),0)-SUM(capacity*slot_fill)/NULLIF(SUM(capacity),0)",
+    "sources": [
+      "Sessions.CheckedIn",
+      "Sessions.Capacity",
+      "Sessions.Location",
+      "Sessions.Class",
+      "Sessions.Day",
+      "Sessions.Time"
+    ],
+    "format": "percent",
+    "domain": "people",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "booking_attended",
+    "label": "Attended bookings",
+    "expression": "COUNT(*) FILTER (WHERE attended)",
+    "sources": [
+      "Bookings.Attended"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "booking_cancelled",
+    "label": "Cancelled bookings",
+    "expression": "COUNT(*) FILTER (WHERE cancelled)",
+    "sources": [
+      "Bookings.Cancelled"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "booking_no_shows",
+    "label": "No-show bookings",
+    "expression": "COUNT(*) FILTER (WHERE no_show)",
+    "sources": [
+      "Bookings.No Show"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "booking_late_cancelled",
+    "label": "Late-cancelled bookings",
+    "expression": "COUNT(*) FILTER (WHERE late_cancelled>0)",
+    "sources": [
+      "Bookings.Late Cancelled"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "membership_revenue",
+    "label": "Membership purchase value",
+    "expression": "SUM(revenue)",
+    "sources": [
+      "Lapsed.Amount Paid"
+    ],
+    "format": "currency",
+    "domain": "risk",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "checkin_revenue",
+    "label": "Attributed check-in revenue",
+    "expression": "SUM(revenue)",
+    "sources": [
+      "Checkins.Paid"
+    ],
+    "format": "currency",
+    "domain": "revenue",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "payroll_revenue_per_session",
+    "label": "Attributed revenue / session",
+    "expression": "SUM(revenue)/NULLIF(SUM(sessions),0)",
+    "sources": [
+      "Payroll.Total Paid",
+      "Payroll.Total Sessions"
+    ],
+    "format": "currency",
+    "domain": "people",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "nonempty_reliability",
+    "label": "Non-empty reliability",
+    "expression": "1-SUM(empty)/NULLIF(SUM(sessions),0)",
+    "sources": [
+      "Sessions.CheckedIn",
+      "Sessions.SessionID"
+    ],
+    "format": "percent",
+    "domain": "attendance",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "active_slots",
+    "label": "Active schedule slots",
+    "expression": "COUNT(DISTINCT CONCAT_WS('|',location,format,day,time))",
+    "sources": [
+      "Sessions.Location",
+      "Sessions.Class",
+      "Sessions.Day",
+      "Sessions.Time"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "gap_to_break_even",
+    "label": "Attendees above break-even",
+    "expression": "SUM(checked_in)/NULLIF(SUM(sessions),0)-{rate}/NULLIF(SUM(revenue)/NULLIF(SUM(checked_in),0),0)",
+    "sources": [
+      "Sessions.Revenue",
+      "Sessions.CheckedIn",
+      "Sessions.SessionID",
+      "Settings.rate_per_session"
+    ],
+    "format": "decimal",
+    "domain": "people",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  }
+]
