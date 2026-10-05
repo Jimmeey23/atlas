@@ -17,16 +17,17 @@ export function Sparkline({
   values: (number | null)[];
   color?: string;
 }) {
+  const gradientId = `spark-${useId().replace(/:/g, "")}`;
   const points = values
     .map((v, i) => ({ v, i }))
     .filter((p) => p.v != null && Number.isFinite(p.v));
   if (points.length < 2)
     return (
-      <svg className="metric-spark" aria-hidden="true">
+      <svg className="metric-spark metric-spark-empty" viewBox="0 0 180 40" preserveAspectRatio="none" aria-hidden="true">
         <line
-          x1="0"
+          x1="4"
           y1="20"
-          x2="100%"
+          x2="176"
           y2="20"
           stroke="var(--hairline)"
           strokeDasharray="3 3"
@@ -36,32 +37,36 @@ export function Sparkline({
   const nums = points.map((p) => p.v!);
   const min = Math.min(...nums),
     max = Math.max(...nums),
-    width = 180;
-  const p = points
-    .map(
-      ({ v, i }) =>
-        `${(i / (values.length - 1)) * width},${24 - ((v! - min) / (max - min || 1)) * 20}`,
-    )
-    .join(" ");
+    width = 172;
+  const x = (i: number) => 4 + (i / (values.length - 1)) * width;
+  const y = (v: number) => max === min ? 20 : 32 - ((v - min) / (max - min)) * 24;
+  // Keep missing months as gaps rather than implying continuous evidence.
+  const segments: typeof points[] = [];
+  points.forEach((point, index) => {
+    if (!index || point.i !== points[index - 1].i + 1) segments.push([]);
+    segments.at(-1)!.push(point);
+  });
+  const last = points.at(-1)!;
   return (
     <svg
       className="metric-spark"
-      viewBox="0 0 180 28"
+      viewBox="0 0 180 40"
       preserveAspectRatio="none"
       aria-hidden="true"
     >
-      <polyline
-        points={p}
-        fill="none"
-        stroke={color}
-        strokeWidth="1.3"
-        strokeDasharray="1000"
-        style={{ animation: "draw var(--m-data) var(--ease)" }}
-      />
+      <defs><linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity=".24" /><stop offset="100%" stopColor={color} stopOpacity="0" /></linearGradient></defs>
+      {segments.map((segment) => {
+        const coordinates = segment.map(({ v, i }) => `${x(i)},${y(v!)}`).join(" ");
+        return <g key={segment[0].i}>
+          {segment.length > 1 && <polygon className="metric-spark-area" points={`${x(segment[0].i)},40 ${coordinates} ${x(segment.at(-1)!.i)},40`} fill={`url(#${gradientId})`} />}
+          <polyline className="metric-spark-line" points={coordinates} fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" pathLength="1" />
+        </g>;
+      })}
       <circle
-        cx={(points.at(-1)!.i / (values.length - 1)) * width}
-        cy={24 - ((points.at(-1)!.v! - min) / (max - min || 1)) * 20}
-        r="2"
+        className="metric-spark-dot"
+        cx={x(last.i)}
+        cy={y(last.v!)}
+        r="2.5"
         fill={color}
       />
     </svg>
@@ -153,6 +158,7 @@ export function MetricCard({
           {warning ? <TriangleAlert size={12} /> : <Info size={14} />}
         </button>
       </div>
+      <div className="metric-reading">
       <button
         className="metric-value number"
         style={{
@@ -166,6 +172,11 @@ export function MetricCard({
       >
         {fmt(id, value)}
       </button>
+      <Sparkline
+        color={`var(--${m.domain})`}
+        values={trend.map((t) => (t[id] == null ? null : Number(t[id])))}
+      />
+      </div>
       <div
         className={`metric-delta ${!canCompare || unchanged ? "muted" : positive ? "positive" : "negative"}`}
       >
@@ -173,10 +184,6 @@ export function MetricCard({
         {canCompare ? delta(id, value, previous) : isSnapshot ? "Current snapshot" : "No comparison"}
         {n < m.minSample && <span className="small">n = {n}</span>}
       </div>
-      <Sparkline
-        color={`var(--${m.domain})`}
-        values={trend.map((t) => (t[id] == null ? null : Number(t[id])))}
-      />
       <div className="metric-footer">
         <span>
           {canCompare

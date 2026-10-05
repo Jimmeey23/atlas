@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Activity, ChevronLeft, X, ArrowUpRight, Pencil, Trash2 } from "lucide-react";
-import { useStore } from "../state/store";
+import { Sparkles, X, ArrowUpRight, Pencil, Trash2 } from "lucide-react";
+import { useStore, tabs } from "../state/store";
 import type { Insight } from "../insights/rules";
 import { InsightEditor, useDocuments } from "./IntelligenceWorkspace";
 import { fmt } from "../semantics/formats";
@@ -30,7 +30,7 @@ export function SignalRail({
           onClick={() => s.set({ signalOpen: true })}
           aria-label={`Open ${relevant.length} insights`}
         >
-          <Activity size={14} />
+          <Sparkles size={15} />
           <span>Insights</span>
           <span>{relevant.length}</span>
           <span className="dot warn" />
@@ -40,32 +40,32 @@ export function SignalRail({
       ) : (
         <>
           <div className="signal-header">
-            <h2 className="icon">
-              <Activity size={15} />
+            <div><h2 className="icon">
+              <Sparkles size={16} />
               Insights <span className="pill">{relevant.length}</span>
-            </h2>
+            </h2><p className="signal-scope">{tabs[s.tab]}</p></div>
             <button
               className="icon-button"
               aria-label="Collapse insights"
               onClick={() => s.set({ signalOpen: false })}
             >
-              <ChevronLeft size={14} />
+              <X size={16} />
             </button>
           </div>
           <div className="signal-body">
+            <p className="signal-intro">
+              Prioritised by rupee exposure. Explore the evidence behind each signal.
+            </p>
             <InsightEditor />
             {saveError && <p role="alert">{saveError}</p>}
-            <p className="small" style={{ marginBottom: 18 }}>
-              Prioritised by estimated rupee exposure. Decisions backed by the
-              contributing rows.
-            </p>
+            <h3 className="signal-section-label">Scope signals</h3>
             {relevant.map((i) => (
               <article
                 className={`insight ${i.severity}`}
                 key={i.rule + i.entity}
               >
                 <div className="insight-meta">
-                  <span>
+                  <span className="insight-severity">
                     {i.severity[0].toUpperCase() + i.severity.slice(1)}
                   </span>
                   <button
@@ -77,7 +77,7 @@ export function SignalRail({
                 </div>
                 <h3>{i.title}</h3>
                 <p>{i.template}</p>
-                <div className="insight-meta" style={{ marginTop: 9 }}>
+                <div className="insight-meta insight-impact">
                   <span>{fmt("revenue", i.impactINR)} exposure / value</span>
                   <span>n = {i.n}</span>
                 </div>

@@ -108,13 +108,13 @@ export function DataInsightAction({
     <>
       <button
         ref={anchor}
-        className={compact ? "ai-insight-btn" : "ai-insight-btn with-label"}
+        className={`ai-insight-btn ai-summary-btn ${compact ? "" : "with-label"} ${open ? "is-open" : ""} ${busy ? "is-thinking" : ""}`}
         aria-label={`Generate insights for ${subject}`}
         aria-expanded={open}
         title={`Generate an AI summary for ${subject}`}
         onClick={() => void run()}
       >
-        <WandSparkles size={compact ? 13 : 14} strokeWidth={1.9} />
+        <span className="ai-summary-mark" aria-hidden="true"><WandSparkles size={16} strokeWidth={1.8} /><span className="ai-summary-twinkle" /></span>
         {!compact && buttonLabel}
       </button>
       {open &&

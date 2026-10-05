@@ -32,12 +32,14 @@
 .floor-logo { font-size: 29px; gap: 12px; }
 .brand-copy { font-size: 12px; letter-spacing: .1px; }
 .brand-copy span { font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase; margin-top: 3px; }
-.logo-mark { width: 24px; gap: 5px; transform: rotate(-12deg); }
-.logo-mark i { width: 24px; height: 4px; border-radius: 3px; transform-origin: center; background: linear-gradient(90deg, var(--attendance), var(--people), var(--attendance)); background-size: 220% 100%; animation: atlas-logo-breathe 4.2s cubic-bezier(.45,0,.15,1) infinite, atlas-logo-sheen 6s linear infinite; }
-.logo-mark i:nth-child(2) { width: 17px; animation-delay: .18s, .3s; }
-.logo-mark i:nth-child(3) { width: 10px; animation-delay: .36s, .6s; }
-@keyframes atlas-logo-breathe { 0%, 62%, 100% { transform: scaleX(1); opacity: 1; } 26% { transform: scaleX(.72); opacity: .85; } 40% { transform: scaleX(1.06); } }
-@keyframes atlas-logo-sheen { from { background-position: 0% 0; } to { background-position: 220% 0; } }
+.logo-mark { width: 24px; gap: 5px; transform: rotate(-12deg); transform-origin: center bottom; animation: atlas-logo-hop 5s cubic-bezier(.4,0,.2,1) infinite; }
+.logo-mark i { width: 24px; height: 4px; border-radius: 3px; transform-origin: left center; background: linear-gradient(90deg, var(--attendance), var(--people)); animation: atlas-logo-wave 5s ease-in-out infinite; }
+.logo-mark i:nth-child(2) { width: 17px; animation-delay: .1s; }
+.logo-mark i:nth-child(3) { width: 10px; animation-delay: .2s; }
+.floor-logo:hover .logo-mark, .floor-logo:focus-visible .logo-mark { animation: atlas-logo-hello 650ms var(--ease); }
+@keyframes atlas-logo-hop { 0%, 12%, 32%, 100% { transform: rotate(-12deg) translateY(0); } 17% { transform: rotate(-17deg) translateY(1px) scaleY(.9); } 23% { transform: rotate(-6deg) translateY(-4px); } 28% { transform: rotate(-14deg) translateY(0); } }
+@keyframes atlas-logo-wave { 0%, 15%, 34%, 100% { transform: translateX(0); } 23% { transform: translateX(2px); } 28% { transform: translateX(-1px); } }
+@keyframes atlas-logo-hello { 0%, 100% { transform: rotate(-12deg); } 25% { transform: rotate(0deg) translateY(-3px); } 50% { transform: rotate(-22deg) translateY(-2px); } 75% { transform: rotate(-5deg) translateY(-1px); } }
 .tabbar { padding: 8px 28px; gap: 5px; height: 56px; background: var(--surface-1); }
 .tab { height: 38px; padding: 0 12px; border-radius: 8px; font-size: 12px; }
 .tab:hover { background: var(--surface-2); }
@@ -106,15 +108,24 @@ main h1 { font-size: clamp(28px, 2.5vw, 40px); letter-spacing: -1.4px; font-weig
 .quick-periods button, .quick-studios button { white-space: nowrap; flex-shrink: 0; }
 .quick-filter-note { display: none; }
 /* Quiet metric cards with a clear numeric hierarchy. */
-.metric-card { padding: 18px 18px 12px; box-shadow: none; border-color: var(--hairline); background: var(--surface-1); border-radius: 10px; }
-.metric-card::before { display: none; }
-.metric-card:hover { transform: none; box-shadow: none; border-color: var(--hairline-strong); }
+.metric-card { padding: 10px 12px 8px; box-shadow: none; border-color: var(--hairline); background: var(--surface-1); border-radius: 10px; animation: metric-card-enter 320ms var(--ease) both; transition: transform 200ms var(--ease), border-color 200ms, box-shadow 200ms; }
+.metric-card::before { display: block; left: 12px; right: 12px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--card-accent) 55%, transparent), transparent); }
+.metric-card:hover, .metric-card:focus-within { transform: translateY(-2px); box-shadow: 0 6px 16px color-mix(in srgb, var(--card-accent) 8%, transparent); border-color: color-mix(in srgb, var(--card-accent) 45%, var(--hairline)); }
+.metric-card:nth-child(2) { animation-delay: 25ms; }.metric-card:nth-child(3) { animation-delay: 50ms; }.metric-card:nth-child(4) { animation-delay: 75ms; }.metric-card:nth-child(n+5) { animation-delay: 100ms; }
 .metric-label { color: var(--text-2); font-size: 11px; font-weight: 600; }
 .metric-label > button { min-width: 24px; min-height: 24px; align-items: center; justify-content: center; border-radius: 6px; }
-.metric-value { font-size: 30px; letter-spacing: -1.1px; font-weight: 650; margin-top: 7px; }
-.metric-delta { margin-top: 7px; gap: 4px; font-size: 11px; }
-.metric-spark { height: 22px; margin-top: 10px; opacity: .8; }
-.metric-footer { font-size: 10px; border-top: 1px solid var(--hairline); padding-top: 9px; color: var(--text-3); }
+.metric-reading { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; margin-top: 2px; }
+.metric-reading .metric-value { font-size: clamp(22px, 1.9vw, 28px); letter-spacing: -.8px; font-weight: 650; margin-top: 0; min-height: 36px; display: flex !important; align-items: center; flex: 0 0 auto; }
+.metric-card .metric-delta { margin-top: 2px; gap: 4px; font-size: 11px; min-height: 17px; flex-wrap: wrap; }
+.metric-card .metric-reading .metric-spark { width: 36%; max-width: 100px; min-width: 28px; height: 36px; margin: 0; opacity: .9; flex: 0 1 100px; overflow: visible; }
+.metric-spark-line { stroke-dasharray: 1; stroke-dashoffset: 0; animation: metric-line-draw 650ms var(--ease) both; }
+.metric-spark-area { animation: metric-area-reveal 500ms ease-out both; }
+.metric-spark-dot { stroke: var(--surface-1); stroke-width: 1; }
+.metric-footer { font-size: 10px; border-top: 1px solid var(--hairline); padding-top: 5px; margin-top: 5px; gap: 6px; color: var(--text-3); }
+@keyframes metric-card-enter { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes metric-line-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes metric-area-reveal { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .metric-card, .metric-spark-line, .metric-spark-area { animation: none; transition: none; }.metric-card:hover, .metric-card:focus-within { transform: none; } }
 .metric-tooltip-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
 .metric-tooltip-head strong { display: block; font-size: 17px; letter-spacing: -.4px; }
 .metric-eyebrow { display: block; color: var(--text-3); font-size: 10px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; margin-bottom: 5px; }
@@ -127,7 +138,7 @@ main h1 { font-size: clamp(28px, 2.5vw, 40px); letter-spacing: -1.4px; font-weig
 .metric-history { padding: 12px 0; border-top: 1px solid var(--hairline); }.metric-history > div { display: flex; justify-content: space-between; font-size: 11px; }.metric-history b { display: block; margin-top: 3px; }
 .metric-caveat { background: var(--surface-2); border-left: 2px solid var(--card-accent, var(--attendance)); border-radius: 0 6px 6px 0; padding: 10px; font-size: 11px; line-height: 1.6; margin-bottom: 12px; }
 .metric-method { border-top: 1px solid var(--hairline); padding: 10px 0; font-size: 11px; }.metric-method summary { color: var(--accent); cursor: pointer; }.metric-method code { margin: 8px 0; font-size: 10px; }.metric-method ul { padding-left: 16px; }
-@media (max-width: 700px) { .quick-filters { flex-wrap: nowrap; max-height: none; }.metric-value { font-size: 26px; }.metric-card { padding: 14px 12px 10px; } }
+@media (max-width: 700px) { .quick-filters { flex-wrap: nowrap; max-height: none; }.metric-value { font-size: 26px; }.metric-card { padding: 9px 10px 7px; }.metric-reading { gap: 6px; } }
 
 .metric-label > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 /* Studio intelligence: a focused, source-backed conversation surface. */
@@ -203,3 +214,48 @@ main h1 { font-size: clamp(28px, 2.5vw, 40px); letter-spacing: -1.4px; font-weig
 .atlas-floating-chat .agent-settings { flex-shrink:0; max-height:30vh; overflow:auto; }
 .atlas-floating-chat .chat-error { flex-shrink:0; max-height:80px; overflow:auto; }
 .atlas-floating-chat aside details[open] { max-height:20vh; overflow:auto; }
+
+/* Compact insight rail and distinct AI summary controls. */
+.signal-rail { background: var(--surface-1); }
+.signal-toggle { gap: 10px; padding: 18px 10px; color: var(--text-2); }
+.signal-toggle > svg { color: var(--people); }
+.signal-rail.open { width: 320px; box-shadow: -6px 0 20px color-mix(in srgb, var(--text-1) 4%, transparent); animation: atlas-rail-in 220ms var(--ease); }
+.signal-header { position: sticky; top: 0; z-index: 2; padding: 12px; background: var(--surface-1); }
+.signal-header h2 { margin: 0; font-size: 14px; gap: 7px; letter-spacing: -.3px; }
+.signal-header h2 > svg { color: var(--people); }
+.signal-header .pill { padding: 2px 6px; font-size: 10px; background: var(--surface-2); }
+.signal-scope { margin: 4px 0 0; font-size: 11px; color: var(--text-3); }
+.signal-body { padding: 12px; }
+.signal-intro { margin: 0 0 12px; color: var(--text-2); font-size: 11px; line-height: 1.5; }
+.signal-section-label, .signal-body .insight-editor > h3 { margin: 0 0 9px; color: var(--text-3); font-size: 10px; font-weight: 650; letter-spacing: .7px; text-transform: uppercase; }
+.signal-body .insight-editor { margin: 0 0 12px; padding: 0 0 12px; }
+.signal-body .insight { --signal-color: var(--warn); padding: 10px; margin-bottom: 8px; border-radius: 8px; border-left-width: 2px; background: var(--surface-1); box-shadow: none; }
+.signal-body .insight.critical { --signal-color: var(--neg); }.signal-body .insight.opportunity { --signal-color: var(--pos); }.signal-body .insight.context { --signal-color: var(--info); }
+.signal-body .insight-meta { align-items: center; margin-bottom: 6px; gap: 8px; }
+.insight-severity { color: var(--signal-color); background: color-mix(in srgb, var(--signal-color) 8%, transparent); border-radius: 4px; padding: 3px 6px; font-size: 10px; font-weight: 600; }
+.signal-body .insight-meta > button { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 5px; }
+.signal-body .insight-meta > button:hover { background: var(--surface-2); color: var(--text-1); }
+.signal-body .insight h3 { margin: 0 0 5px; font-size: 12px; line-height: 1.4; }
+.signal-body .insight p { margin: 0; font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+.signal-body .insight-impact { padding-top: 8px; margin-top: 8px; border-top: 1px solid var(--hairline); font-size: 10px; }
+.signal-body .insight-footer { gap: 6px; margin-top: 6px; }
+.signal-body .insight-action { margin-top: 0; font-size: 10px; gap: 3px; }
+.signal-body .insight-icon-actions { opacity: 1; gap: 2px; }
+.signal-body .insight-actions-row { margin: 8px 0 0; gap: 4px; }
+.signal-body .insight-composer-bar { display: grid; grid-template-columns: auto 1fr; gap: 6px; }
+.signal-body .insight-composer-bar .button { padding: 6px 8px; min-width: 0; font-size: 10px; gap: 4px; justify-content: center; }
+.ai-summary-btn { width: 30px; height: 30px; border-radius: 9px; color: var(--people); background: color-mix(in srgb, var(--people) 6%, transparent); border-color: color-mix(in srgb, var(--people) 15%, transparent); }
+.ai-summary-btn:hover, .ai-summary-btn.is-open { color: var(--people); background: color-mix(in srgb, var(--people) 12%, transparent); border-color: color-mix(in srgb, var(--people) 35%, transparent); }
+.ai-summary-mark { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; }
+.ai-summary-twinkle { position: absolute; right: -2px; bottom: -1px; width: 4px; height: 4px; background: currentColor; border-radius: 1px; opacity: 0; transform: rotate(45deg) scale(.4); }
+.ai-summary-btn:hover .ai-summary-mark, .ai-summary-btn:focus-visible .ai-summary-mark { animation: atlas-wand-wave 450ms var(--ease); }
+.ai-summary-btn:hover .ai-summary-twinkle, .ai-summary-btn:focus-visible .ai-summary-twinkle { animation: atlas-twinkle 550ms ease both; }
+.ai-summary-btn.is-thinking .ai-summary-mark { animation: atlas-wand-think 1.4s ease-in-out infinite; }
+.ai-summary-btn:focus-visible { outline: 2px solid var(--people); outline-offset: 3px; }
+@keyframes atlas-rail-in { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes atlas-wand-wave { 0%, 100% { transform: rotate(0); } 35% { transform: rotate(-16deg) translateY(-1px); } 70% { transform: rotate(10deg); } }
+@keyframes atlas-twinkle { 0%, 100% { opacity: 0; transform: rotate(45deg) scale(.4); } 45% { opacity: .9; transform: rotate(90deg) scale(1); } }
+@keyframes atlas-wand-think { 50% { transform: rotate(-10deg) scale(.9); opacity: .65; } }
+@media (max-width: 1100px) { .signal-rail.open { width: 300px; } }
+@media (max-width: 950px) { .signal-rail.open { width: min(320px, calc(100vw - 24px)); } }
+@media (prefers-reduced-motion: reduce) { .logo-mark, .logo-mark i, .floor-logo:hover .logo-mark, .floor-logo:focus-visible .logo-mark, .signal-rail.open, .ai-summary-btn .ai-summary-mark, .ai-summary-btn .ai-summary-twinkle { animation: none !important; }.ai-summary-btn:hover { transform: none; } }

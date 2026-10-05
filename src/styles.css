@@ -196,30 +196,49 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: 22px;
   text-align: center;
   pointer-events: none;
   background: color-mix(in srgb, var(--canvas) 55%, transparent);
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
 }
-.loader-shell > div {
-  background: var(--surface-1);
-  border: 1px solid var(--hairline);
-  border-radius: 12px;
-  box-shadow: var(--elev-2);
-  padding: 12px 20px;
+.loader-copy {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  width: min(440px, calc(100% - 40px));
+  min-height: 78px;
 }
 .loader-shell strong {
   display: block;
-  font-size: 12px;
-  letter-spacing: -0.2px;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--loader-accent, var(--accent));
 }
 .loader-shell p {
-  margin: 4px 0 0;
-  font-size: 11px;
-  color: var(--text-3);
+  margin: 9px 0 0;
+  font-size: clamp(16px, 1.5vw, 20px);
+  font-weight: 550;
+  line-height: 1.5;
+  letter-spacing: -.35px;
+  color: var(--text-1);
+  text-wrap: balance;
 }
+.loader-graphic { position: relative; width: 88px; height: 88px; flex: none; }
+.loader-orbit { display: block; width: 100%; height: 100%; overflow: visible; animation: atlas-orbit 2.4s linear infinite; }
+.loader-orbit-track { fill: none; stroke: var(--loader-accent, var(--accent)); stroke-opacity: .1; stroke-width: 1; }
+.loader-orbit-arc { fill: none; stroke: var(--loader-accent, var(--accent)); stroke-width: 1.5; stroke-linecap: round; stroke-dasharray: 52 187; }
+.loader-orbit-dot { fill: var(--loader-accent, var(--accent)); }
+.loader-mark { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 6px; padding-left: 25px; transform: rotate(-12deg); }
+.loader-mark i { display: block; width: 38px; height: 5px; border-radius: 5px; background: var(--loader-accent, var(--accent)); transform-origin: left center; animation: atlas-mark-wave 1.8s cubic-bezier(.45, 0, .2, 1) infinite; }
+.loader-mark i:nth-child(2) { width: 27px; animation-delay: 140ms; opacity: .8; }
+.loader-mark i:nth-child(3) { width: 16px; animation-delay: 280ms; opacity: .6; }
+@keyframes atlas-orbit { to { transform: rotate(360deg); } }
+@keyframes atlas-mark-wave { 0%, 65%, 100% { transform: scaleX(1); } 30% { transform: scaleX(.65); } 48% { transform: scaleX(1.06); } }
+@media (prefers-reduced-motion: reduce) { .loader-orbit, .loader-mark i, .loader-line { animation: none !important; } }
 .loader-ring {
   position: relative;
   width: 44px;

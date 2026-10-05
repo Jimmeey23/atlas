@@ -314,27 +314,28 @@ export default function App() {
     return () => window.removeEventListener("keydown", handler);
   }, [s]);
   const loaderLines: Record<number, string[]> = {
-    0: ["Reading the pulse of your studios…", "Balancing revenue against rhythm…", "Polishing the big picture…"],
-    1: ["Counting every seat in the room…", "Measuring the magic per session…", "Warming up the barre…"],
-    2: ["Rearranging the weekly rhythm…", "Hunting for under-loved time slots…", "Lining up the schedule grid…"],
-    3: ["Scoring instructors on fair terms…", "Separating popularity from profit…"],
-    4: ["Following every rupee…", "Reconciling the till…", "Stacking the revenue mix…"],
-    5: ["Tracing first visits to lasting habits…", "Watching newcomers find their feet…"],
-    6: ["Listening for quiet exits…", "Checking the renewal horizon…"],
-    7: ["Turning bookings into attendance…", "Chasing down no-shows…"],
-    8: ["Speeding up first responses…", "Qualifying the pipeline…"],
-    9: ["Counting the regulars…", "Mapping member habits…"],
-    10: ["Balancing excellence and economics…", "Costing the empty room…"],
-    11: ["Auditing every source field…", "Checking the plumbing…"],
-    12: ["Recovering lost seats…", "Timing the late cancels…"],
-    13: ["Waking up the analyst…", "Sharpening the pencils…"],
+    0: ["Putting the big picture into focus…", "A little number crunch. A lot of studio insight…", "Connecting the dots across your studios…", "Your studio story is taking shape…"],
+    1: ["Warming up the barre and the numbers…", "Finding the sessions that steal the show…", "A little pulse, a little shake, a lot of insight…", "Giving every signature experience its spotlight…"],
+    2: ["Getting your studio rhythm in sync…", "Making room for the next full house…", "Finding the sweet spots in your schedule…", "Lining up the week, one session at a time…"],
+    3: ["Setting the stage for your instructors…", "Putting great teaching in the spotlight…", "Connecting instruction with community progress…", "The instructor picture is coming together…"],
+    4: ["Giving every rupee a roll call…", "Following the money, finding the story…", "Getting your revenue ducks in a row…", "Adding a little clarity to the cash flow…"],
+    5: ["Rolling out the welcome mat for newcomers…", "Tracing first hellos to first sessions…", "Finding where new studio journeys begin…", "Connecting curiosity with the Method…"],
+    6: ["Checking in on your studio regulars…", "Looking ahead to the next chapter…", "Connecting renewals with lasting routines…", "Keeping a finger on the community pulse…"],
+    7: ["Taking your bookings out for a spin…", "Connecting reserved spots with real arrivals…", "Finding the rhythm behind the reservations…", "Getting the booking story lined up…"],
+    8: ["Turning the pipeline lights on…", "Following every hello through the funnel…", "Connecting questions with next steps…", "Your prospect picture is coming into focus…"],
+    9: ["Taking a roll call of your studio family…", "Spotting the routines behind the check-ins…", "Finding who keeps coming back for more…", "Connecting visits with practice habits…"],
+    10: ["Giving the studio maths a little stretch…", "Bringing teaching and economics together…", "Finding the balance behind every session…", "Putting instructor costs into perspective…"],
+    11: ["Giving your data a studio-quality check…", "Checking the dots before we connect them…", "Looking for numbers that need a second look…", "Tidying the evidence behind the insights…"],
+    12: ["Following the seats that slipped away…", "Putting late changes on the timeline…", "Finding the patterns behind the cancellations…", "Checking where plans changed at the last minute…"],
+    13: ["Warming up your thinking partner…", "Getting the evidence ready for a good question…", "Setting the table for your next insight…", "A little curiosity goes a long way…"],
   };
   const [loaderTick, setLoaderTick] = useState(0);
   useEffect(() => {
+    setLoaderTick(0);
     if (!busy) return;
-    const timer = setInterval(() => setLoaderTick((t) => t + 1), 1800);
+    const timer = setInterval(() => setLoaderTick((t) => t + 1), 2800);
     return () => clearInterval(timer);
-  }, [busy]);
+  }, [busy, s.tab]);
   const loaderLine =
     (loaderLines[s.tab] || loaderLines[0])[
       loaderTick % (loaderLines[s.tab] || loaderLines[0]).length
@@ -593,9 +594,12 @@ export default function App() {
       <div className="workspace">
         {busy && <div className="loader-bar" />}
         {busy && ready && (
-          <div className="loader-shell" role="status" aria-live="polite">
-            <span className="loader-ring" aria-hidden="true" />
-            <div>
+          <div className="loader-shell" role="status" aria-live="polite" aria-atomic="true" style={{ "--loader-accent": `var(--${bp.domain})` } as React.CSSProperties}>
+            <div className="loader-graphic" aria-hidden="true">
+              <svg className="loader-orbit" viewBox="0 0 88 88"><circle className="loader-orbit-track" cx="44" cy="44" r="38" /><circle className="loader-orbit-arc" cx="44" cy="44" r="38" /><circle className="loader-orbit-dot" cx="44" cy="6" r="3" /></svg>
+              <span className="loader-mark"><i /><i /><i /></span>
+            </div>
+            <div className="loader-copy">
               <strong>{tabs[s.tab]}</strong>
               <p key={loaderLine} className="loader-line">
                 {loaderLine}
