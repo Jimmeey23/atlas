@@ -70,7 +70,7 @@ test("rate deltas use points, count and currency use relative percent", () => {
   assert.equal(delta("fill_rate", 0.5, 0.4), "+10.0pp");
   assert.equal(delta("revenue", 120, 100), "+20.0%");
   assert.equal(fmt("revenue", null), "—");
-  assert.equal(fmt("revenue", 194250), "₹1.94L");
+  assert.equal(fmt("revenue", 194250), "₹1.9L");
 });
 
 test("source snapshot stays attached to each normalised row", () => {

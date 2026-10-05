@@ -33,6 +33,8 @@ export const blueprints: Blueprint[] = [
     source: "sessions",
     domain: "attendance",
     kpis: [
+      "gross_revenue",
+      "net_revenue",
       "revenue",
       "attendance",
       "fill_rate",
@@ -221,7 +223,7 @@ export const blueprints: Blueprint[] = [
     ],
     groups: ["source", "location", "trainer", "time"],
     chart: "funnel",
-    chartTitle: "Where newcomers find their momentum",
+    chartTitle: "Newcomer outcomes · overlapping populations",
     secondary: [
       "Source quality",
       "Conversion speed",

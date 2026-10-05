@@ -1,6 +1,11 @@
 import { createPortal } from "react-dom";
-import { useEffect, useRef, useState } from "react";
-import { Info, TriangleAlert } from "lucide-react";
+import { useEffect, useRef, useState, useId } from "react";
+import { Info, TriangleAlert, X, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { comparisonDates } from "../data/periods";
+import { currentSnapshotMetrics, metricNotes } from "../semantics/evidence";
+import { health } from "../data/duckdb";
+import { sheets } from "../data/sheets.config";
+import { blueprints } from "../data/blueprints";
 import { metrics } from "../semantics/metrics";
 import { fmt, delta } from "../semantics/formats";
 import { useStore } from "../state/store";
@@ -71,6 +76,7 @@ export function MetricCard({
   onDrill,
   warning,
   compare = true,
+  evidence,
 }: {
   id: string;
   value: unknown;
@@ -80,9 +86,22 @@ export function MetricCard({
   onDrill?: () => void;
   warning?: string;
   compare?: boolean;
+  evidence?: Row;
 }) {
   const m = metrics[id];
-  const comparisonMode = useStore((s) => s.compare);
+  const scope = useStore();
+  const comparisonMode = scope.compare;
+  const isSnapshot = currentSnapshotMetrics.has(id);
+  const tooltipId = useId();
+  const priorDates = comparisonDates(scope.filters.from, scope.filters.to, comparisonMode);
+  const note = metricNotes[id];
+  const sourceKeys = [...new Set(m.sources.map((column) => column.split(/[. →]/)[0].toLowerCase()))];
+  const sourceInfo = sourceKeys.map((key) => ({ definition: sheets.find((sheet) => sheet.key === key), status: health[key] })).filter((item) => item.definition);
+  const trendValues = trend.map((row) => row[id] == null ? null : Number(row[id])).filter((v): v is number => v != null && Number.isFinite(v));
+  const canCompare = compare && comparisonMode !== "none" && !isSnapshot && value != null && previous != null;
+  const numerator = evidence?.[`${id}__numerator`];
+  const denominator = evidence?.[`${id}__denominator`];
+
   const [info, setInfo] = useState(false);
   const anchor = useRef<HTMLButtonElement>(null);
   const [position, setPosition] = useState({ left: 16, top: 70 });
@@ -92,10 +111,10 @@ export function MetricCard({
       const rect = anchor.current?.getBoundingClientRect();
       if (rect)
         setPosition({
-          left: Math.max(16, Math.min(rect.left, window.innerWidth - 376)),
+          left: Math.max(16, Math.min(rect.left, window.innerWidth - 406)),
           top: Math.max(
             16,
-            Math.min(rect.bottom + 8, window.innerHeight - 350),
+            Math.min(rect.bottom + 8, window.innerHeight - 570),
           ),
         });
     };
@@ -115,43 +134,23 @@ export function MetricCard({
       window.removeEventListener("keydown", key);
     };
   }, [info]);
-  const [display, setDisplay] = useState<number | null>(
-    value == null ? null : Number(value),
-  );
-  const frame = useRef(0);
-  useEffect(() => {
-    if (value == null) {
-      setDisplay(null);
-      return;
-    }
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setDisplay(Number(value));
-      return;
-    }
-    const begin = performance.now();
-    function tick(t: number) {
-      const progress = Math.min((t - begin) / 480, 1);
-      setDisplay(Number(value) * (1 - (1 - progress) ** 3));
-      if (progress < 1) frame.current = requestAnimationFrame(tick);
-    }
-    frame.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame.current);
-  }, [value]);
-  const positive = Number(value) >= Number(previous) === m.higherIsBetter;
+  const positive = (Number(value) >= Number(previous)) === m.higherIsBetter;
+  const unchanged = Number(value) === Number(previous);
   return (
     <article
       className="metric-card"
       style={{ "--card-accent": `var(--${m.domain})` } as React.CSSProperties}
     >
       <div className="metric-label">
-        <span>{m.label}</span>
+        <span title={m.label}>{m.label}</span>
         <button
           ref={anchor}
           aria-label={`Definition of ${m.label}`}
           aria-expanded={info}
-          onClick={() => setInfo(!info)}
+          aria-controls={info ? tooltipId : undefined}
+          onClick={() => setInfo(true)}
         >
-          {warning ? <TriangleAlert size={12} /> : <Info size={12} />}
+          {warning ? <TriangleAlert size={12} /> : <Info size={14} />}
         </button>
       </div>
       <button
@@ -165,12 +164,13 @@ export function MetricCard({
         onClick={onDrill}
         aria-label={`Drill into ${m.label}: ${fmt(id, value)}`}
       >
-        {fmt(id, display)}
+        {fmt(id, value)}
       </button>
       <div
-        className={`metric-delta ${previous == null ? "muted" : positive ? "positive" : "negative"}`}
+        className={`metric-delta ${!canCompare || unchanged ? "muted" : positive ? "positive" : "negative"}`}
       >
-        {compare ? delta(id, value, previous) : "Current period"}
+        {canCompare && !unchanged && (Number(value) >= Number(previous) ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />)}
+        {canCompare ? delta(id, value, previous) : isSnapshot ? "Current snapshot" : "No comparison"}
         {n < m.minSample && <span className="small">n = {n}</span>}
       </div>
       <Sparkline
@@ -179,18 +179,18 @@ export function MetricCard({
       />
       <div className="metric-footer">
         <span>
-          {compare
+          {canCompare
             ? comparisonMode === "year"
               ? "vs last year"
               : "vs prior period"
-            : "Source-backed"}
+            : isSnapshot ? "All dates · snapshot" : "Source-backed"}
         </span>
         <span>
           {m.aggregation === "weighted"
             ? "Weighted"
             : m.aggregation === "sum"
               ? "Total"
-              : "Per record"}
+              : m.aggregation === "median" ? "Median" : m.aggregation === "avg" ? "Average" : "Snapshot"}
         </span>
       </div>
       {info &&
@@ -202,26 +202,22 @@ export function MetricCard({
                 position: "fixed",
                 left: position.left,
                 top: position.top,
-                width: Math.min(360, window.innerWidth - 32),
+                width: Math.min(390, window.innerWidth - 32),
                 maxHeight: window.innerHeight - position.top - 16,
               }}
               onClick={(e) => e.stopPropagation()}
+              id={tooltipId}
               role="dialog"
               aria-label={m.label}
             >
-              <strong>{m.label}</strong>
-              <code>{m.description}</code>
-              {warning && <p className="warn">{warning}</p>}
-              <p className="small">Source columns</p>
-              <ul>
-                {m.sources.map((s) => (
-                  <li key={s}>{s}</li>
-                ))}
-              </ul>
-              <p className="small">
-                Minimum ranking sample: {m.minSample}. {m.aggregation}{" "}
-                aggregation.
-              </p>
+              <div className="metric-tooltip-head"><div><span className="metric-eyebrow">Metric intelligence</span><strong>{m.label}</strong></div><button className="icon-button" aria-label="Close metric details" onClick={() => setInfo(false)}><X size={16} /></button></div>
+              <p className="metric-explanation">{note?.definition || `${m.label} is calculated from the source fields below using ${m.aggregation} aggregation.`}</p>
+              <div className="metric-tooltip-values"><div><small>Selected scope</small><strong>{fmt(id, value, true)}</strong></div><div><small>{comparisonMode === "year" ? "Same period last year" : "Previous period"}</small><strong>{canCompare ? fmt(id, previous, true) : "Unavailable"}</strong></div></div>
+              {numerator != null && denominator != null && <div className="metric-calculation"><span>{note?.numerator}: <b>{id === "revenue_per_checkin" ? fmt("revenue", numerator, true) : Number(numerator).toLocaleString("en-IN", {maximumFractionDigits: 1})}</b></span><span>{note?.denominator}: <b>{Number(denominator).toLocaleString("en-IN", {maximumFractionDigits: 1})}</b></span></div>}
+              <dl className="metric-facts"><div><dt>Period</dt><dd>{isSnapshot ? "All dates · latest snapshot" : `${scope.filters.from || "All dates"} → ${scope.filters.to || "Present"}`}</dd></div>{canCompare && <div><dt>Comparison</dt><dd>{priorDates.from || "All dates"} → {priorDates.to || "Present"}</dd></div>}<div><dt>Studios</dt><dd>{scope.filters.location.join(", ") || "All studios"}</dd></div><div><dt>Evidence sample</dt><dd>{Number(n).toLocaleString("en-IN")}{n < m.minSample ? " · below ranking minimum" : ""}</dd></div></dl>
+              {trendValues.length > 1 && !isSnapshot && <div className="metric-history"><span className="metric-eyebrow">{trendValues.length} completed months · same non-date filters</span><div><span>Low <b>{fmt(id, Math.min(...trendValues))}</b></span><span>High <b>{fmt(id, Math.max(...trendValues))}</b></span><span>Latest <b>{fmt(id, trendValues.at(-1))}</b></span></div></div>}
+              {(warning || note?.caveat || blueprints[scope.tab].source === "payroll") && <p className="metric-caveat">{warning || note?.caveat || "Payroll is reported by month; partial-month date ranges cannot represent daily payroll."}</p>}
+              <details className="metric-method"><summary>Calculation & source evidence</summary><code>{m.description}</code>{sourceInfo.map(({definition, status}) => <p key={definition!.key}><a href={`https://docs.google.com/spreadsheets/d/${definition!.id}/edit`} target="_blank" rel="noreferrer">{definition!.title} ↗</a> · {status?.fetchedAt ? `Snapshot ${new Date(status.fetchedAt).toLocaleString("en-IN", {timeZone: "Asia/Kolkata"})}` : "Source not loaded"}</p>)}<ul>{m.sources.map((source) => <li key={source}>{source}</li>)}</ul><p>Ranking minimum: {m.minSample}. Rates use aggregate numerators and denominators.</p></details>
               <button className="button" onClick={() => setInfo(false)}>
                 Close definition
               </button>

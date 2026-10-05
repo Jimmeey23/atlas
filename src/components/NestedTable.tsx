@@ -24,12 +24,16 @@ import { metrics } from "../semantics/metrics";
 import { fmt } from "../semantics/formats";
 import { query, quote, type Row } from "../data/duckdb";
 import { blueprints } from "../data/blueprints";
-import { where, context, sessionFacts } from "../data/analytics";
+import { where, context, metricFacts } from "../data/analytics";
 import { metricSQL } from "../semantics/metrics";
 import { slotVerdict } from "../semantics/aggregations";
 import { exportCSV } from "./exports";
 import { useStore } from "../state/store";
 export interface TreeRow {
+  source?: string;
+  filters?: import("../state/store").Filters;
+  metrics?: string[];
+  predicate?: string;
   label: string;
   path: { field: string; value: string }[];
   values: Row;
@@ -134,10 +138,10 @@ export function NestedTable({
     const source = blueprints[store.tab].source;
     const w = where(store.filters, source);
     const facts =
-      source === "sessions" ? sessionFacts(store.filters) : `"${source}"${w}`;
+      metricFacts(store.filters, source);
     let active = true;
     query(
-      `SELECT ${metricSQL(columns, context())},COUNT(*) AS n FROM ${facts}${source === "sessions" || !w ? " WHERE " : " AND "}(${terms})`,
+      `SELECT ${metricSQL(columns, context())},COUNT(*) AS n FROM ${facts}${["sessions", "sales", "checkins"].includes(source) || !w ? " WHERE " : " AND "}(${terms})`,
     ).then((r) => {
       if (active) setSelectionTotal(r[0]);
     });
@@ -218,7 +222,7 @@ export function NestedTable({
                     ? `color-mix(in srgb,var(--accent) ${Math.min(25, Math.max(0, Number(v) * 25))}%,transparent)`
                     : undefined,
               }}
-              title={`${metrics[id].label}: ${fmt(id, v, true)}. n = ${row.original.values.n}. ${metrics[id].description}`}
+              title={`${metrics[id].label}: ${fmt(id, v, true)}. n = ${fmt("records", row.original.values.n)}. ${metrics[id].description}`}
               onClick={() => onDrill(row.original)}
             >
               {fmt(id, v, metrics[id].format === "currency")}

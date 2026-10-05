@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ChevronDown, Download, ExternalLink } from "lucide-react";
 import { query, type Row } from "../data/duckdb";
 import { blueprints } from "../data/blueprints";
-import { where, context, sessionFacts } from "../data/analytics";
+import { where, context, metricFacts } from "../data/analytics";
 import { metricSQL, metrics } from "../semantics/metrics";
 import { fmt } from "../semantics/formats";
 import { useStore } from "../state/store";
@@ -59,7 +59,7 @@ export function Secondary({
           )
         : w;
     query(
-      `SELECT CAST("${group}" AS VARCHAR) AS entity,${metricSQL(columns, context())},COUNT(*) AS n FROM ${bp.source === "sessions" ? sessionFacts(state.filters, []) : `"${bp.source}"${effective}`}${predicate ? (bp.source !== "sessions" && effective ? " AND " : " WHERE ") + predicate : ""} GROUP BY "${group}" ORDER BY n DESC LIMIT 100`,
+      `SELECT CAST("${group}" AS VARCHAR) AS entity,${metricSQL(columns, context())},COUNT(*) AS n FROM ${metricFacts(state.filters, bp.source, [], effective)}${predicate ? (!["sessions", "sales", "checkins"].includes(bp.source) && effective ? " AND " : " WHERE ") + predicate : ""} GROUP BY "${group}" ORDER BY n DESC LIMIT 100`,
     )
       .then((r) => {
         if (active) {

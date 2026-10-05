@@ -1,6 +1,6 @@
 import "dotenv/config";
 import express from "express";
-import { GoogleAuth } from "google-auth-library";
+import { authenticatedSheet } from "./sheets-auth.mjs";
 import { readFile, writeFile, mkdir, copyFile } from "node:fs/promises";
 import path from "node:path";
 import { createClient } from "@supabase/supabase-js";
@@ -54,11 +54,6 @@ async function archiveSnapshot(data) {
   await writeFile(temporary, JSON.stringify(data));
   await rename(temporary, target);
 }
-async function getJSON(url, headers = {}) {
-  const r = await fetch(url, { headers, signal: AbortSignal.timeout(120000) });
-  if (!r.ok) throw new Error(`Google Sheets HTTP ${r.status}`);
-  return r.json();
-}
 const metadata = new Map();
 async function load(source, force) {
   const start = performance.now();
@@ -74,42 +69,14 @@ async function load(source, force) {
       columns,
       mode,
       foundTitles = [];
-    if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-      const auth = new GoogleAuth({
-        scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
-      });
-      const client = await auth.getClient();
-      const headers = await client.getRequestHeaders();
-      let meta = metadata.get(source.id);
-      if (!meta || force) {
-        meta = await getJSON(
-          `https://sheets.googleapis.com/v4/spreadsheets/${source.id}?fields=sheets.properties(sheetId,title,gridProperties)`,
-          headers,
-        );
-        metadata.set(source.id, meta);
-      }
-      foundTitles = meta.sheets.map((s) => s.properties.title);
-      const title = foundTitles.find(
-        (t) => t.toLowerCase() === source.title.toLowerCase(),
-      );
-      if (!title)
-        throw new Error(
-          `Tab '${source.title}' missing. Found: ${foundTitles.join(", ")}`,
-        );
-      const data = await getJSON(
-        `https://sheets.googleapis.com/v4/spreadsheets/${source.id}/values/${encodeURIComponent("'" + title.replaceAll("'", "''") + "'!A:ZZ")}?valueRenderOption=FORMATTED_VALUE`,
-        headers,
-      );
-      columns = data.values?.[0] || [];
-      rows = (data.values || []).slice(1);
-      mode = "Sheets API v4";
-    } else if (process.env.ALLOW_PUBLIC_SHEETS !== "false") {
+    try {
+      if (process.env.ALLOW_PUBLIC_SHEETS === "false") throw new Error("Public reads disabled.");
       // GViz is an explicitly documented public-read alternative. Confirm title from workbook metadata first.
       let meta = metadata.get(source.id);
       if (!meta || force) {
         const response = await fetch(
           `https://docs.google.com/spreadsheets/d/${source.id}/edit`,
-          { signal: AbortSignal.timeout(120000) },
+          { signal: AbortSignal.timeout(30000) },
         );
         if (!response.ok)
           throw new Error(`Workbook metadata HTTP ${response.status}`);
@@ -133,7 +100,7 @@ async function load(source, force) {
         );
       const res = await fetch(
         `https://docs.google.com/spreadsheets/d/${source.id}/gviz/tq?tqx=out:json&headers=1&sheet=${encodeURIComponent(source.title)}&range=A:ZZ`,
-        { signal: AbortSignal.timeout(120000) },
+        { signal: AbortSignal.timeout(30000) },
       );
       if (!res.ok) throw new Error(`Public sheet HTTP ${res.status}`);
       const text = await res.text();
@@ -162,7 +129,11 @@ async function load(source, force) {
         r.c.map((c) => (c == null ? null : (c.f ?? c.v))),
       );
       mode = "Public Google Sheets (title + schema verified)";
-    } else throw new Error("Service-account credentials are not configured.");
+    } catch (publicError) {
+      const authenticated = await authenticatedSheet(source, publicError);
+      ({ rows, columns, mode, foundTitles } = authenticated);
+    }
+
     const missing = source.columns.filter((c) => !columns.includes(c));
     const result = {
       key: source.key,

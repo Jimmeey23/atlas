@@ -96,7 +96,7 @@
   {
     "id": "no_shows",
     "label": "No-shows",
-    "expression": "SUM(booked-checked_in-late_cancelled)",
+    "expression": "SUM(CASE WHEN booked IS NOT NULL AND checked_in IS NOT NULL AND late_cancelled IS NOT NULL THEN GREATEST(booked-checked_in-late_cancelled,0) END)",
     "sources": [
       "Sessions.Booked",
       "Sessions.CheckedIn",
@@ -111,7 +111,7 @@
   {
     "id": "no_show_rate",
     "label": "No-show rate",
-    "expression": "(SUM(booked-checked_in-late_cancelled)) / NULLIF((SUM(booked)),0)",
+    "expression": "SUM(CASE WHEN booked IS NOT NULL AND checked_in IS NOT NULL AND late_cancelled IS NOT NULL THEN GREATEST(booked-checked_in-late_cancelled,0) END)/NULLIF(SUM(booked),0)",
     "sources": [
       "Sessions.Booked",
       "Sessions.CheckedIn",
@@ -194,7 +194,7 @@
   {
     "id": "unsold_seats",
     "label": "Unsold seats",
-    "expression": "SUM(capacity)-SUM(checked_in)",
+    "expression": "SUM(CASE WHEN capacity IS NOT NULL AND checked_in IS NOT NULL THEN GREATEST(capacity-checked_in,0) END)",
     "sources": [
       "Sessions.Capacity",
       "Sessions.CheckedIn"
@@ -261,9 +261,10 @@
   {
     "id": "net_revenue",
     "label": "Net of VAT",
-    "expression": "SUM(net)",
+    "expression": "SUM(revenue-vat) FILTER (WHERE revenue IS NOT NULL AND vat IS NOT NULL)",
     "sources": [
-      "Sales.Price Excluding VAT In Currency"
+      "Sales.Payment Value",
+      "Sales.Payment VAT"
     ],
     "format": "currency",
     "domain": "revenue",
@@ -358,7 +359,7 @@
   {
     "id": "lost_revenue",
     "label": "Opportunity at current yield",
-    "expression": "(SUM(capacity)-SUM(checked_in))*SUM(revenue)/NULLIF(SUM(checked_in),0)",
+    "expression": "SUM(CASE WHEN capacity IS NOT NULL AND checked_in IS NOT NULL THEN GREATEST(capacity-checked_in,0) END)*SUM(revenue)/NULLIF(SUM(checked_in),0)",
     "sources": [
       "Sessions.Capacity",
       "Sessions.CheckedIn",
@@ -418,7 +419,8 @@
     "label": "Discount given",
     "expression": "SUM(discount)",
     "sources": [
-      "Sales.Discount Value In Currency"
+      "Sales.Sale Item Unit Discount Value",
+      "Sales.Sale Item Quantity"
     ],
     "format": "currency",
     "domain": "revenue",
@@ -431,7 +433,8 @@
     "label": "Discount rate",
     "expression": "(SUM(discount)) / NULLIF((SUM(revenue)+SUM(discount)),0)",
     "sources": [
-      "Sales.Discount Value In Currency",
+      "Sales.Sale Item Unit Discount Value",
+      "Sales.Sale Item Quantity",
       "Sales.Payment Value"
     ],
     "format": "percent",
@@ -443,9 +446,10 @@
   {
     "id": "deferred_revenue",
     "label": "Deferred balance",
-    "expression": "SUM(money_left)",
+    "expression": "SUM(CASE WHEN membership_balance_rank=1 THEN money_left END)",
     "sources": [
-      "Sales.Sec. Membership Money Left"
+      "Sales.Sec. Membership Money Left",
+      "Sales.Sec. Membership ID"
     ],
     "format": "currency",
     "domain": "revenue",
@@ -600,9 +604,11 @@
   {
     "id": "avg_conversion_span",
     "label": "Days to convert",
-    "expression": "AVG(conversion_days) FILTER (WHERE conversion='Converted')",
+    "expression": "AVG(conversion_days) FILTER (WHERE is_new AND conversion='Converted' AND conversion_days>=0)",
     "sources": [
-      "New.Conversion Span (Days)"
+      "New.Conversion Span (Days)",
+      "New.Is New",
+      "New.Conversion Status"
     ],
     "format": "days",
     "domain": "growth",
@@ -613,9 +619,11 @@
   {
     "id": "median_conversion_span",
     "label": "Median days to convert",
-    "expression": "MEDIAN(conversion_days) FILTER (WHERE conversion='Converted')",
+    "expression": "MEDIAN(conversion_days) FILTER (WHERE is_new AND conversion='Converted' AND conversion_days>=0)",
     "sources": [
-      "New.Conversion Span (Days)"
+      "New.Conversion Span (Days)",
+      "New.Is New",
+      "New.Conversion Status"
     ],
     "format": "days",
     "domain": "growth",
@@ -626,9 +634,10 @@
   {
     "id": "avg_ltv",
     "label": "Average lifetime value",
-    "expression": "AVG(ltv)",
+    "expression": "AVG(ltv) FILTER (WHERE is_new)",
     "sources": [
-      "New.Ltv"
+      "New.Ltv",
+      "New.Is New"
     ],
     "format": "currency",
     "domain": "growth",
@@ -639,9 +648,11 @@
   {
     "id": "avg_first_purchase",
     "label": "Average first purchase",
-    "expression": "AVG(first_purchase)",
+    "expression": "AVG(first_purchase) FILTER (WHERE is_new AND conversion='Converted' AND first_purchase>0)",
     "sources": [
-      "New.First Purchase Value"
+      "New.First Purchase Value",
+      "New.Is New",
+      "New.Conversion Status"
     ],
     "format": "currency",
     "domain": "growth",
@@ -652,10 +663,12 @@
   {
     "id": "ltv_to_first_purchase",
     "label": "LTV / first purchase",
-    "expression": "AVG(ltv)/NULLIF(AVG(first_purchase),0)",
+    "expression": "AVG(ltv) FILTER (WHERE is_new AND conversion='Converted' AND first_purchase>0)/NULLIF(AVG(first_purchase) FILTER (WHERE is_new AND conversion='Converted' AND first_purchase>0),0)",
     "sources": [
       "New.Ltv",
-      "New.First Purchase Value"
+      "New.First Purchase Value",
+      "New.Is New",
+      "New.Conversion Status"
     ],
     "format": "ratio",
     "domain": "growth",
@@ -666,9 +679,10 @@
   {
     "id": "retention_rate",
     "label": "Retention rate",
-    "expression": "(COUNT(*) FILTER (WHERE retention='Retained')) / NULLIF((COUNT(*)),0)",
+    "expression": "COUNT(*) FILTER (WHERE is_new AND retention='Retained')::DOUBLE/NULLIF(COUNT(*) FILTER (WHERE is_new),0)",
     "sources": [
-      "New.Retention Status"
+      "New.Retention Status",
+      "New.Is New"
     ],
     "format": "percent",
     "domain": "growth",
@@ -720,10 +734,11 @@
   {
     "id": "active_memberships",
     "label": "Active memberships",
-    "expression": "COUNT(*) FILTER (WHERE status='Active' AND (end_date IS NULL OR end_date >= '{today}'))",
+    "expression": "COUNT(*) FILTER (WHERE status='Active' AND start_date<='{today}' AND (end_date IS NULL OR end_date >= '{today}'))",
     "sources": [
       "Lapsed.Status",
-      "Lapsed.End Date"
+      "Lapsed.End Date",
+      "Lapsed.Start Date"
     ],
     "format": "integer",
     "domain": "risk",
@@ -775,10 +790,12 @@
   {
     "id": "dormant_actives",
     "label": "Dormant active memberships",
-    "expression": "COUNT(*) FILTER (WHERE status='Active' AND days_absent>21)",
+    "expression": "COUNT(*) FILTER (WHERE status='Active' AND start_date<='{today}' AND (end_date IS NULL OR end_date >= '{today}') AND days_absent>21)",
     "sources": [
       "Lapsed.Status",
-      "Lapsed.Days Since Last Visit"
+      "Lapsed.Days Since Last Visit",
+      "Lapsed.Start Date",
+      "Lapsed.End Date"
     ],
     "format": "integer",
     "domain": "risk",
@@ -1160,7 +1177,7 @@
   {
     "id": "revenue_per_checkin",
     "label": "Revenue / check-in",
-    "expression": "SUM(revenue)/NULLIF(COUNT(*) FILTER (WHERE attended),0)",
+    "expression": "SUM(revenue) FILTER (WHERE attended)/NULLIF(COUNT(*) FILTER (WHERE attended),0)",
     "sources": [
       "Checkins.Paid",
       "Checkins.Checked In"
@@ -1174,7 +1191,7 @@
   {
     "id": "teaching_hours",
     "label": "Recorded teaching hours",
-    "expression": "SUM(duration)/60",
+    "expression": "SUM(CASE WHEN teaching_session_rank=1 THEN duration END)/60",
     "sources": [
       "Checkins.Duration (Minutes)"
     ],
@@ -1187,7 +1204,7 @@
   {
     "id": "revenue_per_hour",
     "label": "Revenue / recorded hour",
-    "expression": "SUM(revenue)/NULLIF(SUM(duration)/60,0)",
+    "expression": "SUM(revenue) FILTER (WHERE attended AND duration>0)/NULLIF(SUM(CASE WHEN teaching_session_rank=1 THEN duration END)/60,0)",
     "sources": [
       "Checkins.Paid",
       "Checkins.Duration (Minutes)"
@@ -1478,7 +1495,7 @@
   {
     "id": "checkin_revenue",
     "label": "Attributed check-in revenue",
-    "expression": "SUM(revenue)",
+    "expression": "SUM(revenue) FILTER (WHERE attended)",
     "sources": [
       "Checkins.Paid"
     ],
@@ -1547,5 +1564,21 @@
     "aggregation": "weighted",
     "higherIsBetter": true,
     "minSample": 5
+  },
+  {
+    "id": "booking_pending",
+    "label": "Pending / unconfirmed",
+    "expression": "COUNT(*) FILTER (WHERE NOT COALESCE(attended,FALSE) AND NOT COALESCE(cancelled,FALSE) AND NOT COALESCE(no_show,FALSE) AND NOT COALESCE(late_cancelled>0,FALSE))",
+    "sources": [
+      "Bookings.Attended",
+      "Bookings.Cancelled",
+      "Bookings.No Show",
+      "Bookings.Late Cancelled"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": false,
+    "minSample": 1
   }
 ]

@@ -10,12 +10,13 @@ import {
 import type { TreeRow } from "./NestedTable";
 import { query, quote, type Row } from "../data/duckdb";
 import { blueprints } from "../data/blueprints";
-import { where, context, sessionFacts } from "../data/analytics";
+import { where, context, metricFacts } from "../data/analytics";
 import { useStore } from "../state/store";
 import { sheets } from "../data/sheets.config";
 import { metricSQL } from "../semantics/metrics";
 import { MetricCard } from "./MetricCard";
-import { fmt } from "../semantics/formats";
+import { currentSnapshotMetrics } from "../semantics/evidence";
+import { fmt, formatField } from "../semantics/formats";
 import { exportCSV } from "./exports";
 import { sourceRows } from "../data/raw";
 import { Sparkline } from "./MetricCard";
@@ -28,6 +29,12 @@ export function DrillPanel({
   tab: number;
   onClose: () => void;
 }) {
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [sourceData, setSourceData] = useState<Record<string, unknown>[]>([]);
+  const pageSize = 50;
+
   const [records, setRecords] = useState<Row[]>([]);
   const [trend, setTrend] = useState<Row[]>([]);
   const [record, setRecord] = useState<Row | null>(null);
@@ -38,7 +45,7 @@ export function DrillPanel({
     let current = true;
     setOriginal(null);
     if (record)
-      sourceRows(blueprints[tab].source, [record])
+      sourceRows(entry?.source || blueprints[tab].source, [record])
         .then((r) => {
           if (current) setOriginal(r[0]);
         })
@@ -48,11 +55,14 @@ export function DrillPanel({
     return () => {
       current = false;
     };
-  }, [record, tab]);
+  }, [record, tab, entry?.source]);
   const [err, setErr] = useState("");
   const s = useStore();
+  useEffect(() => { setPage(0); }, [entry, tab, s.filters, s.transient]);
   const panel = useRef<HTMLDivElement>(null);
-  const source = blueprints[tab].source;
+  const source = entry?.source || blueprints[tab].source;
+  const filters = entry?.filters || s.filters;
+  const metricIds = entry?.metrics || blueprints[tab].columns;
   const definition = sheets.find((s) => s.key === source)!;
   useEffect(() => {
     if (!entry) return;
@@ -87,43 +97,50 @@ export function DrillPanel({
     if (!entry) return;
     let current = true;
     setRecord(null);
-    const path = entry.path
+    setLoading(true);
+    setTotal(0);
+    setTrend([]);
+    setRecords([]);
+    setSourceData([]);
+    setErr("");
+    const groupingPath = entry.path
       .map((p) =>
         p.value === "Unspecified"
           ? `"${p.field}" IS NULL`
           : `"${p.field}"=${quote(p.value)}`,
       )
       .join(" AND ");
-    const w = where(s.filters, source);
+    const path = [groupingPath, entry.predicate].filter(Boolean).join(" AND ");
+    const w = where(filters, source);
     Promise.all([
       query(
-        `SELECT * FROM "${source}"${w}${path ? (w ? " AND " : " WHERE ") + path : ""} ORDER BY date DESC LIMIT 500`,
+        `SELECT * FROM "${source}"${w}${path ? (w ? " AND " : " WHERE ") + path : ""} ORDER BY date DESC, source_row DESC LIMIT ${pageSize} OFFSET ${page * pageSize}`,
       ),
       query(
         `SELECT month,${metricSQL(
-          [
-            ...new Set([...blueprints[tab].kpis, ...blueprints[tab].columns]),
-          ].filter(
-            (id) =>
-              !["new_clients", "conversion_rate", "active_base"].includes(id) ||
-              tab !== 0,
-          ),
+          entry.metrics || [...new Set([...blueprints[tab].kpis, ...blueprints[tab].columns])].filter((id) => !["new_clients", "conversion_rate", "active_base"].includes(id) || tab !== 0),
           context(),
-        )} FROM ${source === "sessions" ? sessionFacts(s.filters) : `"${source}"${w}`}${path ? (source !== "sessions" && w ? " AND " : " WHERE ") + path : ""} GROUP BY month ORDER BY month DESC LIMIT 14`,
+        )} FROM ${metricFacts(filters, source)}${path ? (!["sessions", "sales", "checkins"].includes(source) && w ? " AND " : " WHERE ") + path : ""} GROUP BY month ORDER BY month DESC LIMIT 14`,
       ),
+      query(`SELECT COUNT(*) AS n FROM "${source}"${w}${path ? (w ? " AND " : " WHERE ") + path : ""}`),
     ])
-      .then(([raw, t]) => {
+      .then(async ([raw, t, count]) => {
+        if (!current) return;
+        setRecords(raw);
+        setTotal(Number(count[0]?.n || 0));
+        setTrend([...t].reverse());
+        const originals = await sourceRows(source, raw);
         if (current) {
-          setRecords(raw);
-          setTrend([...t].reverse());
+          setSourceData(originals);
+          setLoading(false);
           setErr("");
         }
       })
-      .catch((e) => setErr(String(e)));
+      .catch((e) => { if (current) { setErr(String(e)); setLoading(false); } });
     return () => {
       current = false;
     };
-  }, [entry, tab, s.filters]);
+  }, [entry, tab, s.filters, s.transient, page]);
   return (
     <AnimatePresence>
       {entry && (
@@ -164,7 +181,7 @@ export function DrillPanel({
                 </div>
                 <h2>{entry.label}</h2>
                 <p className="small">
-                  {entry.values.n} contributing records / {definition.title}
+                  {total.toLocaleString("en-IN")} contributing records / {definition.title}
                 </p>
               </div>
               <button
@@ -176,29 +193,32 @@ export function DrillPanel({
               </button>
             </div>
             <div className="metric-strip">
-              {blueprints[tab].columns.slice(0, 4).map((id) => (
+              {metricIds.slice(0, 4).map((id) => (
                 <MetricCard
                   key={id}
                   id={id}
                   value={entry.values[id]}
                   trend={trend}
+                  evidence={entry.values}
                   n={Number(entry.values.n)}
                   compare={false}
                 />
               ))}
             </div>
+            {currentSnapshotMetrics.has(metricIds[0]) ? <p className="small">Current snapshot across all dates. Historical comparisons are unavailable.</p> : <>
             <h3>Performance over time</h3>
             <Sparkline
               values={trend.map((t) =>
-                t[blueprints[tab].columns[0]] == null
+                t[metricIds[0]] == null
                   ? null
-                  : Number(t[blueprints[tab].columns[0]]),
+                  : Number(t[metricIds[0]]),
               )}
             />
             <div className="chart-labels">
               <span>{trend[0]?.month}</span>
               <span>{trend.at(-1)?.month}</span>
             </div>
+            </>}
             <div className="register-head" style={{ marginTop: 24 }}>
               <h3>Contributing source rows</h3>
               <button
@@ -210,14 +230,30 @@ export function DrillPanel({
                 }}
               >
                 <Download size={12} />
-                CSV
+                Export page
               </button>
             </div>
             {err && <p className="warn">{err}</p>}
             <p className="small">
-              Showing up to 500 records. Source row references retain original
-              workbook positions.
+              {total ? `${page * pageSize + 1}–${Math.min(total, (page + 1) * pageSize)} of ${total.toLocaleString("en-IN")} records` : "No contributing records"}. All original columns are included; source row references retain workbook positions.
             </p>
+            {loading && <p role="status">Loading source rows…</p>}
+            {!loading && sourceData.length > 0 && (
+              <div className="source-detail-table" tabIndex={0} aria-label="Original item-level sheet rows">
+                <table>
+                  <thead><tr><th scope="col">Sheet row</th>{Object.keys(sourceData[0]).filter((k) => !/token/i.test(k)).map((k) => <th scope="col" key={k}>{k}</th>)}</tr></thead>
+                  <tbody>{sourceData.map((row, i) => <tr key={String(records[i]?.source_row)}>
+                    <td><a target="_blank" rel="noreferrer" href={`https://docs.google.com/spreadsheets/d/${definition.id}/edit#range=${encodeURIComponent("'" + definition.title + "'!A" + records[i]?.source_row)}`}>{String(records[i]?.source_row)} ↗</a></td>
+                    {Object.entries(row).filter(([k]) => !/token/i.test(k)).map(([k,v]) => <td key={k}>{formatField(k, v)}</td>)}
+                  </tr>)}</tbody>
+                </table>
+              </div>
+            )}
+            <div className="source-pagination">
+              <button className="button" disabled={page === 0 || loading} onClick={() => setPage(page - 1)}><ChevronLeft size={14} /> Previous page</button>
+              <span>Page {page + 1} of {Math.max(1, Math.ceil(total / pageSize))}</span>
+              <button className="button" disabled={(page + 1) * pageSize >= total || loading} onClick={() => setPage(page + 1)}>Next page <ChevronRight size={14} /></button>
+            </div>
             {records.map((r, i) => (
               <div className="drill-record" key={i}>
                 <button
@@ -229,6 +265,7 @@ export function DrillPanel({
                   </span>
                   <p>
                     {r.date} / {r.time} / {r.location}
+                    {String(r.product || r.package || r.category || "")}
                   </p>
                 </button>
                 <span className="number">{fmt("revenue", r.revenue)}</span>
@@ -249,7 +286,7 @@ export function DrillPanel({
                   .map(([k, v]) => (
                     <div className="detail-field" key={k}>
                       <small>{k}</small>
-                      <span>{v == null ? "—" : String(v)}</span>
+                      <span>{formatField(k, v)}</span>
                     </div>
                   ))}
               </div>

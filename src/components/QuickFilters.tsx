@@ -1,12 +1,9 @@
 import { periods, relativePeriod } from "../data/periods";
 import { useStore } from "../state/store";
-const studios = [
-  ["Kemps Corner", "Kwality House, Kemps Corner"],
-  ["Kenkere", "Kenkere House"],
-  ["Plash", "Plash Pilates"],
-];
-export function QuickFilters() {
+import { shortLocation } from "../data/normalise";
+export function QuickFilters({ locations }: { locations: string[] }) {
   const s = useStore();
+  const studios = [...new Set([...locations, ...s.filters.location])].sort((a, b) => a.localeCompare(b));
   return (
     <div className="quick-filters">
       <div className="quick-periods" aria-label="Quick date periods">
@@ -34,9 +31,11 @@ export function QuickFilters() {
         >
           All studios
         </button>
-        {studios.map(([label, value]) => (
+        {studios.map((value) => (
           <button
             key={value}
+            aria-pressed={s.filters.location.includes(value)}
+            title={value}
             className={s.filters.location.includes(value) ? "selected" : ""}
             onClick={() =>
               s.filter({
@@ -46,7 +45,7 @@ export function QuickFilters() {
               })
             }
           >
-            {label}
+            {shortLocation(value)}
           </button>
         ))}
       </div>

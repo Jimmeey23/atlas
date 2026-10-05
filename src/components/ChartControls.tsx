@@ -8,6 +8,7 @@ import {
   ZoomOut,
 } from "lucide-react";
 import * as echarts from "echarts";
+import { formatField } from "../semantics/formats";
 import { useStore } from "../state/store";
 import { exportCSV } from "./exports";
 export function ChartControls({
@@ -120,7 +121,7 @@ export function ChartControls({
               {rows.slice(0, 500).map((row, i) => (
                 <tr key={i}>
                   {Object.keys(rows[0] || {}).map((k) => (
-                    <td key={k}>{String(row[k] ?? "—")}</td>
+                    <td key={k}>{formatField(k, row[k])}</td>
                   ))}
                 </tr>
               ))}

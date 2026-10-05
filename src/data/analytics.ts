@@ -1,5 +1,7 @@
 import { query, quote, health, type Row } from "./duckdb";
 import { metricSQL, type QueryContext } from "../semantics/metrics";
+import { currentSnapshotMetrics } from "../semantics/evidence";
+import { comparisonDates } from "./periods";
 import { blueprints } from "./blueprints";
 import { useStore, type Filters } from "../state/store";
 export const today = () =>
@@ -9,9 +11,10 @@ export const today = () =>
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
-export const context = (): QueryContext => ({
+export const context = (filters = useStore.getState().filters): QueryContext => ({
   rate: useStore.getState().rate,
   today: today(),
+  newWhere: where(filters, "new"),
 });
 const allowed = [
   "location",
@@ -37,11 +40,11 @@ export function where(
     terms.push("late_cancelled>0");
   if (filters.from)
     terms.push(
-      `${source === "lapsed" ? "end_date" : "date"}>=${quote(filters.from)}`,
+      `${source === "payroll" ? "month" : source === "lapsed" ? "end_date" : "date"}>=${quote(source === "payroll" ? filters.from.slice(0, 7) : filters.from)}`,
     );
   if (filters.to)
     terms.push(
-      `${source === "lapsed" ? "end_date" : "date"}<=${quote(filters.to)}`,
+      `${source === "payroll" ? "month" : source === "lapsed" ? "end_date" : "date"}<=${quote(source === "payroll" ? filters.to.slice(0, 7) : filters.to)}`,
     );
   for (const field of [
     "location",
@@ -77,22 +80,7 @@ export function where(
   return terms.length ? " WHERE " + terms.join(" AND ") : "";
 }
 export function comparison(f: Filters, mode: string): Filters {
-  if (mode === "none" || !f.from || !f.to) return { ...f };
-  const start = new Date(f.from + "T00:00:00Z"),
-    end = new Date(f.to + "T00:00:00Z");
-  if (mode === "year") {
-    start.setUTCFullYear(start.getUTCFullYear() - 1);
-    end.setUTCFullYear(end.getUTCFullYear() - 1);
-  } else {
-    const length = end.getTime() - start.getTime() + 86400000;
-    start.setTime(start.getTime() - length);
-    end.setTime(end.getTime() - length);
-  }
-  return {
-    ...f,
-    from: start.toISOString().slice(0, 10),
-    to: end.toISOString().slice(0, 10),
-  };
+  return { ...f, ...comparisonDates(f.from, f.to, mode) };
 }
 export interface Analysis {
   total: Row;
@@ -112,7 +100,15 @@ export function sessionFacts(
   f: Filters,
   transient = useStore.getState().transient,
 ) {
-  return `(SELECT *, SUM(checked_in) OVER(PARTITION BY location,format,day,time)/NULLIF(SUM(capacity) OVER(PARTITION BY location,format,day,time),0) AS slot_fill FROM sessions${where(f, "sessions", transient)})`;
+  const baseline = where({ ...f, trainer: [] }, "sessions", transient.filter((item) => item.field !== "trainer"));
+  return `(SELECT * FROM (SELECT *, SUM(checked_in) OVER(PARTITION BY location,format,day,time)/NULLIF(SUM(capacity) OVER(PARTITION BY location,format,day,time),0) AS slot_fill FROM sessions${baseline})${where(f, "sessions", transient)})`;
+}
+export function metricFacts(f: Filters, source: string, transient = useStore.getState().transient, overrideWhere?: string) {
+  const scoped = overrideWhere ?? where(f, source, transient);
+  if (source === "sessions") return sessionFacts(f, transient);
+  if (source === "sales") return `(SELECT *, ROW_NUMBER() OVER(PARTITION BY COALESCE(membership_id, 'row:' || source_row::VARCHAR) ORDER BY date DESC, source_row DESC) AS membership_balance_rank FROM sales${scoped})`;
+  if (source === "checkins") return `(SELECT *, CASE WHEN attended AND duration>0 AND session_id IS NOT NULL THEN ROW_NUMBER() OVER(PARTITION BY session_id, attended, duration>0 ORDER BY source_row) END AS teaching_session_rank FROM checkins${scoped})`;
+  return `"${source}"${scoped}`;
 }
 export function analyse(
   tab: number,
@@ -148,17 +144,14 @@ async function performAnalysis(
   const ids = [...new Set([...b.kpis, ...b.columns, ...columns])].filter(
     (x) =>
       tab !== 0 ||
-      !["new_clients", "conversion_rate", "active_base"].includes(x),
+      !["new_clients", "conversion_rate", "active_base", "gross_revenue", "net_revenue"].includes(x),
   );
   const w = where(filters, b.source);
   const prev = comparison(filters, compare);
-  const aggregate = metricSQL(ids, context());
+  const aggregate = metricSQL(ids, context(filters));
   const parts = groups.filter((g) => allowed.includes(g));
   const groupExpressions = parts.map((g) => `COALESCE("${g}",'Unspecified')`);
-  const facts = (f: Filters) =>
-    b.source === "sessions"
-      ? sessionFacts(f)
-      : `"${b.source}"${where(f, b.source)}`;
+  const facts = (f: Filters) => metricFacts(f, b.source);
   const sample = b.source === "payroll" ? "SUM(sessions)" : "COUNT(*)";
   const end = new Date(today() + "T00:00:00Z");
   end.setUTCDate(0);
@@ -167,12 +160,12 @@ async function performAnalysis(
     query(
       `SELECT ${aggregate},${sample} AS n,COUNT(*) AS records_n FROM ${facts(filters)}`,
     ),
-    query(`SELECT ${aggregate}, ${sample} AS n FROM ${facts(prev)}`),
+    query(`SELECT ${metricSQL(ids, context(prev))}, ${sample} AS n FROM ${facts(prev)}`),
     query(
       `SELECT ${groupExpressions.map((g, i) => `${g} AS g${i}`).join(",")}, ${aggregate}, ${sample} AS n, GROUPING_ID(${groupExpressions.join(",")}) AS level FROM ${facts(filters)} GROUP BY ROLLUP(${groupExpressions.join(",")}) HAVING GROUPING_ID(${groupExpressions.join(",")}) < ${2 ** parts.length - 1} ORDER BY level DESC,g0 LIMIT 50000`,
     ),
     query(
-      `SELECT ${b.source === "lapsed" ? "SUBSTR(end_date,1,7)" : "month"} AS month, ${aggregate},${sample} AS n FROM ${facts(wide)} ${b.source === "sessions" || !where(wide, b.source) ? "WHERE" : "AND"} month IS NOT NULL GROUP BY ${b.source === "lapsed" ? "SUBSTR(end_date,1,7)" : "month"} ORDER BY month DESC LIMIT 14`,
+      `SELECT ${b.source === "lapsed" ? "SUBSTR(end_date,1,7)" : "month"} AS month, ${metricSQL(ids, context(wide))},${sample} AS n FROM ${facts(wide)} ${["sessions", "sales", "checkins"].includes(b.source) || !where(wide, b.source) ? "WHERE" : "AND"} month IS NOT NULL GROUP BY ${b.source === "lapsed" ? "SUBSTR(end_date,1,7)" : "month"} ORDER BY month DESC LIMIT 14`,
     ).then((r) => [...r].reverse()),
     query(
       `SELECT day,time,${aggregate},${sample} AS n FROM ${facts(filters)} GROUP BY day,time`,
@@ -183,7 +176,7 @@ async function performAnalysis(
     const growthIds = ["new_clients", "conversion_rate"];
     const [g, p, monthly, active] = await Promise.all([
       query(
-        `SELECT ${metricSQL(growthIds, context())} FROM new${where(filters, "new")}`,
+        `SELECT ${metricSQL(growthIds, context())},COUNT(*) AS growth_records FROM new${where(filters, "new")}`,
       ),
       query(
         `SELECT ${metricSQL(growthIds, context())} FROM new${where(prev, "new")}`,
@@ -192,14 +185,36 @@ async function performAnalysis(
         `SELECT month,${metricSQL(growthIds, context())} FROM new${where(wide, "new")} GROUP BY month`,
       ),
       query(
-        `SELECT ${metricSQL(["active_base"], context())} FROM new${where({ ...filters, from: "", to: "" }, "new")}`,
+        `SELECT ${metricSQL(["active_base"], context())},COUNT(*) AS active_records FROM new${where({ ...filters, from: "", to: "" }, "new")}`,
       ),
     ]);
+    const cashIds = ["gross_revenue", "net_revenue"];
+    const [cash, priorCash, monthlyCash] = await Promise.all([
+      query(`SELECT ${metricSQL(cashIds, context(filters))},COUNT(*) AS sales_records FROM sales${where(filters, "sales")}`),
+      query(`SELECT ${metricSQL(cashIds, context(prev))} FROM sales${where(prev, "sales")}`),
+      query(`SELECT month,${metricSQL(cashIds, context(wide))} FROM sales${where(wide, "sales")} GROUP BY month`),
+    ]);
+    Object.assign(total[0], cash[0]);
+    Object.assign(previous[0], priorCash[0]);
+    for (const cashMonth of monthlyCash) {
+      let row = trend.find(t => t.month === cashMonth.month);
+      if (!row) { row = {month:cashMonth.month}; trend.push(row); }
+      Object.assign(row,cashMonth);
+    }
+    trend.sort((a,b) => String(a.month).localeCompare(String(b.month)));
+    if (trend.length > 14) trend.splice(0,trend.length - 14);
     Object.assign(total[0], g[0], active[0]);
     Object.assign(previous[0], p[0], { active_base: null });
     trend.forEach((t) =>
       Object.assign(t, monthly.find((g) => g.month === t.month) || {}),
     );
+  }
+  if (tab === 6) {
+    const currentIds = b.kpis.filter((id) => currentSnapshotMetrics.has(id));
+    const currentFilters = { ...filters, from: "", to: "" };
+    const current = await query(`SELECT ${metricSQL(currentIds, context(currentFilters))},COUNT(*) AS current_records FROM lapsed${where(currentFilters, "lapsed")}`);
+    Object.assign(total[0], current[0]);
+    currentIds.forEach((id) => { previous[0][id] = null; trend.forEach((row) => delete row[id]); });
   }
   return {
     total: total[0],
@@ -223,8 +238,11 @@ export async function options() {
     "day",
     "time",
   ]) {
+    const sourceTables = field === "location"
+      ? ["sessions", "new", "sales", "leads", "lapsed", "checkins", "bookings", "payroll", "recurring", "teacher_recurring"]
+      : ["sessions", "new", "sales", "leads"];
     const result = await query(
-      `SELECT "${field}" AS value,COUNT(*) AS n FROM (SELECT "${field}" FROM sessions UNION ALL SELECT "${field}" FROM new UNION ALL SELECT "${field}" FROM sales UNION ALL SELECT "${field}" FROM leads) WHERE "${field}" IS NOT NULL GROUP BY "${field}" ORDER BY n DESC LIMIT 100`,
+      `SELECT "${field}" AS value,COUNT(*) AS n FROM (${sourceTables.map((table) => `SELECT "${field}" FROM "${table}"`).join(" UNION ALL ")}) WHERE "${field}" IS NOT NULL GROUP BY "${field}" ORDER BY n DESC LIMIT 100`,
     );
     all[field] = Object.fromEntries(
       result.map((r) => [String(r.value), Number(r.n)]),

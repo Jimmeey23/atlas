@@ -83,10 +83,13 @@ export const contactable = (v: unknown) =>
   !/^noemail\+/i.test(String(v)) &&
   /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(v));
 export const canonicalLocation = (v: unknown) => {
-  const s = String(v ?? "").trim();
+  const s = String(v ?? "").trim().replace(/\s+/g, " ");
   if (/kwality|kemps/i.test(s)) return "Kwality House, Kemps Corner";
+  if (/supreme|bandra/i.test(s)) return "Supreme HQ, Bandra";
+  if (/^pop[ -]?up$/i.test(s)) return "Pop-up";
   if (/kenkere/i.test(s)) return "Kenkere House";
   if (/plash/i.test(s)) return "Plash Pilates";
+  if (/copper.*cloves/i.test(s)) return "The Studio by Copper + Cloves";
   return s || "Unknown location";
 };
 export const shortLocation = (v: string) =>
@@ -125,6 +128,7 @@ export const sqlTypes: Record<string, string> = {
   unique_id1: "VARCHAR",
   unique_id2: "VARCHAR",
   sale_id: "VARCHAR",
+  membership_id: "VARCHAR",
   payment_method: "VARCHAR",
   capacity: "DOUBLE",
   checked_in: "DOUBLE",
@@ -259,7 +263,7 @@ export function normalise(
     const follow = date(g("Follow Up 1 Date"));
     const imported =
       /import/i.test(
-        String(g("Payment Method", "Sale Item", "First Visit Entity Name")),
+        String(g("Payment Method", "Payment Method Name", "Sale Item", "First Visit Entity Name")),
       ) || g("Sale Item") === "Import Visits";
     const elapsed = (a: string | null, b: string | null) =>
       a && b
@@ -315,9 +319,11 @@ export function normalise(
               { weekday: "long", timeZone: "UTC" },
             )
           : null),
-      time:
-        str("Time", "Time Slot", "First Visit Time Slot") ||
-        (d && d.length > 10 ? d.slice(11, 13) + ":00" : null),
+      time: (() => {
+        const clock = str("Time", "Time Slot", "First Visit Time Slot");
+        const actual = clock?.match(/^(\d{1,2}):(\d{2})/) || d?.slice(11).match(/^(\d{1,2}):(\d{2})/);
+        return actual ? `${actual[1].padStart(2, "0")}:${actual[2]}` : clock;
+      })(),
       member:
         str("Customer Name", "Member Name", "Full Name") ||
         [str("First Name"), str("Last Name")].filter(Boolean).join(" ") ||
@@ -347,6 +353,7 @@ export function normalise(
       unique_id1: str("UniqueID1"),
       unique_id2: str("UniqueID2"),
       sale_id: str("Sale ID", "Sale Id"),
+      membership_id: str("Sec. Membership ID"),
       payment_method: str("Payment Method", "Payment Method Name"),
       capacity: n(roll ? "TotalCapacitySum" : "Capacity"),
       checked_in:
@@ -384,7 +391,11 @@ export function normalise(
       ),
       net: n("Price Excluding VAT In Currency"),
       vat: n("Payment VAT", "Vat"),
-      discount: n("Discount Value In Currency", "Discount Value"),
+      discount: k === "sales"
+        ? n("Sale Item Unit Discount Value") != null && n("Sale Item Quantity") != null
+          ? n("Sale Item Unit Discount Value")! * n("Sale Item Quantity")!
+          : null
+        : n("Discount Value In Currency", "Discount Value"),
       units: n("Sale Item Quantity"),
       sessions: roll
         ? n("TotalSessions", "Classes")
@@ -416,7 +427,7 @@ export function normalise(
       no_show: boolean(g("No Show")),
       attended: boolean(g("Attended", "Checked In")),
       refunded: boolean(g("Refunded")),
-      complimentary: boolean(g("Complementary")),
+      complimentary: boolean(g("Complementary", "Complimentary")),
       voided: boolean(g("Sec. Is Voided")),
       ltv: n("Ltv"),
       first_purchase: n("First Purchase Value"),

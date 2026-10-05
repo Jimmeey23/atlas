@@ -6,11 +6,12 @@ import { LinePath, AreaClosed } from "@visx/shape";
 import { scaleLinear } from "@visx/scale";
 import { Download, Table2, ChartNoAxesCombined } from "lucide-react";
 import { query, quote, type Row } from "../data/duckdb";
-import { where, context, sessionFacts, type Analysis } from "../data/analytics";
+import { where, context, metricFacts, type Analysis } from "../data/analytics";
 import { metricSQL } from "../semantics/metrics";
-import { fmt } from "../semantics/formats";
+import { fmt, formatField } from "../semantics/formats";
 import { useStore } from "../state/store";
 import { revenueBridge } from "../semantics/aggregations";
+import { bookingOutcomeCase } from "../semantics/booking-outcomes";
 import { metrics } from "../semantics/metrics";
 import { blueprints } from "../data/blueprints";
 import { download, exportCSV } from "./exports";
@@ -30,12 +31,12 @@ export function Pulse({ data }: { data: Analysis }) {
   }, []);
   useEffect(() => {
     let active = true;
-    if (!data.count) {
+    if (!data.count && !Number(data.total.sales_records)) {
       setDays([]);
       return;
     }
     query(
-      `SELECT date,${metricSQL(["attendance", "revenue", "fill_rate", "sessions"], context())} FROM sessions${where(state.filters, "sessions")} GROUP BY date ORDER BY date DESC LIMIT 90`,
+      `SELECT COALESCE(s.date,p.date) AS date,s.attendance,s.revenue,s.fill_rate,s.sessions,p.gross_revenue FROM (SELECT date,${metricSQL(["attendance", "revenue", "fill_rate", "sessions"], context())} FROM sessions${where(state.filters, "sessions")} GROUP BY date) s FULL OUTER JOIN (SELECT date,${metricSQL(["gross_revenue"], context())} FROM sales${where(state.filters, "sales")} GROUP BY date) p ON s.date=p.date ORDER BY date DESC LIMIT 90`,
     )
       .then((r) => {
         if (active) setDays([...r].reverse());
@@ -46,7 +47,7 @@ export function Pulse({ data }: { data: Analysis }) {
     return () => {
       active = false;
     };
-  }, [state.filters, state.transient, data.count]);
+  }, [state.filters, state.transient, data]);
   const x = scaleLinear({
     domain: [0, Math.max(days.length - 1, 1)],
     range: [0, width],
@@ -56,7 +57,7 @@ export function Pulse({ data }: { data: Analysis }) {
     range: [143, 10],
   });
   const yr = scaleLinear({
-    domain: [0, Math.max(...days.map((d) => Number(d.revenue)), 1) * 1.15],
+    domain: [0, Math.max(...days.map((d) => Number(d.gross_revenue)), 1) * 1.15],
     range: [143, 10],
   });
   const focused = hover == null ? null : days[hover];
@@ -67,10 +68,10 @@ export function Pulse({ data }: { data: Analysis }) {
         <div>
           <div className="pulse-heading">
             <span className="dot positive" />
-            Revenue, in motion
+            Payments collected, in motion
           </div>
           <div className="pulse-total number">
-            {fmt("revenue", focused?.revenue ?? data.total.revenue)}
+            {fmt("gross_revenue", focused ? focused.gross_revenue : data.total.gross_revenue)}
             <span className="pulse-suffix">
               {focused ? focused.date : "in this period"}
             </span>
@@ -89,7 +90,7 @@ export function Pulse({ data }: { data: Analysis }) {
               className="legend-line"
               style={{ background: "var(--revenue)" }}
             />
-            Session revenue
+            Gross collections
           </span>
           <span className="small">Drag to select a date range</span>
         </div>
@@ -132,7 +133,7 @@ export function Pulse({ data }: { data: Analysis }) {
       >
         <svg
           role="img"
-          aria-label="Daily attendance and session revenue pulse"
+          aria-label="Daily attendance and gross collections pulse"
           viewBox={`0 0 ${width} 155`}
         >
           <line x1="0" y1="143" x2={width} y2="143" stroke="var(--hairline)" />
@@ -157,7 +158,7 @@ export function Pulse({ data }: { data: Analysis }) {
               <LinePath
                 data={days}
                 x={(_, i) => x(i)}
-                y={(d) => yr(Number(d.revenue))}
+                y={(d) => yr(Number(d.gross_revenue))}
                 stroke="var(--revenue)"
                 strokeWidth={1.7}
                 pathLength={1000}
@@ -209,7 +210,7 @@ export function Pulse({ data }: { data: Analysis }) {
         <span>
           {focused
             ? `${fmt("attendance", focused.attendance)} attendees / ${fmt("fill_rate", focused.fill_rate)} fill`
-            : "The daily rhythm of attendance and revenue"}
+            : "Daily attendance and payments collected"}
         </span>
         <span>{days.at(-1)?.date}</span>
       </div>
@@ -266,7 +267,9 @@ export function Chart({
             .slice(0, 80);
         else if (tab === 1 || tab === 7 || tab === 12)
           r = await query(
-            `SELECT strftime(date_trunc('week',TRY_CAST(date AS DATE)),'%Y-%m-%d') AS month,${metricSQL(tab === 1 ? ["sessions", "fill_rate"] : ["bookings", "booking_attended", "booking_cancelled", "booking_late_cancelled", "booking_no_shows", "effective_attendance"], context())},COUNT(*) AS n FROM "${bp.source}"${w} GROUP BY 1 ORDER BY 1`,
+            tab === 1
+              ? `SELECT strftime(date_trunc('week',TRY_CAST(date AS DATE)),'%Y-%m-%d') AS month,${metricSQL(["sessions", "fill_rate"], context())},COUNT(*) AS n FROM sessions${w} GROUP BY 1 ORDER BY 1`
+              : `SELECT strftime(date_trunc('week',TRY_CAST(date AS DATE)),'%Y-%m-%d') AS month,${metricSQL(["bookings", "effective_attendance"], context())},COUNT(*) FILTER (WHERE booking_outcome='attended') AS booking_attended,COUNT(*) FILTER (WHERE booking_outcome='cancelled') AS booking_cancelled,COUNT(*) FILTER (WHERE booking_outcome='late') AS booking_late_cancelled,COUNT(*) FILTER (WHERE booking_outcome='no_show') AS booking_no_shows,COUNT(*) FILTER (WHERE booking_outcome='pending') AS booking_pending,COUNT(*) AS n FROM (SELECT *,${bookingOutcomeCase} AS booking_outcome FROM bookings${w}) GROUP BY 1 ORDER BY 1`,
           );
         else if (tab === 4 && !secondary)
           r = await query(
@@ -274,7 +277,7 @@ export function Chart({
           );
         else if (tab === 5)
           r = await query(
-            `SELECT 'First visit' AS stage,COUNT(*) FILTER (WHERE is_new) AS n FROM new${w} UNION ALL SELECT 'Second visit',COUNT(*) FILTER (WHERE is_new AND visits_post>0) FROM new${w} UNION ALL SELECT 'First purchase',COUNT(*) FILTER (WHERE is_new AND conversion='Converted') FROM new${w} UNION ALL SELECT 'Retained',COUNT(*) FILTER (WHERE is_new AND retention='Retained') FROM new${w}`,
+            `SELECT 'Newcomers' AS stage,COUNT(*) FILTER (WHERE is_new) AS n FROM new${w} UNION ALL SELECT 'Returned',COUNT(*) FILTER (WHERE is_new AND visits_post>0) FROM new${w} UNION ALL SELECT 'Converted',COUNT(*) FILTER (WHERE is_new AND conversion='Converted') FROM new${w} UNION ALL SELECT 'Retained',COUNT(*) FILTER (WHERE is_new AND retention='Retained') FROM new${w}`,
           );
         else if (tab === 8)
           r = await query(
@@ -300,12 +303,10 @@ export function Chart({
           const ids = [...new Set([...bp.kpis, ...bp.columns])].filter(
             (id) =>
               tab !== 0 ||
-              !["new_clients", "conversion_rate", "active_base"].includes(id),
+              !["new_clients", "conversion_rate", "active_base", "gross_revenue", "net_revenue"].includes(id),
           );
           const facts =
-            bp.source === "sessions"
-              ? sessionFacts(state.filters)
-              : `"${bp.source}"${w}`;
+            metricFacts(state.filters, bp.source);
           const month =
             bp.source === "lapsed" ? "SUBSTR(end_date,1,7)" : "month";
           r = await query(
@@ -348,6 +349,7 @@ export function Chart({
       textStyle: { fontFamily: "Instrument Sans", color: c["text-2"] },
       tooltip: {
         trigger: "axis",
+        valueFormatter: (value: unknown) => formatField("value", value),
         backgroundColor: c["surface-3"],
         borderColor: c.hairline,
         textStyle: { color: c["text-1"], fontSize: 12 },
@@ -473,6 +475,8 @@ export function Chart({
           {
             type: "bar",
             stack: "bridge",
+            name: "Offset",
+            tooltip: {show:false},
             data: offsets,
             itemStyle: { color: "transparent" },
             emphasis: { itemStyle: { color: "transparent" } },
@@ -481,6 +485,8 @@ export function Chart({
           {
             type: "bar",
             stack: "bridge",
+            name: "Session revenue",
+            tooltip: {valueFormatter: (v: unknown) => fmt("revenue", v, true)},
             data: steps.map((value, i) => ({
               value,
               itemStyle: {
@@ -520,6 +526,7 @@ export function Chart({
         series: categories.map((category) => ({
           type: "line",
           name: category,
+          tooltip: {valueFormatter: (v: unknown) => fmt("gross_revenue", v, true)},
           stack: "revenue",
           smooth: true,
           symbol: "none",
@@ -539,41 +546,11 @@ export function Chart({
     } else if (tab === 5) {
       option = {
         ...option,
-        tooltip: {
-          trigger: "item",
-          formatter: "{b}: {c} community members",
-          backgroundColor: c["surface-3"],
-          textStyle: { color: c["text-1"] },
-        },
-        xAxis: undefined,
-        yAxis: undefined,
-        series: [
-          {
-            type: "funnel",
-            left: "15%",
-            right: "15%",
-            top: 12,
-            bottom: 15,
-            minSize: "10%",
-            maxSize: "95%",
-            sort: "none",
-            gap: 4,
-            label: {
-              position: "inside",
-              formatter: "{b}   {c}",
-              color: state.theme === "matte" ? "#000" : "#fff",
-              fontSize: 12,
-            },
-            itemStyle: { borderWidth: 0 },
-            data: chartRows.map((r, i) => ({
-              name: String(r.stage),
-              value: Number(r.n),
-              itemStyle: {
-                color: [c.growth, c.attendance, c.people, c.revenue][i],
-              },
-            })),
-          },
-        ],
+        grid: { left: 95, right: 40, top: 15, bottom: 28 },
+        tooltip: { trigger: "axis", formatter: (params: unknown) => { const item = (params as {name:string;value:number}[])[0]; return `${item.name}: ${fmt("records", item.value)} newcomers`; } },
+        xAxis: { type: "value", ...axis },
+        yAxis: { type: "category", inverse: true, data: chartRows.map((r) => String(r.stage)), ...axis },
+        series: [{ type: "bar", barMaxWidth: 38, label: {show: true, position: "right", color: c["text-1"]}, data: chartRows.map((r,i) => ({ value: Number(r.n), itemStyle: { color: [c.attendance,c.growth,c.people,c.revenue][i], borderRadius: [0,4,4,0] } })) }],
       };
     } else if (tab === 8) {
       const names = [
@@ -605,9 +582,10 @@ export function Chart({
       }
       option = {
         ...option,
-        tooltip: { trigger: "item" },
-        xAxis: undefined,
-        yAxis: undefined,
+        tooltip: { trigger: "item", valueFormatter: (v: unknown) => fmt("records", v) },
+        xAxis: [],
+        yAxis: [],
+        grid: [],
         series: [
           {
             type: "sankey",
@@ -637,7 +615,7 @@ export function Chart({
           trigger: "item",
           formatter: (p: unknown) => {
             const d = (p as { data: { name: string; value: number[] } }).data;
-            return `${d.name}<br/>Utilisation: ${(d.value[0] * 100).toFixed(1)}%<br/>Days absent: ${d.value[1]}`;
+            return `${d.name}<br/>Utilisation: ${(d.value[0] * 100).toFixed(1)}%<br/>Days absent: ${formatField("days", d.value[1])}`;
           },
         },
         xAxis: {
@@ -690,6 +668,7 @@ export function Chart({
           {
             type: "bar",
             name: "Revenue",
+            tooltip: {valueFormatter: (v: unknown) => fmt("payroll_revenue", v, true)},
             stack: "economics",
             data: chartRows.map((r) => Number(r.payroll_revenue)),
             itemStyle: { color: c.people },
@@ -698,6 +677,7 @@ export function Chart({
           {
             type: "bar",
             name: "Estimated cost",
+            tooltip: {valueFormatter: (v: unknown) => fmt("payroll_cost", v, true)},
             stack: "economics",
             data: chartRows.map((r) => -Number(r.payroll_cost)),
             itemStyle: { color: c.revenue },
@@ -747,6 +727,7 @@ export function Chart({
             "booking_cancelled",
             "booking_late_cancelled",
             "booking_no_shows",
+            "booking_pending",
           ].map((id, i) => ({
             type: "bar" as const,
             name: metrics[id].label,
@@ -754,13 +735,14 @@ export function Chart({
             data: chartRows.map((r) => r[id]),
             itemStyle: {
               opacity: 0.6,
-              color: [c.attendance, c.people, c.risk, c.revenue][i],
+              color: [c.attendance, c.people, c.risk, c.revenue, c["text-3"]][i],
             },
             barMaxWidth: 30,
           })),
           {
             type: "line",
             name: "Effective attendance",
+            tooltip: {valueFormatter: (v: unknown) => fmt("effective_attendance", v)},
             yAxisIndex: 1,
             data: chartRows.map((r) => r.effective_attendance),
             smooth: true,
@@ -804,6 +786,7 @@ export function Chart({
           {
             type: tab === 1 ? "bar" : "line",
             name: primary,
+            tooltip: {valueFormatter: (v: unknown) => fmt(primary, v, true)},
             data: chartRows.map((r) => r[primary]),
             smooth: true,
             symbol: "circle",
@@ -818,6 +801,7 @@ export function Chart({
                 {
                   type: "line" as const,
                   name: percent,
+                  tooltip: {valueFormatter: (v: unknown) => fmt(percent!, v)},
                   yAxisIndex: 1,
                   data: chartRows.map((r) => r[percent]),
                   smooth: true,
@@ -836,7 +820,7 @@ export function Chart({
     chart.setOption({
       animation: prefs.animation,
       legend: { show: prefs.legend },
-      yAxis: { splitLine: { show: prefs.grid } },
+      ...(Array.isArray(option.yAxis) && !option.yAxis.length ? {} : { yAxis: { splitLine: { show: prefs.grid } } }),
     });
     chart.on("click", (p) => {
       const point = p.data as { name?: string; field?: string };
@@ -924,7 +908,7 @@ export function Chart({
             <thead>
               <tr>
                 {Object.keys(chartRows[0] || {})
-                  .filter((k) => !k.startsWith("g") && k !== "level")
+                  .filter((k) => !/^g\d+$/.test(k) && k !== "level")
                   .slice(0, 8)
                   .map((k) => (
                     <th key={k}>{k}</th>
@@ -935,10 +919,10 @@ export function Chart({
               {chartRows.map((r, i) => (
                 <tr key={i}>
                   {Object.entries(r)
-                    .filter(([k]) => !k.startsWith("g") && k !== "level")
+                    .filter(([k]) => !/^g\d+$/.test(k) && k !== "level")
                     .slice(0, 8)
                     .map(([k, v]) => (
-                      <td key={k}>{typeof v === "number" ? fmt(k, v) : v}</td>
+                      <td key={k}>{formatField(k, v)}</td>
                     ))}
                 </tr>
               ))}
@@ -957,7 +941,7 @@ export function Chart({
         <span>
           {secondary
             ? "Each point represents an entity in scope"
-            : "Actual source observations, aggregated in SQL"}
+            : tab === 5 ? "Reported newcomer outcomes overlap; these are not sequential funnel stages" : tab === 7 || tab === 12 ? "One outcome per booking; late cancellation takes precedence over other flags" : "Actual source observations, aggregated in SQL"}
         </span>
         <span>Hover for details / Click to filter</span>
       </div>

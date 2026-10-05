@@ -77,9 +77,11 @@ import { insights as runInsights } from "./insights/engine";
 import type { Insight } from "./insights/rules";
 import { defaults, thresholds, type Thresholds } from "./insights/thresholds";
 import { fmt } from "./semantics/formats";
+import { currentSnapshotMetrics } from "./semantics/evidence";
 import { metrics } from "./semantics/metrics";
 import "./design/app.css";
 import "./styles.css";
+import "./design/refinement.css";
 import { sourceRows } from "./data/raw";
 const blank: Analysis = {
   total: {},
@@ -395,7 +397,7 @@ export default function App() {
           </select>
 
           <span className="small hide-small" style={{ marginRight: 10 }}>
-            Kemps Corner / Kenkere / Plash
+            {Object.keys(choices.location || {}).length} studios
           </span>
           <button
             className="button hide-small"
@@ -457,7 +459,7 @@ export default function App() {
         </div>
       </header>
       <CloudSettings />
-      <QuickFilters />
+      <QuickFilters locations={Object.keys(choices.location || {})} />
       <Filters options={choices} />
       <nav className="tabbar" aria-label="Performance workspaces">
         {navigationOrder
@@ -665,19 +667,20 @@ export default function App() {
                   <MetricCard
                     key={id}
                     id={id}
-                    value={analysis.count ? analysis.total[id] : null}
+                    value={analysis.total[id]}
                     previous={
                       s.compare === "none" ? null : analysis.previous[id]
                     }
                     trend={analysis.trend}
-                    n={analysis.count}
+                    n={Number(s.tab === 0 && ["gross_revenue", "net_revenue"].includes(id) ? analysis.total.sales_records : id === "active_base" ? analysis.total.active_records : currentSnapshotMetrics.has(id) && s.tab === 6 ? analysis.total.current_records : ["new_clients", "conversion_rate"].includes(id) && s.tab === 0 ? analysis.total.growth_records : analysis.total.n || analysis.count)}
+                    evidence={analysis.total}
                     compare={s.compare !== "none"}
                     warning={
                       id === "net_revenue" &&
                       health.sales?.defects.some(
                         (d) => d.field === "Price Excluding VAT In Currency",
                       )
-                        ? "Source net-of-VAT exceeds gross on some sale lines. Inspect Data health before using net revenue."
+                        ? "Source price values differ from collected payments. Net revenue uses Payment Value − Payment VAT."
                         : ["teaching_hours", "revenue_per_hour"].includes(id) &&
                             health.checkins?.defects.length
                           ? "Duration is corrupted. No estimated hours are substituted."
@@ -689,11 +692,15 @@ export default function App() {
                       main.current
                         ?.querySelector("#main-register")
                         ?.scrollIntoView({ behavior: "smooth" });
-                      if (recordGroups.length)
+                      if (recordGroups.length || currentSnapshotMetrics.has(id) || s.tab === 0 && ["gross_revenue", "net_revenue"].includes(id))
                         setDrill({
                           id: "all",
                           label: metrics[id].label + " in scope",
                           path: [],
+                          source: s.tab === 0 && ["gross_revenue", "net_revenue"].includes(id) ? "sales" : s.tab === 0 && ["new_clients", "conversion_rate", "active_base"].includes(id) ? "new" : bp.source,
+                          filters: currentSnapshotMetrics.has(id) ? { ...s.filters, from: "", to: "" } : s.filters,
+                          metrics: [id],
+                          predicate: id === "active_base" ? "lifecycle='Active'" : ["new_clients", "conversion_rate"].includes(id) ? "is_new" : id === "active_memberships" ? `status='Active' AND start_date<='${today()}' AND (end_date IS NULL OR end_date>='${today()}')` : id === "dormant_actives" ? `status='Active' AND start_date<='${today()}' AND (end_date IS NULL OR end_date>='${today()}') AND days_absent>21` : id === "revenue_at_risk_30d" ? `TRY_CAST(end_date AS DATE) BETWEEN DATE '${today()}' AND DATE '${today()}'+INTERVAL 30 DAY` : undefined,
                           values: analysis.total,
                           children: [],
                         });
@@ -723,8 +730,8 @@ export default function App() {
               {s.tab === 0 && (
                 <Register
                   index="02"
-                  title="What changed the revenue"
-                  subtitle="Exact attendance × realised-yield decomposition"
+                  title="What changed session revenue"
+                  subtitle="Session-attributed revenue · attendance × realised yield; separate from payments collected"
                 >
                   <Chart tab={0} data={analysis} />
                 </Register>
@@ -736,7 +743,7 @@ export default function App() {
                     s.tab === 2
                       ? "Schedule decision register"
                       : s.tab === 0
-                        ? "Your studios, side by side"
+                        ? "Session performance by studio"
                         : "The performance register"
                   }
                   subtitle="Expand from the business to the individual"

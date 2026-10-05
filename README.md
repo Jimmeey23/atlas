@@ -22,7 +22,9 @@ The production server serves `dist/` and the same API on localhost:8787. This is
 
 The supplied workbooks were publicly readable during implementation. Public read mode is enabled for these configured source IDs only. It requests the named tab and verifies its schema; it rejects mismatches rather than quietly treating the first sheet as the requested source.
 
-For the preferred Sheets API v4 route:
+Public reads run first. When fetching or parsing a public Sheet fails, the gateway retries through Sheets API v4 using server-only OAuth credentials. Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `GOOGLE_REFRESH_TOKEN` in `.env` and restart the gateway. The refresh token must grant Sheets read access. These values never enter the browser bundle.
+
+A service account is also supported as an authenticated fallback when OAuth credentials are absent:
 
 1. Enable the Google Sheets API in a Google Cloud project.
 2. Create a service account and keep its JSON key outside the repository.
@@ -49,7 +51,7 @@ Data health exposes source status, header drift, key completeness, original-colu
 
 - Filters start collapsed. Choose dates, comparison, location, instructor, format, source, membership/category, new/returning, day/time, session type, room size and import handling.
 - Drag the grouping chips or change their dropdowns to reorder the drill hierarchy. Expand chevrons, sort headers, resize columns, choose columns and search entities.
-- Click a table value or entity to inspect contributing source records. Source links refer to their original worksheet rows.
+- Click a table value or entity to inspect contributing source records. Drill-downs show every original source column in a paginated item-level table, 50 rows per page, with page CSV export and source links to original worksheet rows.
 - Chart bars and heatmap cells create visible dashed cross-filter chips. Clear a chip or clear all filters to widen scope.
 - Top and bottom lists share a scale and exclude samples below their metric's declared minimum.
 - Monthly registers show 14 months, including a prior-year comparison month; missing observations remain unavailable. Switch values, change or index views and click a month to filter.
@@ -114,4 +116,6 @@ The floating Ask GPT button opens a compact assistant with expandable memory/his
 
 Fresh sessions start with last month; shared URLs and saved views can restore explicit dates. Cloud hydration restores other scope settings without overriding that fresh-session date default.
 
-Verification on 5 October 2026 passed 22 automated tests, the production build, browser UI checks and live Supabase document create/read/update/delete. The configured OpenAI environment key was rejected with HTTP 401; replace it through Settings to enable live GPT. Offline agent tests cover query tools and saved elements using controlled fixtures.
+Verification on 5 October 2026 passed 22 automated tests, the production build, browser UI checks and live Supabase document create/read/update/delete. The configured OpenAI environment key was rejected with HTTP 401; replace it through Ask GPT → Agent settings to enable live GPT. Offline agent tests cover query tools and saved elements using controlled fixtures.
+
+Appearance and page customization live in app Settings. API keys, GPT model, evidence, conversation history and assistant width live exclusively in Ask GPT → Agent settings. Light themes use predominantly white surfaces and high-contrast accents; Ask GPT is anchored on the right. Revenue display uses Indian currency formatting with at most one decimal, including saved AI tables and chart labels. Studio shortcuts use all loaded source locations, and the Atlas mark loops gently with animation and reduced-motion preferences respected.

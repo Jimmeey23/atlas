@@ -1,5 +1,9 @@
+import { ArrowUp, Sparkles, MessageSquare, ChartNoAxesCombined, Check, Database } from "lucide-react";
+import { fmt, formatField } from "../semantics/formats";
+import { metrics } from "../semantics/metrics";
+import { ChatAnswer } from "./ChatAnswer";
 import { ChartControls } from "./ChartControls";
-import { AtlasSettings } from "./AtlasSettings";
+import { AgentSettings } from "./AgentSettings";
 import { usePreferences, hydratePreferences } from "../state/preferences";
 import { useEffect, useRef, useState } from "react";
 import * as echarts from "echarts";
@@ -311,6 +315,8 @@ export function InsightEditor() {
     </section>
   );
 }
+const displayValue = formatField;
+
 function Element({ doc, version }: { doc: Doc; version: number }) {
   const filters = useStore((s) => s.filters);
   const page = useStore((s) => s.tab);
@@ -324,7 +330,7 @@ function Element({ doc, version }: { doc: Doc; version: number }) {
       method: "POST",
       body: JSON.stringify({
         sql: doc.body.sql,
-        filters: { ...filters, lateOnly: page === 12 },
+        filters: doc.body.pinnedScope || { ...filters, lateOnly: page === 12 },
       }),
     })
       .then((d) => {
@@ -347,12 +353,12 @@ function Element({ doc, version }: { doc: Doc; version: number }) {
     const chart = echarts.init(ref.current);
     const { x, y, type } = doc.body;
     chart.setOption({
-      tooltip: { trigger: "axis" },
+      tooltip: { trigger: type === "pie" ? "item" : "axis", valueFormatter: (value: unknown) => displayValue(y, value) },
       xAxis: {
         type: type === "scatter" ? "value" : "category",
         data: rows.map((r) => r[x]),
       },
-      yAxis: { type: "value" },
+      yAxis: { type: "value", axisLabel: { formatter: (value: number) => displayValue(y, value) } },
       series: [
         {
           type,
@@ -381,7 +387,7 @@ function Element({ doc, version }: { doc: Doc; version: number }) {
       <h3>{doc.title}</h3>
       <ChartControls rows={rows} title={doc.title} />
       <div className="small">
-        Live query · inherits global filters · saved in Supabase
+        Live query · {doc.body.pinnedScope ? `fixed scope: ${doc.body.pinnedScope.from || "all dates"} → ${doc.body.pinnedScope.to || "latest"}` : "inherits dashboard filters"} · saved in Supabase
       </div>
       <button className="button" onClick={() => setEditing(!editing)}>
         Edit / move
@@ -467,7 +473,7 @@ function Element({ doc, version }: { doc: Doc; version: number }) {
               {rows.map((r, i) => (
                 <tr key={i}>
                   {Object.keys(rows[0] || {}).map((k) => (
-                    <td key={k}>{r[k] == null ? "—" : String(r[k])}</td>
+                    <td key={k}>{displayValue(k, r[k])}</td>
                   ))}
                 </tr>
               ))}
@@ -503,8 +509,8 @@ export function IntelligenceWorkspace({
   const prefs = usePreferences((s) => s.preferences);
   const [controls, setControls] = useState(false);
   const [status, setStatus] = useState<any>(null);
-  const [conversationTitle, setConversationTitle] =
-    useState("New conversation");
+  const [mode, setMode] = useState<"ask" | "build">("ask");
+  const end = useRef<HTMLDivElement>(null);
   const { docs: history } = useDocuments("conversation");
   const { docs: memories } = useDocuments("memory");
   const [conversationId, setConversationId] = useState<string>();
@@ -527,6 +533,7 @@ export function IntelligenceWorkspace({
     window.addEventListener("atlas-provider", reload);
     return () => window.removeEventListener("atlas-provider", reload);
   }, []);
+  useEffect(() => { end.current?.scrollIntoView({block:"nearest"}); }, [messages, busy]);
   const send = async () => {
     const message = question.trim();
     if (!message || busy) return;
@@ -535,20 +542,22 @@ export function IntelligenceWorkspace({
     setQuestion("");
     setMessages((m) => [...m, { role: "user", content: message }]);
     try {
-      const result = await api("chat", {
+      const result = await api(mode, {
         method: "POST",
         body: JSON.stringify({
           message,
           conversationId,
-          history: prefs.chatSaveHistory
+          history: prefs.chatSaveHistory && status?.supabase
             ? []
             : messages.slice(-10).map((m) => ({
                 role: m.role,
                 content: m.content.slice(0, 6000),
+                scope: m.scope,
               })),
           maxTokens: prefs.chatTokens,
-          saveHistory: prefs.chatSaveHistory,
+          saveHistory: prefs.chatSaveHistory && !!status?.supabase,
           page,
+          rate: s.rate,
           filters: { ...s.filters, cross: s.transient },
         }),
       });
@@ -559,6 +568,9 @@ export function IntelligenceWorkspace({
           role: "assistant",
           content: result.answer,
           evidence: result.evidence,
+          saved: result.saved,
+          scope: result.scope,
+          model: result.model,
         },
       ]);
       changed();
@@ -570,36 +582,20 @@ export function IntelligenceWorkspace({
     }
   };
   return (
-    <section className="intelligence-panel">
+    <section className={"intelligence-panel studio-chat " + (compact ? "compact" : "expanded")}>
       <div className="agent-heading">
         <h2>Atlas Intelligence</h2>
         <button className="button" onClick={() => setControls(!controls)}>
           Agent settings
         </button>
       </div>
-      {controls && <AtlasSettings />}
-      <p>
-        Ask about your studio community, investigate trends or request a custom
-        table, chart or list. Specify where to save it. Global filters accompany
-        every query.
-      </p>
-      {status && (
-        <p className="cloud-status">
-          Supabase: {status.supabase ? "Configured" : "Setup needed"} · GPT:{" "}
-          {status.openai ? "Configured" : "Setup needed"} · Model:{" "}
-          {status.model}
-        </p>
-      )}
-      {status?.missing?.length > 0 && (
-        <div className="empty-state">
-          <h3>Connect your intelligence workspace</h3>
-          <p>
-            Add SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and OPENAI_API_KEY to
-            the server .env, run the included Supabase migration, then restart
-            the server. Keys stay on the server.
-          </p>
-        </div>
-      )}
+      {controls && <AgentSettings />}
+      <div className="chat-modes" role="group" aria-label="Assistant function">
+        <button aria-pressed={mode === "ask"} onClick={() => setMode("ask")}><MessageSquare size={15}/> Ask a question</button>
+        <button aria-pressed={mode === "build"} onClick={() => setMode("build")}><ChartNoAxesCombined size={16}/> Build an element</button>
+      </div>
+      <p className="chat-scope"><Database size={13}/><span>{s.filters.location?.join(" · ") || "All studios"} · {s.filters.from} → {s.filters.to}</span></p>
+      <p className="chat-scope-hint">Name a studio or period to query that scope directly.</p>
       <div className="agent-layout">
         <aside>
           <details open={!compact}>
@@ -610,6 +606,7 @@ export function IntelligenceWorkspace({
               onClick={() => {
                 setConversationId(undefined);
                 setMessages([]);
+                setError("");
               }}
             >
               New conversation
@@ -672,27 +669,34 @@ export function IntelligenceWorkspace({
             </button>
           </details>
         </aside>
-        <div>
+        <div className="chat-main">
           <div className="agent-messages" aria-live="polite">
             {!messages.length && (
-              <p className="muted">
-                Try: “Compare renewals due and renewed by month” or “Create and
-                save a chart of late cancellations by instructor on the Late
-                cancellations page.”
-              </p>
+              <div className="chat-welcome">
+                <span className="chat-orb"><Sparkles size={26}/></span>
+                <h3>{mode === "ask" ? "Clarity, from your numbers." : "Turn a question into a view."}</h3>
+                <p>{mode === "ask" ? "Explore performance with answers grounded in your source sheets." : "Create a chart, table or insight and save it to your workspace."}</p>
+                <div className="chat-suggestions">
+                  {(mode === "ask" ? ["How much sales did Kwality House do in April 2026?", "Compare studio attendance this month"] : ["Build a table of monthly sales by studio for 2026", "Create a chart of late cancellations by instructor"]).map(text => <button key={text} onClick={() => setQuestion(text)}>{text}<span>↗</span></button>)}
+                </div>
+              </div>
             )}
             {messages.map((m, i) => (
               <article key={i} className={"agent-message " + m.role}>
                 <strong>
                   {m.role === "user" ? "You" : "Atlas Intelligence"}
                 </strong>
-                <p style={{ whiteSpace: "pre-wrap" }}>{m.content}</p>
+                <ChatAnswer text={m.content}/>
+                {m.scope && <p className="chat-answer-scope">{m.scope.location?.join(" · ") || "All studios"} · {m.scope.from || "All dates"}{m.scope.to ? " → " + m.scope.to : ""}</p>}
+                {m.saved?.filter((doc: any) => typeof doc === "object" && doc?.id).map((doc: Doc) => <button className="chat-saved" key={doc.id} onClick={() => useStore.getState().set({tab:doc.page})}><Check size={15}/><span>Saved: {doc.title}<small>{tabs[doc.page]}</small></span><span>↗</span></button>)}
                 {prefs.chatEvidence && m.evidence?.length > 0 && (
                   <details>
-                    <summary>Queries and source evidence</summary>
+                    <summary>{m.evidence.length} verified {m.evidence.length === 1 ? "query" : "queries"} · View sources</summary>
                     {m.evidence.map((e: any, j: number) => (
                       <div key={j}>
+                        {e.result?.length > 0 && <div className="chat-result"><table><thead><tr>{Object.keys(e.result[0]).map(k => <th key={k}>{k.replaceAll("_"," ")}</th>)}</tr></thead><tbody>{e.result.map((row: any, n: number) => <tr key={n}>{Object.keys(e.result[0]).map(k => <td key={k}>{displayValue(k,row[k])}</td>)}</tr>)}</tbody></table></div>}
                         <pre>{e.sql}</pre>
+                        {e.provenance?.filter((p: any) => p.url).map((p: any) => <a className="chat-source-link" key={p.source} href={p.url} target="_blank" rel="noreferrer">{p.title || p.source} source sheet ↗</a>)}
                         <p>
                           {e.provenance
                             ?.map(
@@ -707,9 +711,12 @@ export function IntelligenceWorkspace({
                 )}
               </article>
             ))}
+            {busy && <div className="chat-thinking" role="status"><Sparkles size={15}/>{mode === "ask" ? "Checking source data…" : "Building and validating your element…"}<span className="chat-loading-dots">•••</span></div>}
+            <div ref={end}/>
           </div>
-          <label>
-            Save generated elements to
+          <div className="chat-composer">
+          {mode === "build" && <label className="chat-destination">
+            Save to
             <select
               value={page}
               onChange={(e) => setPage(Number(e.target.value))}
@@ -720,7 +727,7 @@ export function IntelligenceWorkspace({
                 </option>
               ))}
             </select>
-          </label>
+          </label>}
           <textarea
             aria-label="Ask studio intelligence"
             value={question}
@@ -731,24 +738,27 @@ export function IntelligenceWorkspace({
                 void send();
               }
             }}
-            placeholder="Ask a question or request a saved chart…"
+            placeholder={mode === "ask" ? "Ask about your studio performance…" : "Describe the chart, table or insight to build…"}
           />
           <button
-            className="button"
+            className="chat-send"
+            aria-label={mode === "ask" ? "Send question" : "Build element"}
             disabled={
               busy ||
               !question.trim() ||
-              !status?.openai ||
-              (prefs.chatSaveHistory && !status?.supabase)
+              (mode === "build" && (!status?.openai || !status?.supabase))
             }
             onClick={() => void send()}
           >
-            {busy ? "Querying studio data…" : "Ask GPT"}
+            <ArrowUp size={19}/>
           </button>
-          {error && <p role="alert">{error}</p>}
+          <div className="chat-composer-meta"><span>{mode === "ask" ? "Answers with source evidence" : "Validated before saving"}</span><span>⌘ / Ctrl ↵</span></div>
+          </div>
+          {error && <p className="chat-error" role="alert">{error}</p>}
+          {mode === "build" && status && (!status.openai || !status.supabase) && <p className="chat-error">Connect GPT and saved workspace storage in Agent settings to build elements.</p>}
         </div>
       </div>
-      <SavedElements page={13} version={0} />
+      {!compact && <SavedElements page={13} version={0} />}
     </section>
   );
 }

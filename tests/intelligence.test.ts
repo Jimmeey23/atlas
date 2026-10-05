@@ -199,18 +199,20 @@ test("GPT tool loop queries real fixtures and persists requested elements and co
   await new Promise((r) => server.once("listening", r));
   const url = "http://127.0.0.1:" + (server.address() as any).port;
   try {
-    const response = await fetch(url + "/api/intelligence/chat", {
+    const response = await fetch(url + "/api/intelligence/build", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        message: "Create and save the late cancellation members table",
+        message: "Create and save the late cancellation members table for September 2026",
         page: 12,
-        filters: { location: ["Kwality House, Kemps Corner"] },
+        filters: { from:"2026-10-01", to:"2026-10-31", location: ["Kwality House, Kemps Corner"] },
       }),
     });
     const result: any = await response.json();
     assert.equal(response.status, 200, JSON.stringify(result));
     assert.equal(steps, 3);
+    assert.equal(documents.find(d => d.kind === "artifact").body.pinnedScope.from,"2026-09-01");
+    assert.equal(calls[1].tool_choice.name,"save_element");
     assert.equal(result.saved.length, 1);
     assert.equal(documents.find((d) => d.kind === "artifact").page, 12);
     assert.equal(
