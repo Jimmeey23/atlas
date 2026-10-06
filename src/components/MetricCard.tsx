@@ -150,6 +150,7 @@ export function MetricCard({
   const unchanged = Number(value) === Number(previous);
   return (
     <article
+      data-note-anchor={`metric-${id}`}
       className="metric-card"
       style={{ "--card-accent": `var(--${m.domain})` } as React.CSSProperties}
     >

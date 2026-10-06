@@ -1,3 +1,8 @@
+import { StickyNotes } from "./components/StickyNotes";
+import { workspaceIcons, useWorkspaceCopy } from "./data/workspaceCopy";
+import { OverviewAttention } from "./components/OverviewAttention";
+import { SessionRevenueChange } from "./components/SessionRevenueChange";
+import { PresentationTools } from "./components/PresentationTools";
 import { motion } from "framer-motion";
 import { AtlasSettings } from "./components/AtlasSettings";
 import { QuickFilters } from "./components/QuickFilters";
@@ -19,7 +24,6 @@ import {
   Settings2,
   ArrowUpRight,
   CalendarDays,
-  Activity,
   ChevronDown,
   X,
   Check,
@@ -110,6 +114,7 @@ export default function App() {
   const { preferences: prefs, page: updatePage } = usePreferences();
   const pagePrefs = prefs.page[s.tab] || {};
   const bp = blueprints[s.tab];
+  const workspaceHeading = useWorkspaceCopy(s.tab, bp.subtitle);
   const workspaceVersion = dependencies(s.tab)
     .map((k) => health[k]?.fetchedAt || "unavailable")
     .join(",");
@@ -119,7 +124,6 @@ export default function App() {
           (k) => usable(k) || sourceStates[k].state === "error",
         )
       : dependencies(s.tab).every(usable);
-  const progress = "Preparing this workspace’s sources";
   const loaded = Object.values(health).filter((h) => h.fetchedAt).length;
   const [error, setError] = useState("");
   const [analysis, setAnalysis] = useState<Analysis>(blank);
@@ -199,6 +203,7 @@ export default function App() {
       setColumns(pagePrefs.columns || bp.columns);
       setConfiguredTab(s.tab);
       setAnalysis(blank);
+      setError("");
       setDrill(null);
       main.current?.scrollTo({ top: 0 });
     }
@@ -394,7 +399,7 @@ export default function App() {
   ]
     .filter((c) => c.name.toLowerCase().includes(command.toLowerCase()))
     .slice(0, 12);
-  const includeWeeklyPattern = [0, 1, 2, 3, 4, 5, 7, 8, 12, 14].includes(s.tab);
+  const includeWeeklyPattern = [0, 1, 2, 3, 7, 12].includes(s.tab);
   const weeklyTitle =
     s.tab === 7
       ? "When seats go unclaimed"
@@ -402,7 +407,9 @@ export default function App() {
         ? "The best time for a first visit"
         : "The weekly pattern";
   const weeklyMetric =
-    s.tab === 7
+    s.tab === 12
+      ? "booking_late_cancelled"
+      : s.tab === 7
       ? "booking_no_show_rate"
       : s.tab === 5
         ? "conversion_rate"
@@ -414,42 +421,7 @@ export default function App() {
   ];
   const [heatMetric, setHeatMetric] = useState(weeklyMetric);
   useEffect(() => setHeatMetric(weeklyMetric), [s.tab]);
-  const tabSummary = () => {
-    if (!ready || s.tab === 11 || s.tab === 13 || s.tab === 15) return "";
-    const locationScope = s.filters.location?.length
-      ? s.filters.location.join(", ")
-      : "all studios";
-    if (s.tab === 0)
-      return `${locationScope} generated ${fmt("revenue", analysis.total.revenue)} in session-attributed revenue from ${fmt("attendance", analysis.total.attendance)} attended seats across ${fmt("sessions", analysis.total.sessions)} sessions. Average class size is ${fmt("avg_class_size_incl", analysis.total.avg_class_size_incl)} with ${fmt("empty_sessions", analysis.total.empty_sessions)} empty sessions in this scope.`;
-    if (s.tab === 1)
-      return `${fmt("sessions", analysis.total.sessions)} experiences were hosted with average class size ${fmt("avg_class_size_incl", analysis.total.avg_class_size_incl)} and ${fmt("empty_sessions", analysis.total.empty_sessions)} empty sessions. Fill rate is ${fmt("fill_rate", analysis.total.fill_rate)} and realised yield sits at ${fmt("rev_pas", analysis.total.rev_pas)} per attended seat.`;
-    if (s.tab === 7)
-      return `${fmt("bookings", analysis.total.bookings)} bookings were observed. Average class size is ${fmt("booking_avg_class_size", analysis.total.booking_avg_class_size)} with ${fmt("booking_empty_sessions", analysis.total.booking_empty_sessions)} empty sessions. Effective attendance is ${fmt("effective_attendance", analysis.total.effective_attendance)} after cancellations and no-shows.`;
-    if (s.tab === 9)
-      return `${fmt("checkins", analysis.total.checkins)} check-ins were recorded from ${fmt("unique_attendees", analysis.total.unique_attendees)} members. Average class size is ${fmt("attendance_avg_class_size", analysis.total.attendance_avg_class_size)} and ${fmt("attendance_empty_sessions", analysis.total.attendance_empty_sessions)} sessions were empty in the observed check-in footprint.`;
-    return `${fmt(bp.kpis[0], analysis.total[bp.kpis[0]])} is the leading signal for this workspace, with ${fmt("records", analysis.total.n || analysis.count)} contributing records in the current scope.`;
-  };
-  const tabRecommendations = () => {
-    if (!ready || s.tab === 11 || s.tab === 13 || s.tab === 15) return [] as string[];
-    const recommendations: string[] = [];
-    if (analysis.total.empty_sessions != null && Number(analysis.total.empty_sessions) > 0)
-      recommendations.push(
-        `Prioritise recovery of ${fmt("empty_sessions", analysis.total.empty_sessions)} empty sessions by re-timing low-fill slots and pairing with high-intent cohorts.`,
-      );
-    if (analysis.total.booking_empty_sessions != null && Number(analysis.total.booking_empty_sessions) > 0)
-      recommendations.push(
-        `Investigate the ${fmt("booking_empty_sessions", analysis.total.booking_empty_sessions)} booking-linked empty sessions for avoidable no-shows and pre-class reminders.`,
-      );
-    if (analysis.total.attendance_empty_sessions != null && Number(analysis.total.attendance_empty_sessions) > 0)
-      recommendations.push(
-        `Member attendance has ${fmt("attendance_empty_sessions", analysis.total.attendance_empty_sessions)} empty observed sessions; run instructor + time cohort outreach on those windows.`,
-      );
-    if (!recommendations.length)
-      recommendations.push(
-        `Maintain current trajectory and monitor the next comparison cycle to confirm this pattern sustains under similar scope and filters.`,
-      );
-    return recommendations.slice(0, 2);
-  };
+  useEffect(() => { document.querySelector('.tabbar [aria-current="page"]')?.scrollIntoView({block:"nearest",inline:"nearest",behavior:"auto"}); }, [s.tab]);
   return (
     <div
       className="app"
@@ -472,10 +444,12 @@ export default function App() {
             aria-label="Atlas overview"
             style={{ color: "var(--text-1)" }}
           >
-            <span className="logo-mark">
+            <span className="logo-mark" aria-hidden="true">
               <i />
               <i />
               <i />
+              <span className="logo-orbit-dot"/>
+              <span className="logo-glint"/>
             </span>
             Atlas<span style={{ color: "var(--attendance)" }}>.</span>
           </a>
@@ -485,6 +459,7 @@ export default function App() {
           </div>
         </div>
         <div className="toolbar">
+          <PresentationTools /><StickyNotes />
           <select
             aria-label="Theme"
             className="theme-select"
@@ -554,7 +529,7 @@ export default function App() {
           >
             <RefreshCw size={14} />
           </button>
-          {s.view !== "kra" && <button className="button" onClick={() => setModal("export")}>
+          {s.view !== "kra" && <button className="button" aria-label="Export" onClick={() => setModal("export")}>
             <Download size={12} />
             Export
           </button>}
@@ -567,9 +542,10 @@ export default function App() {
           .filter((i) => !prefs.page[i]?.hidden)
           .map((i) => {
             const name = prefs.page[i]?.name || tabs[i];
+            const TabIcon = workspaceIcons[i];
             return (
               <button
-                key={name}
+                key={i}
                 className={`tab ${i === s.tab ? "active" : ""}`}
                 style={
                   {
@@ -580,7 +556,7 @@ export default function App() {
                 onClick={() => s.set({ tab: i })}
                 aria-current={i === s.tab ? "page" : undefined}
               >
-                {name}
+                <TabIcon size={15} strokeWidth={1.7} aria-hidden="true" /><span>{name}</span>
                 {i === 11 &&
                   Object.values(health).some((h) => h.status !== "ok") && (
                     <span className="tab-number">
@@ -607,7 +583,7 @@ export default function App() {
       </nav>
       <div className="workspace">
         {busy && <div className="loader-bar" />}
-        {busy && ready && (
+        {busy && (
           <div className="loader-shell" role="status" aria-live="polite" aria-atomic="true" style={{ "--loader-accent": `var(--${bp.domain})` } as React.CSSProperties}>
             <div className="loader-graphic" aria-hidden="true">
               <svg className="loader-orbit" viewBox="0 0 88 88"><circle className="loader-orbit-track" cx="44" cy="44" r="38" /><circle className="loader-orbit-arc" cx="44" cy="44" r="38" /><circle className="loader-orbit-dot" cx="44" cy="6" r="3" /></svg>
@@ -625,7 +601,7 @@ export default function App() {
           id="main"
           ref={main}
           tabIndex={-1}
-          className={`canvas ${busy && ready ? "loading" : ""}`}
+          className={`canvas ${busy ? "loading" : ""}`}
           aria-busy={busy}
         >
           <div className="print-context">
@@ -638,8 +614,8 @@ export default function App() {
           </div>
           <div className="page-intro">
             <div>
-              <h1 key={s.tab}>{s.view === "kra" ? "Jimmeey Gondaa · KRA performance" : pagePrefs.heading || bp.title}</h1>
-              <p>{s.view === "kra" ? "Systems, sales & client servicing · June–November 2026" : pagePrefs.subtitle ?? bp.subtitle}</p>
+              <h1 key={s.tab}>{s.view === "kra" ? "Jimmeey Gondaa · KRA performance" : pagePrefs.heading || workspaceHeading.title || bp.title}</h1>
+              <p>{s.view === "kra" ? "Systems, sales & client servicing · June–November 2026" : pagePrefs.subtitle ?? workspaceHeading.subtitle}</p>
             </div>
             <div className="intro-meta">
               <span className="pill good">
@@ -680,22 +656,6 @@ export default function App() {
             version={version}
             onRetry={(key) => void ensureSource(key, true)}
           />}
-          {s.view !== "kra" && !!tabSummary() && (
-            <div className="tab-summary">
-              <p>{tabSummary()}</p>
-              <ul>
-                {tabRecommendations().map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {!ready && !error && (
-            <div className="notice">
-              <Activity size={14} />
-              {progress}. Other workspaces load their sources when opened.
-            </div>
-          )}
           {error && (
             <div className="notice">
               <TriangleAlert size={14} />
@@ -720,8 +680,7 @@ export default function App() {
             ) && (
               <div className="notice">
                 <TriangleAlert size={13} />
-                Recorded duration is corrupted. Hours and revenue per hour are
-                unavailable. Attendance and revenue remain source-derived.
+                Some recorded durations could not be recovered. Hours and revenue per hour use valid duration-covered sessions only.
               </div>
             )}
           {s.tab === 10 && (
@@ -757,37 +716,14 @@ export default function App() {
           {s.tab === 15 ? (
             ready ? (
               <ReportBuilder version={version} />
-            ) : (
-              <div className="empty-state">
-                <h3>Loading report sources</h3>
-                <p>
-                  Sessions, sales, newcomers, memberships, leads, instructor outcomes, recurring sessions and bookings are being prepared.
-                  The builder appears when they are readable.
-                </p>
-              </div>
-            )
+            ) : null
           ) : s.tab === 13 ? (
             <IntelligenceWorkspace />
           ) : s.tab === 11 ? (
             ready ? (
               <DataHealth version={version} onRefresh={() => void load(true)} />
-            ) : (
-              <div className="empty-state">
-                <h3>Validating your sources</h3>
-                <p>
-                  The diagnostic register will appear when ingestion finishes.
-                </p>
-              </div>
-            )
-          ) : !ready ? (
-            <div className="empty-state">
-              <h3>Loading workspace data</h3>
-              <p>
-                Saved source snapshots will appear first. Live refresh continues
-                in the background.
-              </p>
-            </div>
-          ) : (
+            ) : null
+          ) : !ready || configuredTab !== s.tab ? null : (
             <>
               {!busy && !error && analysis.count === 0 && (
                 <div className="notice" role="status">
@@ -798,15 +734,6 @@ export default function App() {
                   </button>
                 </div>
               )}
-              {s.tab === 6 && (
-                <>
-                  <RenewalCohorts version={version} onDrill={setDrill} />
-                  <RetentionWorklists version={version} />
-                </>
-              )}
-              <PinnedInsights page={s.tab} />
-              <SavedElements page={s.tab} version={version} />
-              {s.tab === 0 && <Pulse data={analysis} />}
               <div className="metric-strip-head">
                 <div>
                   <h3>Metric cards</h3>
@@ -839,7 +766,7 @@ export default function App() {
                       analysis.previous[id]
                     }
                     trend={analysis.trend}
-                    n={Number(s.tab === 0 && ["gross_revenue", "net_revenue"].includes(id) ? analysis.total.sales_records : id === "active_base" ? analysis.total.active_records : currentSnapshotMetrics.has(id) && s.tab === 6 ? analysis.total.current_records : ["new_clients", "conversion_rate"].includes(id) && s.tab === 0 ? analysis.total.growth_records : analysis.total.n || analysis.count)}
+                    n={Number(s.tab === 9 && ["complimentary_visits", "session_complimentary_rate"].includes(id) ? analysis.total.complimentary_source_records : s.tab === 0 && ["gross_revenue", "net_revenue"].includes(id) ? analysis.total.sales_records : id === "active_base" ? analysis.total.active_records : currentSnapshotMetrics.has(id) && s.tab === 6 ? analysis.total.current_records : ["new_clients", "conversion_rate"].includes(id) && s.tab === 0 ? analysis.total.growth_records : analysis.total.n || analysis.count)}
                     evidence={analysis.total}
                     compare={s.compare !== "none"}
                     warning={
@@ -850,7 +777,7 @@ export default function App() {
                         ? "Source price values differ from collected payments. Net revenue uses Payment Value − Payment VAT."
                         : ["teaching_hours", "revenue_per_hour"].includes(id) &&
                             health.checkins?.defects.length
-                          ? "Duration is corrupted. No estimated hours are substituted."
+                          ? "Only sessions with valid recorded duration contribute to hours and hourly revenue."
                           : sourceProblem
                             ? "Source could not load."
                             : undefined
@@ -864,7 +791,7 @@ export default function App() {
                           id: "all",
                           label: metrics[id].label + " in scope",
                           path: [],
-                          source: s.tab === 0 && ["gross_revenue", "net_revenue"].includes(id) ? "sales" : s.tab === 0 && ["new_clients", "conversion_rate", "active_base"].includes(id) ? "new" : bp.source,
+                          source: s.tab === 9 && ["complimentary_visits", "session_complimentary_rate"].includes(id) ? "sessions" : s.tab === 0 && ["gross_revenue", "net_revenue"].includes(id) ? "sales" : s.tab === 0 && ["new_clients", "conversion_rate", "active_base"].includes(id) ? "new" : bp.source,
                           filters: currentSnapshotMetrics.has(id) ? { ...s.filters, from: "", to: "" } : s.filters,
                           metrics: [id],
                           predicate: id === "active_base" ? "lifecycle='Active'" : ["new_clients", "conversion_rate"].includes(id) ? "is_new" : id === "active_memberships" ? `status='Active' AND start_date<='${today()}' AND (end_date IS NULL OR end_date>='${today()}')` : id === "dormant_actives" ? `status='Active' AND start_date<='${today()}' AND (end_date IS NULL OR end_date>='${today()}') AND days_absent>21` : id === "revenue_at_risk_30d" ? `TRY_CAST(end_date AS DATE) BETWEEN DATE '${today()}' AND DATE '${today()}'+INTERVAL 30 DAY` : undefined,
@@ -875,12 +802,23 @@ export default function App() {
                   />
                 ))}
               </div>
+              <PinnedInsights page={s.tab} />
+              <SavedElements page={s.tab} version={version} />
+              {s.tab === 0 && <Pulse data={analysis} />}
+              {s.tab === 6 && (
+                <>
+                  <RenewalCohorts version={version} onDrill={setDrill} />
+                  <RetentionWorklists version={version} />
+                </>
+              )}
               {s.tab !== 0 && (
                 <Register
                   index="02"
                   title={bp.chartTitle}
                   subtitle={
-                    s.tab === 2
+                    s.tab === 4
+                      ? "Separate purchase volume from collection value · click a day to inspect it"
+                      : s.tab === 2
                       ? "Observed weekly fill, in the selected period"
                       : "Compare the shape, then inspect the detail"
                   }
@@ -890,7 +828,7 @@ export default function App() {
                       <Heatmap rows={analysis.heat} schedule />
                     </div>
                   ) : (
-                    <Chart tab={s.tab} data={analysis} />
+                    <Chart tab={s.tab} data={analysis} salesActivity={s.tab === 4} />
                   )}
                 </Register>
               )}
@@ -900,7 +838,7 @@ export default function App() {
                   title="What changed session revenue"
                   subtitle="Session-attributed revenue · attendance × realised yield; separate from payments collected"
                 >
-                  <Chart tab={0} data={analysis} />
+                  <SessionRevenueChange data={analysis} />
                 </Register>
               )}
               <div id="main-register">
@@ -932,11 +870,12 @@ export default function App() {
                   />
                 </Register>
               </div>
-              <div className="two-up">
-                <Rankings
+              <div className={`two-up ${s.tab === 0 ? "overview-decision-pair" : ""}`}>
+                {s.tab === 0 ? <OverviewAttention signals={signals} total={analysis.total}/> : <Rankings
+                  key={s.tab}
                   rows={analysis.groups}
                   groups={groups}
-                  columns={columns}
+                  columns={configuredTab === s.tab ? columns : bp.columns}
                   onDrill={(r) =>
                     onDrill({
                       id: String(r.g0),
@@ -946,7 +885,7 @@ export default function App() {
                       children: [],
                     })
                   }
-                />
+                />}
                 <Register
                   index="04"
                   title={
@@ -961,7 +900,7 @@ export default function App() {
                   <Chart tab={s.tab} data={analysis} secondary />
                 </Register>
               </div>
-              {s.tab === 8 ? <LeadStageScorecard version={version} onDrill={setDrill} /> : <Register
+              {s.tab === 8 ? <LeadStageScorecard version={version} onDrill={setDrill} /> : includeWeeklyPattern && analysis.heat.length > 0 ? <Register
                 index="05"
                 title={
                   includeWeeklyPattern && analysis.heat.length
@@ -1012,7 +951,7 @@ export default function App() {
                 ) : (
                   <Chart tab={s.tab} data={analysis} />
                 )}
-              </Register>}
+              </Register> : null}
               {/* Session metrics describe the class; these describe who the
                   instructor's first-visit members became. */}
               {s.tab === 3 && <AcquisitionTableView kind="trainers" version={version} />}

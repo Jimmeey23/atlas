@@ -146,6 +146,7 @@ export const sqlTypes: Record<string, string> = {
   booked: "DOUBLE",
   late_cancelled: "DOUBLE",
   non_paid: "DOUBLE",
+  complimentary_visits: "DOUBLE",
   revenue: "DOUBLE",
   net: "DOUBLE",
   vat: "DOUBLE",
@@ -263,18 +264,17 @@ export function normalise(
               "Date (IST)",
             ),
           );
-    let duration = n("Duration (Minutes)");
-    if (
-      g("Duration (Minutes)") &&
-      /^1900-/.test(String(g("Duration (Minutes)")))
-    ) {
+    const durationValue = g("Duration (Minutes)");
+    let duration = number(durationValue);
+    // Google Sheets dates encode numeric minutes as days from 1899-12-30.
+    // Recover only the exact serial representation and plausible session lengths.
+    if (duration == null && /^1900-\d{2}-\d{2}$/.test(String(durationValue))) {
+      const serial = (Date.parse(String(durationValue) + "T00:00:00Z") - Date.UTC(1899, 11, 30)) / 86400000;
+      if (Number.isInteger(serial) && serial > 0 && serial <= 240 && new Date(Date.parse(String(durationValue))).toISOString().slice(0,10) === String(durationValue)) duration = serial;
+    }
+    if (durationValue != null && durationValue !== "" && (duration == null || duration <= 0 || duration > 240)) {
       duration = null;
-      defects.push({
-        source: k,
-        row: i + 2,
-        field: "Duration (Minutes)",
-        issue: "Excel serial-date damage; duration unavailable.",
-      });
+      defects.push({ source: k, row: i + 2, field: "Duration (Minutes)", issue: "Unrecognised or implausible recorded duration; excluded from hours." });
     }
     const sessionDate = date(g("Session Date"));
     const saleDate = date(g("Sale Date"));
@@ -395,6 +395,7 @@ export function normalise(
               : 0
           : n("LateCancelled", "Late Cancellations"),
       non_paid: n("NonPaid"),
+      complimentary_visits: k === "sessions" ? n("Complimentary") : null,
       revenue: n(
         roll
           ? "TotalRevenueSum"

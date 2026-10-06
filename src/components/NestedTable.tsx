@@ -1,3 +1,4 @@
+import { InstructorAvatar } from "./InstructorAvatar";
 import { usePreferences } from "../state/preferences";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -188,6 +189,7 @@ export function NestedTable({
                 <span style={{ width: 12 }}>•</span>
               )}
             </button>
+            {row.original.path.at(-1)?.field === "trainer" && <InstructorAvatar name={row.original.label} />}
             <button className="row-name" onClick={() => onDrill(row.original)}>
               {row.original.label}
             </button>

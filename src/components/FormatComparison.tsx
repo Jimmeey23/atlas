@@ -1,3 +1,5 @@
+import { Bike, Dumbbell, Activity, Trophy } from "lucide-react";
+import { InstructorName } from "./InstructorAvatar";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { query, type Row } from "../data/duckdb";
 import { metricSQL, metrics } from "../semantics/metrics";
@@ -78,9 +80,11 @@ export function FormatComparison({ version }: { version: string | number }) {
     const higher = metrics[id]?.higherIsBetter;
     if (higher == null || metrics[id]?.aggregation === "sum" || id === "lost_revenue") return null;
     const scored = formats
+      .filter(f => row(f)?.[id] != null)
       .map((f) => ({ f, v: Number(row(f)?.[id]) }))
       .filter((x) => Number.isFinite(x.v));
     if (scored.length < 2) return null;
+    if (scored.every(x => x.v === scored[0].v)) return null;
     return scored.reduce((a, b) => ((higher ? b.v > a.v : b.v < a.v) ? b : a)).f;
   };
 
@@ -121,6 +125,29 @@ export function FormatComparison({ version }: { version: string | number }) {
         }
       >
         {loading && <p role="status">Comparing formats…</p>}
+        <div className="format-infographic">
+          {formats.map((format, index) => {
+            const record = row(format);
+            const Icon = format === "PowerCycle" ? Bike : format === "Strength Lab" ? Dumbbell : Activity;
+            const fill = record?.fill_rate == null ? null : Number(record.fill_rate);
+            const circumference = 2 * Math.PI * 43;
+            return <article className="format-profile" key={format} style={{"--format-color": ["var(--attendance)", "var(--people)", "var(--revenue)"][index % 3]} as React.CSSProperties}>
+              <header><span className="format-emblem"><Icon size={23} strokeWidth={1.6}/></span><div><span className="eyebrow">Signature format</span><h3>{format}</h3></div></header>
+              <div className="format-fill-ring"><svg viewBox="0 0 110 110" aria-hidden="true"><circle className="ring-track" cx="55" cy="55" r="43"/><circle className="ring-value" cx="55" cy="55" r="43" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - Math.max(0, Math.min(1, fill ?? 0)))}/></svg><div><strong>{fmt("fill_rate", fill)}</strong><span>Attendance fill</span></div></div>
+              <div className="format-volume"><div><strong>{fmt("sessions",record?.sessions)}</strong><span>Sessions</span></div><div><strong>{fmt("attendance",record?.attendance)}</strong><span>Attended seats</span></div></div>
+              <div className="format-measure-list">{["avg_class_size_incl", "revenue_per_session", "show_up_rate", "late_cancel_rate"].map(id => {
+                const raw = record?.[id];
+                const values = formats.map(f=>row(f)?.[id]).filter(v=>v!=null).map(Number).filter(Number.isFinite);
+                const max = Math.max(...values, 0);
+                return <div key={id} className="format-measure"><div><span>{metrics[id].label}</span><strong>{view === "index" && total ? delta(id,raw,total[id]) : fmt(id,raw)}</strong></div><div className="format-measure-track"><span style={{width: raw == null || max <= 0 ? "0%" : `${Math.min(100, Math.max(0, Number(raw)/max*100))}%`}}/></div>{best(id) === format && <small><Trophy size={10}/> Leads this measure</small>}</div>;
+              })}</div>
+              <footer>{fmt("revenue",record?.revenue)} <span>session-attributed revenue</span></footer>
+            </article>;
+          })}
+        </div>
+        {!loading && !formats.length && <p className="empty-state">No format sessions match this scope.</p>}
+        <p className="small">Rings show attended seats / capacity. Bars compare the same measure across formats; leadership follows each metric’s direction. Revenue is session-attributed.</p>
+        <details className="format-full-scorecard"><summary>Explore the complete scorecard</summary>
         <div className="table-scroll">
           <table className="worklist-table format-scorecard">
             <thead>
@@ -162,7 +189,7 @@ export function FormatComparison({ version }: { version: string | number }) {
         <p className="small">
           Highlighted cells lead on that measure in the direction the metric is
           read. Shares and rates are weighted, not averaged across formats.
-        </p>
+        </p></details>
       </Register>
 
       <Register index="F2" title="Share of the timetable" subtitle="What each format takes of the studio, and what it returns">
@@ -368,7 +395,7 @@ function SliceTable({ index, title, subtitle, rows, formats, label, caption }: {
                   <tbody>
                     {ranked.map((r) => (
                       <tr key={label(r)}>
-                        <th scope="row">{label(r)}</th>
+                        <th scope="row">{r.trainer != null ? <InstructorName name={String(r.trainer)}/> : label(r)}</th>
                         <td>{fmt("sessions", r.sessions)}</td>
                         <td>{fmt("fill_rate", r.fill_rate)}</td>
                         <td>{fmt("avg_class_size_incl", r.avg_class_size_incl)}</td>

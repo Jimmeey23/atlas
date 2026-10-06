@@ -27,7 +27,7 @@ test("date and month formats never guess DD/MM dates", () => {
   assert.equal(percent("50"), 0.5);
   assert.equal(boolean("FALSE"), false);
 });
-test("corrupted duration stays unavailable; valid attendance survives", () => {
+test("Sheets date-formatted minutes are recovered; valid attendance survives", () => {
   const d = normalise({
     key: "checkins",
     title: "Checkins",
@@ -38,9 +38,9 @@ test("corrupted duration stays unavailable; valid attendance survives", () => {
     columns: ["Duration (Minutes)", "Checked In", "Member ID", "Date (IST)"],
     rows: [["1900-02-25", "TRUE", "123", "2024-01-02"]],
   });
-  assert.equal(d.rows[0].duration, undefined);
+  assert.equal(d.rows[0].duration, 57);
   assert.equal(d.rows[0].checked_in, 1);
-  assert.equal(d.defects.length, 1);
+  assert.equal(d.defects.length, 0);
 });
 test("trainer attendance parsing handles apostrophes, commas and sorted order", () => {
   assert.deepEqual(

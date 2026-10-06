@@ -15,6 +15,8 @@ const sessionColumns = [
   "capacity",
   "booked",
   "attendance",
+  "complimentary_visits",
+  "session_complimentary_rate",
   "fill_rate",
   "show_up_rate",
   "avg_class_size_incl",
@@ -43,6 +45,7 @@ export const blueprints: Blueprint[] = [
       "new_clients",
       "conversion_rate",
       "active_base",
+      "complimentary_visits",
     ],
     columns: [
       "sessions",
@@ -74,6 +77,8 @@ export const blueprints: Blueprint[] = [
       "rev_pas",
       "revenue_per_session",
       "late_cancel_rate",
+      "complimentary_visits",
+      "session_complimentary_rate",
     ],
     columns: sessionColumns,
     groups: ["format", "location", "time", "trainer"],
@@ -189,8 +194,8 @@ export const blueprints: Blueprint[] = [
       "deferred_revenue",
     ],
     groups: ["category", "product", "location", "associate"],
-    chart: "stacked",
-    chartTitle: "The shape of your revenue",
+    chart: "combo",
+    chartTitle: "Daily collections & purchase activity",
     secondary: [
       "Salesperson scorecard",
       "Payment-method mix",
@@ -365,7 +370,8 @@ export const blueprints: Blueprint[] = [
       "attendance_avg_class_size",
       "attendance_empty_sessions",
       "visits_per_member",
-      "complimentary_rate",
+      "complimentary_visits",
+      "session_complimentary_rate",
       "revenue_per_checkin",
       "teaching_hours",
       "revenue_per_hour",
@@ -377,7 +383,6 @@ export const blueprints: Blueprint[] = [
       "attendance_avg_class_size",
       "attendance_empty_sessions",
       "visits_per_member",
-      "complimentary_rate",
       "checkin_revenue",
       "revenue_per_checkin",
       "teaching_hours",
@@ -448,7 +453,7 @@ export const blueprints: Blueprint[] = [
 
 blueprints.push({
   ...blueprints[7],
-  kpis: ["bookings", "unique_bookers", "revenue_per_booking"],
+  kpis: ["booking_late_cancelled", "unique_bookers", "late_affected_sessions", "late_recorded_value", "revenue_per_booking"],
   columns: ["bookings", "unique_bookers", "revenue_per_booking"],
   title: "Recover the seats lost to late cancellations.",
   subtitle:

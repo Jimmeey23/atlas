@@ -1,3 +1,4 @@
+import { InstructorAvatar, InstructorName } from "./InstructorAvatar";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -183,7 +184,7 @@ export function DrillPanel({
                     </span>
                   ))}
                 </div>
-                <h2>{entry.label}</h2>
+                <div className="trainer-profile-heading">{entry.path.at(-1)?.field === "trainer" && <InstructorAvatar key={entry.label} name={entry.label} large />}<h2>{entry.label}</h2></div>
                 <p className="small">
                   {total.toLocaleString("en-IN")} contributing records / {definition.title}
                 </p>
@@ -265,7 +266,7 @@ export function DrillPanel({
                   onClick={() => setRecord(record === r ? null : r)}
                 >
                   <span className="record-name">
-                    {r.member || r.trainer || r.format || "Source record"}
+                    {r.member || (r.trainer ? <InstructorName name={String(r.trainer)}/> : r.format || "Source record")}
                   </span>
                   <p>
                     {r.date} / {r.time} / {r.location}

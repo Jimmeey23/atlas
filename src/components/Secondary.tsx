@@ -1,3 +1,4 @@
+import { InstructorName } from "./InstructorAvatar";
 import { useEffect, useState } from "react";
 import { ChevronDown, Download, ExternalLink } from "lucide-react";
 import { query, type Row } from "../data/duckdb";
@@ -127,7 +128,7 @@ export function Secondary({
                         <button
                           onClick={() => state.cross(group, String(r.entity))}
                         >
-                          {r.entity || "Unspecified"} <ExternalLink size={10} />
+                          {group === "trainer" ? <InstructorName name={String(r.entity || "Unspecified")}/> : r.entity || "Unspecified"} <ExternalLink size={10} />
                         </button>
                       </td>
                       {columns.map((id) => (

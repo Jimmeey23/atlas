@@ -1,3 +1,4 @@
+import { InstructorName } from "./InstructorAvatar";
 import { useState } from "react";
 import { ChevronDown, Check, Filter, X } from "lucide-react";
 import {
@@ -79,7 +80,7 @@ export function Filters({
             s.filters[field].map((value) => (
               <button className="chip" key={`${field}:${value}`} aria-label={`Remove ${field} filter: ${value}`}
                 onClick={() => s.filter({ [field]: s.filters[field].filter((item) => item !== value) })}>
-                {value} <X size={10} />
+                {field === "trainer" ? <InstructorName name={value}/> : value} <X size={10} />
               </button>
             )),
           )}
@@ -91,7 +92,7 @@ export function Filters({
                 s.set({ transient: s.transient.filter((x) => x !== t) })
               }
             >
-              {t.value} <X size={10} />
+              {t.field === "trainer" ? <InstructorName name={t.value}/> : t.value} <X size={10} />
             </button>
           ))}
         </div>
@@ -310,7 +311,7 @@ function Multi({
                       )
                     }
                   />{" "}
-                  {v}
+                  {field === "trainer" ? <InstructorName name={v}/> : v}
                 </span>
                 <span className="small">
                   {(live[v] ?? n).toLocaleString("en-IN")}

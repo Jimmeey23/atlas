@@ -1,3 +1,4 @@
+import { InstructorName } from "./InstructorAvatar";
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, CalendarDays, ChevronDown, ChevronRight, CircleHelp, GraduationCap, Handshake, Route, TrendingUp, Users } from "lucide-react";
 import { query, quote, type Row, health } from "../data/duckdb";
@@ -197,7 +198,7 @@ function MetricsTable({ rows, dimensions, kind, scope, onDrill }: { rows: Row[];
     <div className="acq-table-scroll" tabIndex={0} aria-label="Metrics table. Scroll horizontally for additional metrics."><table className="acq-table">
       <thead><tr>{dimensions.map(([key, label], i) => <SortHeading key={key} label={label} name={key} sort={sort} onSort={onSort} className={i === 0 ? "acq-sticky acq-dimension" : "acq-dimension"} />)}{measures.map(m => <SortHeading key={m[0]} label={m[1]} name={m[0]} sort={sort} onSort={onSort} />)}</tr></thead>
       <tbody>{matching.slice(currentPage * 25, currentPage * 25 + 25).map((r, i) => <tr key={JSON.stringify(dimensions.map(([key]) => r[key]))}>{dimensions.map(([key], j) => <td key={key} className={`${j === 0 ? "acq-sticky " : ""}acq-dimension`}>
-        {j === 0 && kind === "trainers" && <span className="acq-rank">{currentPage * 25 + i + 1}</span>}{key === "month" ? acquisitionPeriodLabel(r[key]) : key === "entry" ? <span className="acq-badge neutral">{r[key] ?? "Unspecified"}</span> : r[key] ?? "Unspecified"}
+        {j === 0 && kind === "trainers" && <span className="acq-rank">{currentPage * 25 + i + 1}</span>}{key === "month" ? acquisitionPeriodLabel(r[key]) : key === "entry" ? <span className="acq-badge neutral">{r[key] ?? "Unspecified"}</span> : key === "trainer" ? <InstructorName name={String(r[key] ?? "Unspecified")}/> : r[key] ?? "Unspecified"}
       </td>)}{measures.map(m => <td key={m[0]}><button className="acq-cell-button" onClick={() => drill(r, m[0])}><span className={r[m[0]] == null ? "acq-missing" : m[2] === "percent" ? "acq-rate" : "acq-value"}>{valueText(m, r[m[0]])}</span></button></td>)}</tr>)}</tbody>
       {total && <tfoot><tr><th scope="row" className="acq-sticky">Full scope · total</th>{dimensions.slice(1).map(([key]) => <td key={key}>—</td>)}{measures.map(m => <td key={m[0]}><button className="acq-cell-button" onClick={() => drill(total, m[0])}>{valueText(m, total[m[0]])}</button></td>)}</tr></tfoot>}
     </table>{!matching.length && <p className="acq-empty">No cohort records match this scope and search.</p>}</div>
@@ -245,6 +246,7 @@ function Journeys({ rows, version, scope, onDrill }: { rows: Row[]; version: num
     if (["ltv", "first_purchase", "avg_purchase_value"].includes(key)) return fmt("avg_ltv", r[key]);
     if (key === "conversion_days") return fmt("avg_conversion_span", r[key]);
     if (key === "post_trial_purchases") return fmt("new_clients", r[key]);
+    if (key === "trainer") return <InstructorName name={String(r[key] ?? "Unspecified")}/>;
     if (key === "entry") return <span className="acq-badge neutral">{r[key]}</span>;
     if (key === "retention") return <OutcomeBadge value={r[key]} />;
     if (key === "purchase_journey" && r[key]) return <span className="acq-journey-path">{String(r[key])}</span>;

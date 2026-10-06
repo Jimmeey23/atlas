@@ -191,9 +191,9 @@ export const rules: Rule[] = [
     id: "dormant-actives",
     tab: 6,
     sql: (f) =>
-      `SELECT location AS entity,COUNT(*) AS n,SUM(ltv) AS value FROM new${where(f, "new", [])} AND_FIX lifecycle='Active' AND days_absent>${thresholds().dormancyDays} GROUP BY location`.replace(
+      `SELECT location AS entity,COUNT(*) AS n,SUM(ltv) AS value FROM new${where({ ...f, from: "", to: "" }, "new", [])} AND_FIX lifecycle='Active' AND days_absent>${thresholds().dormancyDays} GROUP BY location`.replace(
         " AND_FIX ",
-        where(f, "new", []) ? " AND " : " WHERE ",
+        where({ ...f, from: "", to: "" }, "new", []) ? " AND " : " WHERE ",
       ),
     test: (x) => Number(x.n) > 0,
     build: (x) =>
@@ -228,7 +228,7 @@ export const rules: Rule[] = [
     id: "expiry-cliff",
     tab: 6,
     sql: (f) =>
-      `SELECT location AS entity,${metricSQL(["revenue_at_risk_30d", "active_memberships"], context())},COUNT(*) AS n FROM lapsed${where(f, "lapsed", [])} GROUP BY location`,
+      `SELECT location AS entity,${metricSQL(["revenue_at_risk_30d", "active_memberships"], context())},COUNT(*) AS n FROM lapsed${where({ ...f, from: "", to: "" }, "lapsed", [])} GROUP BY location`,
     test: (x) => Number(x.revenue_at_risk_30d) > 0,
     build: (x) =>
       r(

@@ -1,10 +1,14 @@
 export const currentSnapshotMetrics = new Set(["active_base", "active_memberships", "dormant_actives", "revenue_at_risk_30d"]);
 export const metricNotes: Record<string, { definition: string; caveat?: string; numerator?: string; denominator?: string }> = {
+  complimentary_visits: {definition:"Sum of numeric values in the Sessions Complimentary column within the selected scope.",caveat:"Independent of NonPaid and check-in complimentary flags; missing source values stay unavailable."},
+  session_complimentary_rate: {definition:"Sessions complimentary visit count divided by Sessions CheckedIn attendance."},
   revenue: { definition: "Revenue attributed to studio sessions in the selected date range.", caveat: "Recognised session revenue differs from cash collected on the Revenue & sales tab." },
   discount_value: { definition: "Sale-item unit discount multiplied by quantity, summed across payment lines.", caveat: "Sale-level discount totals repeat on multi-item sales and are not summed as item discounts." },
   discount_rate: { definition: "Item-level discounts divided by collected revenue plus those discounts.", caveat: "Uses unit discount × quantity, not the sale-level discount repeated on each row." },
   gross_revenue: { definition: "Payments collected on successful, non-voided sale lines, by payment date.", caveat: "Cash collections and session-attributed revenue have different timing and populations." },
   net_revenue: { definition: "Successful payment value less the VAT recorded on those same payment lines.", caveat: "Uses collected payment and payment VAT; the source catalogue price is not collected net revenue." },
+  late_affected_sessions: { definition: "Distinct source session identities with at least one late-cancelled booking in this scope.", caveat: "Uses session ID, source unique IDs, then date, time, format and studio when an ID is unavailable." },
+  late_recorded_value: { definition: "Source Sale Value attributed to late-cancelled booking rows, excluding imported bookings.", caveat: "Recorded booking value is not measured lost cash, a refund or a cancellation fee." },
   fill_rate: { definition: "Attendees divided by available seats across the same sessions.", numerator: "Attendees", denominator: "Available seats" },
   avg_class_size_incl: { definition: "Total attendees divided by sessions, including empty sessions.", numerator: "Attendees", denominator: "Sessions" },
   conversion_rate: { definition: "Trials whose Conversion Status is Converted, divided by every trial. A trial is any row whose Is New label contains the word new.", numerator: "Converted trials", denominator: "Trials", caveat: "Outcome is the source's latest status, not conversions occurring during this period." },
@@ -12,7 +16,7 @@ export const metricNotes: Record<string, { definition: string; caveat?: string; 
   second_visit_rate: { definition: "Trials with at least one post-trial visit divided by every trial. Counted from Visits Post Trial, not from a status column.", numerator: "Returned trials", denominator: "Trials", caveat: "The source derives Retention Status from the same column, so this currently equals the retention rate." },
   checkin_revenue: { definition: "Attributed revenue from checked-in rows only.", caveat: "Unattended and late-cancelled rows are excluded, matching session attendance revenue." },
   revenue_per_checkin: { definition: "Attributed revenue on attended rows divided by attended check-ins.", numerator: "Attended revenue", denominator: "Check-ins" },
-  teaching_hours: { definition: "Recorded duration counted once per attended session, converted to hours.", caveat: "Corrupted or missing duration stays unavailable; attendee rows never multiply teaching time." },
+  teaching_hours: { definition: "Recorded duration counted once per attended session, converted to hours.", caveat: "Date-formatted minutes are decoded from the Sheets serial value; invalid or missing duration is excluded. Attendee rows never multiply teaching time." },
   revenue_per_hour: { definition: "Attended revenue with valid session duration divided by distinct-session teaching hours.", caveat: "Revenue and hours use the same duration-covered population." },
   payroll_revenue: { definition: "Monthly instructor-attributed revenue reported by Payroll.", caveat: "Payroll is monthly and source amounts are rounded; it may differ slightly from Sessions." },
   deferred_revenue: { definition: "Remaining membership money, counted once per membership in the selected sale cohort.", caveat: "A current balance from the source snapshot; not a historical balance at the selected period end." },

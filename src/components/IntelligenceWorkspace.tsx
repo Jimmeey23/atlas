@@ -1,3 +1,4 @@
+import { InstructorName } from "./InstructorAvatar";
 import { ArrowUp, ArrowUpRight, Sparkles, MessageSquare, ChartNoAxesCombined, Check, Database, Pencil, Trash2, Paperclip, Mic, Square } from "lucide-react";
 import { fmt, formatField } from "../semantics/formats";
 import { metrics } from "../semantics/metrics";
@@ -541,7 +542,7 @@ function Element({ doc, version }: { doc: Doc; version: number }) {
               {rows.map((r, i) => (
                 <tr key={i}>
                   {Object.keys(rows[0] || {}).map((k) => (
-                    <td key={k}>{displayValue(k, r[k])}</td>
+                    <td key={k}>{["trainer","instructor","teacher"].includes(k.toLowerCase()) && r[k] != null ? <InstructorName name={String(r[k])}/> : displayValue(k, r[k])}</td>
                   ))}
                 </tr>
               ))}
@@ -586,6 +587,8 @@ export function IntelligenceWorkspace({
   const [question, setQuestion] = useState("");
   const [page, setPage] = useState(s.tab === 13 ? 0 : s.tab);
   const [busy, setBusy] = useState(false);
+  const requestController = useRef<AbortController | null>(null);
+  useEffect(()=>()=>requestController.current?.abort(),[]);
   const [error, setError] = useState("");
   const [memoryText, setMemoryText] = useState("");
   const [attachments, setAttachments] = useState<{ name: string; note: string }[]>([]);
@@ -658,12 +661,17 @@ export function IntelligenceWorkspace({
     setAttachments([]);
     setMessages((m) => [...m, { role: "user", content: message }]);
     try {
-      const result = await api(mode, {
+      const requestedMode = /\b(create|build|generate|make|add|save|plot|draw)\b/i.test(base) && /\b(chart|table|graph|element|view|insight|summary|list|dashboard)\b/i.test(base) ? "build" : mode;
+      if (requestedMode !== mode) setMode(requestedMode);
+      const controller = new AbortController();
+      requestController.current = controller;
+      const result = await api(requestedMode, {
+        signal:controller.signal,
         method: "POST",
         body: JSON.stringify({
           message,
           conversationId,
-          history: prefs.chatSaveHistory && status?.supabase
+          history: conversationId && prefs.chatSaveHistory && status?.supabase
             ? []
             : messages.slice(-10).map((m) => ({
                 role: m.role,
@@ -687,11 +695,13 @@ export function IntelligenceWorkspace({
           saved: result.saved,
           scope: result.scope,
           model: result.model,
+          activity: result.activity,
         },
       ]);
       changed();
     } catch (e) {
-      setError(String(e));
+      setError((e as Error).name === "AbortError" ? "Request stopped. Your question is preserved." : String(e));
+      setMessages(m=>m.slice(0,-1));
       setQuestion(message);
     } finally {
       setBusy(false);
@@ -711,7 +721,10 @@ export function IntelligenceWorkspace({
         <button aria-pressed={mode === "build"} onClick={() => setMode("build")}><ChartNoAxesCombined size={16}/> Build an element</button>
       </div>
       <p className="chat-scope"><Database size={13}/><span>{s.filters.location?.join(" · ") || "All studios"} · {s.filters.from} → {s.filters.to}</span></p>
-      <p className="chat-scope-hint">Name a studio or period to query that scope directly.</p>
+      <p className="chat-scope-hint">Name a studio or period to query that scope directly. Creation requests automatically use Build.</p>
+      <div className="agent-capabilities"><span><Database size={13}/> Governed KPI queries</span><span>Source coverage checks</span><span>Studio & period comparisons</span><span>Validated charts & tables</span></div>
+      <p className="small" role="status">{status ? `${status.openai ? "GPT connected" : "GPT requires configuration"} · ${status.supabase ? "Workspace storage connected" : "Workspace storage requires configuration"}` : "Checking agent connections…"}</p>
+      {!!messages.at(-1)?.activity?.length && <details className="agent-tool-log"><summary>Agent tool activity · {messages.at(-1).activity.length} actions</summary>{messages.at(-1).activity.map((a:any,i:number)=><p key={i}>{a.tool.replaceAll("_"," ")} · {a.status}{a.error ? ` · ${a.error}` : ""}</p>)}</details>}
       <div className="agent-layout">
         <aside>
           <details open={!compact}>
@@ -810,7 +823,7 @@ export function IntelligenceWorkspace({
                     <summary>{m.evidence.length} verified {m.evidence.length === 1 ? "query" : "queries"} · View sources</summary>
                     {m.evidence.map((e: any, j: number) => (
                       <div key={j}>
-                        {e.result?.length > 0 && <div className="chat-result"><table><thead><tr>{Object.keys(e.result[0]).map(k => <th key={k}>{k.replaceAll("_"," ")}</th>)}</tr></thead><tbody>{e.result.map((row: any, n: number) => <tr key={n}>{Object.keys(e.result[0]).map(k => <td key={k}>{displayValue(k,row[k])}</td>)}</tr>)}</tbody></table></div>}
+                        {e.result?.length > 0 && <div className="chat-result"><table><thead><tr>{Object.keys(e.result[0]).map(k => <th key={k}>{k.replaceAll("_"," ")}</th>)}</tr></thead><tbody>{e.result.map((row: any, n: number) => <tr key={n}>{Object.keys(e.result[0]).map(k => <td key={k}>{["trainer","instructor","teacher"].includes(k.toLowerCase()) && row[k] != null ? <InstructorName name={String(row[k])}/> : displayValue(k,row[k])}</td>)}</tr>)}</tbody></table></div>}
                         <pre>{e.sql}</pre>
                         {e.provenance?.filter((p: any) => p.url).map((p: any) => <a className="chat-source-link" key={p.source} href={p.url} target="_blank" rel="noreferrer">{p.title || p.source} source sheet ↗</a>)}
                         <p>
@@ -827,7 +840,7 @@ export function IntelligenceWorkspace({
                 )}
               </article>
             ))}
-            {busy && <div className="chat-thinking" role="status"><Sparkles size={15}/>{mode === "ask" ? "Checking source data…" : "Building and validating your element…"}<span className="chat-loading-dots">•••</span></div>}
+            {busy && <div className="chat-thinking" role="status"><Sparkles size={15}/>{mode === "ask" ? "Checking source data…" : "Building and validating your element…"}<span className="chat-loading-dots">•••</span><button className="button" onClick={()=>requestController.current?.abort()}>Stop</button></div>}
             <div ref={end}/>
           </div>
           <div className="chat-composer">

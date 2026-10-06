@@ -20,13 +20,13 @@ export interface ChapterSpec {
 const group = (field: string, title: string, columns: string[], extra: Partial<GroupSpec> = {}): GroupSpec => ({
   field, title, deck: 'Selected-month results. Rankings use eligible samples; comparisons refer to the same group in the previous month and previous year.', columns, limit: 10, ...extra,
 });
-const demand = ['sessions', 'attendance', 'avg_class_size_incl', 'fill_rate', 'revenue_per_session'];
+const demand = ['sessions', 'attendance', 'complimentary_visits', 'session_complimentary_rate', 'avg_class_size_incl', 'fill_rate', 'revenue_per_session'];
 const trials = ['new_clients', 'conversion_rate', 'retention_rate', 'avg_ltv'];
 const sales = ['gross_revenue', 'net_revenue', 'transactions', 'aov'];
 export const chapters: ChapterSpec[] = [
   { id: 'executive-summary', nav: 'Overview', title: 'Executive decision brief', eyebrow: 'The decisions that matter',
     deck: 'The strongest signals across cash sales, acquisition, member continuity and studio demand.', source: 'sessions',
-    metrics: ['attendance', 'fill_rate', 'avg_class_size_incl', 'revenue'], groups: [], history: ['attendance', 'fill_rate'] },
+    metrics: ['attendance', 'fill_rate', 'avg_class_size_incl', 'revenue', 'complimentary_visits', 'session_complimentary_rate'], groups: [], history: ['attendance', 'fill_rate'] },
   { id: 'revenue-performance', nav: 'Sales', title: 'Sales, products & revenue quality', eyebrow: 'Commercial performance',
     deck: 'What changed in collections, where the movement came from and how resilient the product mix is.', source: 'sales',
     metrics: ['gross_revenue', 'net_revenue', 'transactions', 'aov', 'buyers', 'discount_rate', 'membership_rev_share', 'units', 'discount_value', 'arpu'],

@@ -1,3 +1,4 @@
+import { InstructorName } from "./InstructorAvatar";
 import { useEffect, useState } from "react";
 import { analyse, type Analysis } from "../data/analytics";
 import { blueprints } from "../data/blueprints";
@@ -105,7 +106,7 @@ export function InstructorEconomics({ version }: { version: string | number }) {
               <tbody>
                 {rows.map((r) => (
                   <tr key={String(r.g0)}>
-                    <th scope="row">{String(r.g0 ?? "Unspecified")}</th>
+                    <th scope="row"><InstructorName name={String(r.g0 ?? "Unspecified")}/></th>
                     {bp.columns.map((id) => (
                       <td key={id}>{fmt(id, r[id])}</td>
                     ))}

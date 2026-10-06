@@ -36,6 +36,21 @@ export function ReportBuilder({ version }: { version: string | number }) {
   const [loadingSaved, setLoadingSaved] = useState(false);
   const document_ = useRef<HTMLElement>(null);
   const run = useRef<AbortController>();
+  const presentedId = useRef("");
+  useEffect(() => {
+    presentedId.current = model?.id || "";
+  }, [model?.id]);
+  useEffect(() => {
+    let live = true;
+    const listener = (event: Event) => {
+      const id = (event as CustomEvent<string>).detail;
+      if (!id || presentedId.current === id) return;
+      presentedId.current = id;
+      void loadReport(id).then(saved => { if(live) {setModel(saved);setStudio(saved.scope.studio);setMonth(saved.scope.month);} }).catch(e=>{if(live){presentedId.current="";setError(String(e));}});
+    };
+    window.addEventListener("p57-present-report", listener);
+    return () => {live=false;window.removeEventListener("p57-present-report",listener);};
+  }, []);
 
   useEffect(() => {
     let live = true;
@@ -181,11 +196,12 @@ export function ReportBuilder({ version }: { version: string | number }) {
   );
 
   return (
-    <div className="report-workspace">
+    <div className="report-workspace" data-report-id={model?.id || ""}>
       <div className="report-controls" data-export="omit">
         <label>
           <span className="small">Studio</span>
           <select
+            aria-label="Studio"
             value={studio}
             onChange={(e) => setStudio(e.target.value)}
             disabled={busy || !studios.length}
@@ -200,6 +216,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
         <label>
           <span className="small">Period</span>
           <select
+            aria-label="Period"
             value={month}
             onChange={(e) => setMonth(e.target.value)}
             disabled={busy || !months.length}
@@ -280,8 +297,9 @@ export function ReportBuilder({ version }: { version: string | number }) {
       )}
 
       {model && (!model.schemaVersion || model.schemaVersion < 3) && <div className="notice">This saved version uses the earlier report format. Rebuild to include leads, renewal cohorts, instructor scorecards, recurring slots and late-cancellation analysis.</div>}
+      {model?.schemaVersion === 3 && <div className="notice">This saved snapshot predates the corrected complimentary-visit and recorded-duration calculations. Rebuild the report to use the current source definitions; the original snapshot is preserved.</div>}
       {model ? (
-        <ReportDocument model={model} theme={reportTheme} ref={document_} />
+        <ReportDocument key={model.id ?? model.figuresHash} model={model} theme={reportTheme} ref={document_} />
       ) : (
         !busy && (
           <div className="empty-state" data-export="omit">

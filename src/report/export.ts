@@ -66,6 +66,62 @@ export async function serialiseReport(element: HTMLElement, model: ReportModel) 
     "</head>",
     "<body>",
     clone.outerHTML,
+    `<script>
+    document.addEventListener('click', function(event) {
+      const button = event.target.closest('button');
+      if (!button) return;
+      if (button.hasAttribute('data-view-control')) {
+        const root = button.closest('[data-switch-root]');
+        const choice = button.getAttribute('data-view-control');
+        root.querySelectorAll('[data-view-control]').forEach(function(b) {
+          if (b.closest('[data-switch-root]') === root) b.setAttribute('aria-pressed', String(b === button));
+        });
+        root.querySelectorAll('[data-view-panel]').forEach(function(panel) {
+          if (panel.parentElement === root) panel.hidden = panel.getAttribute('data-view-panel') !== choice;
+        });
+      }
+      if (button.hasAttribute('data-comparison-control')) {
+        const root = button.closest('.r-bar-chart');
+        const choice = button.getAttribute('data-comparison-control');
+        root.querySelectorAll('[data-comparison-control]').forEach(function(b) {b.setAttribute('aria-pressed',String(b === button));});
+        root.querySelectorAll('[data-comparison-panel]').forEach(function(panel) {panel.hidden = panel.getAttribute('data-comparison-panel') !== choice;});
+      }
+      if (button.closest('[data-carousel-root]')) {
+        const root = button.closest('[data-carousel-root]');
+        const slides = Array.from(root.querySelectorAll('[data-carousel-slide]'));
+        if (button.hasAttribute('data-carousel-pause')) {
+          const paused = button.getAttribute('aria-pressed') !== 'true';
+          root.dataset.paused = String(paused);
+          button.setAttribute('aria-pressed',String(paused));
+          button.textContent = paused ? 'Resume' : 'Pause';
+          button.setAttribute('aria-label',paused ? 'Resume photography' : 'Pause photography');
+        } else {
+          const current = slides.findIndex(function(slide) {return !slide.hidden;});
+          const choice = button.hasAttribute('data-carousel-choice') ? Number(button.dataset.carouselChoice) : (current + Number(button.dataset.carouselStep) + slides.length) % slides.length;
+          slides.forEach(function(slide,i) {slide.hidden = i !== choice;});
+          root.querySelectorAll('[data-carousel-choice]').forEach(function(dot) {dot.setAttribute('aria-pressed',String(Number(dot.dataset.carouselChoice) === choice));});
+        }
+      }
+      if (button.hasAttribute('data-marquee-control')) {
+        const strip = button.closest('.r-signal-strip');
+        const paused = button.getAttribute('aria-pressed') !== 'true';
+        button.setAttribute('aria-pressed',String(paused));
+        button.textContent = paused ? 'Resume' : 'Pause';
+        button.setAttribute('aria-label', paused ? 'Resume signals' : 'Pause signals');
+        strip.querySelector('.r-marquee').setAttribute('data-paused',String(paused));
+      }
+    });
+    let printing = false;
+    window.addEventListener('beforeprint',function(){printing=true;});
+    window.addEventListener('afterprint',function(){printing=false;});
+    document.querySelectorAll('[data-carousel-root]').forEach(function(root) {
+      root.dataset.paused = root.querySelector('[data-carousel-pause]').getAttribute('aria-pressed');
+      setInterval(function() {
+        if (printing || document.hidden || root.dataset.paused === 'true' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        root.querySelector('[data-carousel-step="1"]').click();
+      },7000);
+    });
+    </script>`,
     "</body>",
     "</html>",
   ].join("\n");

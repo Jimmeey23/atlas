@@ -1221,10 +1221,10 @@
   {
     "id": "complimentary_rate",
     "label": "Complimentary share",
-    "expression": "COUNT(*) FILTER (WHERE complimentary AND attended)::DOUBLE/NULLIF(COUNT(*) FILTER (WHERE attended),0)",
+    "expression": "SUM(complimentary_visits)/NULLIF(SUM(checked_in),0)",
     "sources": [
-      "Checkins.Complementary",
-      "Checkins.Checked In"
+      "Sessions.Complimentary",
+      "Sessions.CheckedIn"
     ],
     "format": "percent",
     "domain": "attendance",
@@ -1664,5 +1664,62 @@
     "aggregation": "sum",
     "higherIsBetter": true,
     "minSample": 3
+  },
+  {
+    "id": "complimentary_visits",
+    "label": "Complimentary visits",
+    "expression": "SUM(complimentary_visits)",
+    "sources": [
+      "Sessions.Complimentary"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": false,
+    "minSample": 1
+  },
+  {
+    "id": "session_complimentary_rate",
+    "label": "Complimentary share",
+    "expression": "SUM(complimentary_visits)/NULLIF(SUM(checked_in),0)",
+    "sources": [
+      "Sessions.Complimentary",
+      "Sessions.CheckedIn"
+    ],
+    "format": "percent",
+    "domain": "attendance",
+    "aggregation": "weighted",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "late_affected_sessions",
+    "label": "Affected sessions",
+    "expression": "COUNT(DISTINCT COALESCE(session_id,unique_id1,unique_id2,date||'|'||time||'|'||format||'|'||location)) FILTER (WHERE late_cancelled>0)",
+    "sources": [
+      "Bookings.Session Date",
+      "Bookings.Late Cancelled"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": false,
+    "minSample": 5,
+    "description": "Distinct source sessions with at least one late cancellation in this scope."
+  },
+  {
+    "id": "late_recorded_value",
+    "label": "Recorded booking value",
+    "expression": "SUM(revenue) FILTER (WHERE late_cancelled>0 AND NOT imported)",
+    "sources": [
+      "Bookings.Sale Value",
+      "Bookings.Late Cancelled"
+    ],
+    "format": "currency",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": false,
+    "minSample": 5,
+    "description": "Source sale values attributed to late-cancelled booking rows, excluding imported rows. This is not lost cash or a cancellation fee."
   }
 ]

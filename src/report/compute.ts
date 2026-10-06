@@ -142,7 +142,7 @@ export async function computeReport(
   }
   onProgress?.(done, queryable.length, "Figures complete");
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     sources: Object.values(health).filter(s => queryable.some(spec => spec.source === s.key)).map(s => ({ key: s.key, title: s.title, fetchedAt: s.fetchedAt, stale: !!s.stale, status: s.status })),
     rate: context(scopeFilters(scope), []).rate,
     scope,

@@ -1,3 +1,4 @@
+import { stickyNoteRoutes } from "./sticky-notes.mjs";
 import "dotenv/config";
 import express from "express";
 import { authenticatedSheet } from "./sheets-auth.mjs";
@@ -6,6 +7,7 @@ import path from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import WebSocket from "ws";
 import { kraRoutes } from "./kra.mjs";
+import { presentationRoutes } from "./presentation.mjs";
 import { reportRoutes } from "./reports.mjs";
 import { createStore } from "./store.mjs";
 import { intelligenceRoutes } from "./intelligence.mjs";
@@ -31,6 +33,8 @@ export async function createApp({ serveStatic = false } = {}) {
   app.use("/api/reports", express.json({ limit: "8mb" }));
   app.use(express.json({ limit: "96kb" }));
   reportRoutes(app, store, cloud);
+  presentationRoutes(app, store);
+  stickyNoteRoutes(app, store, cloud);
   const ttl = 15 * 60 * 1000;
   await mkdir(path.join(cacheRoot, ".cache"), { recursive: true });
   if (!process.env.VERCEL) {
@@ -272,6 +276,7 @@ export async function createApp({ serveStatic = false } = {}) {
       store: store.backend,
     }),
   );
+  app.use("/api", (_req,res)=>res.status(404).json({error:"Unknown API endpoint. Refresh the app after updating the gateway."}));
     if (serveStatic) {
       app.use(express.static(path.join(root, "dist")));
       app.get("*", (_, res) => res.sendFile(path.join(root, "dist/index.html")));

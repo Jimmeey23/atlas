@@ -1,3 +1,5 @@
+import { InstructorName } from "../InstructorAvatar";
+import { ReportMarquee } from "./ReportChrome";
 import type { Row } from "../../data/duckdb";
 import { definition } from "../../report/definitions";
 import { reportFmt as fmt, reportDelta as delta } from "../../report/definitions";
@@ -30,13 +32,13 @@ export function SectionHeader({
   total?: number;
   highlights?: {label: string; value: string}[];
 }) {
-  return (
-    <header className="r-section-head" data-number={number}>
-      <div className="r-section-topline"><span className="r-eyebrow">{number} · {topic || eyebrow}</span><span className="r-section-counter">Section {number} / {String(total ?? 14).padStart(2,'0')}</span></div>
+  return (<>
+    <header className={`r-section-head${highlights?.length ? " r-has-marquee" : ""}`} data-number={number}>
+      <div className="r-section-topline"><span className="r-eyebrow">{number} · {topic || eyebrow}</span><span className="r-section-counter">{number === "A" ? "Supporting detail" : `Section ${number} / ${String(total ?? 14).padStart(2,'0')}`}</span></div>
       <div className="r-section-title"><h2 id={id}>{title}</h2><p>{deck}</p></div>
-      {!!highlights?.length && <div className="r-highlight-band">{highlights.map(item => <span key={item.label}><strong>{item.value}</strong> {item.label}</span>)}</div>}
     </header>
-  );
+    {!!highlights?.length && <ReportMarquee label={`${topic || eyebrow} highlights`} items={highlights}/>}
+  </>);
 }
 
 export function MetricCards({
@@ -51,10 +53,10 @@ export function MetricCards({
   priorYear: Row;
   history?: Row[];
 }) {
-  const shown = ids.filter((id) => definition(id) && total[id] != null);
+  const shown = ids.filter((id) => definition(id) && total[id] != null).slice(0, 5);
   if (!shown.length) return null;
   return (
-    <div className="r-cards">
+    <div className="r-cards" style={{ "--r-card-count": shown.length } as React.CSSProperties}>
       {shown.map((id) => (
         <article className={`r-card ${tone(id,total[id],prior[id])}`} key={id}>
           <div className="r-card-label">{label(id)}{currentSnapshotMetrics.has(id) && <small className="r-comparison">Current snapshot at report build</small>}</div>
@@ -69,7 +71,7 @@ export function MetricCards({
           </div>
           {history && <Sparkline id={id} history={history} />}
           {metricNotes[id]?.definition && (
-            <p className="r-card-def">{metricNotes[id].definition}</p>
+            <p className="r-card-def" title={metricNotes[id].definition}>{definition(id)?.description}</p>
           )}
         </article>
       ))}
@@ -103,7 +105,7 @@ export function GroupTableView({ table }: { table: GroupTable }) {
         <tbody>
           {table.rows.map((row, index) => (
             <tr key={String(row.g) + index}>
-              <td>{row.rank_lane && <small className="r-rank">{String(row.rank_lane)}</small>}{String(row.g ?? "Unspecified")}</td>
+              <td>{row.rank_lane && <small className="r-rank">{String(row.rank_lane)}</small>}{table.field === "trainer" ? <InstructorName name={String(row.g ?? "Unspecified")}/> : String(row.g ?? "Unspecified")}</td>
               {table.columns.map((id, column) => (
                 <td
                   className={`r-num${column === 0 ? " r-bar-cell" : ""}`}
@@ -167,19 +169,20 @@ export function InsightPane({
   narrative: ChapterNarrative | undefined;
 }) {
   if (!narrative || (!narrative.summary && !narrative.cards.length)) return null;
+  const unique = narrative.cards.filter((card,index,cards)=>cards.findIndex(c=>c.headline===card.headline)===index);
   return (
     <div className="r-editorial" aria-label={title}>
       {narrative.summary && <p className="r-summary">{narrative.summary}</p>}
       {!narrative.generated && <p className="r-analysis-note">Data commentary · AI analysis unavailable{narrative.error ? `: ${narrative.error}` : ""}</p>}
-      {narrative.cards.map((passage, index) => (
+      {unique.map((passage, index) => (
         <div className="r-passage" key={index}>
           <header className="r-passage-lead">{passage.category && <span className="r-analysis-label">{{red_flag:"Red flag",worked:"What worked",didnt_work:"What didn’t work",meaning:"What this means",next_step:"What to do next",plain_language:"Simply put"}[passage.category]}</span>}
           <h3>{passage.headline}</h3></header>
           {passage.meaning && <p>{passage.meaning}</p>}
-          {passage.evidence && <p className="r-citation">{passage.evidence}</p>}
+          {passage.evidence && <details className="r-passage-proof"><summary>Evidence & confidence</summary><p className="r-citation">{passage.evidence}</p>{passage.confidence && <small>Interpretation confidence: {passage.confidence}</small>}</details>}
           {passage.plainLanguage && <p className="r-plain"><strong>Simply put:</strong> {passage.plainLanguage}</p>}
           {passage.action && <p className="r-action"><strong>Next step:</strong> {passage.action}</p>}
-          {passage.confidence && <small className="r-confidence">Interpretation confidence: {passage.confidence}</small>}
+
         </div>
       ))}
     </div>
@@ -208,5 +211,5 @@ export function RankingBoard({table,criterion}:{table:GroupTable;criterion:strin
   const split=Math.ceil(sorted.length/2);
   const sides=[{label:'Top performers',rows:top.length?top:sorted.slice(0,split),kind:'top'},{label:'Bottom performers',rows:bottom.length?bottom:sorted.slice(split).reverse(),kind:'bottom'}];
   const peak=Math.max(...sorted.map(row=>Math.abs(Number(row[criterion]))),.01);
-  return <div className="r-rank-board"><div className="r-table-head"><span className="r-eyebrow">Criterion ranking · {label(criterion)}</span><h4>{table.title}</h4><p>{table.minimum}. {table.omitted ? `${table.omitted} eligible entries between these extremes are omitted.` : 'Eligible entries are shown once, ordered from both ends.'} Comparisons describe the same group.</p></div><div className="r-rank-grid">{sides.map(side=><section className={`r-rank-side r-rank-${side.kind}`} key={side.kind}><header><b>{side.label}</b><span>{label(criterion)}</span></header>{side.rows.map((row,i)=><div className="r-rank-item" key={String(row.g)}><span className="r-rank-index">{String(i+1).padStart(2,'0')}</span><div className="r-rank-content"><strong>{String(row.g)}</strong><div className="r-rank-stats">{table.columns.filter(id=>id!==criterion).map(id=><span key={id}>{label(id)} <b>{fmt(id,row[id])}</b></span>)}</div><div className="r-rank-track"><span style={{width:`${Math.abs(Number(row[criterion]))/peak*100}%`}}/></div></div><div className="r-rank-value"><b>{fmt(criterion,row[criterion])}</b><small>MoM {delta(criterion,row[criterion],table.prior?.[String(row.g)]?.[criterion])}<br/>YoY {delta(criterion,row[criterion],table.priorYear?.[String(row.g)]?.[criterion])}</small></div></div>)}</section>)}</div></div>;
+  return <div className="r-rank-board"><div className="r-table-head"><span className="r-eyebrow">Criterion ranking · {label(criterion)}</span><h4>{table.title}</h4><p>{table.minimum}. {table.omitted ? `${table.omitted} eligible entries between these extremes are omitted.` : 'Eligible entries are shown once, ordered from both ends.'} Comparisons describe the same group.</p></div><div className="r-rank-grid">{sides.map(side=><section className={`r-rank-side r-rank-${side.kind}`} key={side.kind}><header><b>{side.label}</b><span>{label(criterion)}</span></header>{side.rows.map((row,i)=><div className="r-rank-item" key={String(row.g)}><span className="r-rank-index">{String(i+1).padStart(2,'0')}</span><div className="r-rank-content"><strong>{table.field === "trainer" ? <InstructorName name={String(row.g)}/> : String(row.g)}</strong><div className="r-rank-stats">{table.columns.filter(id=>id!==criterion).map(id=><span key={id}>{label(id)} <b>{fmt(id,row[id])}</b></span>)}</div><div className="r-rank-track"><span style={{width:`${Math.abs(Number(row[criterion]))/peak*100}%`}}/></div></div><div className="r-rank-value"><b>{fmt(criterion,row[criterion])}</b><small>MoM {delta(criterion,row[criterion],table.prior?.[String(row.g)]?.[criterion])}<br/>YoY {delta(criterion,row[criterion],table.priorYear?.[String(row.g)]?.[criterion])}</small></div></div>)}</section>)}</div></div>;
 }

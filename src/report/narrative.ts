@@ -4,7 +4,7 @@ import { chapters, type ChapterSpec } from "./chapters";
 import { monthLabel, shiftMonth } from "./period";
 import type { ChapterData, ChapterNarrative, InsightCard, ReportModel } from "./model";
 
-const CACHE_PREFIX = "atlas-report-narrative:v5:";
+const CACHE_PREFIX = "atlas-report-narrative:v6:";
 const cacheKey = (model: ReportModel, chapterId: string) =>
   `${CACHE_PREFIX}${model.scope.studio}:${model.scope.month}:${model.figuresHash}:${chapterId}`;
 
@@ -110,26 +110,27 @@ export function forwardScenarios(model: ReportModel) {
 
 const CARD_RULES = [
   'Return JSON summary and cards with headline, meaning, evidence, action, focus, category, plainLanguage and confidence.',
-  'Write a decision brief, not a verbal copy of the tables. Summary: 60–90 words, explaining the central tension and management decision.',
-  'Write ONE passage for EACH requested evidence focus ID, plus two or three distinct overall passages on kpis or trend. Use category red_flag, worked, didnt_work, meaning, next_step or plain_language according to actual evidence; never invent a failure or success to fill a category.',
-  'headline: a concise finding (at most 14 words). meaning: 45–70 words on drivers, trade-offs, concentration, sample strength or an operational choice; interpret relationships and the supplied arithmetic decomposition. Explain what evidence can and cannot distinguish. Do not repeat the same claim across panels.',
-  'plainLanguage: 15–25 words explaining the practical meaning without jargon. action: an assignable next step naming the role, proposed timing, the first concrete intervention and the metric that would show improvement; at most 35 words.',
-  'evidence: a short sentence with exact supporting figures and comparison/sample limits; at most 30 words. confidence describes the strength of the interpretation, not a statistical confidence interval.',
+  'Write a decision brief, not a verbal copy of the tables. Summary: 35–50 words, explaining the central tension and management decision.',
+  'Write ONE passage for EACH requested evidence focus ID, plus exactly two distinct overall passages: one on kpis and one on trend when historical evidence exists. Use category red_flag, worked, didnt_work, meaning, next_step or plain_language according to actual evidence; never invent a failure or success to fill a category.',
+  'headline: a concise finding (at most 14 words). meaning: 25–40 words on drivers, trade-offs, concentration, sample strength or an operational choice; interpret relationships and the supplied arithmetic decomposition. Explain what evidence can and cannot distinguish. Do not repeat the same claim across panels.',
+  'plainLanguage: 10–18 words explaining the practical meaning without jargon. action: an assignable next step naming the role, proposed timing, the first concrete intervention and the metric that would show improvement; at most 25 words.',
+  'evidence: a short sentence with exact supporting figures and comparison/sample limits; at most 20 words. confidence describes the strength of the interpretation, not a statistical confidence interval.',
   'Use only supplied figures and verified diagnostics. Separate additive contributions, changes within groups, and changes in mix. Never add overlapping distinct transaction or member counts from groups.',
   'Higher AOV alone does not establish a price increase: distinguish recorded product-mix changes from unverified pricing hypotheses. Missing-ID warnings must use the supplied coverage counts and reflect their scale. Do not assert that a price change caused demand or conversion changes without evidence.',
   'Cash sales and session revenue are different populations. Membership revenue share is based on gross payments, never net payments. Payroll costs are estimates at the configured rate, not actual salaries.',
   'Newcomer LTV is cumulative observed spend to the source date, not first-month spend or predicted lifetime spend. Recent cohorts have less follow-up time; equal-age outcomes are needed to attribute eventual differences.',
   'Recorded lead stages are current cohort outcomes, not evidence of transitions during the selected month. Renewal grace is pending, not confirmed churn. Do not compare historical active snapshots or sum recurring and Sessions totals.',
   'Do not invent causes, policy thresholds, uplift promises, record claims beyond supplied history, or certainty from small samples. Hypotheses must include the specific check that could confirm or reject them.',
+  'The kpis headline is the section statement: an impactful, specific decision-relevant finding, not a metric label or a generic claim. Keep all focus passages distinct. Use AI for trade-offs, diagnostic hypotheses, evidence limitations and action prioritisation; all figures and arithmetic are already derived by the app engine. Avoid simply converting rows into sentences.',
   'Check every comparative statement. Use percentage points for rate changes. Do not say doubled or halved unless the ratio supports it. Proposed targets and timings must be identified as proposals.',
   'Future figures may use only supplied conditional scenario arithmetic. Do not invent probabilities, confidence bands or forecast ranges, and never call those scenarios likely outcomes.',
 ].join('\n');
 
 const DERIVED_RULES: Record<string, string> = {
   recommendations:
-    "Write the month's strategic recommendations. Each card is one recommendation: headline states the move and the figure it targets, meaning gives the reasoning, evidence gives the supporting figures, action names the owner role and the first step. Rank by money or risk at stake.",
+    "Write the month's strategic recommendations. Use at most four cards and do not restate the chapter summaries. Each card is one recommendation: headline states the move and the figure it targets, meaning gives the reasoning, evidence gives the supporting figures, action names the owner role and the first step. Rank by money or risk at stake.",
   predictions:
-    "Write a conditional forward view for next month. Use trailing monthly series rather than only the last observation. When fewer than three populated months exist, describe scenarios without numeric forecasts. Any projected number must state its arithmetic, baseline and assumption; never present it as a recorded result. Each passage is one projection: headline states the projected figure and direction, meaning states the assumption it rests on and what would break it, evidence gives the trailing figures behind the projection, action names what to do now to change the outcome. State assumptions rather than hiding them.",
+    "Write a conditional forward view for next month. Use trailing monthly series rather than only the last observation. When fewer than three populated months exist, describe scenarios without numeric forecasts. Any projected number must state its arithmetic, baseline and assumption; never present it as a recorded result. Use at most three passages. Each passage is one projection: headline states the projected figure and direction, meaning states the assumption it rests on and what would break it, evidence gives the trailing figures behind the projection, action names what to do now to change the outcome. State assumptions rather than hiding them.",
 };
 
 function parseJson(answer: string): { summary?: string; cards?: InsightCard[] } | null {
@@ -259,7 +260,7 @@ export async function generateNarratives(
           DERIVED_RULES[spec.id] ?? "",
           spec.id === "predictions" ? "Use only the following numeric what-if scenarios for future values. Do not invent forecast ranges, confidence bands, probabilities or additional numeric forecasts. Explain the arithmetic and assumptions in prose, and compare with the trailing history.\n" + forwardScenarios(model) : "",
           CARD_RULES,
-          data?.groups.length ? `Required evidence focus IDs: ${data.groups.map(g => g.id ?? g.field).join(", ")}. Use focus kpis for headline reasoning and trend for historical interpretation. Write one passage with its matching focus ID for EACH breakdown table: ${data.groups.map(g => g.title).join("; ")}. End with one or two passages on risk, limitations and next steps. Return at least ${data.groups.length + 3} passages so each table has commentary.` : "",
+          data?.groups.length ? `Required evidence focus IDs: ${data.groups.map(g => g.id ?? g.field).join(", ")}. Use focus kpis for headline reasoning and trend for historical interpretation. Write one passage with its matching focus ID for EACH breakdown table: ${data.groups.map(g => g.title).join("; ")}. Do not add closing passages that duplicate breakdowns. Return ${data.groups.length + 2} concise passages, covering each breakdown plus kpis and trend.` : "",
           "Figures:",
           figures.slice(0, 48000),
         ]

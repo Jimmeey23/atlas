@@ -1,3 +1,4 @@
+import { InstructorName } from "./InstructorAvatar";
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, ChevronRight, Download, X } from 'lucide-react';
@@ -12,6 +13,7 @@ import { sourceRows } from '../data/raw';
 const filters = [['contributors','Clicked metric contributors'],['all','All clients'],['eligible','New-client cohort'],['converted','Converted'],['retained','Retained'],['excluded','Outside new-client cohort'],['highValue','Above-average LTV'],['hosted','Hosted'],['converted30','Same-month converted'],['retained30','Same-month converted & retained'],['convertedMonth','First-month converted'],['retainedMonth','First-month retained']] as const;
 const clientColumns = [['member','Community member'],['member_id','Member ID'],['email','Email'],['phone','Phone'],['entry_type','Client type'],['date','First visit'],['format','First visit entity'],['location','Studio'],['trainer','Instructor'],['membership','Membership used'],['conversion','Conversion status'],['retention','Retention status'],['first_purchase_date','First purchase date'],['product','First purchase item'],['first_purchase','First purchase value'],['purchase_journey','Purchase journey'],['post_trial_purchases','Post-trial purchases'],['visits_post','Post-trial visits'],['second_visit_days','Days to second visit'],['conversion_days','Conversion span'],['ref_membership_eligible','Eligible purchase list'],['mature','30-day observation complete'],['converted_in_30','Same-month converted'],['returned_in_30','Same-month converted & retained'],['converted_same_month','First-month converted'],['returned_same_month','First-month retained'],['ltv','LTV'],['avg_purchase_value','Average spend']] as const;
 function display(key: string, value: unknown) {
+  if (key === 'trainer') return <InstructorName name={String(value ?? 'Unspecified')}/>;
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   if (key === 'date' || key.endsWith('_date')) return acquisitionPeriodLabel(value);
   if (['revenue','first_purchase','ltv','avg_purchase_value'].includes(key)) return fmt('avg_ltv',value);
@@ -25,7 +27,7 @@ function Distribution({ title, rows, keyName }: {title:string;rows:Row[];keyName
   const values = new Map<string,number>();
   rows.forEach(row => {const value = keyName==='membership' ? membershipUsed(row) : String(row[keyName] ?? 'Unspecified'); values.set(value,(values.get(value)??0)+1);});
   const sorted = [...values].sort((a,b)=>b[1]-a[1]).slice(0,6), max = sorted[0]?.[1] || 1;
-  return <article className="acq-distribution"><h3>{title}</h3>{sorted.map(([value,count])=><div key={value}><div><span title={value}>{value}</span><strong>{count.toLocaleString('en-IN')}</strong></div><i style={{width:`${count/max*100}%`}} /></div>)}{!sorted.length&&<p>No source data in this slice.</p>}</article>;
+  return <article className="acq-distribution"><h3>{title}</h3>{sorted.map(([value,count])=><div key={value}><div><span title={value}>{keyName === "trainer" ? <InstructorName name={value}/> : value}</span><strong>{count.toLocaleString('en-IN')}</strong></div><i style={{width:`${count/max*100}%`}} /></div>)}{!sorted.length&&<p>No source data in this slice.</p>}</article>;
 }
 function OriginalRow({ row }: {row:Row}) {
   const [original,setOriginal]=useState<Record<string,unknown>|null>(null), [error,setError]=useState('');

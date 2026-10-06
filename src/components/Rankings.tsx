@@ -1,3 +1,4 @@
+import { InstructorAvatar } from "./InstructorAvatar";
 import { ChartControls } from "./ChartControls";
 import { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
@@ -18,10 +19,11 @@ export function Rankings({
   onDrill: (row: Row) => void;
 }) {
   const [chosen, setChosen] = useState("");
-  const id = columns.includes(chosen)
+  const validColumns = columns.filter(x => metrics[x]);
+  const id = validColumns.includes(chosen)
     ? chosen
-    : columns.find((x) => x.includes("rate") || x === "contribution_margin") ||
-      columns[0];
+    : validColumns.find((x) => x.includes("rate") || x === "contribution_margin") ||
+      validColumns[0];
   const m = metrics[id];
   const eligible = useMemo(
     () =>
@@ -29,12 +31,12 @@ export function Rankings({
         .filter(
           (r) =>
             Number(r.level) === 2 ** (groups.length - 1) - 1 &&
-            Number(r.n) >= m.minSample &&
+            Number(r.n) >= (m?.minSample ?? 1) &&
             r[id] != null,
         )
         .sort(
           (a, b) =>
-            (Number(b[id]) - Number(a[id])) * (m.higherIsBetter ? 1 : -1),
+            (Number(b[id]) - Number(a[id])) * (m?.higherIsBetter ? 1 : -1),
         ),
     [rows, id, groups, m],
   );
@@ -42,6 +44,7 @@ export function Rankings({
   const maximum = Math.max(...eligible.map((r) => Math.abs(Number(r[id]))), 1);
   const top = eligible.slice(0, 5),
     bottom = eligible.slice(-5).reverse();
+  if (!m) return null;
   return (
     <Register
       index="04"
@@ -55,7 +58,7 @@ export function Rankings({
             style={{ fontSize: 11, minHeight: 28, padding: "3px 7px" }}
             onChange={(e) => setChosen(e.target.value)}
           >
-            {columns.map((x) => (
+            {validColumns.map((x) => (
               <option key={x} value={x}>
                 {metrics[x].label}
               </option>
@@ -79,6 +82,7 @@ export function Rankings({
                 onClick={() => onDrill(r)}
               >
                 <span className="rank">{k ? eligible.length - i : i + 1}</span>
+                {groups[0] === "trainer" && <InstructorAvatar name={String(r.g0)} />}
                 <span className="ranking-name">
                   {r.g0}
                   <span className="rank-bar">

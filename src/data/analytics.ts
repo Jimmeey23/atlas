@@ -164,8 +164,8 @@ async function performAnalysis(
   const { filters, compare } = useStore.getState();
   const ids = [...new Set([...b.kpis, ...b.columns, ...columns])].filter(
     (x) =>
-      tab !== 0 ||
-      !["new_clients", "conversion_rate", "active_base", "gross_revenue", "net_revenue"].includes(x),
+      (tab !== 9 || !["complimentary_visits", "session_complimentary_rate"].includes(x)) && (tab !== 0 ||
+      !["new_clients", "conversion_rate", "active_base", "gross_revenue", "net_revenue"].includes(x)),
   );
   const w = where(filters, b.source);
   const prev = comparison(filters, compare === "none" ? "prior" : compare);
@@ -229,6 +229,16 @@ async function performAnalysis(
     trend.forEach((t) =>
       Object.assign(t, monthly.find((g) => g.month === t.month) || {}),
     );
+  }
+  if (tab === 9) {
+    const sessionIds = ["complimentary_visits", "session_complimentary_rate"];
+    const [now, prior, monthly] = await Promise.all([
+      query(`SELECT ${metricSQL(sessionIds, context(filters))},COUNT(*) AS complimentary_source_records FROM sessions${where(filters,"sessions")}`),
+      query(`SELECT ${metricSQL(sessionIds, context(prev))} FROM sessions${where(prev,"sessions")}`),
+      query(`SELECT month,${metricSQL(sessionIds, context(wide))} FROM sessions${where(wide,"sessions")} GROUP BY month`),
+    ]);
+    Object.assign(total[0],now[0]);Object.assign(previous[0],prior[0]);
+    trend.forEach(row=>Object.assign(row,monthly.find(m=>m.month===row.month)||{}));
   }
   if (tab === 6) {
     const currentIds = b.kpis.filter((id) => currentSnapshotMetrics.has(id));

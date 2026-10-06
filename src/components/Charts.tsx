@@ -1,3 +1,4 @@
+import { instructorKey, instructorPortraits } from "../data/instructorPortraits";
 import { ChartControls } from "./ChartControls";
 import { usePreferences } from "../state/preferences";
 import { useEffect, useRef, useState } from "react";
@@ -238,10 +239,12 @@ export function Chart({
   tab,
   data,
   secondary = false,
+  salesActivity = false,
 }: {
   tab: number;
   data: Analysis;
   secondary?: boolean;
+  salesActivity?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const instance = useRef<echarts.ECharts | null>(null);
@@ -251,6 +254,7 @@ export function Chart({
   const state = useStore();
   const prefs = usePreferences((s) => s.preferences);
   const bp = blueprints[tab];
+  const chartTitle = tab === 4 && !salesActivity ? (secondary ? "Sales relationship" : "Revenue by category") : bp.chartTitle;
   useEffect(() => {
     let active = true;
     if (!data.count) {
@@ -271,6 +275,11 @@ export function Chart({
               ? `SELECT strftime(date_trunc('week',TRY_CAST(date AS DATE)),'%Y-%m-%d') AS month,${metricSQL(["sessions", "fill_rate"], context())},COUNT(*) AS n FROM sessions${w} GROUP BY 1 ORDER BY 1`
               : `SELECT strftime(date_trunc('week',TRY_CAST(date AS DATE)),'%Y-%m-%d') AS month,${metricSQL(["bookings", "effective_attendance"], context())},COUNT(*) FILTER (WHERE booking_outcome='attended') AS booking_attended,COUNT(*) FILTER (WHERE booking_outcome='cancelled') AS booking_cancelled,COUNT(*) FILTER (WHERE booking_outcome='late') AS booking_late_cancelled,COUNT(*) FILTER (WHERE booking_outcome='no_show') AS booking_no_shows,COUNT(*) FILTER (WHERE booking_outcome='pending') AS booking_pending,COUNT(*) AS n FROM (SELECT *,${bookingOutcomeCase} AS booking_outcome FROM bookings${w}) GROUP BY 1 ORDER BY 1`,
           );
+        else if (tab === 4 && !secondary && salesActivity) {
+          r = await query(
+            `SELECT date,${metricSQL(["gross_revenue", "transactions", "aov"], context())},COUNT(*) AS n FROM sales${where(state.filters, "sales")} GROUP BY date ORDER BY date`,
+          );
+        }
         else if (tab === 4 && !secondary) {
           r = await query(
             `SELECT month,category,${metricSQL(["gross_revenue"], context())},COUNT(*) AS n FROM sales${where(state.filters, "sales")} GROUP BY month,category ORDER BY month`,
@@ -334,7 +343,7 @@ export function Chart({
     return () => {
       active = false;
     };
-  }, [tab, data, state.filters, state.transient, state.rate, secondary]);
+  }, [tab, data, state.filters, state.transient, state.rate, secondary, salesActivity]);
   useEffect(() => {
     if (!ref.current || table) return;
     const c = colors();
@@ -401,7 +410,9 @@ export function Chart({
           trigger: "item",
           formatter: (p: unknown) => {
             const v = p as { data: { name: string; value: number[] } };
-            return `${v.data.name}<br/>${metrics[xMetric].label}: ${fmt(xMetric, v.data.value[0])}<br/>${metrics[yMetric].label}: ${fmt(yMetric, v.data.value[1])}`;
+            const name = v.data.name.replace(/[&<>"']/g, character => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[character]!));
+            const photo = bp.groups[0] === "trainer" ? instructorPortraits[instructorKey(v.data.name)] : undefined;
+            return `${photo ? `<img src="${photo}" alt="" width="28" height="28" style="object-fit:cover;object-position:50% 20%;border-radius:50%;vertical-align:middle;margin-right:8px"/>` : ""}${name}<br/>${metrics[xMetric].label}: ${fmt(xMetric, v.data.value[0])}<br/>${metrics[yMetric].label}: ${fmt(yMetric, v.data.value[1])}`;
           },
           backgroundColor: c["surface-3"],
           textStyle: { color: c["text-1"] },
@@ -509,6 +520,37 @@ export function Chart({
             })),
             barMaxWidth: 60,
           },
+        ],
+      };
+    } else if (tab === 4 && salesActivity) {
+      option = {
+        ...option,
+        legend: { bottom: 0, textStyle: { color: c["text-3"], fontSize: 10 } },
+        grid: { left: 65, right: 55, top: 30, bottom: 55 },
+        tooltip: {
+          ...option.tooltip,
+          trigger: "axis",
+          axisPointer: { type: "shadow" },
+          formatter: (params: unknown) => {
+            const points = params as {dataIndex:number}[];
+            const row = chartRows[points[0]?.dataIndex];
+            if (!row) return '';
+            // Date labels and values are governed source fields; no category strings enter HTML.
+            return `${String(row.date).replace(/[^0-9-]/g,'')}<br/>Gross collections: ${fmt("gross_revenue",row.gross_revenue,true)}<br/>Transactions: ${fmt("transactions",row.transactions)}<br/>Average order value: ${fmt("aov",row.aov,true)}`;
+          },
+        },
+        xAxis: { type: "category", data: chartRows.map(row=>String(row.date)), ...axis,
+          axisLabel: {...axis.axisLabel, formatter:(value:string)=>value.slice(5),hideOverlap:true},
+        },
+        yAxis: [
+          {type:"value",name:"Collections (₹)",nameTextStyle:{color:c["text-3"],fontSize:10},...axis,
+            axisLabel:{...axis.axisLabel,formatter:(value:number)=>fmt("gross_revenue",value)}},
+          {type:"value",name:"Transactions",nameTextStyle:{color:c["text-3"],fontSize:10},...axis,minInterval:1,
+            splitLine:{show:false},axisLabel:{...axis.axisLabel,formatter:(value:number)=>fmt("transactions",value)}},
+        ],
+        series: [
+          {name:"Gross collections",type:"bar",data:chartRows.map(row=>row.gross_revenue),barMaxWidth:30,itemStyle:{color:c.revenue,borderRadius:[4,4,0,0]}},
+          {name:"Transactions",type:"line",yAxisIndex:1,data:chartRows.map(row=>row.transactions),smooth:false,symbol:"circle",symbolSize:5,lineStyle:{color:c.growth,width:2},itemStyle:{color:c.growth}},
         ],
       };
     } else if (tab === 4) {
@@ -670,7 +712,10 @@ export function Chart({
           type: "category",
           data: chartRows.map((r) => String(r.trainer)),
           ...axis,
-          axisLabel: { color: c["text-2"], fontSize: 10 },
+          axisLabel: { color: c["text-2"], fontSize: 10,
+            formatter: (name:string, index:number) => instructorPortraits[instructorKey(name)] ? `{portrait${index}|} ${name}` : name,
+            rich: Object.fromEntries(chartRows.map((r,index)=>[`portrait${index}`,{width:22,height:22,borderRadius:11,backgroundColor:{image:instructorPortraits[instructorKey(String(r.trainer))]}}])),
+          },
           inverse: true,
         },
         series: [
@@ -838,6 +883,10 @@ export function Chart({
         return;
       }
       const record = chartRows[p.dataIndex];
+      if (tab === 4 && salesActivity && !secondary && record?.date) {
+        state.filter({from:String(record.date),to:String(record.date)});
+        return;
+      }
       if (record?.month) {
         if (String(record.month).length === 10) {
           const end = new Date(String(record.month) + "T00:00:00Z");
@@ -876,13 +925,14 @@ export function Chart({
     table,
     tab,
     secondary,
+    salesActivity,
     prefs.animation,
     prefs.legend,
     prefs.grid,
   ]);
   return (
     <div className="chart-surface">
-      <ChartControls rows={chartRows} title={bp.chartTitle} />
+      <ChartControls rows={chartRows} title={chartTitle} />
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 5 }}>
         <button
           className="icon-button"
@@ -943,14 +993,14 @@ export function Chart({
           className="chart"
           ref={ref}
           role="img"
-          aria-label={bp.chartTitle}
+          aria-label={chartTitle}
         />
       )}
       <div className="chart-caption">
         <span>
           {secondary
             ? "Each point represents an entity in scope"
-            : tab === 5 ? "Reported newcomer outcomes overlap; these are not sequential funnel stages" : tab === 7 || tab === 12 ? "One outcome per booking; late cancellation takes precedence over other flags" : "Actual source observations, aggregated in SQL"}
+            : tab === 4 && salesActivity ? "Daily gross collections (left axis) and transactions (right axis); average order value in tooltips. Only dates with source records are shown." : tab === 5 ? "Reported newcomer outcomes overlap; these are not sequential funnel stages" : tab === 7 || tab === 12 ? "One outcome per booking; late cancellation takes precedence over other flags" : "Actual source observations, aggregated in SQL"}
         </span>
         <span>Hover for details / Click to filter</span>
       </div>
