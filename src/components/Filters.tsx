@@ -75,6 +75,14 @@ export function Filters({
               ? s.filters.trainer.length + " instructors"
               : "All instructors"}
           </span>
+          {(["location", "trainer", "format", "source", "category", "day", "time"] as const).flatMap((field) =>
+            s.filters[field].map((value) => (
+              <button className="chip" key={`${field}:${value}`} aria-label={`Remove ${field} filter: ${value}`}
+                onClick={() => s.filter({ [field]: s.filters[field].filter((item) => item !== value) })}>
+                {value} <X size={10} />
+              </button>
+            )),
+          )}
           {s.transient.map((t) => (
             <button
               className="chip"
@@ -276,12 +284,12 @@ function Multi({
             onChange={(e) => setSearch(e.target.value)}
           />
           <div className="multi-actions">
-            <button onClick={() => set(Object.keys(options))}>
+            <button onClick={() => set([])}>
               Select all
             </button>
             <button onClick={() => set([])}>Clear</button>
           </div>
-          {Object.entries(options)
+          {Object.entries({ ...Object.fromEntries(values.map(value => [value, 0])), ...options })
             .filter(([v]) => v.toLowerCase().includes(search.toLowerCase()))
             .map(([v, n]) => (
               <label

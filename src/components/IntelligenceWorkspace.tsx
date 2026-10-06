@@ -19,7 +19,6 @@ async function api(url: string, options: RequestInit = {}) {
   if (!r.ok) throw new Error(data.error || "Request failed");
   return data;
 }
-const initialURLHadFilters = new URLSearchParams(location.search).has("f");
 const changed = () => window.dispatchEvent(new Event("p57-documents"));
 export function useDocuments(kind: string) {
   const [docs, setDocs] = useState<Doc[]>([]);
@@ -75,15 +74,14 @@ export function CloudSettings() {
         if (doc) {
           docId.current = doc.id;
           const b = doc.body;
-          const { from: savedFrom, to: savedTo, ...savedScope } = b.filters || {};
+          // Cloud settings are shared presentation preferences. A filter chosen
+          // in another tab/session can exclude every row here. Query scope comes
+          // from the current URL and explicit filter/view actions instead.
           useStore.getState().set({
             theme: b.theme || "matte",
             density: b.density || "compact",
             rate: Number(b.rate) || 1200,
             compare: b.compare || "prior",
-            ...(!initialURLHadFilters && b.filters
-              ? { filters: { ...useStore.getState().filters, ...savedScope } }
-              : {}),
           });
           for (const [key, value] of Object.entries(b.localPreferences || {}))
             if (
@@ -122,7 +120,6 @@ export function CloudSettings() {
             density: store.density,
             rate: store.rate,
             compare: store.compare,
-            filters: store.filters,
             localPreferences,
           },
         }),
@@ -138,7 +135,6 @@ export function CloudSettings() {
     store.theme,
     store.density,
     store.rate,
-    store.filters,
     store.compare,
     revision,
   ]);

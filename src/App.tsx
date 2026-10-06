@@ -169,7 +169,7 @@ export default function App() {
     let current = true;
     const timer = setTimeout(
       () =>
-        getOptions()
+        getOptions(s.tab)
           .then((options) => {
             if (current) setChoices(options);
           })
@@ -180,7 +180,7 @@ export default function App() {
       current = false;
       clearTimeout(timer);
     };
-  }, [ready, version]);
+  }, [ready, version, s.tab]);
   useEffect(() => {
     document.documentElement.dataset.theme = s.theme;
     document.documentElement.dataset.density = s.density;
@@ -242,7 +242,10 @@ export default function App() {
       },
       s.tab === lastTab.current ? 0 : 180,
     );
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (sequence.current === id) sequence.current++;
+    };
   }, [
     configuredTab,
     ready,
@@ -768,6 +771,15 @@ export default function App() {
             </div>
           ) : (
             <>
+              {!busy && !error && analysis.count === 0 && (
+                <div className="notice" role="status">
+                  <TriangleAlert size={13} />
+                  No records match this tab’s current filters. Check the period and selected studios or other filters.
+                  <button className="button" onClick={() => s.set({ filters: { ...emptyFilters, from: s.filters.from, to: s.filters.to }, transient: [] })}>
+                    Clear filters, keep period
+                  </button>
+                </div>
+              )}
               {s.tab === 6 && (
                 <>
                   <RenewalCohorts version={version} onDrill={setDrill} />

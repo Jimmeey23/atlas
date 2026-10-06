@@ -241,7 +241,7 @@ async function performAnalysis(
     elapsed: performance.now() - start,
   };
 }
-export async function options() {
+export async function options(tab = useStore.getState().tab) {
   const all: Record<string, Record<string, number>> = {};
   for (const field of [
     "location",
@@ -252,9 +252,7 @@ export async function options() {
     "day",
     "time",
   ]) {
-    const sourceTables = field === "location"
-      ? ["sessions", "new", "sales", "leads", "lapsed", "checkins", "bookings", "payroll", "recurring", "teacher_recurring"]
-      : ["sessions", "new", "sales", "leads"];
+    const sourceTables = [blueprints[tab].source];
     const result = await query(
       `SELECT "${field}" AS value,COUNT(*) AS n FROM (${sourceTables.map((table) => `SELECT "${field}" FROM "${table}"`).join(" UNION ALL ")}) WHERE "${field}" IS NOT NULL GROUP BY "${field}" ORDER BY n DESC LIMIT 100`,
     );
