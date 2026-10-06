@@ -70,6 +70,21 @@ export function kraRoutes(app,root,config,load) {
     });writes=job.catch(()=>undefined);
     try{res.json(await job);}catch(error){res.status(error.status??500).json({error:error.status===409?error.message:'The KRA edit could not be saved. Retry.'});}
   });
+  // Bulk progress update: one queued write for the whole selection instead of a request per topic.
+  app.put('/api/kra/training',auth,async(req,res)=>{
+    const body=req.body??{};
+    const ids=Array.isArray(body.ids)?[...new Set(body.ids)]:null;
+    if(!ids?.length||ids.length>performanceMarketingTopics.length||!ids.every(id=>performanceMarketingTopics.some(topic=>topic.id===id))||!['Not started','In progress','Completed'].includes(body.status)||(body.note!=null&&(typeof body.note!=='string'||body.note.length>4000)))return res.status(400).json({error:'Invalid bulk training progress.'});
+    const stamp={status:body.status,date:asOf(),updatedAt:new Date().toISOString(),basis:'Manually reported by user · bulk update'};
+    const job=writes.then(async()=>{
+      const records=await evidence();records.marketingTopics??={};
+      const written={};
+      for(const id of ids){const record={...stamp,note:(body.note??records.marketingTopics[id]?.note??'').trim()};records.marketingTopics[id]=record;written[id]=record;}
+      await writeFile(file+'.tmp',JSON.stringify(records));await rename(file+'.tmp',file);return written;
+    });
+    writes=job.catch(()=>undefined);
+    try{res.json(await job);}catch{res.status(500).json({error:'Training progress could not be saved.'});}
+  });
   app.put('/api/kra/training/:id',auth,async(req,res)=>{
     const body=req.body??{};
     if(!performanceMarketingTopics.some(topic=>topic.id===req.params.id)||!['Not started','In progress','Completed'].includes(body.status)||typeof body.note!=='string'||body.note.length>4000)return res.status(400).json({error:'Invalid training progress.'});

@@ -46,7 +46,7 @@ test('KRA first-class outcomes reject prior attendances, cancellations, future a
   assert.equal(june.trials.rows.find(row=>row.member_id==='repeat').completed,null);
   assert.equal(june.trialsTarget,null);
 });
-test('KRA churn uses recorded Lapsed dates across all membership records without expiry inference',()=>{
+test('KRA churn uses recorded Lapsed dates across eligible membership records without expiry inference',()=>{
   const rows=[
     {member_id:'a',start_date:'2026-05-01',end_date:'2026-06-20',product:'Monthly Membership',revenue:500,status:'Renewed',source_row:2},
     {member_id:'a',start_date:'2026-05-02',end_date:'2026-06-25',product:'Monthly Membership',revenue:500,status:'Renewed',source_row:3},
@@ -56,11 +56,15 @@ test('KRA churn uses recorded Lapsed dates across all membership records without
     {member_id:'y',start_date:'2025-05-01',end_date:'2025-06-30',product:'Monthly Membership',revenue:500,churned_date:'2025-06-30',source_row:7},
     {member_id:'z',start_date:'2026-08-01',end_date:'2026-09-30',product:'Monthly Membership',revenue:500,source_row:8},
     {member_id:'free',start_date:'2026-05-01',end_date:'2026-06-30',product:'Free Membership',revenue:0,source_row:9},
+    {member_id:'intro',start_date:'2026-05-01',end_date:'2026-06-30',product:'Studio Intro Offer',revenue:500,churned_date:'2026-06-30',source_row:10},
+    {member_id:'froze',start_date:'2026-05-01',end_date:'2026-06-30',product:'Monthly Membership',revenue:500,status:'Frozen',churned_date:'2026-06-30',source_row:11},
   ];
   const result=kraPerformance({lapsed:{rows,status:'ok'}},'2026-10-06');
-  const june=result.monthly[0];assert.equal(june.churn.due,4);assert.equal(june.churn.renewed,2);assert.equal(june.churn.rate,.25);
-  assert.equal(june.churnReduction,.75);assert.equal(june.churnTarget,true);
+  const june=result.monthly[0];assert.equal(june.churn.due,3);assert.equal(june.churn.renewed,2);assert.equal(june.churn.rate,1/3);
+  assert.equal(june.churnReduction,1-1/3);assert.equal(june.churnTarget,true);
   assert.equal(result.monthly[3].churn.rate,0);assert.equal(result.monthly[3].churnTarget,null);
+  assert.equal(result.comparisonPeriods.ytd.from,'2026-01-01');assert.equal(result.comparisonPeriods.ytdLastYear.from,'2025-01-01');
+  assert.equal(result.comparisonPeriods.ytd.lapsed,1);assert.equal(result.comparisonPeriods.ytd.due,5);assert.equal(result.comparisonPeriods.ytdLastYear.churnRate,1);
 });
 test('protected KRA API rejects direct access, validates evidence and revokes sessions on lock',async()=>{
   const root=await mkdtemp(path.join(tmpdir(),'p57-kra-'));await mkdir(path.join(root,'.floor'));await mkdir(path.join(root,'.cache'));
