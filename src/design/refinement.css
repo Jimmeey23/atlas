@@ -320,3 +320,35 @@ main h1 { font-size: clamp(28px, 2.5vw, 40px); letter-spacing: -1.4px; font-weig
 .chat-result table { width: auto; min-width: min(100%, 460px); max-width: 100%; }
 .chat-result tbody th { max-width: 260px; overflow-wrap: anywhere; }
 .chat-result td.num { white-space: nowrap; }
+
+/* Collapsible, pinnable AI insights. */
+.ai-summary-toggle {
+  display: flex; align-items: center; gap: 8px; min-width: 0;
+  background: none; border: 0; padding: 0; cursor: pointer; color: var(--text-2);
+}
+.ai-summary-toggle:disabled { cursor: default; opacity: 0.6; }
+.ai-summary-toggle strong {
+  font-size: 12px; font-weight: 600; color: var(--text-1);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.section-ai-summary[data-pinned] { border-left-color: var(--growth); }
+.icon-button.is-pinned { color: var(--growth); }
+.pinned-insights {
+  margin: 0 0 18px; padding: 14px 16px;
+  border: 1px solid var(--hairline); border-left: 2px solid var(--growth);
+  border-radius: var(--radius, 12px); background: var(--surface-2);
+}
+.pinned-insights > header {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px;
+}
+.pinned-insights > header .icon {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 10px; font-weight: 650; letter-spacing: 0.07em; text-transform: uppercase; color: var(--growth);
+}
+.pinned-insight-list { display: grid; gap: 8px; }
+.pinned-insight-list > article {
+  padding: 10px 12px; background: var(--surface-inset); border-radius: 8px;
+}
+.pinned-insight-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.pinned-insight-head > div { display: flex; align-items: center; gap: 2px; flex: none; }
+.pinned-insight-list .chat-answer { margin-top: 10px; }

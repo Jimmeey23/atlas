@@ -522,3 +522,20 @@ blueprints.push({
     "Format \u00d7 day",
   ],
 });
+
+// 15 · Monthly report. The tab renders its own document rather than the shared
+// metric/table shell, so this entry exists only to satisfy the lookups the app
+// chrome makes by tab index.
+blueprints.push({
+  title: "One studio, one month, one board report.",
+  subtitle:
+    "A seven-chapter performance report for a single studio and month, with AI analysis, recommendations and a forward view.",
+  source: "sessions",
+  domain: "revenue",
+  kpis: [],
+  columns: [],
+  groups: [],
+  chart: "trend",
+  chartTitle: "Monthly report",
+  secondary: [],
+});

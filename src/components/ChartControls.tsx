@@ -112,6 +112,7 @@ export function ChartControls({
           subject={title}
           detail="Chart/table controls for the currently displayed section data."
           buttonLabel="Summarise this view"
+          rows={rows}
         />
       </div>
       {table && (

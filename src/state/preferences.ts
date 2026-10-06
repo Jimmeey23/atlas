@@ -48,7 +48,18 @@ export const defaultPreferences = {
   chatTokens: 3500,
   chatEvidence: true,
   chatSaveHistory: true,
-  sectionInsights: {} as Record<string, { text: string; scope: string; generatedAt: string }>,
+  sectionInsights: {} as Record<
+    string,
+    {
+      text: string;
+      scope: string;
+      generatedAt: string;
+      subject?: string;
+      tab?: number;
+      pinned?: boolean;
+      collapsed?: boolean;
+    }
+  >,
   page: {} as Record<number, PagePreference>,
 };
 export type Preferences = typeof defaultPreferences;

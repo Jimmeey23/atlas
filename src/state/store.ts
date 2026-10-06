@@ -16,10 +16,11 @@ export const tabs = [
   "Late cancellations",
   "AI workspace",
   "Format comparison",
+  "Monthly report",
 ];
 // Instructor economics (10) now renders inside Instructor performance (3), so
 // it keeps its index for saved views and insight links but leaves the nav.
-export const navigationOrder = [0, 4, 8, 5, 6, 9, 7, 12, 1, 2, 14, 3, 13, 11];
+export const navigationOrder = [0, 4, 8, 5, 6, 9, 7, 12, 1, 2, 14, 3, 15, 13, 11];
 export interface Filters {
   from: string;
   to: string;
@@ -72,7 +73,7 @@ interface Store {
 }
 export const useStore = create<Store>((set, get) => ({
   view: "",
-  tab: Math.min(13, Math.max(0, Number(params.get("tab") || 0))),
+  tab: Math.min(15, Math.max(0, Number(params.get("tab") || 0))),
   theme: localStorage.getItem("floor-theme") || "matte",
   density: localStorage.getItem("floor-density") || "compact",
   filters: {

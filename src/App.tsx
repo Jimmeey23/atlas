@@ -44,6 +44,7 @@ import {
   usable,
 } from "./data/loader";
 import { SourceStatus } from "./components/SourceStatus";
+import { ReportBuilder } from "./components/report/ReportBuilder";
 import { RetentionWorklists } from "./components/RetentionWorklists";
 import {
   analyse,
@@ -80,6 +81,7 @@ import { DataHealth } from "./components/DataHealth";
 import { Secondary } from "./components/Secondary";
 import { exportCSV } from "./components/exports";
 import { DataInsightAction } from "./components/DataInsightAction";
+import { PinnedInsights } from "./components/PinnedInsights";
 import { insights as runInsights } from "./insights/engine";
 import type { Insight } from "./insights/rules";
 import { defaults, thresholds, type Thresholds } from "./insights/thresholds";
@@ -90,6 +92,7 @@ import "./design/app.css";
 import "./styles.css";
 import "./design/refinement.css";
 import "./design/acquisition.css";
+import "./design/report.css";
 import { sourceRows } from "./data/raw";
 const blank: Analysis = {
   total: {},
@@ -216,7 +219,7 @@ export default function App() {
   }, [prefs, pagePrefs]);
   useEffect(() => {
     if (configuredTab !== s.tab) return;
-    if (!ready || s.tab === 11 || s.tab === 13) {
+    if (!ready || s.tab === 11 || s.tab === 13 || s.tab === 15) {
       setBusy(
         !ready &&
           !dependencies(s.tab).some((k) => sourceStates[k].state === "error"),
@@ -412,7 +415,7 @@ export default function App() {
   const [heatMetric, setHeatMetric] = useState(weeklyMetric);
   useEffect(() => setHeatMetric(weeklyMetric), [s.tab]);
   const tabSummary = () => {
-    if (!ready || s.tab === 11 || s.tab === 13) return "";
+    if (!ready || s.tab === 11 || s.tab === 13 || s.tab === 15) return "";
     const locationScope = s.filters.location?.length
       ? s.filters.location.join(", ")
       : "all studios";
@@ -427,7 +430,7 @@ export default function App() {
     return `${fmt(bp.kpis[0], analysis.total[bp.kpis[0]])} is the leading signal for this workspace, with ${fmt("records", analysis.total.n || analysis.count)} contributing records in the current scope.`;
   };
   const tabRecommendations = () => {
-    if (!ready || s.tab === 11 || s.tab === 13) return [] as string[];
+    if (!ready || s.tab === 11 || s.tab === 13 || s.tab === 15) return [] as string[];
     const recommendations: string[] = [];
     if (analysis.total.empty_sessions != null && Number(analysis.total.empty_sessions) > 0)
       recommendations.push(
@@ -751,7 +754,19 @@ export default function App() {
               complete; narrow the period or location to inspect every leaf.
             </div>
           )}
-          {s.tab === 13 ? (
+          {s.tab === 15 ? (
+            ready ? (
+              <ReportBuilder version={version} />
+            ) : (
+              <div className="empty-state">
+                <h3>Loading report sources</h3>
+                <p>
+                  Sessions, sales, newcomers and memberships are being prepared.
+                  The builder appears when they are readable.
+                </p>
+              </div>
+            )
+          ) : s.tab === 13 ? (
             <IntelligenceWorkspace />
           ) : s.tab === 11 ? (
             ready ? (
@@ -789,6 +804,7 @@ export default function App() {
                   <RetentionWorklists version={version} />
                 </>
               )}
+              <PinnedInsights page={s.tab} />
               <SavedElements page={s.tab} version={version} />
               {s.tab === 0 && <Pulse data={analysis} />}
               <div className="metric-strip-head">
