@@ -6,23 +6,45 @@ import { useStore } from "../state/store";
 import { today, monthlyHistorySQL } from "../data/analytics";
 import { acquisitionPeriodLabel } from "../data/acquisition";
 import { Register } from "./Register";
+import { exportCSV } from "./exports";
+import {
+  MonthlyTableControls,
+  type MonthlyTableState,
+} from "./MonthlyTableControls";
 export function MoMTable({ ids, version }: { ids: string[]; version: string }) {
-  const [mode, setMode] = useState("absolute");
   const s = useStore();
-  const [rows, setRows] = useState<Row[]>([]);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [controls, setControls] = useState<MonthlyTableState>({
+    periods: 14,
+    newest: true,
+    dense: true,
+    mode: "absolute",
+  });
+  const [search, setSearch] = useState(""),
+    [selected, setSelected] = useState("all"),
+    [baseline, setBaseline] = useState(false);
+  const [rows, setRows] = useState<Row[]>([]),
+    [error, setError] = useState(""),
+    [loading, setLoading] = useState(true);
   const sql = monthlyHistorySQL(s.tab, ids, s.filters, s.transient);
   useEffect(() => {
     let active = true;
     setLoading(true);
     setError("");
-    query(sql).then(result => { if (active) setRows(result); })
-      .catch(e => { if (active) setError(String(e)); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+    query(sql)
+      .then((result) => {
+        if (active) setRows(result);
+      })
+      .catch((e) => {
+        if (active) setError(String(e));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [sql, version]);
-  const months = useMemo(() => {
+  const allMonths = useMemo(() => {
     const end = new Date(today() + "T00:00:00Z");
     end.setUTCDate(0);
     return Array.from({ length: 14 }, (_, i) => {
@@ -32,87 +54,162 @@ export function MoMTable({ ids, version }: { ids: string[]; version: string }) {
       const key = d.toISOString().slice(0, 7);
       return {
         key,
-        label: s.tab === 5 ? acquisitionPeriodLabel(key) : d.toLocaleDateString("en-IN", {
-          month: "short",
-          year: "2-digit",
-          timeZone: "UTC",
-        }),
+        label:
+          s.tab === 5
+            ? acquisitionPeriodLabel(key)
+            : d.toLocaleDateString("en-IN", {
+                month: "short",
+                year: "2-digit",
+                timeZone: "UTC",
+              }),
         row: rows.find((r) => r.month === key),
       };
     });
   }, [rows, s.tab]);
+  const months = allMonths.slice(-controls.periods);
+  if (controls.newest) months.reverse();
+  const visibleIds = ids.filter(
+    (id) =>
+      (selected === "all" || !ids.includes(selected) || id === selected) &&
+      metrics[id].label.toLowerCase().includes(search.toLowerCase()),
+  );
+  const prior = (key: string) => {
+    const date = new Date(key + "-01T00:00:00Z");
+    return new Date(
+      Date.UTC(
+        date.getUTCFullYear(),
+        date.getUTCMonth() - (controls.mode === "year" ? 12 : 1),
+        1,
+      ),
+    )
+      .toISOString()
+      .slice(0, 7);
+  };
+  const cellText = (id: string, key: string) => {
+    const value = rows.find((r) => r.month === key)?.[id],
+      prev = rows.find((r) => r.month === prior(key))?.[id];
+    if (controls.mode === "absolute") return fmt(id, value);
+    if (controls.mode === "change" || controls.mode === "year")
+      return value == null || prev == null ? "—" : delta(id, value, prev);
+    const first = allMonths.find((m) => m.row?.[id] != null)?.row?.[id];
+    return value == null || !first
+      ? "—"
+      : ((Number(value) / Number(first)) * 100).toFixed(0);
+  };
   return (
     <Register
       index="06"
       dateIndependent
       title="Month by month"
-      subtitle="14 completed months · MoM and YoY ignore date filters; other filters apply"
-      actions={
-        <div className="segmented">
-          {["absolute", "change", "year", "index"].map((m) => (
-            <button
-              className={mode === m ? "active" : ""}
-              onClick={() => setMode(m)}
-              key={m}
-            >
-              {m === "absolute"
-                ? "Values"
-                : m === "change"
-                  ? "MoM Δ"
-                  : m === "year" ? "YoY Δ" : "Index 100"}
-            </button>
-          ))}
-        </div>
-      }
+      subtitle="14 completed months available · comparisons ignore date filters; other filters apply"
     >
+      <MonthlyTableControls
+        state={controls}
+        onChange={(patch) => setControls((c) => ({ ...c, ...patch }))}
+        modes={[
+          ["absolute", "Values"],
+          ["change", "MoM Δ"],
+          ["year", "YoY Δ"],
+          ["index", "Index 100"],
+        ]}
+        onExport={() =>
+          exportCSV(
+            `monthly-${s.tab}-${controls.mode}`,
+            visibleIds.map((id) => ({
+              Measure: metrics[id].label,
+              ...Object.fromEntries(
+                months.map((m) => [m.key, cellText(id, m.key)]),
+              ),
+            })),
+          )
+        }
+      >
+        <label>
+          Measure
+          <select
+            aria-label="Monthly metric"
+            value={ids.includes(selected) ? selected : "all"}
+            onChange={(e) => setSelected(e.target.value)}
+          >
+            <option value="all">All measures</option>
+            {ids.map((id) => (
+              <option key={id} value={id}>
+                {metrics[id].label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <input
+          type="search"
+          aria-label="Search monthly measures"
+          placeholder="Find a measure…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <label className="monthly-check">
+          <input
+            type="checkbox"
+            checked={baseline}
+            onChange={(e) => setBaseline(e.target.checked)}
+          />
+          Show baseline
+        </label>
+      </MonthlyTableControls>
       {error && <p role="alert">{error}</p>}
       {loading && <p role="status">Loading monthly history…</p>}
-      <div className="table-scroll mom">
+      <div
+        className={`table-scroll mom monthly-table${controls.dense ? " compact" : " comfortable"}`}
+        tabIndex={0}
+        aria-label="Monthly comparison table; scroll for more periods"
+      >
         <table>
           <thead>
             <tr>
               <th>Performance measure</th>
               {months.map((m) => (
-                <th key={m.key}>{m.label}</th>
+                <th
+                  key={m.key}
+                  className={
+                    m.key === allMonths.at(-1)?.key ? "latest-month" : undefined
+                  }
+                >
+                  {m.label}
+                  {m.key === allMonths.at(-1)?.key && <small>Latest</small>}
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {ids.map((id) => {
-              const values = months
-                .map((m) => m.row?.[id])
-                .filter((v) => v != null)
-                .map(Number);
-              const min = Math.min(...values),
-                max = Math.max(...values);
-              const first = months.find((m) => m.row?.[id] != null)?.row?.[id];
-              return (
-                <tr key={id}>
-                  <td title={metrics[id].description}>{metrics[id].label}</td>
-                  {months.map((m, i) => {
-                    const value = m.row?.[id];
-                    const date = new Date(m.key + "-01T00:00:00Z");
-                    const priorKey = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() - (mode === "year" ? 12 : 1), 1)).toISOString().slice(0, 7);
-                    const prev = rows.find(row => row.month === priorKey)?.[id];
-                    const positive =
-                      value != null &&
-                      Number(value) >= Number(prev) ===
-                        metrics[id].higherIsBetter;
-                    const normalized =
-                      value == null
-                        ? 0
-                        : (Number(value) - min) / (max - min || 1);
-                    return (
-                      <td
-                        key={m.key}
-                        tabIndex={0}
-                        title={`${m.label}: ${fmt(id, value)}; prior: ${delta(id, value, prev)}; n = ${m.row?.n ?? 0}. Click to scope this month.`}
-                        style={{
-                          background:
-                            value == null
-                              ? undefined
-                              : `color-mix(in srgb,var(--${positive ? "pos" : "neg"}) ${Math.round(5 + normalized * 14)}%,var(--surface-1))`,
-                        }}
+            {visibleIds.map((id) => (
+              <tr key={id}>
+                <th scope="row" title={metrics[id].description}>
+                  {metrics[id].label}
+                </th>
+                {months.map((m) => {
+                  const value = m.row?.[id],
+                    prev = rows.find((r) => r.month === prior(m.key))?.[id];
+                  const movement =
+                    value == null || prev == null
+                      ? null
+                      : Number(value) - Number(prev);
+                  const tone =
+                    movement == null || movement === 0
+                      ? "neutral"
+                      : movement > 0 === metrics[id].higherIsBetter
+                        ? "positive"
+                        : "negative";
+                  return (
+                    <td
+                      key={m.key}
+                      className={
+                        m.key === allMonths.at(-1)?.key
+                          ? "latest-month"
+                          : undefined
+                      }
+                    >
+                      <button
+                        className={`monthly-value ${["change", "year"].includes(controls.mode) ? tone : ""}`}
+                        title={`${m.label}: ${fmt(id, value)} · baseline: ${fmt(id, prev)} · ${m.row?.n ?? 0} source rows. Click to scope this month.`}
                         onClick={() =>
                           s.filter({
                             from: m.key + "-01",
@@ -127,33 +224,33 @@ export function MoMTable({ ids, version }: { ids: string[]; version: string }) {
                               .slice(0, 10),
                           })
                         }
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") e.currentTarget.click();
-                        }}
                       >
-                        {mode === "absolute"
-                          ? fmt(id, value)
-                          : mode === "change" || mode === "year"
-                            ? value == null || prev == null
-                              ? "—"
-                              : delta(id, value, prev)
-                            : value == null || !first
-                              ? "—"
-                              : ((Number(value) / Number(first)) * 100).toFixed(
-                                  0,
-                                )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
+                        {cellText(id, m.key)}
+                        {baseline && (
+                          <small>
+                            {controls.mode === "year"
+                              ? "Last year"
+                              : "Prior month"}{" "}
+                            {fmt(id, prev)}
+                          </small>
+                        )}
+                      </button>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
+      {!visibleIds.length && (
+        <p className="empty-state">No measures match this selection.</p>
+      )}
       <p className="ranking-foot">
-        Rates recompute from numerator and denominator. Missing months remain
-        unavailable. Click a month to inspect its contributors.
+        Rates recompute from source numerators and denominators. Missing months
+        stay unavailable; changes use percentage points for rates. Index 100
+        uses the first available value in the full 14-month window. Click a
+        value to scope its month.
       </p>
     </Register>
   );

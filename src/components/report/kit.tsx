@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { exportCSV } from "../exports";
 import { InstructorName } from "../InstructorAvatar";
 import { ReportMarquee } from "./ReportChrome";
 import type { Row } from "../../data/duckdb";
@@ -202,7 +204,20 @@ function Sparkline({id,history}:{id:string;history:Row[]}) {
 }
 
 export function MonthlyHistory({data,ids,title}:{data:ChapterData;ids:string[];title:string}) {
-  return <details className="r-mom-panel"><summary><div><span className="r-eyebrow">Monthly comparison</span><h3>{title} — month on month</h3><p>Fourteen months · {ids.length} measures · expand to inspect the figures</p></div><span className="r-mom-open">Show history <span aria-hidden="true">⌄</span></span></summary><div className="r-table-wrap"><table className="r-table"><thead><tr><th>Month</th>{ids.map(id=><th key={id}>{label(id)}</th>)}</tr></thead><tbody>{data.history.map((row,i)=><tr key={String(row.month)}><td>{String(row.month)}</td>{ids.map(id=><td key={id}>{fmt(id,row[id])}<small className="r-comparison">MoM {delta(id,row[id],data.history[i-1]?.[id])}</small></td>)}</tr>)}</tbody></table></div></details>;
+  const [periods,setPeriods]=useState(14),[mode,setMode]=useState('values'),[metric,setMetric]=useState('all'),[newest,setNewest]=useState(true);
+  const history=[...data.history].sort((a,b)=>String(a.month).localeCompare(String(b.month)));
+  const visible=history.slice(-periods).map(row=>String(row.month));
+  const ordered=newest?[...history].reverse():history;
+  const previous=(month:string,offset:number)=>{const d=new Date(month+'-01T00:00:00Z');const key=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()-offset,1)).toISOString().slice(0,7);return history.find(row=>row.month===key);};
+  return <details className="r-mom-panel" data-report-history><summary><div><span className="r-eyebrow">Monthly comparison</span><h3>{title} — monthly comparison</h3><p>Fourteen months · {ids.length} measures · source-backed values and comparisons</p></div><span className="r-mom-open">Show history <span aria-hidden="true">⌄</span></span></summary>
+  <div className="r-history-controls">
+    <label>Display<select data-history-control="mode" aria-label={`${title} monthly display`} value={mode} onChange={e=>setMode(e.target.value)}><option value="values">Values</option><option value="mom">MoM Δ</option><option value="yoy">YoY Δ</option></select></label>
+    <label>Periods<select data-history-control="periods" aria-label={`${title} monthly periods`} value={periods} onChange={e=>setPeriods(Number(e.target.value))}>{[3,6,12,14].map(n=><option key={n} value={n}>{n} months</option>)}</select></label>
+    <label>Measure<select data-history-control="metric" aria-label={`${title} monthly metric`} value={metric} onChange={e=>setMetric(e.target.value)}><option value="all">All measures</option>{ids.map(id=><option key={id} value={id}>{label(id)}</option>)}</select></label>
+    <label>Order<select data-history-control="order" aria-label={`${title} monthly order`} value={newest?'newest':'oldest'} onChange={e=>setNewest(e.target.value==='newest')}><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select></label>
+    <button data-history-export className="r-pill" onClick={()=>exportCSV('report-monthly-'+mode,ordered.filter(row=>visible.includes(String(row.month))).map(row=>({Month:row.month,...Object.fromEntries(ids.filter(id=>metric==='all'||id===metric).map(id=>[label(id),mode==='values'?fmt(id,row[id]):delta(id,row[id],previous(String(row.month),mode==='mom'?1:12)?.[id])]))})))}>CSV</button>
+  </div>
+  <div className="r-table-wrap"><table className="r-table r-history-table"><thead><tr><th>Month</th>{ids.map(id=><th data-history-metric={id} hidden={metric!=='all'&&metric!==id} key={id}>{label(id)}</th>)}</tr></thead><tbody>{ordered.map(row=><tr data-history-month={String(row.month)} hidden={!visible.includes(String(row.month))} key={String(row.month)}><th scope="row">{String(row.month)}</th>{ids.map(id=><td data-history-metric={id} hidden={metric!=='all'&&metric!==id} key={id}><span data-history-value="values" hidden={mode!=='values'}>{fmt(id,row[id])}</span><span data-history-value="mom" hidden={mode!=='mom'}>{delta(id,row[id],previous(String(row.month),1)?.[id])}</span><span data-history-value="yoy" hidden={mode!=='yoy'}>{delta(id,row[id],previous(String(row.month),12)?.[id])}</span></td>)}</tr>)}</tbody></table></div><p className="r-history-note">Missing values and comparison baselines remain unavailable. Rates change in percentage points.</p></details>;
 }
 
 export function RankingBoard({table,criterion}:{table:GroupTable;criterion:string}) {

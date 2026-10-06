@@ -623,7 +623,10 @@ export function StickyNotes() {
                           {note.resolved ? "Reopen note" : "Mark done"}
                         </button>
                         <button
-                          onClick={() => {
+                          onClick={(event) => {
+                            event.currentTarget
+                              .closest("details")
+                              ?.removeAttribute("open");
                             setPlacing(false);
                             setConnecting({ id: note.id, type: "arrow" });
                           }}
@@ -632,7 +635,10 @@ export function StickyNotes() {
                           Connect arrow
                         </button>
                         <button
-                          onClick={() => {
+                          onClick={(event) => {
+                            event.currentTarget
+                              .closest("details")
+                              ?.removeAttribute("open");
                             setPlacing(false);
                             setConnecting({ id: note.id, type: "line" });
                           }}
@@ -753,6 +759,44 @@ export function StickyNotes() {
                     <button
                       className="note-resize"
                       aria-label="Resize note"
+                      onKeyDown={(e) => {
+                        if (
+                          [
+                            "ArrowLeft",
+                            "ArrowRight",
+                            "ArrowUp",
+                            "ArrowDown",
+                          ].includes(e.key)
+                        ) {
+                          e.preventDefault();
+                          update(note.id, {
+                            width: Math.max(
+                              200,
+                              Math.min(
+                                480,
+                                (note.width ?? 240) +
+                                  (e.key === "ArrowRight"
+                                    ? 10
+                                    : e.key === "ArrowLeft"
+                                      ? -10
+                                      : 0),
+                              ),
+                            ),
+                            height: Math.max(
+                              90,
+                              Math.min(
+                                500,
+                                (note.height ?? 125) +
+                                  (e.key === "ArrowDown"
+                                    ? 10
+                                    : e.key === "ArrowUp"
+                                      ? -10
+                                      : 0),
+                              ),
+                            ),
+                          });
+                        }
+                      }}
                       onPointerDown={(e) => {
                         e.preventDefault();
                         const target = e.currentTarget,

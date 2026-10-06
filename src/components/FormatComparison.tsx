@@ -1,3 +1,4 @@
+import { MonthlyTableControls, type MonthlyTableState } from "./MonthlyTableControls";
 import { Bike, Dumbbell, Activity, Trophy } from "lucide-react";
 import { InstructorName } from "./InstructorAvatar";
 import { Fragment, useEffect, useMemo, useState } from "react";
@@ -268,7 +269,9 @@ export function FormatComparison({ version }: { version: string | number }) {
 }
 
 function TrendTable({ rows, formats, metric, onMetric }: { rows: Row[]; formats: string[]; metric: string; onMetric: (v: string) => void }) {
-  const months = [...new Set(rows.map((r) => String(r.month)))].slice(-14);
+  const [controls,setControls]=useState<MonthlyTableState>({periods:14,newest:true,dense:true,mode:'absolute'});
+  const months = [...new Set(rows.map((r) => String(r.month)))].sort().slice(-controls.periods);if(controls.newest)months.reverse();
+  const priorKey=(month:string)=>{const d=new Date(month+'-01T00:00:00Z');return new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()-(controls.mode==='year'?12:1),1)).toISOString().slice(0,7);};
   const monthLabel = (key: string) =>
     new Date(key + "-01T00:00:00Z").toLocaleDateString("en-IN", {
       month: "short",
@@ -291,7 +294,8 @@ function TrendTable({ rows, formats, metric, onMetric }: { rows: Row[]; formats:
         </select>
       }
     >
-      <div className="table-scroll mom">
+      <MonthlyTableControls state={controls} onChange={patch=>setControls(c=>({...c,...patch}))} onExport={()=>exportCSV('format-monthly-'+controls.mode,formats.map(format=>({Format:format,...Object.fromEntries(months.map(month=>[month,controls.mode==='absolute'?fmt(metric,cell(month,format)):delta(metric,cell(month,format),cell(priorKey(month),format))]))})))}/>
+      <div className={`table-scroll mom monthly-table ${controls.dense?'compact':'comfortable'}`}>
         <table>
           <thead>
             <tr>
@@ -306,7 +310,7 @@ function TrendTable({ rows, formats, metric, onMetric }: { rows: Row[]; formats:
               <tr key={f}>
                 <th scope="row">{f}</th>
                 {months.map((m) => (
-                  <td key={m}>{fmt(metric, cell(m, f))}</td>
+                  <td key={m}>{controls.mode === "absolute" ? fmt(metric,cell(m,f)) : delta(metric,cell(m,f),cell(priorKey(m),f))}</td>
                 ))}
               </tr>
             ))}

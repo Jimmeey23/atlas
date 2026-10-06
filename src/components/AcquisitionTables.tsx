@@ -1,3 +1,5 @@
+import { exportCSV } from "./exports";
+import { MonthlyTableControls, type MonthlyTableState } from "./MonthlyTableControls";
 import { InstructorName } from "./InstructorAvatar";
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, CalendarDays, ChevronDown, ChevronRight, CircleHelp, GraduationCap, Handshake, Route, TrendingUp, Users } from "lucide-react";
@@ -98,13 +100,17 @@ function CohortComparison({ mode, version, onDrill }: { mode: "mom" | "yoy"; ver
   const [error, setError] = useState("");
   const [metric, setMetric] = useState<string>("cohort_rows");
   const [display, setDisplay] = useState("values");
+  const [controls,setControls]=useState<MonthlyTableState>({periods:14,newest:true,dense:true,mode:"values"});
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<string[]>([]);
   const [sort, setSort] = useState<Sort>({ key: "parent", desc: false });
   const child = group === childGroup ? acquisitionDimensions.find(d => d.key !== group)!.key : childGroup;
   const groupLabel = acquisitionDimensions.find(d => d.key === group)!.label;
   const childLabel = acquisitionDimensions.find(d => d.key === child)!.label;
-  const months = mode === "mom" ? acquisitionMonths(today()).reverse() : acquisitionYoYMonths(today());
+  const selectedMonths=acquisitionMonths(today(),controls.periods);
+  const comparableMonths=new Set([...selectedMonths,...selectedMonths.map(month=>priorMonth(month,12))]);
+  const months = mode === "mom" ? selectedMonths.reverse() : acquisitionYoYMonths(today()).filter(month=>comparableMonths.has(month));
+  if(!controls.newest)months.reverse();
   const monthGroups = mode === "yoy" ? [...new Set(months.map(month => month.slice(5)))].map(key => ({ key, label: acquisitionPeriodLabel(months.find(month => month.slice(5) === key)).split(" - ")[0], size: months.filter(month => month.slice(5) === key).length })) : [];
   const measure = acquisitionMeasures.find(m => m[0] === metric)!;
   const historyScope = where(historicalFilters(filters, today()), "new", historicalTransient(transient));
@@ -126,7 +132,7 @@ function CohortComparison({ mode, version, onDrill }: { mode: "mom" | "yoy"; ver
     const map = new Map<string, Set<string>>();
     rows.filter(r => !r.is_parent && !r.is_total && months.includes(String(r.month))).forEach(r => { const parent = String(r.parent); if (!map.has(parent)) map.set(parent, new Set()); map.get(parent)!.add(String(r.child)); });
     return map;
-  }, [rows, mode]);
+  }, [rows, mode, controls.periods]);
   function onSort(key: string) { setSort(s => ({ key, desc: s.key === key ? !s.desc : key !== "parent" })); }
   function toggle(value: string) { setExpanded(current => current.includes(value) ? current.filter(x => x !== value) : [...current, value]); }
   function drillCell(parent: string | null, childValue: string | null, month: string) {
@@ -153,19 +159,22 @@ function CohortComparison({ mode, version, onDrill }: { mode: "mom" | "yoy"; ver
       <label className="acq-control">First column<select aria-label={`${mode.toUpperCase()} first column`} value={group} onChange={e => { setGroup(e.target.value as AcquisitionDimension); setSelectedValues(null); setExpanded([]); }}>{acquisitionDimensions.map(d => <option value={d.key} key={d.key}>{d.label}</option>)}</select></label>
       <ValueSelection options={values} selected={selectedValues} onChange={setSelectedValues} label={`${mode.toUpperCase()} first-column values`} />
       <label className="acq-control">Child rows<select aria-label={`${mode.toUpperCase()} child rows`} value={child} onChange={e => setChildGroup(e.target.value as AcquisitionDimension)}>{acquisitionDimensions.filter(d => d.key !== group).map(d => <option value={d.key} key={d.key}>{d.label}</option>)}</select></label>
-      <div className="acq-segmented" aria-label="Comparison display">{["values", "change"].map(d => <button key={d} aria-pressed={d === display} onClick={() => setDisplay(d)}>{d === "values" ? "Values" : mode === "mom" ? "MoM Δ" : "YoY Δ"}</button>)}</div>
+      <div className="acq-segmented" aria-label="Comparison display">{["values", "change"].map(d => <button key={d} aria-pressed={d === display} onClick={() => {setDisplay(d);setControls(c=>({...c,mode:d}));}}>{d === "values" ? "Values" : mode === "mom" ? "MoM Δ" : "YoY Δ"}</button>)}</div>
     </>}
     metricBar={<MetricTabs value={metric} onChange={setMetric} />}
     footer={<><span>{measure[1]} · expand a {groupLabel.toLowerCase()} to see {childLabel.toLowerCase()} details · totals reflect selected first-column values · date filters are ignored</span><DefinitionNote /></>}>
-    {error ? <p role="alert">{error}</p> : loading ? <p className="acq-empty" role="status">Loading cohort groups…</p> : <div className="acq-table-scroll" tabIndex={0} aria-label={`${mode.toUpperCase()} cohort table. Scroll horizontally for earlier periods.`}>
+    <MonthlyTableControls state={controls} modes={[["values","Values"],["change",mode === "mom" ? "MoM Δ" : "YoY Δ"]]} onChange={patch=>{setControls(c=>({...c,...patch}));if(patch.mode)setDisplay(patch.mode);}} onExport={()=>exportCSV(`acquisition-${mode}-${metric}`,visible.map(r=>({Group:r.parent,...Object.fromEntries(months.map(month=>{const value=lookup.get(JSON.stringify([r.parent,null,month]))?.[metric];const prev=lookup.get(JSON.stringify([r.parent,null,priorMonth(month,mode==='mom'?1:12)]))?.[metric];return [month,display==='values'?valueText(measure,value):changeText(measure,value,prev)];}))})))}>
+      <button className="button" onClick={()=>setExpanded(visible.map(r=>String(r.parent)))}>Expand all</button><button className="button" onClick={()=>setExpanded([])}>Collapse all</button>
+    </MonthlyTableControls>
+    {error ? <p role="alert">{error}</p> : loading ? <p className="acq-empty" role="status">Loading cohort groups…</p> : <div className={`acq-table-scroll monthly-table ${controls.dense?'compact':'comfortable'}`} tabIndex={0} aria-label={`${mode.toUpperCase()} cohort table. Scroll horizontally for earlier periods.`}>
       <table className="acq-table acq-pivot"><thead>
         {mode === "yoy" && <tr className="acq-month-group"><th className="acq-sticky">{groupLabel}</th>{monthGroups.map(g => <th scope="colgroup" key={g.key} colSpan={g.size}>{g.label}</th>)}</tr>}
         <tr><SortHeading label={groupLabel} name="parent" sort={sort} onSort={onSort} className="acq-sticky" />{months.map(month => <SortHeading key={month} label={acquisitionPeriodLabel(month)} name={month} sort={sort} onSort={onSort} />)}</tr>
       </thead><tbody>{visible.map(r => {
         const parent = String(r.parent), open = expanded.includes(parent);
         return <Fragment key={parent}>
-          <tr className="acq-entry-row"><th scope="row" className="acq-sticky"><button className="acq-expand" aria-expanded={open} onClick={() => toggle(parent)}>{open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}<span title={parent}>{parent}</span></button></th>{months.map(month => cell(parent, null, month))}</tr>
-          {open && [...(children.get(parent) ?? [])].sort().map(value => <tr className="acq-detail-row" key={value}><th scope="row" className="acq-sticky"><span className="acq-detail-label" title={`${childLabel}: ${value}`}>{value}</span></th>{months.map(month => cell(parent, value, month))}</tr>)}
+          <tr className="acq-entry-row"><th scope="row" className="acq-sticky"><button className="acq-expand" aria-expanded={open} onClick={() => toggle(parent)}>{open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}<span title={parent}>{group === "trainer" ? <InstructorName name={parent}/> : parent}</span></button></th>{months.map(month => cell(parent, null, month))}</tr>
+          {open && [...(children.get(parent) ?? [])].sort().map(value => <tr className="acq-detail-row" key={value}><th scope="row" className="acq-sticky"><span className="acq-detail-label" title={`${childLabel}: ${value}`}>{child === "trainer" ? <InstructorName name={value}/> : value}</span></th>{months.map(month => cell(parent, value, month))}</tr>)}
         </Fragment>;
       })}</tbody>
       {<tfoot><tr><th scope="row" className="acq-sticky">Selected values · total</th>{months.map(month => cell(null, null, month))}</tr></tfoot>}

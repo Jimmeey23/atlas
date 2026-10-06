@@ -70,6 +70,13 @@ export async function serialiseReport(element: HTMLElement, model: ReportModel) 
     document.addEventListener('click', function(event) {
       const button = event.target.closest('button');
       if (!button) return;
+      if(button.hasAttribute('data-history-export')) {
+        const root=button.closest('[data-report-history]');
+        const table=root.querySelector('table');
+        const rows=Array.from(table.querySelectorAll('tr')).filter(function(row){return !row.hidden;});
+        const csv=rows.map(function(row){return Array.from(row.children).filter(function(cell){return !cell.hidden;}).map(function(cell){const value=cell.querySelector('[data-history-value]:not([hidden])');return '"'+(value?value.textContent:cell.textContent).replaceAll('"','""')+'"';}).join(',');}).join('\\n');
+        const url=URL.createObjectURL(new Blob(['\\ufeff'+csv],{type:'text/csv;charset=utf-8;'}));const link=document.createElement('a');link.href=url;link.download='monthly-comparison.csv';link.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);
+      }
       if (button.hasAttribute('data-view-control')) {
         const root = button.closest('[data-switch-root]');
         const choice = button.getAttribute('data-view-control');
@@ -110,6 +117,17 @@ export async function serialiseReport(element: HTMLElement, model: ReportModel) 
         button.setAttribute('aria-label', paused ? 'Resume signals' : 'Pause signals');
         strip.querySelector('.r-marquee').setAttribute('data-paused',String(paused));
       }
+    });
+    document.addEventListener('change',function(event){
+      const control=event.target.closest('[data-history-control]');if(!control)return;
+      const root=control.closest('[data-report-history]');
+      const read=function(key){return root.querySelector('[data-history-control="'+key+'"]').value;};
+      const rows=Array.from(root.querySelectorAll('[data-history-month]'));
+      const months=rows.map(function(row){return row.dataset.historyMonth;}).sort();const visible=months.slice(-Number(read('periods')));
+      rows.forEach(function(row){row.hidden=!visible.includes(row.dataset.historyMonth);});
+      root.querySelectorAll('[data-history-metric]').forEach(function(cell){cell.hidden=read('metric')!=='all'&&cell.dataset.historyMetric!==read('metric');});
+      root.querySelectorAll('[data-history-value]').forEach(function(value){value.hidden=value.dataset.historyValue!==read('mode');});
+      rows.sort(function(a,b){return read('order')==='newest'?b.dataset.historyMonth.localeCompare(a.dataset.historyMonth):a.dataset.historyMonth.localeCompare(b.dataset.historyMonth);}).forEach(function(row){root.querySelector('tbody').appendChild(row);});
     });
     let printing = false;
     window.addEventListener('beforeprint',function(){printing=true;});

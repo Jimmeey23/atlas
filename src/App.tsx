@@ -1,3 +1,4 @@
+import { SalesRankings } from "./components/SalesRankings";
 import { StickyNotes } from "./components/StickyNotes";
 import { workspaceIcons, useWorkspaceCopy } from "./data/workspaceCopy";
 import { OverviewAttention } from "./components/OverviewAttention";
@@ -900,7 +901,7 @@ export default function App() {
                   <Chart tab={s.tab} data={analysis} secondary />
                 </Register>
               </div>
-              {s.tab === 8 ? <LeadStageScorecard version={version} onDrill={setDrill} /> : includeWeeklyPattern && analysis.heat.length > 0 ? <Register
+              {s.tab === 4 ? <SalesRankings version={version}/> : s.tab === 8 ? <LeadStageScorecard version={version} onDrill={setDrill} /> : includeWeeklyPattern && analysis.heat.length > 0 ? <Register
                 index="05"
                 title={
                   includeWeeklyPattern && analysis.heat.length
