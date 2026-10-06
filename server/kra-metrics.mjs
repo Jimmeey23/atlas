@@ -1,3 +1,4 @@
+import {acquisitionCounts} from './kra-acquisition.mjs';
 import {recordedChurn} from './kra-churn.mjs';
 // Role outcomes are company-wide; only exact name matches are personally attributed.
 const finite = value => value != null && Number.isFinite(Number(value));
@@ -5,7 +6,7 @@ const sum = (rows,key) => {const known=rows.filter(row=>finite(row[key]));return
 const ratio = (a,b) => a!=null && b>0 ? a/b : null;
 const atLeast = (value,target) => value >= target-1e-12;
 const change = (value,baseline) => value!=null && baseline>0 ? value/baseline-1 : null;
-const compact = row => Object.fromEntries(['source_row','member','member_id','lead_id','email','phone','date','location','product','category','sale_id','associate','source','revenue','status','start_date','end_date','renewed','churned_date','churn_included','session_limit','completed','scheduled','completed','identity_basis','stage'].map(key=>[key,row[key]??null]));
+const compact = row => Object.fromEntries(['entry_type','trial_included','referral_included','source_row','member','member_id','lead_id','email','phone','date','location','product','category','sale_id','associate','source','revenue','status','start_date','end_date','renewed','churned_date','churn_included','session_limit','completed','scheduled','completed','identity_basis','stage'].map(key=>[key,row[key]??null]));
 const person = value => String(value??'').trim().toLowerCase().replace(/\s+/g,' ');
 const emailKey = value => {const email=person(value);return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)&&!/^noemail\+/i.test(email)?email:'';};
 const datePlus = (date,days) => new Date(Date.parse(date+'T00:00:00Z')+days*86400000).toISOString().slice(0,10);
@@ -84,6 +85,7 @@ export function kraPerformance(sources,asOf,{imports=false}={}) {
     const revenueReady=closed&&revenueCovered(month)&&revenueCovered(baseline),stabilityReady=closed&&revenueCovered(month)&&revenueCovered(previous);
     return {month,state:future?'Upcoming':closed?'Completed month':'Month to date',revenue:revenueValue,baselineRevenue,previousRevenue,revenueYoY,revenueMoM,revenueTarget:revenueReady&&revenueYoY!=null?atLeast(revenueYoY,.10):null,stabilityTarget:stabilityReady&&revenueMoM!=null?revenueMoM>-.10+1e-12:null,
       churn:currentChurn,baselineChurn,matchedBaselineChurn,previousChurn,previousMatchedChurn,previousTrials,precedingChurn,churnReduction,observedChurnReduction:currentChurn.observedRate!=null&&matchedBaselineChurn.observedRate>0?1-currentChurn.observedRate/matchedBaselineChurn.observedRate:null,precedingRevenue,precedingRevenueGrowth:change(revenueValue,precedingRevenue),precedingTrials,churnTarget:closed&&churnReduction!=null?atLeast(churnReduction,.10):null,
+      acquisition:cutoff?acquisitionCounts(get('new'),month+'-01',cutoff):{trials:0,referrals:0,rows:[]},baselineAcquisition:baselineCutoff?acquisitionCounts(get('new'),baseline+'-01',baselineCutoff,false):{trials:0,referrals:0,rows:[]},previousAcquisition:prevCutoff?acquisitionCounts(get('new'),previous+'-01',prevCutoff,false):{trials:0,referrals:0,rows:[]},precedingAcquisition:precedingCutoff?acquisitionCounts(get('new'),precedingMonth+'-01',precedingCutoff,false):{trials:0,referrals:0,rows:[]},
       trials:trial,baselineTrials:baselineTrial,scheduledGrowth,completedGrowth,trialsTarget:closed&&trialCoverage&&elapsed>=30&&scheduledGrowth!=null&&completedGrowth!=null?atLeast(scheduledGrowth,.10)&&atLeast(completedGrowth,.10):null,observationEnd:cutoff?observationEnd:null,
       sales:cutoff?sales.filter(row=>row.date>=month+'-01'&&row.date<=cutoff).map(compact):[]};
   });
@@ -102,7 +104,8 @@ export function kraPerformance(sources,asOf,{imports=false}={}) {
     const scheduled=prospects.filter(row=>row.scheduled&&row.scheduled<=observationEnd&&row.scheduled<=datePlus(endOfMonth(row.date.slice(0,7)),30)).length;
     const completed=prospects.filter(row=>row.completed&&row.completed<=observationEnd&&row.completed<=datePlus(endOfMonth(row.date.slice(0,7)),30)).length;
     const churnSummary=recordedChurn(get('lapsed'),from,to,to);
-    return {from,to,revenue:sum(known,'revenue'),saleItems:payments.length,knownSales:new Set(payments.map(row=>row.sale_id).filter(Boolean)).size,knownItems:known.length,averageItemValue:known.length?sum(known,'revenue')/known.length:null,members:new Set(payments.map(row=>row.member_id).filter(Boolean)).size,
+    const acquisition=acquisitionCounts(get('new'),from,to,false);
+    return {from,to,trials:acquisition.trials,referrals:acquisition.referrals,revenue:sum(known,'revenue'),saleItems:payments.length,knownSales:new Set(payments.map(row=>row.sale_id).filter(Boolean)).size,knownItems:known.length,averageItemValue:known.length?sum(known,'revenue')/known.length:null,members:new Set(payments.map(row=>row.member_id).filter(Boolean)).size,
       leads:prospects.length,scheduled,completed,scheduledRate:ratio(scheduled,prospects.length),completedRate:ratio(completed,prospects.length),
       due:churnSummary.due,matureDue:churnSummary.due,lapsed:churnSummary.lapsed,renewed:churnSummary.renewed,unrecorded:churnSummary.unrecorded,missingDates:churnSummary.missingDates,churnRate:churnSummary.rate,grace:0};
   }
@@ -152,7 +155,8 @@ export function kraPerformance(sources,asOf,{imports=false}={}) {
       'Revenue sums Payment Value on successful/non-voided sales, matching the existing Revenue workspace. Imports are excluded by default. Source gaps are identified for reconciliation; no zeros or forecasts are invented.',
       'Completed-month revenue assessments need source records spanning the month and its comparison. This is a coverage check, not proof of upstream completeness. Month-to-date comparisons use matching elapsed calendar days.',
       'KRA churn uses only Lapsed in spreadsheet 1x-0iFgnYmEqt-b2MfAgHVx5CErcX5NtZYB9p5Rh6f1I: recorded Churned Date on or before cutoff / all membership records with End Date in the selected period. All statuses and membership types, including free/trial products, remain in the denominator. Each source row is a membership record; this is not active-base member churn. Blank Churned Date never implies churn; no paid-only filter or 30-day inference is applied.',
-      'Trials uses the lead creation-month cohort linked by member ID, with a valid unambiguous email fallback, to the earliest recorded non-cancelled, non-no-show scheduled and completed sessions. Sessions preceding lead creation receive no first-class credit. Scheduled and attended/completed first-class rates are compared YoY with up to 30 post-month observation days matched across years. A 10% target means relative rate growth; counts are also shown. Referral-specific targets were not supplied.',
+      'Trial counts are New-sheet rows whose Is New contains new, case-insensitive; referrals are rows containing referrals, case-insensitive. No member deduplication is applied. Counts follow First Visit Date. A row matching both contributes to both counts. Singular Referral does not match the literal referrals rule.',
+      'The approved first-class target uses the lead creation-month cohort linked by member ID, with a valid unambiguous email fallback, to the earliest recorded non-cancelled, non-no-show scheduled and completed sessions. Sessions preceding lead creation receive no first-class credit. Scheduled and attended/completed first-class rates are compared YoY with up to 30 post-month observation days matched across years. A 10% target means relative rate growth; counts are also shown. Referral-specific targets were not supplied.',
       'Trial assessments require 30 post-month observation days; missing or ambiguous identifiers or booking coverage can understate results. Dates represent recorded sessions; a historical booking creation timestamp is unavailable.',
       'Zero comparison denominators are labelled explicitly. Future months are pending; open observation windows show observed values and provisional trajectories. No overall score is asserted for an unfinished review period.',
       'Performance Marketing upskilling, hiring/onboarding and soft-skills training require dated evidence. Logged progress is self-reported; it does not certify completion or create an approved KRA score.',

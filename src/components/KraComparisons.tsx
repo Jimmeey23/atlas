@@ -1,7 +1,7 @@
 import {useState} from 'react';
 import {fmt} from '../semantics/formats';
 import {acquisitionPeriodLabel} from '../data/acquisition';
-export type Period={from:string;to:string;revenue:number|null;saleItems:number;knownSales:number;knownItems:number;averageItemValue:number|null;members:number;leads:number;scheduled:number;completed:number;scheduledRate:number|null;completedRate:number|null;due:number;matureDue:number;renewed:number;unrecorded:number;missingDates:number;lapsed:number;churnRate:number|null;grace:number};
+export type Period={trials:number;referrals:number;from:string;to:string;revenue:number|null;saleItems:number;knownSales:number;knownItems:number;averageItemValue:number|null;members:number;leads:number;scheduled:number;completed:number;scheduledRate:number|null;completedRate:number|null;due:number;matureDue:number;renewed:number;unrecorded:number;missingDates:number;lapsed:number;churnRate:number|null;grace:number};
 export type Explanation={finding:string;basis:string;action:string};
 export type Topic={id:string;category:string;title:string};
 export type TopicRecord={status:string;note:string;date:string;basis?:string};

@@ -64,7 +64,7 @@ test('KRA churn uses recorded Lapsed dates across all membership records without
 });
 test('protected KRA API rejects direct access, validates evidence and revokes sessions on lock',async()=>{
   const root=await mkdtemp(path.join(tmpdir(),'p57-kra-'));await mkdir(path.join(root,'.floor'));await mkdir(path.join(root,'.cache'));
-  for(const key of ['sales','leads','bookings','lapsed'])await writeFile(path.join(root,'.cache',key+'.json'),JSON.stringify({key,columns:[],rows:[],status:'ok',fetchedAt:Date.now()}));
+  for(const key of ['sales','leads','bookings','lapsed','new'])await writeFile(path.join(root,'.cache',key+'.json'),JSON.stringify({key,columns:[],rows:[],status:'ok',fetchedAt:Date.now()}));
   const app=express();app.use(express.json());kraRoutes(app,root,[],async()=>{throw Error('Unexpected remote read');});
   const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));const base='http://127.0.0.1:'+server.address().port;
   try {

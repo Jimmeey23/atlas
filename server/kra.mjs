@@ -3,7 +3,8 @@ import {readFile,writeFile,rename} from 'node:fs/promises';
 import path from 'node:path';
 import {normalise} from '../src/data/normalise.ts';
 import {performanceMarketingTopics} from './kra-curriculum.mjs';
-import {kraPerformance} from './kra-metrics.mjs';
+import {validateKraEdit} from './kra-edits.mjs';
+import {kraPerformance,kraDefinitions} from './kra-metrics.mjs';
 const digest=value=>createHash('sha256').update(value).digest();
 export function kraRoutes(app,root,config,load) {
   const sessions=new Map(),attempts=new Map(),cookie='p57_kra_session';
@@ -36,7 +37,7 @@ export function kraRoutes(app,root,config,load) {
   app.get('/api/kra/performance',auth,async(req,res)=>{
     try {
       const sources={};
-      await Promise.all(['sales','leads','bookings','lapsed'].map(async key=>{
+      await Promise.all(['sales','leads','bookings','lapsed','new'].map(async key=>{
         const source=config.find(item=>item.key===key);
         let data;
         if(req.query.refresh!=='true')try{data=JSON.parse(await readFile(path.join(root,'.cache',key+'.json'),'utf8'));data.stale=Date.now()-data.fetchedAt>=15*60*1000;}catch{}
@@ -47,8 +48,27 @@ export function kraRoutes(app,root,config,load) {
       }));
       const result=kraPerformance(sources,asOf(),{imports:req.query.imports==='true'});
       await writes;
-      res.json({...result,evidence:await evidence(),trainingTopics:performanceMarketingTopics});
+      const saved=await evidence();
+      res.json({...result,definitions:result.definitions.map(definition=>{const info=saved.scorecardInfo?.[definition.id];return {...definition,...info,targetEdited:!!info&&info.target!==definition.target,manual:!!info&&(info.area!==definition.area||info.target!==definition.target||info.weight!==definition.weight)};}),evidence:saved,scorecardEdits:saved.scorecardEdits??{},scorecardHistory:saved.scorecardHistory??[],trainingTopics:performanceMarketingTopics});
     } catch {res.status(500).json({error:'KRA source analysis could not be completed. Retry or refresh the source snapshots.'});}
+  });
+  app.put('/api/kra/scorecard/:period/:id',auth,async(req,res)=>{
+    const error=validateKraEdit(req.params.period,req.params.id,req.body);
+    if(error)return res.status(400).json({error});
+    const {info,data,expectedUpdatedAt}=req.body,key=req.params.period+'/'+req.params.id;
+    const job=writes.then(async()=>{
+      const saved=await evidence(),before=saved.scorecardEdits?.[key]??null;
+      if((before?.updatedAt??null)!==expectedUpdatedAt){const conflict=Error('This KRA was changed in another session. Reload before saving.');conflict.status=409;throw conflict;}
+      const updatedAt=new Date(Math.max(Date.now(),before?Date.parse(before.updatedAt)+1:0)).toISOString(),record={...data,updatedAt,basis:'Manual KRA edit'};
+      saved.scorecardInfo??={};saved.scorecardEdits??={};saved.scorecardHistory??=[];
+      const previousInfo=saved.scorecardInfo[req.params.id]??null;
+      saved.scorecardInfo[req.params.id]={area:info.area.trim(),target:info.target.trim(),weight:info.weight};saved.scorecardEdits[key]=record;
+      saved.scorecardHistory.push({id:randomBytes(12).toString('hex'),key,updatedAt,before,after:record,previousInfo,info:saved.scorecardInfo[req.params.id]});
+      await writeFile(file+'.tmp',JSON.stringify(saved));await rename(file+'.tmp',file);
+      const base=kraDefinitions.find(definition=>definition.id===req.params.id),editedInfo=saved.scorecardInfo[req.params.id];
+      return {key,record,info:{...editedInfo,targetEdited:editedInfo.target!==base.target,manual:editedInfo.area!==base.area||editedInfo.target!==base.target||editedInfo.weight!==base.weight},history:saved.scorecardHistory};
+    });writes=job.catch(()=>undefined);
+    try{res.json(await job);}catch(error){res.status(error.status??500).json({error:error.status===409?error.message:'The KRA edit could not be saved. Retry.'});}
   });
   app.put('/api/kra/training/:id',auth,async(req,res)=>{
     const body=req.body??{};

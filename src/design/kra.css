@@ -133,3 +133,25 @@ body:has(.kra-standalone) { overflow: auto; height: auto; }
 .kra-panel .kra-score-table tfoot :is(td,th):first-child { background: #24233f; color: #fff; }
 .kra-churn-source { display: block; margin-top: 5px; color: #7054e8; font-size: 10px; text-decoration: none; }
 .kra-churn-source:hover { text-decoration: underline; }
+.kra-edit-row { display: block; margin-top: 7px; padding: 3px 7px; border: 1px solid #7054e830; border-radius: 5px; background: transparent; color: #7054e8; font-size: 10px; cursor: pointer; }
+.kra-manual-tag { display: block; font-size: 9px; color: #8c6431; margin-top: 4px; }
+.kra-saved-note { white-space: pre-wrap; margin-top: 7px; padding: 7px 9px; border-left: 2px solid #7054e850; background: #7054e805; font-size: 10px; }
+.kra-saved-note strong { display: block; color: #7054e8; font-size: 9px; margin-bottom: 2px; }
+.kra-edit-dialog { width: min(720px,calc(100vw - 28px)); max-height: calc(100dvh - 36px); padding: 22px; border: 1px solid var(--hairline); border-radius: 14px; background: var(--surface-1); color: var(--text-1); box-shadow: 0 24px 100px #201d3c30; }
+.kra-edit-dialog::backdrop { background: #17152d65; backdrop-filter: blur(3px); }
+.kra-edit-dialog > header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+.kra-edit-dialog h3 { margin: 6px 0 0; font-size: 20px; }.kra-edit-dialog > header button { background: transparent; border: 0; font-size: 24px; cursor: pointer; color: inherit; }
+.kra-edit-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.kra-edit-grid label { display: grid; gap: 5px; font-size: 11px; color: var(--text-2); }
+.kra-edit-grid :is(input,textarea,select) { width: 100%; padding: 8px 10px; font-size: 12px; border: 1px solid var(--hairline-strong); border-radius: 6px; background: var(--surface-1); color: var(--text-1); }
+.kra-edit-dialog .small { font-size: 10px; color: var(--text-2); line-height: 1.6; margin: 15px 0; }
+.kra-edit-dialog form > footer { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--hairline); }
+.kra-edit-dialog form > footer > button { font-size: 11px; padding: 8px 12px; border: 1px solid var(--hairline); border-radius: 6px; background: var(--surface-1); color: inherit; cursor: pointer; }
+.kra-edit-dialog form > footer .kra-save { background: #7054e8; color: #fff; border-color: #7054e8; }
+.kra-edit-dialog [role=alert] { color: var(--neg); font-size: 12px; }
+.kra-edit-history { padding: 12px 22px; border-top: 1px solid var(--hairline); font-size: 11px; }
+.kra-edit-history > summary { cursor: pointer; color: #7054e8; }.kra-edit-history > button { margin-top: 12px; font-size: 11px; }
+.kra-edit-history article { padding: 10px 0; border-bottom: 1px solid var(--hairline); }.kra-edit-history time { display: block; color: var(--text-3); margin-top: 3px; font-size: 10px; }
+.kra-edit-history pre { font-size: 10px; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--surface-2); padding: 12px; border-radius: 6px; }
+@media(max-width:600px){.kra-edit-dialog { padding: 16px; }.kra-edit-grid { grid-template-columns:1fr; }.kra-edit-grid .kra-wide { grid-column: 1; }}
+.kra-revision-fields { margin: 8px 0; font-size: 10px; }.kra-revision-fields > div { padding: 7px 0; }.kra-revision-fields dt { font-weight: 600; color: var(--text-2); }.kra-revision-fields dd { margin: 4px 0 0; display: flex; gap: 10px; flex-wrap: wrap; white-space: pre-wrap; }.kra-revision-fields dd > strong { color: #7054e8; }
