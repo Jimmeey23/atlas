@@ -1,25 +1,31 @@
-// JSON document store with two backends.
+// JSON document store with two backends, chosen per key.
 //
-// Local operation keeps the original behaviour: atomic writes into .floor/.cache on disk.
-// Serverless deployments (Vercel) have no durable filesystem, so the same documents go to
-// Supabase instead. Callers use one interface and never branch on the environment.
+// `.floor/*` holds durable state (KRA evidence, scorecard edits, training progress). It must
+// survive a redeploy, so it goes to Supabase whenever credentials are configured.
+//
+// `.cache/*` holds Google Sheets snapshots. Those are regenerable and multi-megabyte, so they
+// always stay on local disk — pushing them through Supabase on every request is slow and buys
+// nothing. On serverless the cache root moves to /tmp, which is writable but per-instance:
+// a cold start simply refetches from Sheets.
 import { readFile, writeFile, rename, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 
 const TABLE = "atlas_store";
+const DURABLE = ".floor/";
 
-export function createStore({ root, cloud = null }) {
+export function createStore({ root, cloud = null, cacheRoot = root }) {
+  const base = key => (key.startsWith(DURABLE) ? root : cacheRoot);
   async function readLocal(key) {
     try {
-      return JSON.parse(await readFile(path.join(root, key), "utf8"));
+      return JSON.parse(await readFile(path.join(base(key), key), "utf8"));
     } catch (error) {
       if (error.code === "ENOENT") return null;
       throw error;
     }
   }
   async function writeLocal(key, value) {
-    const target = path.join(root, key);
+    const target = path.join(base(key), key);
     await mkdir(path.dirname(target), { recursive: true });
     const temporary = `${target}.${randomUUID()}.tmp`;
     await writeFile(temporary, JSON.stringify(value));
@@ -48,14 +54,14 @@ export function createStore({ root, cloud = null }) {
     const saved = await readCloud(key);
     if (saved !== null) return saved;
     const local = await readLocal(key);
-    if (local === null) return null;
-    await writeCloud(key, local);
+    if (local !== null) await writeCloud(key, local);
     return local;
   }
+  const durable = key => !!cloud && key.startsWith(DURABLE);
   return {
     durable: !!cloud,
-    backend: cloud ? "supabase" : "filesystem",
-    read: key => (cloud ? readMigrating(key) : readLocal(key)),
-    write: (key, value) => (cloud ? writeCloud(key, value) : writeLocal(key, value)),
+    backend: cloud ? "supabase documents + local cache" : "filesystem",
+    read: key => (durable(key) ? readMigrating(key) : readLocal(key)),
+    write: (key, value) => (durable(key) ? writeCloud(key, value) : writeLocal(key, value)),
   };
 }

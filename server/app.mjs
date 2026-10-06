@@ -23,23 +23,25 @@ export async function createApp({ serveStatic = false } = {}) {
           { auth: { persistSession: false }, realtime: { transport: WebSocket } },
         )
       : null;
-  const store = createStore({ root, cloud });
+  // Serverless has no writable project directory; /tmp is the only option for the sheet cache.
+  const cacheRoot = process.env.VERCEL ? "/tmp/atlas" : root;
+  const store = createStore({ root, cloud, cacheRoot });
   const app = express();
   app.use(express.json({ limit: "96kb" }));
   const ttl = 15 * 60 * 1000;
-    if (!store.durable) {
-      await mkdir(path.join(root, ".cache"), { recursive: true });
-      await mkdir(path.join(root, ".floor"), { recursive: true });
-      try {
-        await copyFile(
-          path.join(root, ".cache", "retention-followups.json"),
-          path.join(root, ".floor", "retention-followups.json"),
-          1,
-        );
-      } catch (error) {
-        if (!["ENOENT", "EEXIST"].includes(error.code)) throw error;
-      }
+  await mkdir(path.join(cacheRoot, ".cache"), { recursive: true });
+  if (!process.env.VERCEL) {
+    await mkdir(path.join(root, ".floor"), { recursive: true });
+    try {
+      await copyFile(
+        path.join(root, ".cache", "retention-followups.json"),
+        path.join(root, ".floor", "retention-followups.json"),
+        1,
+      );
+    } catch (error) {
+      if (!["ENOENT", "EEXIST"].includes(error.code)) throw error;
     }
+  }
   followupRoutes(app, path.join(root, ".floor", "retention-followups.json"), cloud);
   intelligenceRoutes(app, root, config, load, { store });
   kraRoutes(app, root, config, load, store);
@@ -94,8 +96,16 @@ export async function createApp({ serveStatic = false } = {}) {
             `Tab '${source.title}' missing. Found: ${foundTitles.join(", ")}`,
           );
         const res = await fetch(
-          `https://docs.google.com/spreadsheets/d/${source.id}/gviz/tq?tqx=out:json&headers=1&sheet=${encodeURIComponent(source.title)}&range=A:ZZ`,
-          { signal: AbortSignal.timeout(30000) },
+          // gviz silently serves the DEFAULT tab when a sheet name does not match, so a renamed
+          // or missing tab reads as valid data from the wrong place. A configured gid addresses
+          // the tab exactly and removes that failure mode.
+          // gviz silently serves the DEFAULT tab when a sheet name does not match, so a renamed
+          // or missing tab reads as valid data from the wrong place. A configured gid addresses
+          // the tab exactly. A forced refresh also busts Google's response cache, which has been
+          // observed returning a stale, partially-filtered payload for the same URL.
+          `https://docs.google.com/spreadsheets/d/${source.id}/gviz/tq?tqx=out:json&headers=1&${source.gid ? `gid=${encodeURIComponent(source.gid)}` : `sheet=${encodeURIComponent(source.title)}`}&range=A:ZZ${force ? `&_=${Date.now()}` : ""}`,
+          
+          { cache: "no-store", signal: AbortSignal.timeout(30000) },
         );
         if (!res.ok) throw new Error(`Public sheet HTTP ${res.status}`);
         const text = await res.text();
