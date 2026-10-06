@@ -328,7 +328,11 @@
   .report-doc .r-summary { font-size: 17px; }
   .report-doc .r-section-head h2 { font-size: 23px; }
 }
-@page { size: A4 landscape; margin: 14mm 13mm 16mm; }
+@page {
+  size: A4 landscape; margin: 14mm 13mm 16mm;
+  @bottom-left { content: "Physique 57 India · Internal management review"; font-family: Arial, sans-serif; font-size: 8pt; color: #58657a; }
+  @bottom-right { content: counter(page) " / " counter(pages); font-family: Arial, sans-serif; font-size: 8pt; color: #58657a; }
+}
 @media print {
   .report-doc, .report-doc[data-report-theme="dark"] {
     --r-bg: #fff; --r-card: #fff; --r-bg-soft: #f5f7fa; --r-border: #d6dce5;
@@ -342,18 +346,24 @@
   .report-doc .r-hero { padding: 8mm 0; }
   .report-doc .r-hero h1 { font-size: 32pt; }
   .report-doc .r-contents { position: static; display: flex; flex-wrap: wrap; padding: 4mm 0; gap: 4mm; }
-  .report-doc .r-section { break-before: page; padding-top: 5mm; }
-  .report-doc .r-section-head, .report-doc .r-table-head, .report-doc .r-passage h3 { break-after: avoid; }
+  .report-doc .r-section { break-before: page; padding-top: 0; }
+  .report-doc .r-section-head, .report-doc .r-passage h3 { break-after: avoid; }
+  .report-doc .r-table-head { break-after: auto; padding: 10px 12px; }
+  .report-doc .r-table-head h4 { font-size: 10pt; }
+  .report-doc .r-table-head p { font-size: 8pt; }
   .report-doc .r-section-head h2 { font-size: 23pt; }
-  .report-doc .r-summary { font-size: 12pt; line-height: 1.6; }
-  .report-doc .r-passage p { font-size: 10pt; line-height: 1.6; orphans: 3; widows: 3; }
-  .report-doc .r-passage { break-inside: auto; }
+  .report-doc .r-editorial { max-width: none; margin: 12px 0 18px; }
+  .report-doc .r-summary { font-size: 11pt; line-height: 1.5; margin-bottom: 16px; }
+  .report-doc .r-passage p { font-size: 9.5pt; line-height: 1.5; orphans: 3; widows: 3; }
+  .report-doc .r-passage { break-inside: auto; margin-bottom: 16px; }
+  .report-doc .r-passage h3 { font-size: 11pt; }
+  .report-doc .r-passage .r-citation { font-size: 8.5pt; }
   .report-doc .r-card, .report-doc .r-figure { break-inside: avoid; }
   .report-doc .r-cards { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .report-doc .r-card-def { font-size: 8pt; }
   .report-doc .r-table-wrap { overflow: visible; break-inside: auto; border-radius: 0; }
   .report-doc table.r-table { min-width: 0; table-layout: fixed; font-size: 8.5pt; }
-  .report-doc table.r-table th, .report-doc table.r-table td { padding: 7px 8px; white-space: normal; overflow-wrap: anywhere; }
+  .report-doc table.r-table th, .report-doc table.r-table td { padding: 5px 8px; white-space: normal; overflow-wrap: anywhere; }
   .report-doc table.r-table th:first-child, .report-doc table.r-table td:first-child { width: 23%; }
   .report-doc thead { display: table-header-group; }
   .report-doc tfoot { display: table-row-group; }

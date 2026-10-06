@@ -5,7 +5,7 @@ import { chapters, type ChapterSpec } from "./chapters";
 import { monthLabel, shiftMonth } from "./period";
 import type { ChapterData, ChapterNarrative, InsightCard, ReportModel } from "./model";
 
-const CACHE_PREFIX = "atlas-report-narrative:v2:";
+const CACHE_PREFIX = "atlas-report-narrative:v4:";
 const cacheKey = (model: ReportModel, chapterId: string) =>
   `${CACHE_PREFIX}${model.scope.studio}:${model.scope.month}:${model.figuresHash}:${chapterId}`;
 
@@ -45,8 +45,8 @@ export function chapterPayload(spec: ChapterSpec, data: ChapterData, model: Repo
     `Chapter: ${spec.title}. Studio: ${model.scope.studio}. Month: ${monthLabel(model.scope.month)}.`,
     `Comparisons are against ${monthLabel(shiftMonth(model.scope.month, -1))} and ${monthLabel(shiftMonth(model.scope.month, -12))}.`,
     `Contributing records: ${data.n.toLocaleString("en-IN")}.`,
-    "Definitions: " + spec.metrics.map(id => `${id}: ${metricNotes[id]?.definition ?? metrics[id]?.label ?? id}`).join("; "),
-    "Current-snapshot metrics cannot reconstruct historical member counts. Ranked tables omit groups below three contributing records and may be truncated; totals include all groups. Session revenue is attendance attribution, not cash sales.",
+    "Definitions: " + spec.metrics.map(id => `${id}: ${metrics[id]?.label ?? id}. ${metricNotes[id]?.definition ?? ""} Governed calculation: ${metrics[id]?.description ?? "unavailable"}. ${metricNotes[id]?.caveat ?? ""}`).join("; "),
+    "Membership revenue share is a share of gross collected payments, not net revenue. Newcomer lifetime value and return counts are observed to the source snapshot date: recent cohorts have less time to mature, so lower observed values do not prove weaker eventual outcomes. Churn outcomes can mature as renewals are recorded. Current-snapshot metrics cannot reconstruct historical member counts. Ranked tables omit groups below three contributing records and may be truncated; totals include all groups. Session revenue is attendance attribution, not cash sales.",
   ];
   const headline = spec.metrics.filter((id) => data.total[id] != null);
   if (headline.length)
@@ -75,7 +75,7 @@ export function chapterPayload(spec: ChapterSpec, data: ChapterData, model: Repo
 }
 
 /** Figures the derived chapters reason over: every chapter's headline movement. */
-function portfolioPayload(model: ReportModel) {
+export function portfolioPayload(model: ReportModel) {
   return chapters
     .filter((spec) => !spec.derived)
     .map((spec) => {
@@ -85,6 +85,24 @@ function portfolioPayload(model: ReportModel) {
     })
     .filter(Boolean)
     .join("\n\n");
+}
+
+/** Transparent what-if values, not a fitted forecast or confidence interval. */
+export function forwardScenarios(model: ReportModel) {
+  return chapters.filter(spec => !spec.derived).flatMap(spec => {
+    const data = model.chapters[spec.id];
+    if (!data) return [];
+    return spec.history.flatMap(id => {
+      const current = data.total[id], prior = data.prior[id];
+      if (current == null || prior == null || !Number.isFinite(Number(current)) || !Number.isFinite(Number(prior))) return [];
+      const base = Number(current), previous = Number(prior);
+      if (metrics[id].format !== "percent" && previous === 0) return [];
+      const projected = metrics[id].format === "percent"
+        ? Math.min(1, Math.max(0, base + (base - previous)))
+        : Math.max(0, base * (base / previous));
+      return [`${metrics[id].label}: flat scenario ${fmt(id, base, true)}; repeat-last-month-movement scenario ${fmt(id, projected, true)}. Arithmetic: ${metrics[id].format === "percent" ? `${base} + (${base} - ${previous}), clipped to [0,1]` : `${base} × (${base} / ${previous}), floored at zero`}. These are conditional scenarios, not estimates of likelihood.`];
+    });
+  }).join("\n");
 }
 
 const CARD_RULES = [
@@ -98,6 +116,11 @@ const CARD_RULES = [
   "Every card must be about a different row or a different relationship between rows. No two cards may share an action.",
   "Rank matters: lead with whatever carries the most money or the most risk.",
   "Use only the figures supplied below. Do not query anything and do not invent a number.",
+  "Do not mix cash-sales and session-attributed revenue growth rates or claim that cash AOV explains session revenue. Identify the population of every ratio and amount. A share of gross payments cannot be applied to net revenue.",
+  "Do not declare targets or thresholds as studio policy. Suggested targets must explicitly be proposals. Do not claim a record, consecutive growth or an all-time high/low beyond the supplied populated months.",
+  "Check every comparison against the supplied current, prior and prior-year values. Do not say doubled or halved unless the actual ratio supports it. Do not describe conditional scenarios as likely, expected or probable outcomes.",
+  "Lifetime value is cumulative observed spend to the source snapshot, never first-month LTV. Do not dismiss cohort maturity as an explanation: without equal follow-up windows the data cannot establish the eventual LTV difference.",
+  "A newer cohort has a shorter observation window for return visits and lifetime spend: discuss this before interpreting weaker observed LTV as a performance decline. Separate cohort maturity from recorded conversion outcomes.",
 ].join("\n");
 
 const DERIVED_RULES: Record<string, string> = {
@@ -232,6 +255,7 @@ export async function generateNarratives(
         const message = [
           `You are a studio performance analyst writing the "${spec.title}" chapter of a board report for ${model.scope.studio}, ${monthLabel(model.scope.month)}.`,
           DERIVED_RULES[spec.id] ?? "",
+          spec.id === "predictions" ? "Use only the following numeric what-if scenarios for future values. Do not invent forecast ranges, confidence bands, probabilities or additional numeric forecasts. Explain the arithmetic and assumptions in prose, and compare with the trailing history.\n" + forwardScenarios(model) : "",
           CARD_RULES,
           data?.groups.length ? `Passage order: the first two passages explain the chapter headline and trend. Then write one passage for EACH of these breakdown tables in this exact order: ${data.groups.map(g => g.title).join("; ")}. End with one or two passages on risk, limitations and next steps. Return at least ${data.groups.length + 3} passages so each table has commentary.` : "",
           "Figures:",

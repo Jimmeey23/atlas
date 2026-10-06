@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { reportRoutes } from '../server/reports.mjs';
 import { intelligenceRoutes } from '../server/intelligence.mjs';
-import { generateNarratives } from '../src/report/narrative.ts';
+import { forwardScenarios, generateNarratives } from '../src/report/narrative.ts';
 import { chapters } from '../src/report/chapters.ts';
 import { figuresHash } from '../src/report/period.ts';
 
@@ -77,4 +77,14 @@ test('historical and prior-year changes invalidate report analysis', () => {
   const base: any = { id: 'sessions', total: { revenue: 100 }, prior: {}, priorYear: { revenue: 80 }, groups: [], history: [{ month: '2026-08', revenue: 90 }], n: 5 };
   assert.notEqual(figuresHash({ sessions: base }), figuresHash({ sessions: { ...base, priorYear: { revenue: 70 } } }));
   assert.notEqual(figuresHash({ sessions: base }), figuresHash({ sessions: { ...base, history: [{ month: '2026-08', revenue: 95 }] } }));
+});
+
+
+test('forward view uses explicit what-if arithmetic and skips missing baselines', () => {
+  const model: any = { ...snapshot(), chapters: { sessions: { total: { sessions: 120, fill_rate: .9 }, prior: { sessions: 100, fill_rate: .5 } } } };
+  const scenarios = forwardScenarios(model);
+  assert.match(scenarios, /flat scenario 120; repeat-last-month-movement scenario 144/);
+  assert.match(scenarios, /100.0%/);
+  assert.match(scenarios, /conditional scenarios, not estimates of likelihood/);
+  assert.doesNotMatch(scenarios, /Revenue per session/);
 });

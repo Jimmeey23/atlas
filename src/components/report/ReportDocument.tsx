@@ -78,13 +78,12 @@ export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; them
                     This chapter is written from the figures in the chapters above, and no
                     analysis was generated for it. {narrative?.error || "Use Rewrite insights to retry writing this chapter."}
                   </p>
-                ) : empty ? (
-                  <p className="r-empty">
-                    No records for {model.scope.studio} in {monthLabel(model.scope.month)} on this
-                    chapter's source. This is an absence of data, not a reading of zero.
-                  </p>
                 ) : (
                   <>
+                    {empty && <p className="r-empty">
+                      No records for {model.scope.studio} in {monthLabel(model.scope.month)} on this
+                      chapter's source. This is an absence of data, not a reading of zero. Commentary may discuss available historical context.
+                    </p>}
                     <InsightPane title={`${spec.title} analysis`} narrative={opening} />
                     {data && (
                       <MetricCards
