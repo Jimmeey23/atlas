@@ -1,15 +1,16 @@
-import { query, fieldPresence, quote, type Row } from "../data/duckdb";
-import { metricSQL, metrics } from "../semantics/metrics";
+import { query, fieldPresence, health, quote, type Row } from "../data/duckdb";
+import { metricSQL } from "../semantics/metrics";
 import { currentSnapshotMetrics } from "../semantics/evidence";
-import { context, metricFacts, where } from "../data/analytics";
+import { context, metricFacts, today, where } from "../data/analytics";
 import { emptyFilters, type Filters } from "../state/store";
 import { chapters, type ChapterSpec, type GroupSpec } from "./chapters";
 import type { ChapterData, GroupTable, ReportModel, ReportScope } from "./model";
+import { renewalFactsSQL, renewalMeasuresSQL } from '../data/renewals';
+import { definition, reportFmt } from './definitions';
+import { diagnosticFacts } from "./diagnostics";
+import { groupQuery, rankedRows } from './group-query';
 import { HISTORY_MONTHS, figuresHash, monthBounds, shiftMonth } from "./period";
 export { HISTORY_MONTHS, figuresHash, monthBounds, monthLabel, shiftMonth } from "./period";
-
-/** A group row below this many contributing records is dropped from ranked tables. */
-const MIN_GROUP_RECORDS = 3;
 
 /** The report scopes itself: one studio, one month, every other filter cleared. */
 export function scopeFilters(scope: ReportScope, month = scope.month): Filters {
@@ -17,43 +18,54 @@ export function scopeFilters(scope: ReportScope, month = scope.month): Filters {
 }
 
 /** A metric the registry does not define is dropped rather than queried into an error. */
-const usableMetrics = (ids: string[]) => ids.filter((id) => metrics[id]);
-const carries = (source: string, field: string) =>
-  !fieldPresence[source] || fieldPresence[source].has(field);
+const usableMetrics = (ids: string[]) => ids.filter((id) => definition(id));
+const tracked = new Set(['location','trainer','format','source','category','day','time','member','month','status','product','associate']);
+const carries = (source: string, field: string) => !tracked.has(field) || !fieldPresence[source] || fieldPresence[source].has(field);
+const factsFor = (spec: ChapterSpec, filters: Filters) => spec.renewal
+  ? `(${renewalFactsSQL(where(filters, 'lapsed', []), today())})`
+  : metricFacts(filters, spec.source, []);
+const measuresFor = (spec: ChapterSpec, ids: string[], filters: Filters) => spec.renewal ? renewalMeasuresSQL(ids) : metricSQL(ids, context(filters, []));
 /** Memberships are dated by expiry, so their month comes from end_date. */
 const monthColumn = (source: string) =>
   source === "lapsed" ? "SUBSTR(end_date,1,7)" : "month";
 
 async function totalsFor(spec: ChapterSpec, filters: Filters, ids: string[]) {
   if (!ids.length) return [{} as Row];
-  const facts = metricFacts(filters, spec.source, []);
-  return query(`SELECT ${metricSQL(ids, context(filters, []))},COUNT(*) AS n FROM ${facts}`);
+  const facts = factsFor(spec, filters);
+  const coverage = spec.source === "sales" ? ",COUNT(*) FILTER (WHERE sale_id IS NULL) AS missing_sale_ids,COUNT(*) FILTER (WHERE member_id IS NULL) AS missing_member_ids" : "";
+  return query(`SELECT ${measuresFor(spec, ids, filters)},COUNT(*) AS n${coverage} FROM ${facts}`);
 }
 
-async function groupTable(
-  spec: ChapterSpec,
-  group: GroupSpec,
-  filters: Filters,
-): Promise<GroupTable | null> {
-  if (!carries(spec.source, group.field)) return null;
-  // A snapshot metric describes today across all dates; inside a month-scoped
-  // breakdown it would print a figure that belongs to no row in the table.
-  const columns = usableMetrics(group.columns).filter((id) => !currentSnapshotMetrics.has(id));
+async function groupTable(spec: ChapterSpec, group: GroupSpec, filters: Filters): Promise<GroupTable | null> {
+  if ((group.fields ?? [group.field]).some(field => !carries(spec.source, field))) return null;
+  const columns = usableMetrics(group.columns).filter(id => !currentSnapshotMetrics.has(id));
   if (!columns.length) return null;
-  const facts = metricFacts(filters, spec.source, []);
-  const rows = await query(
-    `WITH f AS (SELECT *,COALESCE("${group.field}",'Unspecified') AS "__g" FROM ${facts})` +
-      ` SELECT "__g" AS g,GROUPING("__g") AS is_total,${metricSQL(columns, context(filters, []))},COUNT(*) AS n` +
-      ` FROM f GROUP BY GROUPING SETS (("__g"),())`,
-  );
-  const total = rows.find((r) => Number(r.is_total) === 1) ?? null;
-  const lead = columns[0];
-  const body = rows
-    .filter((r) => Number(r.is_total) !== 1 && Number(r.n) >= MIN_GROUP_RECORDS)
-    .sort((a, b) => Number(b[lead] ?? 0) - Number(a[lead] ?? 0))
-    .slice(0, group.limit ?? 20);
-  if (!body.length) return null;
-  return { field: group.field, title: group.title, deck: group.deck, columns, rows: body, total };
+  const read = (f: Filters) => query(groupQuery(factsFor(spec, f), group, columns, context(f, []), spec.renewal));
+  const [current, priorRows, priorYearRows] = await Promise.all([
+    read(filters), read({ ...filters, ...monthBounds(shiftMonth(filters.from.slice(0,7),-1)) }),
+    read({ ...filters, ...monthBounds(shiftMonth(filters.from.slice(0,7),-12)) }),
+  ]);
+  const { rows, omitted, eligible } = rankedRows(current, group);
+  if (!rows.length) return null;
+  const total = current.find(r => Number(r.is_total) === 1) ?? null;
+  const map = (rs: Row[]) => Object.fromEntries(rs.filter(r => Number(r.is_total)!==1).map(r => [String(r.g), r]));
+  const prior = map(priorRows), priorYear = map(priorYearRows);
+  const lead = group.rankBy ?? columns[0];
+  const diagnostics: string[] = [];
+  if (eligible.length) diagnostics.push(`Highest ${definition(lead)?.label}: ${eligible[0].g} (${reportFmt(lead,eligible[0][lead])}); lowest eligible: ${eligible.at(-1)!.g} (${reportFmt(lead,eligible.at(-1)![lead])}). This is a ranking, not evidence of causation.`);
+  if (columns.includes('gross_revenue') && total?.gross_revenue != null && Number(total.gross_revenue)>0) {
+    const all = current.filter(r => Number(r.is_total)!==1);
+    const largest = [...all].sort((a,b)=>Number(b.gross_revenue)-Number(a.gross_revenue)).slice(0,3);
+    const share = largest.reduce((sum,r)=>sum+Number(r.gross_revenue??0),0)/Number(total.gross_revenue);
+    diagnostics.push(`The top ${largest.length} groups contribute ${(share*100).toFixed(1)}% of gross collections. Grouped transaction counts can overlap and must not be added.`);
+    const keys = new Set([...all.map(r=>String(r.g)),...Object.keys(prior)]);
+    const now = map(all);
+    const drivers = [...keys].map(g=>({g,change:Number(now[g]?.gross_revenue??0)-Number(prior[g]?.gross_revenue??0)})).sort((a,b)=>b.change-a.change);
+    if (priorRows.some(r=>Number(r.n)>0)) diagnostics.push(`Largest category/product movement against prior month: ${drivers[0]?.g} ${reportFmt('gross_revenue',drivers[0]?.change)}; lowest movement ${drivers.at(-1)?.g} ${reportFmt('gross_revenue',drivers.at(-1)?.change)}. Missing groups are treated as zero contribution only for this additive sales bridge, not for rates.`);
+  }
+  return { id: group.id ?? group.field, field: group.field, fields: group.fields, title: group.title, deck: group.deck,
+    columns, rows, total, prior, priorYear, compare: group.compare, omitted, diagnostics,
+    minimum: group.minMetric ? `Minimum ${group.minValue ?? 3} ${definition(group.minMetric)?.label.toLowerCase()}` : 'Minimum 3 source records' };
 }
 
 async function historyFor(spec: ChapterSpec, scope: ReportScope, ids: string[]) {
@@ -65,13 +77,13 @@ async function historyFor(spec: ChapterSpec, scope: ReportScope, ids: string[]) 
     from: monthBounds(start).from,
     to: monthBounds(scope.month).to,
   };
-  const facts = metricFacts(filters, spec.source, []);
+  const facts = factsFor(spec, filters);
   const month = monthColumn(spec.source);
   const scoped = where(filters, spec.source, []);
   const conjunction =
-    ["sessions", "sales", "checkins"].includes(spec.source) || !scoped ? "WHERE" : "AND";
+    spec.renewal || ["sessions", "sales", "checkins"].includes(spec.source) || !scoped ? "WHERE" : "AND";
   const rows = await query(
-    `SELECT ${month} AS month,${metricSQL(historical, context(filters, []))},COUNT(*) AS n` +
+    `SELECT ${month} AS month,${measuresFor(spec, historical, filters)},COUNT(*) AS n` +
       ` FROM ${facts} ${conjunction} ${month} IS NOT NULL AND ${month}>=${quote(start)}` +
       ` GROUP BY ${month} ORDER BY month`,
   );
@@ -105,6 +117,7 @@ async function computeChapter(spec: ChapterSpec, scope: ReportScope): Promise<Ch
     priorYear: priorYear[0] ?? {},
     n: Number(total[0]?.n ?? 0),
     groups: (groups as (GroupTable | null)[]).filter((g): g is GroupTable => !!g),
+    notes: spec.groups.filter((_, index) => !groups[index]).map(g => `${g.title}: no eligible ranked rows or a grouping field is unavailable. This does not establish zero activity.`),
     history,
   };
 }
@@ -124,10 +137,14 @@ export async function computeReport(
   for (const spec of queryable) {
     onProgress?.(done, queryable.length, spec.title);
     data[spec.id] = await computeChapter(spec, scope);
+    data[spec.id].diagnostics = diagnosticFacts(data[spec.id]);
     done++;
   }
   onProgress?.(done, queryable.length, "Figures complete");
   return {
+    schemaVersion: 3,
+    sources: Object.values(health).filter(s => queryable.some(spec => spec.source === s.key)).map(s => ({ key: s.key, title: s.title, fetchedAt: s.fetchedAt, stale: !!s.stale, status: s.status })),
+    rate: context(scopeFilters(scope), []).rate,
     scope,
     builtAt: new Date().toISOString(),
     chapters: data,

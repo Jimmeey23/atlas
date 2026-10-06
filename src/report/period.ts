@@ -36,7 +36,7 @@ export function figuresHash(chapterData: Record<string, ChapterData>) {
       data.prior,
       data.priorYear,
       data.history,
-      data.groups.map((g) => [g.field, g.rows, g.total]),
+      data.groups.map((g) => [g.id, g.field, g.rows, g.total, g.prior, g.priorYear, g.diagnostics]),
     ]);
   const text = JSON.stringify(material);
   let hash = 2166136261;

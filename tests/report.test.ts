@@ -1,3 +1,5 @@
+import { definition } from "../src/report/definitions";
+import { groupQuery, rankedRows } from "../src/report/group-query";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -65,7 +67,7 @@ test('every chapter names real metrics and prints a two-digit number', () => {
     assert.ok(!ids.has(spec.id), `duplicate chapter id ${spec.id}`);
     ids.add(spec.id);
     for (const id of [...spec.metrics, ...spec.history, ...spec.groups.flatMap(g => g.columns)])
-      assert.ok(metrics[id], `${spec.id} references unknown metric ${id}`);
+      assert.ok(definition(id), `${spec.id} references unknown metric ${id}`);
     for (const group of spec.groups)
       assert.ok(sqlTypes[group.field], `${spec.id} groups by unknown column ${group.field}`);
   }
@@ -88,7 +90,7 @@ test('an exported report fetches nothing: no remote fonts, images or stylesheets
 });
 
 test('a chapter group query returns both its rows and a rollup total', async () => {
-  const spec = chapters.find(c => c.id === 'executive-summary')!;
+  const spec = chapters.find(c => c.id === 'formats')!;
   const columns = ['sessions', 'attendance', 'fill_rate'];
   const db = await DuckDBInstance.create(':memory:');
   const c = await db.connect();
@@ -112,4 +114,45 @@ test('a chapter group query returns both its rows and a rollup total', async () 
   } finally {
     c.closeSync();
   }
+});
+
+test('rankings separate top and bottom without admitting undersized samples', () => {
+  const group = { field: 'trainer', title: '', deck: '', columns: ['fill_rate'], rankBy: 'fill_rate', tails: true, limit: 4, minMetric: 'sessions', minValue: 5 };
+  const rows = Array.from({length: 8}, (_, i) => ({g: `Instructor ${i}`, fill_rate: i / 10, sessions: 5, n: 5}));
+  rows.push({g:'Too small', fill_rate:1, sessions:2, n:2});
+  const ranked = rankedRows(rows, group);
+  assert.deepEqual(ranked.rows.map(r=>r.g), ['Instructor 7','Instructor 6','Instructor 0','Instructor 1']);
+  assert.equal(ranked.omitted, 4);
+  assert.equal(new Set(ranked.rows.map(r=>r.g)).size, 4);
+});
+
+test('all report grouping SQL compiles against the common engine schema', async () => {
+  const db = await DuckDBInstance.create(':memory:'); const c = await db.connect();
+  try {
+    await c.run(`CREATE TABLE facts (${Object.entries(sqlTypes).map(([k,t])=>`"${k}" ${t}`).join(',')}, renewal_state VARCHAR,slot_fill DOUBLE)`);
+    for (const spec of chapters) for (const group of spec.groups) {
+      const rows = await (await c.run(groupQuery('facts', group, group.columns, {rate:1200,today:'2026-10-06'}, spec.renewal))).getRowObjects();
+      assert.equal(rows.length, 1, `${spec.id}/${group.id ?? group.field} returns empty rollup`);
+    }
+  } finally { c.closeSync(); }
+});
+
+test('renewal report uses the dashboard deduplicated paid expiry cohort and grace states', async () => {
+  const {renewalFactsSQL, renewalCohortSQL, renewalMeasuresSQL} = await import('../src/data/renewals');
+  const db=await DuckDBInstance.create(':memory:'); const c=await db.connect();
+  try {
+    await c.run(`CREATE TABLE lapsed (${Object.entries(sqlTypes).map(([k,t])=>`"${k}" ${t}`).join(',')})`);
+    await c.run(`INSERT INTO lapsed(member_id,product,revenue,session_limit,start_date,end_date,source_row) VALUES
+      ('renewed','10 pack',1000,10,'2026-08-01','2026-09-15',1),
+      ('renewed','10 pack',1000,10,'2026-08-01','2026-09-15',2),
+      ('renewed','10 pack',1000,10,'2026-09-16','2026-10-15',3),
+      ('grace','10 pack',1000,10,'2026-08-01','2026-09-25',4),
+      ('lapsed','10 pack',1000,10,'2026-08-01','2026-09-01',5),
+      ('free','complimentary',1000,10,'2026-08-01','2026-09-01',6)`);
+    const scope=" WHERE SUBSTR(end_date,1,7)='2026-09'";
+    const report=(await(await c.run(`SELECT ${renewalMeasuresSQL()} FROM (${renewalFactsSQL(scope,'2026-10-06')})`)).getRowObjects())[0];
+    const dashboard=(await(await c.run(renewalCohortSQL(scope,'2026-10-06'))).getRowObjects())[0];
+    for(const id of ['due','renewed','lapsed','grace','upcoming','renewal_rate']) assert.equal(report[id],dashboard[id]);
+    assert.equal(Number(report.due),3); assert.equal(Number(report.renewed),1); assert.equal(Number(report.lapsed),1); assert.equal(Number(report.grace),1); assert.equal(Number(report.renewal_rate),1/3);
+  } finally { c.closeSync(); }
 });

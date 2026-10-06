@@ -529,7 +529,7 @@ blueprints.push({
 blueprints.push({
   title: "One studio, one month, one board report.",
   subtitle:
-    "A seven-chapter performance report for a single studio and month, with AI analysis, recommendations and a forward view.",
+    "A comprehensive monthly review of sales, community growth, renewals, instructors and studio demand, with evidence-based insights and recommended next steps.",
   source: "sessions",
   domain: "revenue",
   kpis: [],

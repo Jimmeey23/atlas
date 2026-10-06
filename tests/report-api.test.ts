@@ -57,6 +57,10 @@ test('report narration bypasses chat tools and returns a structured chapter', as
     const response = await fetch(api.url + '/api/reports/narrative', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: 'Write revenue analysis for the frozen September snapshot.' }) });
     assert.equal(response.status, 200); assert.deepEqual(JSON.parse((await response.json()).answer), narrative);
     assert.equal(call.text.format.type, 'json_schema'); assert.equal(call.tools, undefined);
+    await fetch(api.url + '/api/reports/narrative', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'Write the client type breakdown.',editorial:true,focusIds:['entry_type','format_group','slot-combinations']})});
+    const schema=call.text.format.schema.properties.cards.items;
+    assert.deepEqual(schema.properties.focus.enum,['kpis','trend','entry_type','format_group','slot-combinations']);
+    assert.ok(schema.required.includes('plainLanguage')); assert.ok(schema.required.includes('confidence'));
     assert.match(call.instructions, /Session-attributed revenue is not cash collections/);
   } finally { await api.close(); await rm(root, { recursive: true, force: true }); }
 });
@@ -68,7 +72,7 @@ test('AI failures remain visible for every chapter and are never cached as AI an
   globalThis.fetch = async () => new Response(JSON.stringify({ error: 'OpenAI rejected the configured key.' }), { status: 400 });
   try {
     const narratives = await generateNarratives({ ...snapshot(), chapters: Object.fromEntries(chapters.filter(c => !c.derived).map(c => [c.id, { id: c.id, n: 5, total: { revenue: 100 }, prior: { revenue: 80 }, priorYear: {}, history: [], groups: [] }])) });
-    assert.equal(Object.keys(narratives).length, 7);
+    assert.equal(Object.keys(narratives).length, chapters.length);
     for (const narrative of Object.values(narratives)) { assert.equal(narrative.generated, false); assert.match(narrative.error!, /rejected/); }
   } finally { globalThis.fetch = originalFetch; (globalThis as any).localStorage = originalStorage; }
 });

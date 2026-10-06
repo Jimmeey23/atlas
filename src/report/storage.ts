@@ -5,6 +5,7 @@ export interface SavedReport {
   builtAt: string;
   savedAt: string;
   aiChapters: number;
+  chapterCount?: number;
 }
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);

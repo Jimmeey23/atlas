@@ -17,7 +17,7 @@ export function reportRoutes(app, store, cloud) {
     return Promise.all(data.map(async row => {
       const report = await store.read(row.key);
       return { id: report.id, scope: report.scope, builtAt: report.builtAt,
-        savedAt: report.savedAt, aiChapters: Object.values(report.narratives).filter(n => n.generated).length };
+        savedAt: report.savedAt, aiChapters: Object.values(report.narratives).filter(n => n.generated).length, chapterCount: Object.keys(report.narratives).length };
     }));
   }));
   app.get("/api/reports/:id", route(async req => {
@@ -46,7 +46,7 @@ export function reportRoutes(app, store, cloud) {
         throw Object.assign(new Error("Report figures are malformed."), { status: 400 });
     }
     // Immutable versions preserve exactly the figures and prose reviewed/exported.
-    const saved = { ...report, id: randomUUID(), savedAt: new Date().toISOString(), schemaVersion: 2 };
+    const saved = { ...report, id: randomUUID(), savedAt: new Date().toISOString(), schemaVersion: report.schemaVersion || 2 };
     await store.write(`${PREFIX}${saved.id}.json`, saved);
     return saved;
   }));

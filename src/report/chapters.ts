@@ -1,286 +1,123 @@
-/**
- * The seven chapters a studio report is made of, in the order the template
- * prints them: money, then demand, then the funnel, then retention, then what
- * to do about it. The order is shared by the document, the side rail, the nav
- * and the contents list, so it lives here once.
- *
- * `metrics` are the ids the chapter's card row reads, `source` the table its
- * figures come from, and `groups` the breakdowns its tables print. Nothing in
- * this file is studio-specific — the studio and month arrive through the
- * ReportScope, so two reports differ only in their data.
- */
 export interface GroupSpec {
-  /** Column in the source table to group by. */
+  id?: string;
   field: string;
-  /** Heading printed above the table. */
+  fields?: string[];
   title: string;
-  /** Sentence under the heading. */
   deck: string;
-  /** Metric ids shown as columns, in order. */
   columns: string[];
-  /** Rows kept, ranked by the first column. */
   limit?: number;
+  rankBy?: string;
+  tails?: boolean;
+  minMetric?: string;
+  minValue?: number;
+  compare?: string;
 }
 export interface ChapterSpec {
-  id: string;
-  /** Short label for the top nav and side rail. */
-  nav: string;
-  /** "01 Executive Summary" — the number is printed from the index. */
-  title: string;
-  eyebrow: string;
-  deck: string;
-  /** Table the chapter's figures are aggregated from. */
-  source: string;
-  /** Metric ids for the chapter's card row. */
-  metrics: string[];
-  /** Breakdown tables, rendered in order. */
-  groups: GroupSpec[];
-  /** Metric ids plotted in the month-on-month appendix grid. */
-  history: string[];
-  /**
-   * Chapters written entirely from figures the other chapters already
-   * computed. They run no queries of their own.
-   */
-  derived?: boolean;
+  id: string; nav: string; title: string; eyebrow: string; deck: string;
+  source: string; metrics: string[]; groups: GroupSpec[]; history: string[]; derived?: boolean;
+  renewal?: boolean;
 }
+const group = (field: string, title: string, columns: string[], extra: Partial<GroupSpec> = {}): GroupSpec => ({
+  field, title, deck: 'Selected-month results. Rankings use eligible samples; comparisons refer to the same group in the previous month and previous year.', columns, limit: 10, ...extra,
+});
+const demand = ['sessions', 'attendance', 'avg_class_size_incl', 'fill_rate', 'revenue_per_session'];
+const trials = ['new_clients', 'conversion_rate', 'retention_rate', 'avg_ltv'];
+const sales = ['gross_revenue', 'net_revenue', 'transactions', 'aov'];
 export const chapters: ChapterSpec[] = [
-  {
-    id: "executive-summary",
-    nav: "Overview",
-    title: "Executive Summary",
-    eyebrow: "The month at a glance",
-    deck: "Where the month landed on money, demand and membership — and which of the three moved the others.",
-    source: "sessions",
-    metrics: [
-      "revenue",
-      "attendance",
-      "sessions",
-      "fill_rate",
-      "avg_class_size_incl",
-      "empty_sessions",
-      "rev_pas",
-      "lost_revenue",
-    ],
-    groups: [
-      {
-        field: "format_group",
-        title: "Where the month was earned",
-        deck: "Each format's contribution to attendance and session-attributed revenue.",
-        columns: ["sessions", "attendance", "fill_rate", "revenue", "rev_pas"],
-      },
-    ],
-    history: ["revenue", "attendance", "fill_rate", "avg_class_size_incl"],
-  },
-  {
-    id: "revenue-performance",
-    nav: "Revenue",
-    title: "Revenue & Sales Performance",
-    eyebrow: "What the studio took in",
-    deck: "Gross to net, what was sold, who bought it, and what discounting cost.",
-    source: "sales",
-    metrics: [
-      "gross_revenue",
-      "net_revenue",
-      "vat",
-      "transactions",
-      "units",
-      "aov",
-      "buyers",
-      "arpu",
-      "discount_value",
-      "discount_rate",
-      "membership_rev_share",
-      "deferred_revenue",
-    ],
-    groups: [
-      {
-        field: "category",
-        title: "Revenue by category",
-        deck: "What sold, and at what average value.",
-        columns: ["net_revenue", "transactions", "units", "aov", "discount_rate"],
-      },
-      {
-        field: "product",
-        title: "Top products",
-        deck: "The individual SKUs carrying the month.",
-        columns: ["net_revenue", "transactions", "units", "aov"],
-        limit: 12,
-      },
-      {
-        field: "payment_method",
-        title: "Payment mix",
-        deck: "How members paid, and whether any channel is drifting.",
-        columns: ["net_revenue", "transactions", "aov"],
-      },
-    ],
-    history: ["net_revenue", "transactions", "aov", "discount_rate"],
-  },
-  {
-    id: "conversion-funnel",
-    nav: "Funnel",
-    title: "New Client Conversion Funnel",
-    eyebrow: "First visit to paying member",
-    deck: "How many arrived, how many came back, how many bought — and how long each step took.",
-    source: "new",
-    metrics: [
-      "new_clients",
-      "conversion_rate",
-      "second_visit_rate",
-      "zero_return_rate",
-      "avg_conversion_span",
-      "median_conversion_span",
-      "avg_first_purchase",
-      "avg_ltv",
-      "ltv_to_first_purchase",
-      "visits_post_trial",
-    ],
-    groups: [
-      {
-        field: "source",
-        title: "Acquisition source",
-        deck: "Where new clients came from, and which source converts rather than merely arrives.",
-        columns: [
-          "new_clients",
-          "conversion_rate",
-          "second_visit_rate",
-          "avg_first_purchase",
-          "avg_ltv",
-        ],
-      },
-      {
-        field: "trainer",
-        title: "First-visit trainer",
-        deck: "Who takes the first class, and what happens to those clients afterwards.",
-        columns: ["new_clients", "conversion_rate", "second_visit_rate", "avg_ltv"],
-        limit: 12,
-      },
-    ],
-    history: ["new_clients", "conversion_rate", "second_visit_rate", "avg_ltv"],
-  },
-  {
-    id: "sessions",
-    nav: "Sessions",
-    title: "Sessions & Class Performance",
-    eyebrow: "The timetable, judged",
-    deck: "Which classes earn their slot, which run near-empty, and what the empty seats cost.",
-    source: "sessions",
-    metrics: [
-      "sessions",
-      "capacity",
-      "booked",
-      "attendance",
-      "fill_rate",
-      "show_up_rate",
-      "late_cancel_rate",
-      "no_show_rate",
-      "empty_sessions",
-      "empty_session_rate",
-      "unsold_seats",
-      "revenue_per_session",
-    ],
-    groups: [
-      {
-        field: "format",
-        title: "Format performance",
-        deck: "Every format on the timetable, ranked by attended seats.",
-        columns: [
-          "sessions",
-          "attendance",
-          "fill_rate",
-          "avg_class_size_incl",
-          "revenue_per_session",
-          "lost_revenue",
-        ],
-        limit: 15,
-      },
-      {
-        field: "trainer",
-        title: "Trainer performance",
-        deck: "Draw and reliability by teacher, minimum five sessions.",
-        columns: [
-          "sessions",
-          "attendance",
-          "fill_rate",
-          "avg_class_size_incl",
-          "revenue_per_session",
-        ],
-        limit: 15,
-      },
-      {
-        field: "day",
-        title: "Day of week",
-        deck: "The weekly rhythm — where the timetable is dense and where it is thin.",
-        columns: ["sessions", "attendance", "fill_rate", "empty_sessions", "revenue"],
-      },
-    ],
-    history: ["sessions", "fill_rate", "empty_sessions", "revenue_per_session"],
-  },
-  {
-    id: "lapsed",
-    nav: "Retention",
-    title: "Lapsed Memberships Deep Dive",
-    eyebrow: "Who is slipping away",
-    deck: "Active memberships, the ones going unused, and the revenue standing behind the members at risk.",
-    source: "lapsed",
-    metrics: [
-      "active_memberships",
-      "churn_rate",
-      "utilisation",
-      "zero_usage_memberships",
-      "dormant_actives",
-      "revenue_at_risk_30d",
-      "memberships_count",
-      "remaining_sessions",
-      "days_absent",
-    ],
-    groups: [
-      {
-        field: "product",
-        title: "Membership products",
-        deck: "Which products are used, and which are bought and then forgotten.",
-        columns: [
-          "memberships_count",
-          "utilisation",
-          "zero_usage_memberships",
-          "remaining_sessions",
-          "revenue_at_risk_30d",
-        ],
-        limit: 12,
-      },
-      {
-        field: "status",
-        title: "Membership status",
-        deck: "The standing position across the base.",
-        columns: ["memberships_count", "utilisation", "days_absent"],
-      },
-    ],
-    history: ["active_memberships", "churn_rate", "utilisation", "revenue_at_risk_30d"],
-  },
-  {
-    id: "recommendations",
-    nav: "Actions",
-    title: "Strategic Recommendations",
-    eyebrow: "What to do about it",
-    deck: "Ranked by the money or the risk behind them, each with a named owner and a figure to move.",
-    source: "sessions",
-    metrics: [],
-    groups: [],
-    history: [],
-    derived: true,
-  },
-  {
-    id: "predictions",
-    nav: "Outlook",
-    title: "Predictions & Forward View",
-    eyebrow: "Where next month lands",
-    deck: "A projection from the trailing trend, with the assumptions it rests on stated rather than hidden.",
-    source: "sessions",
-    metrics: [],
-    groups: [],
-    history: [],
-    derived: true,
-  },
+  { id: 'executive-summary', nav: 'Overview', title: 'Executive decision brief', eyebrow: 'The decisions that matter',
+    deck: 'The strongest signals across cash sales, acquisition, member continuity and studio demand.', source: 'sessions',
+    metrics: ['attendance', 'fill_rate', 'avg_class_size_incl', 'revenue'], groups: [], history: ['attendance', 'fill_rate'] },
+  { id: 'revenue-performance', nav: 'Sales', title: 'Sales, products & revenue quality', eyebrow: 'Commercial performance',
+    deck: 'What changed in collections, where the movement came from and how resilient the product mix is.', source: 'sales',
+    metrics: ['gross_revenue', 'net_revenue', 'transactions', 'aov', 'buyers', 'discount_rate', 'membership_rev_share', 'units', 'discount_value', 'arpu'],
+    history: ['gross_revenue', 'transactions', 'aov', 'discount_rate'], groups: [
+      group('category', 'Sales by category', [...sales, 'discount_rate'], { limit: 20, compare: 'gross_revenue' }),
+      group('product', 'Sales by product', sales, { limit: 20, compare: 'gross_revenue' }),
+      group('payment_method', 'Payment mix', ['gross_revenue', 'transactions', 'aov'], { compare: 'gross_revenue' }),
+    ] },
+  { id: 'conversion-funnel', nav: 'Newcomers', title: 'Newcomer conversion & retention', eyebrow: 'From first visit to habit',
+    deck: 'Which client types, channels and instructors support paid conversion and repeat practice. Recent cohorts have shorter follow-up windows.', source: 'new',
+    metrics: ['new_clients', 'conversion_rate', 'retention_rate', 'zero_return_rate', 'avg_first_purchase', 'avg_ltv', 'avg_conversion_span', 'visits_post_trial'],
+    history: ['new_clients', 'conversion_rate', 'retention_rate', 'avg_ltv'], groups: [
+      group('entry_type', 'Conversion and retention by client type', trials, { compare: 'conversion_rate' }),
+      group('source', 'Newcomer acquisition by source', trials, { compare: 'conversion_rate' }),
+      group('trainer', 'First-session instructor outcomes', trials, { minMetric: 'new_clients', minValue: 5, compare: 'conversion_rate' }),
+    ] },
+  { id: 'leads', nav: 'Leads', title: 'Lead sources, stages & conversion', eyebrow: 'Pipeline effectiveness',
+    deck: 'Creation-cohort performance, recorded sales-stage outcomes and follow-up discipline. Stage counts are the latest recorded position, not historical stage transitions.', source: 'leads',
+    metrics: ['leads', 'converted_leads', 'lead_conversion_rate', 'trials_completed', 'open_leads', 'untouched_leads', 'response_time_hours', 'touches'],
+    history: ['leads', 'converted_leads', 'lead_conversion_rate', 'response_time_hours'], groups: [
+      group('source', 'Leads by source', ['leads', 'converted_leads', 'lead_conversion_rate', 'response_time_hours'], { compare: 'lead_conversion_rate' }),
+      group('stage', 'Lead performance by stage', ['leads', 'trials_completed', 'converted_leads', 'touches'], { compare: 'leads' }),
+      group('associate', 'Lead ownership and follow-up', ['leads', 'converted_leads', 'lead_conversion_rate', 'untouched_leads'], { compare: 'lead_conversion_rate' }),
+    ] },
+  { id: 'renewals', nav: 'Renewals', title: 'Renewals completed & confirmed lapses', eyebrow: 'Membership continuity',
+    deck: 'The dashboard’s paid expiry cohorts, deduplicated per member and expiry month. A 30-day grace period separates pending renewals from confirmed lapses.',
+    source: 'lapsed', renewal: true,
+    metrics: ['due', 'renewed', 'renewal_rate', 'lapsed', 'grace', 'upcoming'], history: ['due', 'renewed', 'lapsed', 'renewal_rate'], groups: [
+      group('product', 'Renewals and lapses by membership', ['due', 'renewed', 'lapsed', 'grace', 'renewal_rate'], { compare: 'renewal_rate', limit: 15 }),
+    ] },
+  { id: 'lapsed', nav: 'Member health', title: 'Membership usage & engagement risk', eyebrow: 'Members who need attention',
+    deck: 'Expiry-cohort usage alongside clearly labelled current membership snapshots. Remaining balances and outcomes can change as the source is updated.', source: 'lapsed',
+    metrics: ['memberships_count', 'utilisation', 'churn_rate', 'remaining_sessions', 'active_memberships', 'dormant_actives', 'revenue_at_risk_30d'],
+    history: ['memberships_count', 'utilisation', 'churn_rate', 'remaining_sessions'], groups: [
+      group('product', 'Member health by membership', ['memberships_count', 'utilisation', 'remaining_sessions', 'days_absent'], { compare: 'utilisation', limit: 15 }),
+      group('status', 'Membership status and usage', ['memberships_count', 'utilisation', 'days_absent'], { compare: 'memberships_count' }),
+    ] },
+  { id: 'instructors', nav: 'Instructors', title: 'Instructor scorecards & rankings', eyebrow: 'Performance with context',
+    deck: 'Criterion-based scorecards, with no invented composite score. Rankings require at least five sessions and should be read alongside timetable mix.', source: 'sessions',
+    metrics: ['sessions', 'attendance', 'avg_class_size_incl', 'fill_rate', 'revenue_per_session', 'draw_premium_pp'],
+    history: ['avg_class_size_incl', 'fill_rate', 'revenue_per_session', 'draw_premium_pp'], groups: [
+      group('trainer', 'Instructor performance scorecards', [...demand, 'draw_premium_pp'], { limit: 20, minMetric: 'sessions', minValue: 5, compare: 'fill_rate' }),
+      group('trainer', 'Top and bottom instructors by fill rate', demand, { id: 'trainer-fill', rankBy: 'fill_rate', tails: true, minMetric: 'sessions', minValue: 5, compare: 'fill_rate' }),
+      group('trainer', 'Top and bottom instructors by class average', demand, { id: 'trainer-size', compare: 'avg_class_size_incl', rankBy: 'avg_class_size_incl', tails: true, minMetric: 'sessions', minValue: 5 }),
+      group('trainer', 'Top and bottom instructors by revenue per session', demand, { id: 'trainer-yield', compare: 'revenue_per_session', rankBy: 'revenue_per_session', tails: true, minMetric: 'sessions', minValue: 5 }),
+    ] },
+  { id: 'instructor-outcomes', nav: 'Outcomes', title: 'Instructor community & economics scorecards', eyebrow: 'Beyond attendance',
+    deck: 'Payroll-reported newcomer outcomes and instructor economics. Cost and contribution use the app’s configured rate and are estimates.', source: 'payroll',
+    metrics: ['new_handled', 'payroll_conversion', 'payroll_retention', 'payroll_revenue', 'payroll_cost', 'contribution_margin'],
+    history: ['payroll_conversion', 'payroll_retention', 'payroll_revenue', 'contribution_margin'], groups: [
+      group('trainer', 'Instructor conversion and retention scorecards', ['new_handled', 'payroll_conversion', 'payroll_retention', 'payroll_revenue'], { compare: 'payroll_conversion', minMetric: 'new_handled', minValue: 5, limit: 20 }),
+      group('trainer', 'Instructor economics', ['sessions', 'payroll_revenue', 'payroll_cost', 'contribution_margin'], { compare: 'payroll_revenue', minMetric: 'sessions', minValue: 5, limit: 20 }),
+    ] },
+  { id: 'formats', nav: 'Formats', title: 'Format comparison & demand mix', eyebrow: 'Barre · PowerCycle · Strength Lab',
+    deck: 'Class averages, fill and yield across the three formats, with class, instructor and time comparisons.', source: 'sessions',
+    metrics: ['sessions', 'attendance', 'avg_class_size_incl', 'fill_rate', 'revenue_per_session', 'late_cancel_rate'],
+    history: ['sessions', 'attendance', 'fill_rate', 'avg_class_size_incl'], groups: [
+      group('format_group', 'Format comparison with MoM and YoY', demand, { compare: 'fill_rate', limit: 3 }),
+      group('format', 'Format metrics by class', demand, { compare: 'fill_rate', limit: 15 }),
+      group('format_group', 'Format and instructor combinations', demand, { id: 'format-trainer', fields: ['format_group', 'trainer'], compare: 'fill_rate', minMetric: 'sessions', minValue: 5, limit: 12 }),
+      group('format_group', 'Format metrics by time', demand, { id: 'format-time', fields: ['format_group', 'time'], compare: 'fill_rate', minMetric: 'sessions', minValue: 5, limit: 12 }),
+    ] },
+  { id: 'sessions', nav: 'Schedule', title: 'Schedule winners, weak slots & combinations', eyebrow: 'Where to protect or change capacity',
+    deck: 'Best and worst classes, times and class–instructor–day–time combinations, ranked on capacity-weighted fill with at least five sessions.', source: 'sessions',
+    metrics: ['sessions', 'capacity', 'booked', 'attendance', 'fill_rate', 'empty_session_rate', 'late_cancel_rate', 'unsold_seats'],
+    history: ['sessions', 'fill_rate', 'empty_sessions', 'revenue_per_session'], groups: [
+      group('format', 'Best and worst performing scheduled classes', demand, { rankBy: 'fill_rate', tails: true, minMetric: 'sessions', minValue: 5, compare: 'fill_rate' }),
+      group('time', 'Best and worst class times', demand, { rankBy: 'fill_rate', tails: true, minMetric: 'sessions', minValue: 5, compare: 'fill_rate' }),
+      group('day', 'Day-of-week demand', demand, { compare: 'fill_rate', limit: 7 }),
+      group('format', 'Best class, instructor, day and time combinations', demand, { id: 'slot-combinations', fields: ['format', 'trainer', 'day', 'time'], rankBy: 'fill_rate', tails: true, minMetric: 'sessions', minValue: 5, compare: 'fill_rate' }),
+    ] },
+  { id: 'recurring', nav: 'Recurring', title: 'Recurring class performance', eyebrow: 'Consistency across repeated slots',
+    deck: 'Recurring-source session aggregates. These are not additional sessions to add to the Sessions chapter.', source: 'recurring',
+    metrics: ['sessions', 'attendance', 'fill_rate', 'avg_class_size_incl', 'empty_session_rate', 'revenue_per_session'],
+    history: ['sessions', 'fill_rate', 'avg_class_size_incl', 'empty_session_rate'], groups: [
+      group('format', 'Recurring class performance by format', demand, { compare: 'fill_rate', limit: 15 }),
+      group('format', 'Best and worst recurring schedule combinations', demand, { id: 'recurring-slots', fields: ['format', 'trainer', 'day', 'time'], rankBy: 'fill_rate', tails: true, minMetric: 'sessions', minValue: 5, compare: 'fill_rate' }),
+    ] },
+  { id: 'late-cancellations', nav: 'Late cancels', title: 'Late cancellations & attendance leakage', eyebrow: 'Recovery opportunities',
+    deck: 'Booking-record cancellations by session date, with MoM and YoY context. Rates use all eligible bookings as the denominator; counts are not distinct people.', source: 'bookings',
+    metrics: ['bookings', 'booking_late_cancelled', 'booking_late_rate', 'booking_no_shows', 'booking_no_show_rate', 'booking_attendance_rate'],
+    history: ['bookings', 'booking_late_cancelled', 'booking_late_rate', 'booking_no_show_rate'], groups: [
+      group('product', 'Late cancellations by membership', ['bookings', 'booking_late_cancelled', 'booking_late_rate'], { rankBy: 'booking_late_cancelled', compare: 'booking_late_cancelled', limit: 12 }),
+      group('format', 'Late cancellations by class type', ['bookings', 'booking_late_cancelled', 'booking_late_rate'], { rankBy: 'booking_late_cancelled', compare: 'booking_late_cancelled', limit: 12 }),
+      group('trainer', 'Late cancellations by instructor', ['bookings', 'booking_late_cancelled', 'booking_late_rate'], { rankBy: 'booking_late_cancelled', compare: 'booking_late_cancelled', limit: 12 }),
+      group('location', 'Late cancellations by location', ['bookings', 'booking_late_cancelled', 'booking_late_rate'], { compare: 'booking_late_cancelled' }),
+    ] },
+  { id: 'recommendations', nav: 'Action plan', title: 'What to do next', eyebrow: 'Prioritised operating plan',
+    deck: 'The actions with the strongest supporting evidence, a responsible role, a timing proposal and a measurable success check.', source: 'sessions', metrics: [], groups: [], history: [], derived: true },
+  { id: 'predictions', nav: 'Outlook', title: 'What happens next: conditional scenarios', eyebrow: 'Assumptions made visible',
+    deck: 'Transparent what-if calculations, with leading indicators and conditions that would change the outlook.', source: 'sessions', metrics: [], groups: [], history: [], derived: true },
 ];
-export const chapterById = Object.fromEntries(chapters.map((c) => [c.id, c]));
-/** "01", "02", … printed beside the chapter title. */
-export const chapterNumber = (index: number) => String(index + 1).padStart(2, "0");
+export const chapterById = Object.fromEntries(chapters.map(c => [c.id, c]));
+export const chapterNumber = (index: number) => String(index + 1).padStart(2, '0');

@@ -1,8 +1,8 @@
 import { forwardRef } from "react";
 import { chapters, chapterNumber } from "../../report/chapters";
 import { monthLabel } from "../../report/compute";
-import { metrics } from "../../semantics/metrics";
-import { fmt } from "../../semantics/formats";
+import { definition } from "../../report/definitions";
+import { reportFmt as fmt } from "../../report/definitions";
 import type { ReportModel } from "../../report/model";
 import { GroupTableView, InsightPane, MetricCards, SectionHeader, TrendChart } from "./kit";
 
@@ -14,12 +14,14 @@ import { GroupTableView, InsightPane, MetricCards, SectionHeader, TrendChart } f
 export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; theme: "light" | "dark" }>(
   function ReportDocument({ model, theme }, ref) {
     const built = new Date(model.builtAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+    const available = chapters.filter(spec => model.chapters[spec.id] || model.narratives[spec.id]);
     const records = Object.values(model.chapters).reduce((sum, c) => sum + c.n, 0);
-    const appendix = chapters.filter(
+    const appendix = available.filter(
       (spec) => !spec.derived && (model.chapters[spec.id]?.history.length ?? 0) > 1,
     );
     return (
       <article className="report-doc" data-report-theme={theme} ref={ref}>
+        <div className="r-page-frame" aria-hidden="true" />
         <header className="r-hero">
           <div className="r-container r-hero-inner">
             <span className="r-eyebrow">Monthly performance report</span>
@@ -47,10 +49,10 @@ export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; them
 
         <div className="r-container r-report-basis">
           <p>Physique 57 India · Internal management review</p>
-          <p>{Object.values(model.narratives).filter(n => n.generated).length} of {chapters.length} chapters contain AI-assisted analysis grounded in the report snapshot. Findings distinguish recorded results from hypotheses and conditional outlooks.</p>
+          <p>{Object.values(model.narratives).filter(n => n.generated).length} of {available.length} chapters contain AI-assisted analysis grounded in the report snapshot. Findings distinguish recorded results from hypotheses and conditional outlooks.</p>
         </div>
         <nav className="r-container r-contents" aria-label="Report contents">
-          {chapters.map((spec, index) => (
+          {available.map((spec, index) => (
             <a href={`#${spec.id}`} key={spec.id}>
               {chapterNumber(index)} {spec.nav}
             </a>
@@ -58,11 +60,13 @@ export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; them
         </nav>
 
         <div className="r-container">
-          {chapters.map((spec, index) => {
+          {available.map((spec, index) => {
             const data = model.chapters[spec.id];
             const narrative = model.narratives[spec.id];
-            const opening = narrative ? { ...narrative, cards: narrative.cards.slice(0, 2) } : undefined;
-            const closing = narrative ? { ...narrative, summary: "", cards: narrative.cards.slice(2 + (data?.groups.length ?? 0)) } : undefined;
+            const focused = narrative?.cards.some(card => card.focus);
+            const pane = (focus: string) => narrative ? { ...narrative, summary: "", cards: narrative.cards.filter(card => card.focus === focus) } : undefined;
+            const opening = narrative ? { ...narrative, cards: focused ? narrative.cards.filter(card => card.focus === "kpis") : narrative.cards.slice(0, 2) } : undefined;
+            const closing = narrative ? { ...narrative, summary: "", cards: focused ? narrative.cards.filter(card => !["kpis", "trend", ...(data?.groups.map(g => g.id ?? g.field) ?? [])].includes(card.focus ?? "")) : narrative.cards.slice(2 + (data?.groups.length ?? 0)) } : undefined;
             const empty = !spec.derived && (!data || !data.n);
             return (
               <section className="r-section" id={spec.id} key={spec.id}>
@@ -84,7 +88,7 @@ export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; them
                       No records for {model.scope.studio} in {monthLabel(model.scope.month)} on this
                       chapter's source. This is an absence of data, not a reading of zero. Commentary may discuss available historical context.
                     </p>}
-                    <InsightPane title={`${spec.title} analysis`} narrative={opening} />
+                    {narrative?.summary && <p className="r-summary">{narrative.summary}</p>}
                     {data && (
                       <MetricCards
                         ids={spec.metrics}
@@ -93,22 +97,26 @@ export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; them
                         priorYear={data.priorYear}
                       />
                     )}
+                    <InsightPane title={`${spec.title} analysis`} narrative={opening ? { ...opening, summary: "" } : undefined} />
                     {data && spec.history.length > 0 && (
+                      <div className="r-evidence-layout">
                       <TrendChart
                         history={data.history}
                         ids={spec.history}
                         title={`${spec.nav} over the trailing year`}
-                        note="Each series is indexed to its own range so measures on different scales share one frame. Exact values are in the appendix."
+                        note="Fourteen months, actual units and independent axes. Gaps indicate unavailable observations; exact values appear in the appendix."
                       />
+                      <InsightPane title="Trend interpretation" narrative={pane("trend")} />
+                      </div>
                     )}
                     {data?.groups.map((table, groupIndex) => (
-                      <div key={table.field}>
+                      <div className={`r-evidence-layout ${table.columns.length > 4 ? "r-evidence-wide" : ""}`} key={table.id ?? table.field}>
                         <GroupTableView table={table} />
-                        {narrative?.cards[2 + groupIndex] && <InsightPane title={`${table.title} commentary`}
-                          narrative={{ ...narrative, summary: "", cards: [narrative.cards[2 + groupIndex]] }} />}
+                        <InsightPane title={`${table.title} commentary`} narrative={focused ? pane(table.id ?? table.field) : narrative?.cards[2 + groupIndex] ? { ...narrative, summary: "", cards: [narrative.cards[2 + groupIndex]] } : undefined} />
                       </div>
                     ))}
                     <InsightPane title={`${spec.title} implications`} narrative={closing} />
+                    {data?.notes?.map((note, i) => <p className="r-method" key={i}>{note}</p>)}
                     {data && <p className="r-method">Source: {spec.source} · {data.n.toLocaleString("en-IN")} contributing records. Comparisons use the previous month and the same month last year. Ranked breakdowns require at least three records; totals include all eligible groups. Unavailable values are shown as a dash.</p>}
                   </>
                 )}
@@ -143,7 +151,7 @@ export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; them
                           <th scope="col">Month</th>
                           {ids.map((id) => (
                             <th scope="col" key={id}>
-                              {metrics[id]?.label ?? id}
+                              {definition(id)?.label ?? id}
                             </th>
                           ))}
                         </tr>
@@ -167,6 +175,7 @@ export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; them
             </section>
           )}
 
+          <section className="r-source-basis"><h3>Source and calculation basis</h3><p>Cash collections and session revenue describe different bases. Renewal cohorts follow the app’s paid membership extension rules, with a 30-day grace window. Instructor rankings use the stated criterion and minimum sample; payroll economics use the configured rate. Lead stages are recorded positions, not historical stage transitions. Newcomer outcomes may still mature. Current member snapshots describe the build date.</p>{model.sources?.map(source => <p key={source.key}><strong>{source.title}</strong> · {source.status}{source.stale ? " · stale snapshot" : ""} · {source.fetchedAt ? new Date(source.fetchedAt).toLocaleString("en-IN", {timeZone:"Asia/Kolkata"}) : "Refresh time unavailable"}</p>)}</section>
           <footer className="r-footer">
             <p>
               <strong>{model.scope.studio}</strong> — {monthLabel(model.scope.month)}. Built{" "}

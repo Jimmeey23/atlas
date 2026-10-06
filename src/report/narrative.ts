@@ -1,11 +1,10 @@
-import { fmt, delta } from "../semantics/formats";
+import { reportFmt as fmt, reportDelta as delta, definition } from "./definitions";
 import { metricNotes } from "../semantics/evidence";
-import { metrics } from "../semantics/metrics";
 import { chapters, type ChapterSpec } from "./chapters";
 import { monthLabel, shiftMonth } from "./period";
 import type { ChapterData, ChapterNarrative, InsightCard, ReportModel } from "./model";
 
-const CACHE_PREFIX = "atlas-report-narrative:v4:";
+const CACHE_PREFIX = "atlas-report-narrative:v5:";
 const cacheKey = (model: ReportModel, chapterId: string) =>
   `${CACHE_PREFIX}${model.scope.studio}:${model.scope.month}:${model.figuresHash}:${chapterId}`;
 
@@ -32,9 +31,9 @@ export function clearNarrativeCache(model: ReportModel) {
 }
 
 const line = (id: string, data: ChapterData) =>
-  `${metrics[id]?.label ?? id}: ${fmt(id, data.total[id], true)}` +
-  ` (prior month ${fmt(id, data.prior[id], true)}, ${delta(id, data.total[id], data.prior[id])};` +
-  ` same month last year ${fmt(id, data.priorYear[id], true)}, ${delta(id, data.total[id], data.priorYear[id])})`;
+  `${definition(id)?.label ?? id}: ${fmt(id, data.total[id])}` +
+  ` (prior month ${fmt(id, data.prior[id])}, ${delta(id, data.total[id], data.prior[id])};` +
+  ` same month last year ${fmt(id, data.priorYear[id])}, ${delta(id, data.total[id], data.priorYear[id])})`;
 
 /**
  * What the model is shown for one chapter: exactly the figures the reader
@@ -45,29 +44,31 @@ export function chapterPayload(spec: ChapterSpec, data: ChapterData, model: Repo
     `Chapter: ${spec.title}. Studio: ${model.scope.studio}. Month: ${monthLabel(model.scope.month)}.`,
     `Comparisons are against ${monthLabel(shiftMonth(model.scope.month, -1))} and ${monthLabel(shiftMonth(model.scope.month, -12))}.`,
     `Contributing records: ${data.n.toLocaleString("en-IN")}.`,
-    "Definitions: " + spec.metrics.map(id => `${id}: ${metrics[id]?.label ?? id}. ${metricNotes[id]?.definition ?? ""} Governed calculation: ${metrics[id]?.description ?? "unavailable"}. ${metricNotes[id]?.caveat ?? ""}`).join("; "),
+    ...data.diagnostics ?? [],
+    ...data.notes ?? [],
+    "Definitions: " + spec.metrics.map(id => `${id}: ${definition(id)?.label ?? id}. ${metricNotes[id]?.definition ?? ""} Governed calculation: ${definition(id)?.description ?? "unavailable"}. ${metricNotes[id]?.caveat ?? ""}`).join("; "),
     "Membership revenue share is a share of gross collected payments, not net revenue. Newcomer lifetime value and return counts are observed to the source snapshot date: recent cohorts have less time to mature, so lower observed values do not prove weaker eventual outcomes. Churn outcomes can mature as renewals are recorded. Current-snapshot metrics cannot reconstruct historical member counts. Ranked tables omit groups below three contributing records and may be truncated; totals include all groups. Session revenue is attendance attribution, not cash sales.",
   ];
   const headline = spec.metrics.filter((id) => data.total[id] != null);
   if (headline.length)
     parts.push("Headline figures:\n" + headline.map((id) => line(id, data)).join("\n"));
   for (const group of data.groups) {
-    const head = ["Group", ...group.columns.map((id) => metrics[id]?.label ?? id)].join(" | ");
+    const head = ["Group", ...group.columns.map((id) => definition(id)?.label ?? id)].join(" | ");
     const body = group.rows
       .map((row) =>
-        [row.g, ...group.columns.map((id) => fmt(id, row[id], true))].join(" | "),
+        [row.g, ...group.columns.map((id) => fmt(id, row[id])), group.compare ? `MoM ${delta(group.compare,row[group.compare],group.prior?.[String(row.g)]?.[group.compare])}; YoY ${delta(group.compare,row[group.compare],group.priorYear?.[String(row.g)]?.[group.compare])}` : ''].join(" | "),
       );
-    parts.push(`${group.title} (by ${group.field}):\n${head}\n${body.join("\n")}`);
+    parts.push(`Focus ID: ${group.id ?? group.field}. ${group.title} (${group.minimum}; ${group.omitted ?? 0} eligible rows omitted). Diagnostics: ${group.diagnostics?.join(" ") ?? ""}. By ${group.fields?.join(" + ") ?? group.field}:\n${head}\n${body.join("\n")}`);
   }
   if (data.history.length > 1) {
     const ids = spec.history.filter((id) => data.history.some((row) => row[id] != null));
     if (ids.length)
       parts.push(
         "Trailing months:\n" +
-          ["Month", ...ids.map((id) => metrics[id]?.label ?? id)].join(" | ") +
+          ["Month", ...ids.map((id) => definition(id)?.label ?? id)].join(" | ") +
           "\n" +
           data.history
-            .map((row) => [row.month, ...ids.map((id) => fmt(id, row[id], true))].join(" | "))
+            .map((row) => [row.month, ...ids.map((id) => fmt(id, row[id]))].join(" | "))
             .join("\n"),
       );
   }
@@ -81,7 +82,9 @@ export function portfolioPayload(model: ReportModel) {
     .map((spec) => {
       const data = model.chapters[spec.id];
       if (!data) return "";
-      return chapterPayload(spec, data, model);
+      return [`${spec.title}:`, ...spec.metrics.filter(id => data.total[id]!=null).map(id => line(id,data)),
+        ...(data.diagnostics ?? []), ...data.groups.map(g => `${g.title}: ${g.diagnostics?.join(' ') ?? ''}. Highest rows: ${g.rows.slice(0,2).map(row => [row.g,...g.columns.map(id => `${definition(id)?.label} ${fmt(id,row[id])}`)].join(', ')).join('; ')}`),
+        `Trailing series: ${data.history.map(row=>[row.month,...spec.history.slice(0,2).map(id=>`${id}=${fmt(id,row[id])}`)].join(', ')).join('; ')}`].join('\n');
     })
     .filter(Boolean)
     .join("\n\n");
@@ -96,32 +99,31 @@ export function forwardScenarios(model: ReportModel) {
       const current = data.total[id], prior = data.prior[id];
       if (current == null || prior == null || !Number.isFinite(Number(current)) || !Number.isFinite(Number(prior))) return [];
       const base = Number(current), previous = Number(prior);
-      if (metrics[id].format !== "percent" && previous === 0) return [];
-      const projected = metrics[id].format === "percent"
+      if (definition(id)!.format !== "percent" && previous === 0) return [];
+      const projected = definition(id)!.format === "percent"
         ? Math.min(1, Math.max(0, base + (base - previous)))
         : Math.max(0, base * (base / previous));
-      return [`${metrics[id].label}: flat scenario ${fmt(id, base, true)}; repeat-last-month-movement scenario ${fmt(id, projected, true)}. Arithmetic: ${metrics[id].format === "percent" ? `${base} + (${base} - ${previous}), clipped to [0,1]` : `${base} × (${base} / ${previous}), floored at zero`}. These are conditional scenarios, not estimates of likelihood.`];
+      return [`${definition(id)!.label}: flat scenario ${fmt(id, base)}; repeat-last-month-movement scenario ${fmt(id, projected)}. Arithmetic: ${definition(id)!.format === "percent" ? `${base} + (${base} - ${previous}), clipped to [0,1]` : `${base} × (${base} / ${previous}), floored at zero`}. These are conditional scenarios, not estimates of likelihood.`];
     });
   }).join("\n");
 }
 
 const CARD_RULES = [
-  'Return JSON only, in exactly this shape: {"summary":"...","cards":[{"headline":"...","meaning":"...","evidence":"...","action":"..."}]}',
-  "summary: four to six substantive sentences for a senior management reader, leading with the single finding that most changes a decision.",
-  "cards: six to eight editorial passages, fewer only when evidence is sparse. Cover headline movement, YoY context, strongest and weakest breakdowns, mix/concentration, historical trend, risks, data limitations and management response.",
-  "headline: one sentence, the finding itself, with the number in it. Never a label like 'Strong performance'.",
-  "meaning: three to five connected sentences explaining the finding, comparison and operational implication. Include hypotheses explicitly as hypotheses; do not claim a cause without evidence. Write readable report prose, not a rigid checklist.",
-  "evidence: a short readable sentence naming the source breakdown and supporting figures, sample size and missing comparisons where relevant.",
-  "action: one specific next step with owner role, timing and the metric to review. Not 'monitor this' — say what to change and where.",
-  "Every card must be about a different row or a different relationship between rows. No two cards may share an action.",
-  "Rank matters: lead with whatever carries the most money or the most risk.",
-  "Use only the figures supplied below. Do not query anything and do not invent a number.",
-  "Do not mix cash-sales and session-attributed revenue growth rates or claim that cash AOV explains session revenue. Identify the population of every ratio and amount. A share of gross payments cannot be applied to net revenue.",
-  "Do not declare targets or thresholds as studio policy. Suggested targets must explicitly be proposals. Do not claim a record, consecutive growth or an all-time high/low beyond the supplied populated months.",
-  "Check every comparison against the supplied current, prior and prior-year values. Do not say doubled or halved unless the actual ratio supports it. Do not describe conditional scenarios as likely, expected or probable outcomes.",
-  "Lifetime value is cumulative observed spend to the source snapshot, never first-month LTV. Do not dismiss cohort maturity as an explanation: without equal follow-up windows the data cannot establish the eventual LTV difference.",
-  "A newer cohort has a shorter observation window for return visits and lifetime spend: discuss this before interpreting weaker observed LTV as a performance decline. Separate cohort maturity from recorded conversion outcomes.",
-].join("\n");
+  'Return JSON summary and cards with headline, meaning, evidence, action, focus, category, plainLanguage and confidence.',
+  'Write a decision brief, not a verbal copy of the tables. Summary: 60–90 words, explaining the central tension and management decision.',
+  'Write ONE passage for EACH requested evidence focus ID, plus two or three distinct overall passages on kpis or trend. Use category red_flag, worked, didnt_work, meaning, next_step or plain_language according to actual evidence; never invent a failure or success to fill a category.',
+  'headline: a concise finding (at most 14 words). meaning: 45–70 words on drivers, trade-offs, concentration, sample strength or an operational choice; interpret relationships and the supplied arithmetic decomposition. Explain what evidence can and cannot distinguish. Do not repeat the same claim across panels.',
+  'plainLanguage: 15–25 words explaining the practical meaning without jargon. action: an assignable next step naming the role, proposed timing, the first concrete intervention and the metric that would show improvement; at most 35 words.',
+  'evidence: a short sentence with exact supporting figures and comparison/sample limits; at most 30 words. confidence describes the strength of the interpretation, not a statistical confidence interval.',
+  'Use only supplied figures and verified diagnostics. Separate additive contributions, changes within groups, and changes in mix. Never add overlapping distinct transaction or member counts from groups.',
+  'Higher AOV alone does not establish a price increase: distinguish recorded product-mix changes from unverified pricing hypotheses. Missing-ID warnings must use the supplied coverage counts and reflect their scale. Do not assert that a price change caused demand or conversion changes without evidence.',
+  'Cash sales and session revenue are different populations. Membership revenue share is based on gross payments, never net payments. Payroll costs are estimates at the configured rate, not actual salaries.',
+  'Newcomer LTV is cumulative observed spend to the source date, not first-month spend or predicted lifetime spend. Recent cohorts have less follow-up time; equal-age outcomes are needed to attribute eventual differences.',
+  'Recorded lead stages are current cohort outcomes, not evidence of transitions during the selected month. Renewal grace is pending, not confirmed churn. Do not compare historical active snapshots or sum recurring and Sessions totals.',
+  'Do not invent causes, policy thresholds, uplift promises, record claims beyond supplied history, or certainty from small samples. Hypotheses must include the specific check that could confirm or reject them.',
+  'Check every comparative statement. Use percentage points for rate changes. Do not say doubled or halved unless the ratio supports it. Proposed targets and timings must be identified as proposals.',
+  'Future figures may use only supplied conditional scenario arithmetic. Do not invent probabilities, confidence bands or forecast ranges, and never call those scenarios likely outcomes.',
+].join('\n');
 
 const DERIVED_RULES: Record<string, string> = {
   recommendations:
@@ -153,7 +155,7 @@ export function fallbackNarrative(spec: ChapterSpec, data: ChapterData | undefin
     .filter((id) => data.total[id] != null && data.prior[id] != null && Number(data.prior[id]) !== 0)
     .map((id) => {
       const change = Number(data.total[id]) / Number(data.prior[id]) - 1;
-      const good = (change >= 0) === (metrics[id]?.higherIsBetter ?? true);
+      const good = (change >= 0) === (definition(id)?.higherIsBetter ?? true);
       return { id, change, good };
     })
     .sort((a, b) => Math.abs(b.change) - Math.abs(a.change))
@@ -161,12 +163,12 @@ export function fallbackNarrative(spec: ChapterSpec, data: ChapterData | undefin
   return {
     summary: "",
     cards: moves.map(({ id, change, good }) => ({
-      headline: `${metrics[id]?.label ?? id} is ${fmt(id, data.total[id], true)}, ${delta(id, data.total[id], data.prior[id])} on the prior month.`,
+      headline: `${definition(id)?.label ?? id} is ${fmt(id, data.total[id])}, ${delta(id, data.total[id], data.prior[id])} on the prior month.`,
       meaning: good
         ? "Moving in the intended direction for this measure."
         : "Moving against the intended direction for this measure.",
-      evidence: `${fmt(id, data.total[id], true)} this month, ${fmt(id, data.prior[id], true)} prior month`,
-      action: `Review ${metrics[id]?.label ?? id} against the breakdowns in this chapter and decide whether the ${Math.abs(change * 100).toFixed(1)}% move needs a response.`,
+      evidence: `${fmt(id, data.total[id])} this month, ${fmt(id, data.prior[id])} prior month`,
+      action: `Review ${definition(id)?.label ?? id} against the breakdowns in this chapter and decide whether the ${Math.abs(change * 100).toFixed(1)}% move needs a response.`,
     })),
     generated: false,
   };
@@ -192,13 +194,13 @@ const wait = (ms: number, signal?: AbortSignal) =>
  */
 const RETRY_DELAYS_MS = [5000, 15000, 30000];
 
-async function askModel(message: string, signal?: AbortSignal): Promise<string> {
+async function askModel(message: string, focusIds: string[], signal?: AbortSignal): Promise<string> {
   for (let attempt = 0; ; attempt++) {
     const response = await fetch("/api/reports/narrative", {
       method: "POST",
       signal,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, page: 0, filters: {}, saveHistory: false, history: [] }),
+      body: JSON.stringify({ message, focusIds, editorial: true }),
     });
     const payload = await response.json();
     if (response.ok) return String(payload.answer || "").trim();
@@ -257,21 +259,21 @@ export async function generateNarratives(
           DERIVED_RULES[spec.id] ?? "",
           spec.id === "predictions" ? "Use only the following numeric what-if scenarios for future values. Do not invent forecast ranges, confidence bands, probabilities or additional numeric forecasts. Explain the arithmetic and assumptions in prose, and compare with the trailing history.\n" + forwardScenarios(model) : "",
           CARD_RULES,
-          data?.groups.length ? `Passage order: the first two passages explain the chapter headline and trend. Then write one passage for EACH of these breakdown tables in this exact order: ${data.groups.map(g => g.title).join("; ")}. End with one or two passages on risk, limitations and next steps. Return at least ${data.groups.length + 3} passages so each table has commentary.` : "",
+          data?.groups.length ? `Required evidence focus IDs: ${data.groups.map(g => g.id ?? g.field).join(", ")}. Use focus kpis for headline reasoning and trend for historical interpretation. Write one passage with its matching focus ID for EACH breakdown table: ${data.groups.map(g => g.title).join("; ")}. End with one or two passages on risk, limitations and next steps. Return at least ${data.groups.length + 3} passages so each table has commentary.` : "",
           "Figures:",
           figures.slice(0, 48000),
         ]
           .filter(Boolean)
           .join("\n\n");
         try {
-          const parsed = parseJson(await askModel(message, signal));
+          const parsed = parseJson(await askModel(message, data?.groups.map(g => g.id ?? g.field) ?? [], signal));
           const cards = Array.isArray(parsed?.cards)
             ? parsed!.cards.filter(
                 (c): c is InsightCard =>
                   !!c && typeof c.headline === "string" && !!c.headline.trim(),
               )
             : [];
-          const valid = cards.every(c => [c.meaning, c.evidence, c.action].every(v => typeof v === "string"));
+          const valid = cards.every(c => [c.meaning, c.evidence, c.action, c.plainLanguage].every(v => typeof v === "string") && !!c.focus && !!c.category && !!c.confidence) && (data?.groups ?? []).every(g => cards.some(c => c.focus === (g.id ?? g.field)));
           if (!valid || !cards.length || typeof parsed?.summary !== "string" || !parsed.summary.trim())
             throw new Error("The model returned no complete chapter analysis. Retry writing insights.");
           const narrative: ChapterNarrative = cards.length

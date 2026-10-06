@@ -104,7 +104,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
       if (signal?.aborted) return;
       setModel(saved);
       setSavedReports(current => [{ id: saved.id!, scope: saved.scope, builtAt: saved.builtAt,
-        savedAt: saved.savedAt!, aiChapters: Object.values(saved.narratives).filter(n => n.generated).length }, ...current].slice(0, 50));
+        savedAt: saved.savedAt!, aiChapters: Object.values(saved.narratives).filter(n => n.generated).length, chapterCount: Object.keys(saved.narratives).length }, ...current].slice(0, 50));
     } catch (e) {
       if (!signal?.aborted) setStorageError(`This report is not saved. ${String(e)}`);
     }
@@ -245,7 +245,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
             onChange={e => e.target.value && void openSaved(e.target.value)}>
             <option value="">{loadingSaved ? "Loading saved reports…" : "Select a saved report"}</option>
             {savedReports.map(saved => <option key={saved.id} value={saved.id}>
-              {saved.scope.studio} · {monthLabel(saved.scope.month)} · {new Date(saved.savedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} · {saved.aiChapters}/7 AI chapters
+              {saved.scope.studio} · {monthLabel(saved.scope.month)} · {new Date(saved.savedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} · {saved.aiChapters}/{saved.chapterCount ?? 7} AI chapters
             </option>)}
           </select>
         </label>
@@ -276,6 +276,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
         </div>
       )}
 
+      {model && (!model.schemaVersion || model.schemaVersion < 3) && <div className="notice">This saved version uses the earlier report format. Rebuild to include leads, renewal cohorts, instructor scorecards, recurring slots and late-cancellation analysis.</div>}
       {model ? (
         <ReportDocument model={model} theme={reportTheme} ref={document_} />
       ) : (
@@ -284,7 +285,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
             <FileText size={22} />
             <h3>Build a board report</h3>
             <p>
-              Choose a studio and a month, and the seven-chapter report is built from that
+              Choose a studio and a month, and the comprehensive report is built from that
               studio's own figures — money, demand, the funnel, the membership base, then what
               to do and what comes next. Download it as a single file to send on.
             </p>

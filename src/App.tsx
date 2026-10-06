@@ -761,7 +761,7 @@ export default function App() {
               <div className="empty-state">
                 <h3>Loading report sources</h3>
                 <p>
-                  Sessions, sales, newcomers and memberships are being prepared.
+                  Sessions, sales, newcomers, memberships, leads, instructor outcomes, recurring sessions and bookings are being prepared.
                   The builder appears when they are readable.
                 </p>
               </div>

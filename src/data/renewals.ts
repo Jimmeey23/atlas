@@ -5,10 +5,21 @@ export function renewalFactsSQL(scope: string, asOf: string) {
     SELECT *, SUBSTR(end_date,1,7) AS expiry_month, CASE WHEN renewed=1 THEN 'renewed' WHEN TRY_CAST(end_date AS DATE)<'${asOf}'::DATE-INTERVAL 30 DAY THEN 'lapsed' WHEN end_date<'${asOf}' THEN 'grace' ELSE 'upcoming' END AS renewal_state FROM cohort`;
 }
 export function renewalCohortSQL(scope: string, asOf: string) {
-  return `WITH facts AS (${renewalFactsSQL(scope, asOf)}) SELECT expiry_month AS month,COUNT(*) AS due,COUNT(*) FILTER(WHERE renewal_state='renewed') AS renewed,COUNT(*) FILTER(WHERE renewal_state='lapsed') AS lapsed,COUNT(*) FILTER(WHERE renewal_state='grace') AS grace,COUNT(*) FILTER(WHERE renewal_state='upcoming') AS upcoming FROM facts GROUP BY expiry_month ORDER BY month DESC LIMIT 14`;
+  return `WITH facts AS (${renewalFactsSQL(scope, asOf)}) SELECT expiry_month AS month,${renewalMeasuresSQL()} FROM facts GROUP BY expiry_month ORDER BY month DESC LIMIT 14`;
 }
 export function renewalDrillPredicate(scope: string, asOf: string, month: string, state: string) {
   const quotedMonth = "'" + month.replaceAll("'", "''") + "'";
   if (!['due', 'renewed', 'lapsed', 'grace', 'upcoming'].includes(state)) throw new Error('Unknown renewal cohort state');
   return `source_row IN (SELECT source_row FROM (${renewalFactsSQL(scope, asOf)}) WHERE expiry_month=${quotedMonth}${state === 'due' ? '' : ` AND renewal_state='${state}'`})`;
 }
+
+/** Shared measures over renewalFactsSQL; the report and dashboard use the same cohort. */
+export const renewalMeasures: Record<string, { label: string; format: 'integer' | 'percent'; expression: string }> = {
+  due: { label: 'Paid memberships due', format: 'integer', expression: 'COUNT(*)' },
+  renewed: { label: 'Renewals completed', format: 'integer', expression: "COUNT(*) FILTER (WHERE renewal_state='renewed')" },
+  lapsed: { label: 'Confirmed lapses', format: 'integer', expression: "COUNT(*) FILTER (WHERE renewal_state='lapsed')" },
+  grace: { label: 'Within renewal grace', format: 'integer', expression: "COUNT(*) FILTER (WHERE renewal_state='grace')" },
+  upcoming: { label: 'Not yet expired', format: 'integer', expression: "COUNT(*) FILTER (WHERE renewal_state='upcoming')" },
+  renewal_rate: { label: 'Recorded renewal rate', format: 'percent', expression: "COUNT(*) FILTER (WHERE renewal_state='renewed')::DOUBLE/NULLIF(COUNT(*),0)" },
+};
+export const renewalMeasuresSQL = (ids = Object.keys(renewalMeasures)) => ids.map(id => `${renewalMeasures[id].expression} AS "${id}"`).join(',');
