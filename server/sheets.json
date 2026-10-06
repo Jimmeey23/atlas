@@ -30,7 +30,8 @@
       "Type",
       "Class",
       "Classes"
-    ]
+    ],
+    "gid": "2108019763"
   },
   {
     "key": "recurring",
@@ -73,7 +74,8 @@
       "FillRate",
       "WeightedAverage",
       "Top5Trainers"
-    ]
+    ],
+    "gid": "0"
   },
   {
     "key": "teacher_recurring",
@@ -116,7 +118,8 @@
       "ClassAvgExclEmpty",
       "FillRate",
       "WeightedAverage"
-    ]
+    ],
+    "gid": "1778490418"
   },
   {
     "key": "sales",
@@ -172,7 +175,8 @@
       "Sec. Membership Revenue Per Event Credit Incl VAT",
       "Sec. Membership Activated On First Use",
       "Sec. Membership Name"
-    ]
+    ],
+    "gid": "0"
   },
   {
     "key": "new",
@@ -264,7 +268,8 @@
       "Retained",
       "Retention Rate",
       "New"
-    ]
+    ],
+    "gid": "1898477983"
   },
   {
     "key": "lapsed",
@@ -309,7 +314,8 @@
       "Average Sessions Per Month",
       "Revenue Per Session",
       "Attendance Rate %"
-    ]
+    ],
+    "gid": "0"
   },
   {
     "key": "bookings",
@@ -345,7 +351,8 @@
       "Host Id",
       "UniqueID1",
       "UniqueID2"
-    ]
+    ],
+    "gid": "0"
   },
   {
     "key": "leads",
@@ -378,7 +385,8 @@
       "Status",
       "Channel",
       "Period"
-    ]
+    ],
+    "gid": "256104486"
   },
   {
     "key": "checkins",
@@ -413,6 +421,7 @@
       "Is New",
       "UniqueID1",
       "UniqueID2"
-    ]
+    ],
+    "gid": "0"
   }
 ]

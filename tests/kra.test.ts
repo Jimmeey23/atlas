@@ -66,31 +66,24 @@ test('KRA churn uses recorded Lapsed dates across eligible membership records wi
   assert.equal(result.comparisonPeriods.ytd.from,'2026-01-01');assert.equal(result.comparisonPeriods.ytdLastYear.from,'2025-01-01');
   assert.equal(result.comparisonPeriods.ytd.lapsed,1);assert.equal(result.comparisonPeriods.ytd.due,5);assert.equal(result.comparisonPeriods.ytdLastYear.churnRate,1);
 });
-test('protected KRA API rejects direct access, validates evidence and revokes sessions on lock',async()=>{
+test('open KRA API serves records without a passcode, still validates evidence writes',async()=>{
   const root=await mkdtemp(path.join(tmpdir(),'p57-kra-'));await mkdir(path.join(root,'.floor'));await mkdir(path.join(root,'.cache'));
   for(const key of ['sales','leads','bookings','lapsed','new'])await writeFile(path.join(root,'.cache',key+'.json'),JSON.stringify({key,columns:[],rows:[],status:'ok',fetchedAt:Date.now()}));
   const app=express();app.use(express.json());kraRoutes(app,root,[],async()=>{throw Error('Unexpected remote read');});
   const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));const base='http://127.0.0.1:'+server.address().port;
   try {
-    assert.equal((await fetch(base+'/api/kra/performance')).status,401);
-    const wrong=await fetch(base+'/api/kra/unlock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:'bad'})});assert.equal(wrong.status,401);
-    const unlock=await fetch(base+'/api/kra/unlock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:'9818'})});
-    assert.equal(unlock.status,200);assert.match(unlock.headers.get('set-cookie'),/HttpOnly/i);const cookie=unlock.headers.get('set-cookie').split(';')[0];
-    const loaded=await fetch(base+'/api/kra/performance',{headers:{Cookie:cookie}});assert.equal(loaded.status,200);assert.equal(loaded.headers.get('cache-control'),'no-store');
-    const data=await loaded.json();assert.equal(data.definitions.length,7);assert.equal(data.trainingTopics.length,28);
-    const topicURL=base+'/api/kra/training/'+data.trainingTopics[0].id;
-    assert.equal((await fetch(topicURL,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'Completed',note:''})})).status,401);
-    assert.equal((await fetch(topicURL,{method:'PUT',headers:{Cookie:cookie,'Content-Type':'application/json'},body:JSON.stringify({status:'Completed',note:'Manually verified training'})})).status,200);
-    const topicSaved=await(await fetch(base+'/api/kra/performance',{headers:{Cookie:cookie}})).json();
-    assert.equal(topicSaved.evidence.marketingTopics[data.trainingTopics[0].id].status,'Completed');
-    assert.equal(topicSaved.evidence.marketingTopics[data.trainingTopics[0].id].basis,'Manually reported by user');
-    const send=body=>fetch(base+'/api/kra/evidence/growth',{method:'PUT',headers:{Cookie:cookie,'Content-Type':'application/json'},body:JSON.stringify(body)});
-    assert.equal((await send({status:'Completed',note:'Onboarding',checks:[],date:'2026-06-20',url:''})).status,400);
-    const valid=await send({status:'Completed',note:'Documented hiring and onboarding outcomes',checks:['Hired','Fully trained'],date:'2026-06-20',url:''});assert.equal(valid.status,200);
-    const saved=await (await fetch(base+'/api/kra/performance',{headers:{Cookie:cookie}})).json();assert.equal(saved.evidence.growth.basis,'Self-reported evidence');
-    await fetch(base+'/api/kra/lock',{method:'POST',headers:{Cookie:cookie}});
-    assert.equal((await fetch(base+'/api/kra/performance',{headers:{Cookie:cookie}})).status,401);
-  }finally{await new Promise(resolve=>server.close(resolve));await rm(root,{recursive:true,force:true});}
+    // The passcode gate was removed deliberately: these endpoints answer without any session.
+    const performance=await fetch(base+'/api/kra/performance');
+    assert.equal(performance.status,200);
+    assert.equal(performance.headers.get('cache-control'),'no-store');
+    assert.equal((await performance.json()).person,'Jimmeey Gondaa');
+    assert.equal((await(await fetch(base+'/api/kra/session')).json()).unlocked,true);
+    const bad=await fetch(base+'/api/kra/evidence/churn',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'Invented',note:'',url:'',date:'',checks:[]})});
+    assert.equal(bad.status,400);
+    const good=await fetch(base+'/api/kra/evidence/churn',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'In progress',note:'Action plan drafted',url:'',date:'2026-10-01',checks:['Action plan']})});
+    assert.equal(good.status,200);
+    assert.equal((await(await fetch(base+'/api/kra/performance')).json()).evidence.churn.status,'In progress');
+  } finally {await new Promise(resolve=>server.close(resolve));await rm(root,{recursive:true,force:true});}
 });
 
 test('exact 10 percent target boundaries avoid floating point false passes and false failures',()=>{

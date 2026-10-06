@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState} from 'react';
-import {LockKeyhole,RefreshCw,Download} from 'lucide-react';
+import {RefreshCw,Download} from 'lucide-react';
 import {acquisitionPeriodLabel} from '../data/acquisition';
 import {fmt} from '../semantics/formats';
 import {exportCSV} from './exports';
@@ -48,16 +48,13 @@ function ContributorTable({month,kind}:{month:Month;kind:string}) {
 }
 export function KraPerformance() {
   const generation=useRef(0);
-  const [data,setData]=useState<KraData|null>(null),[locked,setLocked]=useState(true),[loading,setLoading]=useState(true),[code,setCode]=useState(''),[error,setError]=useState(''),[imports,setImports]=useState(false),[kind,setKind]=useState('revenue'),[month,setMonth]=useState('review'),[detailsOpen,setDetailsOpen]=useState(true);
+  const [data,setData]=useState<KraData|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[imports,setImports]=useState(false),[kind,setKind]=useState('revenue'),[month,setMonth]=useState('review'),[detailsOpen,setDetailsOpen]=useState(true);
   const drillRef=useRef<HTMLDetailsElement>(null);
   async function load(refresh=false) {
     const request=++generation.current;setLoading(true);setError('');
-    try {const response=await fetch('/api/kra/performance?imports='+imports+(refresh?'&refresh=true':''));if(request!==generation.current)return;if(response.status===401){setLocked(true);setData(null);return;}const result=await response.json();if(request!==generation.current)return;if(!response.ok)throw Error(result.error);setData(result);setLocked(false);}catch(error){if(request===generation.current)setError(error instanceof Error?error.message:String(error));}finally{if(request===generation.current)setLoading(false);}
+    try {const response=await fetch('/api/kra/performance?imports='+imports+(refresh?'&refresh=true':''));if(request!==generation.current)return;const result=await response.json();if(request!==generation.current)return;if(!response.ok)throw Error(result.error);setData(result);}catch(error){if(request===generation.current)setError(error instanceof Error?error.message:String(error));}finally{if(request===generation.current)setLoading(false);}
   }
   useEffect(()=>{void load();return()=>{generation.current++;};},[imports]);
-  async function unlock(event:React.FormEvent){event.preventDefault();setError('');setLoading(true);try{const response=await fetch('/api/kra/unlock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});const result=await response.json();setCode('');if(!response.ok)throw Error(result.error);await load();}catch(error){setError(error instanceof Error?error.message:String(error));setLoading(false);}}
-  async function lock(){try{const response=await fetch('/api/kra/lock',{method:'POST'});if(!response.ok&&response.status!==401)throw Error('The view could not be locked. Retry.');generation.current++;setLoading(false);setData(null);setLocked(true);setCode('');}catch(error){setError(String(error));}}
-  if(locked)return <section className="kra-lock"><LockKeyhole size={30}/><h2>Jimmeey Gondaa · KRA performance</h2><p>Head of Systems, Sales & Client Servicing<br/>June–November 2026 · protected KRA page</p><form onSubmit={unlock}><label htmlFor="kra-passcode">Passcode</label><input id="kra-passcode" type="password" inputMode="numeric" autoComplete="off" autoFocus value={code} onChange={event=>setCode(event.target.value)} required/><button className="button" disabled={loading}>{loading?'Connecting…':'Unlock KRA view'}</button></form>{error&&<p role="alert">{error}</p>}</section>;
   if(!data)return <p role="status">Loading verified KRA performance…</p>;
   const evidenceFor=(id:string)=>data.evidence[id] as Evidence|undefined;
   const marketingRecords=(data.evidence.marketingTopics??{}) as Record<string,TopicRecord>;
@@ -72,7 +69,7 @@ export function KraPerformance() {
   const selected=month==='review'?aggregate:data.monthly.find(row=>row.month===month)??aggregate;
   const periodLabel=(value:string)=>value==='review'?'KRA period to date':acquisitionPeriodLabel(value);
   return <div className="kra-workspace">
-    <header className="kra-header"><div><span className="kra-eyebrow">June–November 2026 · {data.definitions.reduce((sum,definition)=>sum+definition.weight,0)}% weighted KRA framework</span><h2>{data.person}</h2><p>{data.role}</p><p className="small">As of {acquisitionPeriodLabel(data.asOf)} · organisation outcomes plus separately attributed sales</p></div><div><button className="button" disabled={loading} onClick={()=>void load(true)}><RefreshCw size={13}/>{loading?'Refreshing…':'Refresh sources'}</button><button className="button" onClick={()=>void lock()}><LockKeyhole size={13}/>Lock view</button></div></header>
+    <header className="kra-header"><div><span className="kra-eyebrow">June–November 2026 · {data.definitions.reduce((sum,definition)=>sum+definition.weight,0)}% weighted KRA framework</span><h2>{data.person}</h2><p>{data.role}</p><p className="small">As of {acquisitionPeriodLabel(data.asOf)} · organisation outcomes plus separately attributed sales</p></div><div><button className="button" disabled={loading} onClick={()=>void load(true)}><RefreshCw size={13}/>{loading?'Refreshing…':'Refresh sources'}</button></div></header>
     {error&&<p role="alert">{error}</p>}
     <KraScorecard data={data} onSaved={result=>setData(current=>current?{...current,definitions:current.definitions.map(definition=>definition.id===result.key.split('/')[1]?{...definition,...result.info}:definition),scorecardEdits:{...current.scorecardEdits,[result.key]:result.record},scorecardHistory:result.history}:current)} onDrill={(nextKind,nextMonth)=>{setKind(nextKind);setMonth(nextMonth==='review'||data.monthly.some(row=>row.month===nextMonth)?nextMonth:month);setDetailsOpen(true);requestAnimationFrame(()=>drillRef.current?.scrollIntoView({behavior:'smooth',block:'start'}));}}/>
     <KraPeriodComparisons periods={data.comparisonPeriods} trajectories={data.trajectories} explanations={data.explanations} maturity={data.churnMaturity}/>

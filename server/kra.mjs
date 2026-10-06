@@ -1,64 +1,18 @@
-import {createHash,createHmac,randomBytes,timingSafeEqual} from 'node:crypto';
+import {randomBytes} from 'node:crypto';
 import path from 'node:path';
 import {createStore} from './store.mjs';
 import {normalise} from '../src/data/normalise.ts';
 import {performanceMarketingTopics} from './kra-curriculum.mjs';
 import {validateKraEdit} from './kra-edits.mjs';
 import {kraPerformance,kraDefinitions} from './kra-metrics.mjs';
-const digest=value=>createHash('sha256').update(value).digest();
 export function kraRoutes(app,root,config,load,store=createStore({root})) {
-  const attempts=new Map(),cookie='p57_kra_session';
-  const protectedCode=digest(process.env.KRA_PASSCODE||'9818');
   const file='.floor/kra-jimmeey-jun-nov-2026.json';
   const cache=key=>`.cache/${key}.json`;
-  // Serverless instances do not share memory, so a session cannot live in a Map: the token is
-  // signed instead and verified arithmetically on whichever instance receives the request.
-  const sessionKey=process.env.KRA_SESSION_SECRET||process.env.SUPABASE_SERVICE_ROLE_KEY||(process.env.KRA_PASSCODE??'9818')+'::atlas-kra';
-  const sign=payload=>createHmac('sha256',sessionKey).update(payload).digest('base64url');
-  const issue=()=>{const now=Date.now(),payload=`${now+8*60*60*1000}.${now}.${randomBytes(18).toString('base64url')}`;return `${payload}.${sign(payload)}`;};
-  // Locking has to revoke server-side, not just clear the cookie. A durable epoch does that
-  // without per-instance session state: every token issued before it stops verifying.
-  const epochFile='.floor/kra-session-epoch.json';
-  let epoch={value:0,readAt:0};
-  const revokedBefore=async()=>{
-    if(Date.now()-epoch.readAt<5000)return epoch.value;
-    const saved=await store.read(epochFile).catch(()=>null);
-    epoch={value:Number(saved?.since)||0,readAt:Date.now()};
-    return epoch.value;
-  };
-  const revokeAll=async()=>{const since=Date.now();await store.write(epochFile,{since});epoch={value:since,readAt:Date.now()};};
-  const valid=async token=>{
-    const parts=String(token??'').split('.');
-    if(parts.length!==4)return false;
-    const payload=parts.slice(0,3).join('.'),expected=sign(payload);
-    const given=Buffer.from(parts[3]),want=Buffer.from(expected);
-    if(given.length!==want.length||!timingSafeEqual(given,want))return false;
-    if(!(Number(parts[0])>Date.now()))return false;
-    return Number(parts[1])>=await revokedBefore();
-  };
   const asOf=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
-  const auth=(req,res,next)=>{
-    res.set('Cache-Control','no-store');
-    const token=String(req.headers.cookie??'').split(';').map(part=>part.trim()).find(part=>part.startsWith(cookie+'='))?.slice(cookie.length+1);
-    valid(token).then(ok=>{
-      if(!ok)return res.status(401).json({error:'Unlock the KRA view to continue.'});
-      req.kraToken=token;next();
-    }).catch(()=>res.status(503).json({error:'The KRA session store is unavailable. Retry.'}));
-  };
-  app.post('/api/kra/unlock',(req,res)=>{
-    res.set('Cache-Control','no-store');
-    const key=req.ip,old=attempts.get(key);
-    const attempt=old&&old.until>Date.now()?old:{count:0,until:Date.now()+5*60*1000};
-    if(attempt.count>=10)return res.status(429).json({error:'Too many attempts. Try again in five minutes.'});
-    attempt.count++;attempts.set(key,attempt);
-    if(typeof req.body?.code!=='string'||!timingSafeEqual(protectedCode,digest(req.body.code)))return res.status(401).json({error:'Incorrect passcode.'});
-    attempts.delete(key);
-    const token=issue();
-    res.cookie(cookie,token,{httpOnly:true,sameSite:'strict',secure:req.secure||req.headers['x-forwarded-proto']==='https',maxAge:8*60*60*1000,path:'/api/kra'});
-    res.json({unlocked:true});
-  });
-  app.post('/api/kra/lock',auth,async(_req,res)=>{try{await revokeAll();res.clearCookie(cookie,{path:'/api/kra'});res.json({locked:true});}catch{res.status(503).json({error:'The view could not be locked. Retry.'});}});
-  app.get('/api/kra/session',auth,(_req,res)=>res.json({unlocked:true}));
+  // The passcode gate was removed at the owner's request: these routes are open to anyone who
+  // can reach them. Responses stay uncacheable so no proxy retains KRA records.
+  const auth=(_req,res,next)=>{res.set('Cache-Control','no-store');next();};
+  app.get('/api/kra/session',(_req,res)=>res.set('Cache-Control','no-store').json({unlocked:true}));
   const evidence=async()=>await store.read(file)??{};
   let writes=Promise.resolve();
   app.get('/api/kra/performance',auth,async(req,res)=>{

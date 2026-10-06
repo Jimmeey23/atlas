@@ -10,16 +10,15 @@ test('protected KRA edits persist across server reinitialisation, retain revisio
  const root=await mkdtemp(path.join(tmpdir(),'p57-kra-edits-'));await mkdir(path.join(root,'.floor'));await mkdir(path.join(root,'.cache'));
  for(const key of ['sales','leads','bookings','lapsed','new'])await writeFile(path.join(root,'.cache',key+'.json'),JSON.stringify({key,columns:[],rows:[],status:'ok',fetchedAt:Date.now()}));
  let server;const start=async()=>{const app=express();app.use(express.json());kraRoutes(app,root,[],async()=>{throw Error('No remote reads');});server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));return 'http://127.0.0.1:'+server.address().port;};
- const login=async base=>(await fetch(base+'/api/kra/unlock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:'9818'})})).headers.get('set-cookie').split(';')[0];
  const data={current:'55 trials · 4 referrals',lastYear:'50 trials · 3 referrals',preceding:'48 trials · 2 referrals',yoy:.1,previousGrowth:.15,status:'On track',explanation:'Manually reconciled source counts',note:'Follow up on referrals',annotation:'Reconciled on 6 Oct'};
  const body={info:{area:'Trials & Referrals',target:'Reviewed target',weight:15},data,expectedUpdatedAt:null};
  try{
-  let base=await start();assert.equal((await fetch(base+'/api/kra/scorecard/2026-10/trials',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).status,401);
-  let cookie=await login(base);const put=body=>fetch(base+'/api/kra/scorecard/2026-10/trials',{method:'PUT',headers:{Cookie:cookie,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  let base=await start();
+  const put=body=>fetch(base+'/api/kra/scorecard/2026-10/trials',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   assert.equal((await put({...body,info:{...body.info,weight:101}})).status,400);const response=await put(body);assert.equal(response.status,200);const first=await response.json();assert.equal(first.record.note,data.note);
-  assert.equal((await put(body)).status,409);await new Promise(resolve=>server.close(resolve));base=await start();cookie=await login(base);
-  const loaded=await(await fetch(base+'/api/kra/performance',{headers:{Cookie:cookie}})).json();assert.equal(loaded.scorecardEdits['2026-10/trials'].current,data.current);assert.equal(loaded.scorecardHistory.length,1);assert.equal(loaded.definitions.find(row=>row.id==='trials').target,'Reviewed target');assert.equal(loaded.definitions.find(row=>row.id==='trials').targetEdited,true);
-  const restored={...data,current:null,lastYear:null,preceding:null,yoy:null,previousGrowth:null,status:null,explanation:null};const restore=await fetch(base+'/api/kra/scorecard/2026-10/trials',{method:'PUT',headers:{Cookie:cookie,'Content-Type':'application/json'},body:JSON.stringify({...body,data:restored,expectedUpdatedAt:first.record.updatedAt})});assert.equal(restore.status,200);const result=await restore.json();assert.equal(result.record.current,null);assert.equal(result.record.note,data.note);assert.equal(result.history.length,2);assert.equal(result.history[0].after.current,data.current);
+  assert.equal((await put(body)).status,409);await new Promise(resolve=>server.close(resolve));base=await start();
+  const loaded=await(await fetch(base+'/api/kra/performance',{})).json();assert.equal(loaded.scorecardEdits['2026-10/trials'].current,data.current);assert.equal(loaded.scorecardHistory.length,1);assert.equal(loaded.definitions.find(row=>row.id==='trials').target,'Reviewed target');assert.equal(loaded.definitions.find(row=>row.id==='trials').targetEdited,true);
+  const restored={...data,current:null,lastYear:null,preceding:null,yoy:null,previousGrowth:null,status:null,explanation:null};const restore=await fetch(base+'/api/kra/scorecard/2026-10/trials',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,data:restored,expectedUpdatedAt:first.record.updatedAt})});assert.equal(restore.status,200);const result=await restore.json();assert.equal(result.record.current,null);assert.equal(result.record.note,data.note);assert.equal(result.history.length,2);assert.equal(result.history[0].after.current,data.current);
  }finally{if(server?.listening)await new Promise(resolve=>server.close(resolve));await rm(root,{recursive:true,force:true});}
 });
 test('bulk training progress applies to every selected topic in one write and rejects unknown ids',async()=>{
@@ -28,10 +27,9 @@ test('bulk training progress applies to every selected topic in one write and re
  const app=express();app.use(express.json());kraRoutes(app,root,[],async()=>{throw Error('No remote reads');});
  const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));const base='http://127.0.0.1:'+server.address().port;
  try{
-  const cookie=(await fetch(base+'/api/kra/unlock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:'9818'})})).headers.get('set-cookie').split(';')[0];
-  const put=body=>fetch(base+'/api/kra/training',{method:'PUT',headers:{Cookie:cookie,'Content-Type':'application/json'},body:JSON.stringify(body)});
-  assert.equal((await fetch(base+'/api/kra/training',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids:[],status:'Completed'})})).status,401);
-  const topics=(await(await fetch(base+'/api/kra/performance',{headers:{Cookie:cookie}})).json()).trainingTopics;
+  const put=body=>fetch(base+'/api/kra/training',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  assert.equal((await fetch(base+'/api/kra/training',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids:[],status:'Completed'})})).status,400);
+  const topics=(await(await fetch(base+'/api/kra/performance',{})).json()).trainingTopics;
   assert.ok(topics.length>2);
   assert.equal((await put({ids:[],status:'Completed'})).status,400);
   assert.equal((await put({ids:[topics[0].id,'not-a-topic'],status:'Completed'})).status,400);
@@ -40,7 +38,7 @@ test('bulk training progress applies to every selected topic in one write and re
   const result=await(await put({ids:[...ids,ids[0]],status:'Completed'})).json();
   assert.deepEqual(Object.keys(result).sort(),[...ids].sort());
   ids.forEach(id=>assert.equal(result[id].status,'Completed'));
-  const loaded=await(await fetch(base+'/api/kra/performance',{headers:{Cookie:cookie}})).json();
+  const loaded=await(await fetch(base+'/api/kra/performance',{})).json();
   ids.forEach(id=>assert.equal(loaded.evidence.marketingTopics[id].status,'Completed'));
   assert.equal(loaded.evidence.marketingTopics[topics[3].id],undefined);
  }finally{await new Promise(resolve=>server.close(resolve));await rm(root,{recursive:true,force:true});}
