@@ -15,23 +15,46 @@ export function kraRoutes(app,root,config,load,store=createStore({root})) {
   app.get('/api/kra/session',(_req,res)=>res.set('Cache-Control','no-store').json({unlocked:true}));
   const evidence=async()=>await store.read(file)??{};
   let writes=Promise.resolve();
+  // Computing the scorecard means pulling five Google sheets and normalising ~300k rows. On a
+  // serverless cold start that took ~60s, which the browser abandons. The finished payload is
+  // small, so it is cached durably and served immediately; a stale copy is returned while a
+  // refresh runs rather than making the reader wait for Google.
+  const resultKey=imports=>`.floor/kra-result-${imports?'imports':'direct'}.json`;
+  const RESULT_TTL=30*60*1000;
+  async function compute(imports,refresh) {
+    const sources={};
+    await Promise.all(['sales','leads','bookings','lapsed','new'].map(async key=>{
+      const source=config.find(item=>item.key===key);
+      let data;
+      if(!refresh)try{data=await store.read(cache(key));if(data)data.stale=Date.now()-data.fetchedAt>=15*60*1000;}catch{}
+      if(!data)data=await load(source,refresh);
+      const normalized=normalise(data,false).rows;
+      if(key==='leads'){const index=data.columns.indexOf('ID');normalized.forEach((row,i)=>{row.lead_id=index>=0?String(data.rows[i][index]??'').trim()||null:null;});}
+      sources[key]={...data,rows:normalized};
+    }));
+    const result=kraPerformance(sources,asOf(),{imports});
+    // Caching is an optimisation: a failed write must never fail the request.
+    await store.write(resultKey(imports),{computedAt:Date.now(),result}).catch(error=>console.error('KRA result cache write skipped:',error?.message??error));
+    return result;
+  }
+  const decorate=(result,saved,computedAt)=>({...result,definitions:result.definitions.map(definition=>{const info=saved.scorecardInfo?.[definition.id];return {...definition,...info,targetEdited:!!info&&info.target!==definition.target,manual:!!info&&(info.area!==definition.area||info.target!==definition.target||info.weight!==definition.weight)};}),evidence:saved,scorecardEdits:saved.scorecardEdits??{},scorecardHistory:saved.scorecardHistory??[],trainingTopics:performanceMarketingTopics,computedAt:computedAt??Date.now()});
   app.get('/api/kra/performance',auth,async(req,res)=>{
+    const imports=req.query.imports==='true',refresh=req.query.refresh==='true';
     try {
-      const sources={};
-      await Promise.all(['sales','leads','bookings','lapsed','new'].map(async key=>{
-        const source=config.find(item=>item.key===key);
-        let data;
-        if(req.query.refresh!=='true')try{data=await store.read(cache(key));if(data)data.stale=Date.now()-data.fetchedAt>=15*60*1000;}catch{}
-        if(!data)data=await load(source,req.query.refresh==='true');
-        const normalized=normalise(data,false).rows;
-        if(key==='leads'){const index=data.columns.indexOf('ID');normalized.forEach((row,i)=>{row.lead_id=index>=0?String(data.rows[i][index]??'').trim()||null:null;});}
-        sources[key]={...data,rows:normalized};
-      }));
-      const result=kraPerformance(sources,asOf(),{imports:req.query.imports==='true'});
+      // Edits must never be served stale, so saved evidence is always read live and merged
+      // onto whichever source computation is used.
       await writes;
       const saved=await evidence();
-      res.json({...result,definitions:result.definitions.map(definition=>{const info=saved.scorecardInfo?.[definition.id];return {...definition,...info,targetEdited:!!info&&info.target!==definition.target,manual:!!info&&(info.area!==definition.area||info.target!==definition.target||info.weight!==definition.weight)};}),evidence:saved,scorecardEdits:saved.scorecardEdits??{},scorecardHistory:saved.scorecardHistory??[],trainingTopics:performanceMarketingTopics});
-    } catch {res.status(500).json({error:'KRA source analysis could not be completed. Retry or refresh the source snapshots.'});}
+      if(!refresh){
+        const cached=await store.read(resultKey(imports)).catch(()=>null);
+        if(cached?.result){
+          res.json(decorate(cached.result,saved,cached.computedAt));
+          if(Date.now()-cached.computedAt>=RESULT_TTL)compute(imports,false).catch(()=>undefined);
+          return;
+        }
+      }
+      res.json(decorate(await compute(imports,refresh),saved));
+    } catch(error) {console.error('KRA performance failed:',error?.message??error);res.status(500).json({error:'KRA source analysis could not be completed. Retry or refresh the source snapshots.'});}
   });
   app.put('/api/kra/scorecard/:period/:id',auth,async(req,res)=>{
     const error=validateKraEdit(req.params.period,req.params.id,req.body);

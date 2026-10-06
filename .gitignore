@@ -22,3 +22,5 @@ ATLAS-VERIFICATION.json
 supabase/.temp/
 
 api/_app.mjs
+.vercel
+.env*.local

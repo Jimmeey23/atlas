@@ -10,6 +10,15 @@
 import { readFile, writeFile, rename, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import { gzip, gunzip } from "node:zlib";
+import { promisify } from "node:util";
+
+const deflate = promisify(gzip);
+const inflate = promisify(gunzip);
+// Postgres rejects a multi-megabyte jsonb write with a statement timeout, and the computed KRA
+// payload is ~14MB. Anything over this threshold is stored gzipped instead (~1.2MB) and
+// transparently expanded on read, so callers never see the difference.
+const COMPRESS_OVER = 512 * 1024;
 
 const TABLE = "atlas_store";
 const DURABLE = ".floor/";
@@ -39,12 +48,20 @@ export function createStore({ root, cloud = null, cacheRoot = root }) {
       .eq("key", key)
       .maybeSingle();
     if (error) throw new Error(`Store read failed for ${key}: ${error.message}`);
-    return data?.value ?? null;
+    const saved = data?.value ?? null;
+    if (saved && typeof saved === "object" && typeof saved.__gz === "string")
+      return JSON.parse((await inflate(Buffer.from(saved.__gz, "base64"))).toString("utf8"));
+    return saved;
   }
   async function writeCloud(key, value) {
+    const encoded = JSON.stringify(value);
+    const payload =
+      encoded.length > COMPRESS_OVER
+        ? { __gz: (await deflate(encoded)).toString("base64") }
+        : value;
     const { error } = await cloud
       .from(TABLE)
-      .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: "key" });
+      .upsert({ key, value: payload, updated_at: new Date().toISOString() }, { onConflict: "key" });
     if (error) throw new Error(`Store write failed for ${key}: ${error.message}`);
     return value;
   }
