@@ -71,6 +71,16 @@ test('every chapter names real metrics and prints a two-digit number', () => {
   }
 });
 
+test('the exported document keeps its markup as markup', () => {
+  // The body is written through untouched; escaping `</` there (which is right
+  // inside <style> and <script>) turns every closing tag into literal text and
+  // the downloaded file renders as a wall of source.
+  const source = readFileSync(new URL('../src/report/export.ts', import.meta.url), 'utf8');
+  assert.match(source, /\n\s*clone\.outerHTML,/, 'the report body must be embedded unescaped');
+  assert.doesNotMatch(source, /safeInStyle\(clone\.outerHTML\)/);
+  assert.match(source, /safeInStyle\(reportCSS\)/, 'stylesheet contents must still be escaped');
+});
+
 test('an exported report fetches nothing: no remote fonts, images or stylesheets', () => {
   const css = readFileSync(new URL('../src/design/report.css', import.meta.url), 'utf8');
   assert.doesNotMatch(css, /@import/, 'an @import would make the downloaded file depend on a server');

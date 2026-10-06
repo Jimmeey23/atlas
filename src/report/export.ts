@@ -2,8 +2,12 @@ import reportCSS from "../design/report.css?raw";
 import { monthLabel } from "./compute";
 import type { ReportModel } from "./model";
 
-/** `</` is escaped so no embedded text can close the tag it sits in. */
-const safe = (text: string) => text.replaceAll("</", "<\\/");
+/**
+ * Inside `<style>` and `<script>`, `</` would end the element early, so it is
+ * escaped. This is only ever applied to element *contents* — markup must be
+ * written through untouched, or every closing tag renders as literal text.
+ */
+const safeInStyle = (css: string) => css.replaceAll("</", "<\\/");
 const escapeHTML = (text: string) =>
   text
     .replaceAll("&", "&amp;")
@@ -43,11 +47,11 @@ export function serialiseReport(element: HTMLElement, model: ReportModel) {
     "html{scroll-behavior:smooth}body{margin:0;background:#f4f6fa;padding:24px}",
     "@media(max-width:768px){body{padding:0}}",
     "@media print{body{padding:0;background:#fff}}",
-    safe(reportCSS),
+    safeInStyle(reportCSS),
     "</style>",
     "</head>",
     "<body>",
-    safe(clone.outerHTML),
+    clone.outerHTML,
     "</body>",
     "</html>",
   ].join("\n");
