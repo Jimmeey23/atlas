@@ -1,14 +1,27 @@
-import { useMemo, useState } from "react";
-import type { Row } from "../data/duckdb";
+import { useEffect, useMemo, useState } from "react";
+import { query, type Row } from "../data/duckdb";
 import { metrics } from "../semantics/metrics";
 import { fmt, delta } from "../semantics/formats";
 import { useStore } from "../state/store";
-import { today } from "../data/analytics";
+import { today, monthlyHistorySQL } from "../data/analytics";
 import { acquisitionPeriodLabel } from "../data/acquisition";
 import { Register } from "./Register";
-export function MoMTable({ rows, ids }: { rows: Row[]; ids: string[] }) {
+export function MoMTable({ ids, version }: { ids: string[]; version: string }) {
   const [mode, setMode] = useState("absolute");
   const s = useStore();
+  const [rows, setRows] = useState<Row[]>([]);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const sql = monthlyHistorySQL(s.tab, ids, s.filters, s.transient);
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError("");
+    query(sql).then(result => { if (active) setRows(result); })
+      .catch(e => { if (active) setError(String(e)); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [sql, version]);
   const months = useMemo(() => {
     const end = new Date(today() + "T00:00:00Z");
     end.setUTCDate(0);
@@ -31,11 +44,12 @@ export function MoMTable({ rows, ids }: { rows: Row[]; ids: string[] }) {
   return (
     <Register
       index="06"
+      dateIndependent
       title="Month by month"
-      subtitle="14 completed months · date filters do not restrict this table"
+      subtitle="14 completed months · MoM and YoY ignore date filters; other filters apply"
       actions={
         <div className="segmented">
-          {["absolute", "change", "index"].map((m) => (
+          {["absolute", "change", "year", "index"].map((m) => (
             <button
               className={mode === m ? "active" : ""}
               onClick={() => setMode(m)}
@@ -45,12 +59,14 @@ export function MoMTable({ rows, ids }: { rows: Row[]; ids: string[] }) {
                 ? "Values"
                 : m === "change"
                   ? "MoM Δ"
-                  : "Index 100"}
+                  : m === "year" ? "YoY Δ" : "Index 100"}
             </button>
           ))}
         </div>
       }
     >
+      {error && <p role="alert">{error}</p>}
+      {loading && <p role="status">Loading monthly history…</p>}
       <div className="table-scroll mom">
         <table>
           <thead>
@@ -75,7 +91,9 @@ export function MoMTable({ rows, ids }: { rows: Row[]; ids: string[] }) {
                   <td title={metrics[id].description}>{metrics[id].label}</td>
                   {months.map((m, i) => {
                     const value = m.row?.[id];
-                    const prev = months[i - 1]?.row?.[id];
+                    const date = new Date(m.key + "-01T00:00:00Z");
+                    const priorKey = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() - (mode === "year" ? 12 : 1), 1)).toISOString().slice(0, 7);
+                    const prev = rows.find(row => row.month === priorKey)?.[id];
                     const positive =
                       value != null &&
                       Number(value) >= Number(prev) ===
@@ -115,7 +133,7 @@ export function MoMTable({ rows, ids }: { rows: Row[]; ids: string[] }) {
                       >
                         {mode === "absolute"
                           ? fmt(id, value)
-                          : mode === "change"
+                          : mode === "change" || mode === "year"
                             ? value == null || prev == null
                               ? "—"
                               : delta(id, value, prev)

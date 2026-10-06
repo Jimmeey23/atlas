@@ -290,7 +290,7 @@ export function Chart({
           );
         else if (tab === 8)
           r = await query(
-            `SELECT COALESCE(source,'Unknown') AS source,COALESCE(stage,'Unspecified stage') AS stage,COALESCE(status,'Open') AS outcome,COUNT(*) AS n FROM leads${w} GROUP BY source,stage,status ORDER BY n DESC LIMIT 35`,
+            `SELECT COALESCE(source,'Unknown') AS source,COALESCE(stage,'Unspecified stage') AS stage,CASE WHEN lower(trim(stage))='membership sold' THEN 'Membership sold' WHEN lower(trim(stage))='trial completed' THEN 'Trial completed' ELSE COALESCE(status,'Open') END AS outcome,COUNT(*) AS n FROM leads${w} GROUP BY source,stage,status ORDER BY n DESC LIMIT 35`,
           );
         else if (tab === 9)
           r = await query(

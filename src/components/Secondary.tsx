@@ -46,7 +46,7 @@ export function Secondary({
     if (tab === 7 && index === 1) predicate = "no_show";
     if (tab === 8 && index === 3)
       predicate =
-        "touches=0 AND (status NOT IN ('Won','Lost') OR status IS NULL)";
+        "touches=0 AND lower(trim(COALESCE(stage,'')))<>'membership sold' AND (status NOT IN ('Lost','Disqualified') OR status IS NULL)";
     if (tab === 5 && index === 3)
       predicate = "lifecycle='Active' AND days_absent>21";
     if (tab === 4 && index === 3) predicate = "voided OR status<>'succeeded'";

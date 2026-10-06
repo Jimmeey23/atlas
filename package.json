@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "concurrently -k \"tsx server/index.mjs\" \"vite --host 0.0.0.0\"",
+    "dev": "tsx scripts/dev.mjs",
     "build": "tsc -b && vite build && node scripts/build-api.mjs",
     "start": "NODE_ENV=production tsx server/index.mjs",
     "test": "tsx --test tests/*.test.ts",

@@ -1,7 +1,7 @@
 import { query, quote, health, type Row } from "./duckdb";
 import { metricSQL, type QueryContext } from "../semantics/metrics";
 import { currentSnapshotMetrics } from "../semantics/evidence";
-import { comparisonDates } from "./periods";
+import { comparisonDates, historicalFilters, historicalTransient } from "./periods";
 import { blueprints } from "./blueprints";
 import { useStore, type Filters } from "../state/store";
 export const today = () =>
@@ -11,10 +11,10 @@ export const today = () =>
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
-export const context = (filters = useStore.getState().filters): QueryContext => ({
+export const context = (filters = useStore.getState().filters, transient = useStore.getState().transient): QueryContext => ({
   rate: useStore.getState().rate,
   today: today(),
-  newWhere: where(filters, "new"),
+  newWhere: where(filters, "new", transient),
 });
 const allowed = [
   "location",
@@ -110,6 +110,20 @@ export function metricFacts(f: Filters, source: string, transient = useStore.get
   if (source === "checkins") return `(SELECT *, CASE WHEN attended AND duration>0 AND session_id IS NOT NULL THEN ROW_NUMBER() OVER(PARTITION BY session_id, attended, duration>0 ORDER BY source_row) END AS teaching_session_rank FROM checkins${scoped})`;
   return `"${source}"${scoped}`;
 }
+export function monthlyHistorySQL(tab: number, ids: string[], filters: Filters, transient = useStore.getState().transient) {
+  const source = blueprints[tab].source;
+  const history = historicalFilters(filters, today());
+  const cross = historicalTransient(transient);
+  const historicalIds = ids.filter(id => !currentSnapshotMetrics.has(id));
+  const aggregates = [
+    ...(historicalIds.length ? [metricSQL(historicalIds, context(history, cross))] : []),
+    ...ids.filter(id => currentSnapshotMetrics.has(id)).map(id => `NULL AS "${id}"`),
+  ].join(",");
+  const month = source === "lapsed" ? "SUBSTR(end_date,1,7)" : "month";
+  const facts = metricFacts(history, source, cross);
+  const conjunction = ["sessions", "sales", "checkins"].includes(source) || !where(history, source, cross) ? "WHERE" : "AND";
+  return `SELECT ${month} AS month,${aggregates},COUNT(*) AS n FROM ${facts} ${conjunction} ${month} IS NOT NULL GROUP BY ${month} ORDER BY month`;
+}
 export function analyse(
   tab: number,
   groups: string[],
@@ -147,7 +161,7 @@ async function performAnalysis(
       !["new_clients", "conversion_rate", "active_base", "gross_revenue", "net_revenue"].includes(x),
   );
   const w = where(filters, b.source);
-  const prev = comparison(filters, compare);
+  const prev = comparison(filters, compare === "none" ? "prior" : compare);
   const aggregate = metricSQL(ids, context(filters));
   const parts = groups.filter((g) => allowed.includes(g));
   const groupExpressions = parts.map((g) => `COALESCE("${g}",'Unspecified')`);

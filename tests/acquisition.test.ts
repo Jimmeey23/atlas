@@ -11,19 +11,19 @@ test('entry types, hosted first visits and source purchase journey retain detail
 test('comparison windows contain 14 completed months and all prior-year baselines',()=>{
   const months=acquisitionMonths('2026-10-06');assert.equal(months.length,14);assert.equal(months[0],'2025-08');assert.equal(months.at(-1),'2026-09');assert.equal(acquisitionMonths('2026-10-06',26)[0],priorMonth(months[0],12));
 });
-test('acquisition aggregates use cohort denominators, mature 30-day windows and unavailable timing',async()=>{
+test('acquisition aggregates use calendar-month purchases and preserve unavailable purchase dates',async()=>{
   const db=await DuckDBInstance.create(':memory:');const c=await db.connect();
   try {
     await c.run(`CREATE TABLE new (${Object.entries(sqlTypes).map(([k,t])=>`"${k}" ${t}`).join(',')})`);
-    await c.run(`INSERT INTO new (member_id,date,month,entry_type,is_new,conversion,retention,conversion_days,second_visit_days,ltv,avg_purchase_value) VALUES
-      ('1','2026-08-01','2026-08','New - Trial Class',true,'Converted','Retained',5,2,10000,5000),
-      ('2','2026-08-02','2026-08','New - Trial Class',true,'Not Converted','Not Retained',NULL,NULL,0,NULL),
-      ('3','2026-10-01','2026-10','New - Trial Class',true,'Converted','Retained',1,2,8000,4000),
-      ('4','2026-08-03','2026-08','Repeat Visit',false,NULL,NULL,NULL,NULL,NULL,NULL),
-      (NULL,'2026-08-04','2026-08','Repeat Visit',false,NULL,NULL,NULL,NULL,NULL,NULL)`);
+    await c.run(`INSERT INTO new (member_id,date,month,entry_type,is_new,conversion,retention,conversion_days,second_visit_days,ltv,avg_purchase_value,first_purchase_date) VALUES
+      ('1','2026-08-01','2026-08','New - Trial Class',true,'Converted','Retained',5,2,10000,5000,'2026-08-06'),
+      ('2','2026-08-02','2026-08','New - Trial Class',true,'Not Converted','Not Retained',NULL,NULL,0,NULL,NULL),
+      ('3','2026-10-01','2026-10','New - Trial Class',true,'Converted','Retained',1,2,8000,4000,'2026-10-02'),
+      ('4','2026-08-03','2026-08','Repeat Visit',false,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+      (NULL,'2026-08-04','2026-08','Repeat Visit',false,NULL,NULL,NULL,NULL,NULL,NULL,NULL)`);
     const result=await c.runAndReadAll(`WITH facts AS (${acquisitionFactsSQL('','2026-10-06')}) SELECT entry,${acquisitionAggregate} FROM facts GROUP BY entry ORDER BY entry`);
     const [trial,repeat]=result.getRowObjectsJS();
-    assert.equal(Number(trial.converted_members),2);assert.equal(trial.conversion_rate,2/3);assert.equal(Number(trial.mature_30),2);assert.equal(Number(trial.converted_30),1);assert.equal(trial.conversion_30_rate,.5);assert.equal(trial.retention_30_rate,.5);assert.equal(trial.avg_spend,4500);
+    assert.equal(Number(trial.converted_members),2);assert.equal(trial.conversion_rate,2/3);assert.equal(Number(trial.mature_30),3);assert.equal(Number(trial.converted_30),2);assert.equal(trial.conversion_30_rate,2/3);assert.equal(trial.retention_30_rate,2/3);assert.equal(trial.avg_spend,4500);
     assert.equal(Number(repeat.cohort_rows),2);assert.equal(Number(repeat.unique_members),1);assert.equal(repeat.conversion_rate,null);assert.equal(repeat.retained_30,null);
   }finally{c.closeSync();db.closeSync();}
 });
@@ -75,7 +75,7 @@ test('reference conversion eligibility and exact metric contributors preserve mi
   assert.equal(contributesToMetric(credits,'avg_ltv'),false);
   assert.equal(contributesToMetric({...credits,conversion_days:0},'conversion_span'),false);
   assert.equal(contributesToMetric({...credits,conversion_days:5},'conversion_span'),true);
-  assert.equal(contributesToMetric({...credits,mature:false,converted_in_30:true,member_id:'a'},'converted_30'),false);
+  assert.equal(contributesToMetric({...credits,mature:false,converted_in_30:true,member_id:'a'},'converted_30'),true);
   assert.equal(referenceSummary([credits]).avg_ltv,null);
 });
 test('reference row counts, unique instructor outcomes and calendar month flags reconcile with drill-down contributors', async () => {
@@ -102,7 +102,7 @@ test('reference row counts, unique instructor outcomes and calendar month flags 
       assert.equal(records.filter(row=>contributesToMetric(row,key)).length,Number(aggregate[key]));
     }
     const januaryEnd=records.find(r=>r.date==='2026-01-31')!;
-    assert.equal(januaryEnd.converted_same_month,false);assert.equal(januaryEnd.converted_in_30,true);
-    assert.equal(januaryEnd.returned_same_month,false);assert.equal(januaryEnd.returned_in_30,true);
+    assert.equal(januaryEnd.converted_same_month,false);assert.equal(januaryEnd.converted_in_30,false);
+    assert.equal(januaryEnd.returned_same_month,false);assert.equal(januaryEnd.returned_in_30,false);
   } finally {c.closeSync();db.closeSync();}
 });

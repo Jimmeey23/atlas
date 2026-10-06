@@ -36,6 +36,7 @@ export function DrillPanel({
   const pageSize = 50;
 
   const [records, setRecords] = useState<Row[]>([]);
+  const [summary, setSummary] = useState<Row>({});
   const [trend, setTrend] = useState<Row[]>([]);
   const [record, setRecord] = useState<Row | null>(null);
   const [original, setOriginal] = useState<Record<string, unknown> | null>(
@@ -102,6 +103,7 @@ export function DrillPanel({
     setTrend([]);
     setRecords([]);
     setSourceData([]);
+    setSummary({});
     setErr("");
     const groupingPath = entry.path
       .map((p) =>
@@ -123,11 +125,13 @@ export function DrillPanel({
         )} FROM ${metricFacts(filters, source)}${path ? (!["sessions", "sales", "checkins"].includes(source) && w ? " AND " : " WHERE ") + path : ""} GROUP BY month ORDER BY month DESC LIMIT 14`,
       ),
       query(`SELECT COUNT(*) AS n FROM "${source}"${w}${path ? (w ? " AND " : " WHERE ") + path : ""}`),
+      query(`SELECT ${metricSQL(metricIds, context(filters))}, COUNT(*) AS n FROM ${metricFacts(filters, source)}${path ? (!["sessions", "sales", "checkins"].includes(source) && w ? " AND " : " WHERE ") + path : ""}`),
     ])
-      .then(async ([raw, t, count]) => {
+      .then(async ([raw, t, count, aggregate]) => {
         if (!current) return;
         setRecords(raw);
         setTotal(Number(count[0]?.n || 0));
+        setSummary(aggregate[0] || {});
         setTrend([...t].reverse());
         const originals = await sourceRows(source, raw);
         if (current) {
@@ -197,10 +201,10 @@ export function DrillPanel({
                 <MetricCard
                   key={id}
                   id={id}
-                  value={entry.values[id]}
+                  value={summary[id]}
                   trend={trend}
-                  evidence={entry.values}
-                  n={Number(entry.values.n)}
+                  evidence={summary}
+                  n={Number(summary.n || 0)}
                   compare={false}
                 />
               ))}

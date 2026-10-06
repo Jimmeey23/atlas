@@ -323,6 +323,8 @@ export const blueprints: Blueprint[] = [
     kpis: [
       "leads",
       "lead_conversion_rate",
+      "converted_leads",
+      "trials_completed",
       "response_time_hours",
       "untouched_leads",
       "touches",
@@ -333,6 +335,8 @@ export const blueprints: Blueprint[] = [
     columns: [
       "leads",
       "lead_conversion_rate",
+      "converted_leads",
+      "trials_completed",
       "response_time_hours",
       "touches",
       "untouched_leads",

@@ -63,9 +63,9 @@ export function contributesToMetric(row: Row, metric?: string, uniqueOutcomes = 
   if (metric === 'converted_members' || metric === 'conversion_rate') return referenceConverted(row) && (!uniqueOutcomes || identified);
   if (metric === 'retained_members' || metric === 'retention_rate') return referenceRetained(row) && (!uniqueOutcomes || identified);
   if (metric === 'unique_members') return identified;
-  if (metric === 'mature_30') return Boolean(row.mature) && identified;
-  if (metric === 'converted_30' || metric === 'conversion_30_rate') return Boolean(row.mature) && Boolean(row.converted_in_30) && identified;
-  if (metric === 'retained_30' || metric === 'retention_30_rate') return Boolean(row.mature) && Boolean(row.returned_in_30) && identified;
+  if (metric === 'mature_30') return identified;
+  if (metric === 'converted_30' || metric === 'conversion_30_rate') return Boolean(row.converted_in_30) && identified;
+  if (metric === 'retained_30' || metric === 'retention_30_rate') return Boolean(row.returned_in_30) && identified;
   if (metric === 'converted_same_month' || metric === 'conversion_same_month_rate') return Boolean(row.converted_same_month);
   if (metric === 'retained_same_month' || metric === 'retention_same_month_rate') return Boolean(row.returned_same_month);
   if (metric === 'conversion_span' || metric === 'median_span') return present('conversion_days') && Number(row.conversion_days) > 0;

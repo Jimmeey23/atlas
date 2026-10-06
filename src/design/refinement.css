@@ -259,3 +259,11 @@ main h1 { font-size: clamp(28px, 2.5vw, 40px); letter-spacing: -1.4px; font-weig
 @media (max-width: 1100px) { .signal-rail.open { width: 300px; } }
 @media (max-width: 950px) { .signal-rail.open { width: min(320px, calc(100vw - 24px)); } }
 @media (prefers-reduced-motion: reduce) { .logo-mark, .logo-mark i, .floor-logo:hover .logo-mark, .floor-logo:focus-visible .logo-mark, .signal-rail.open, .ai-summary-btn .ai-summary-mark, .ai-summary-btn .ai-summary-twinkle { animation: none !important; }.ai-summary-btn:hover { transform: none; } }
+
+.section-ai-summary-host { width: 100%; min-width: 0; }
+.section-ai-summary { margin: 14px 0; padding: 16px; border: 1px solid var(--hairline); border-radius: var(--radius, 12px); background: var(--surface-2); }
+.section-ai-summary > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.section-ai-summary > header > div { display: flex; align-items: center; gap: 8px; }
+.section-ai-summary .chat-answer { max-width: 100%; }
+.scorecard-cell { color: inherit; font: inherit; font-variant-numeric: tabular-nums; background: transparent; border: 0; padding: 4px; cursor: pointer; text-decoration: underline; text-decoration-color: var(--hairline); text-underline-offset: 4px; }
+.scorecard-cell:hover { color: var(--accent); }

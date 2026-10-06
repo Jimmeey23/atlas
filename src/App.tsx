@@ -55,6 +55,8 @@ import {
 } from "./data/analytics";
 import { blueprints } from "./data/blueprints";
 import { MetricCard } from "./components/MetricCard";
+import { LeadStageScorecard } from "./components/LeadStageScorecard";
+import { SalesScorecards } from "./components/SalesScorecards";
 import { Filters } from "./components/Filters";
 import { Register } from "./components/Register";
 import { NestedTable, type TreeRow } from "./components/NestedTable";
@@ -768,7 +770,7 @@ export default function App() {
             <>
               {s.tab === 6 && (
                 <>
-                  <RenewalCohorts version={version} />
+                  <RenewalCohorts version={version} onDrill={setDrill} />
                   <RetentionWorklists version={version} />
                 </>
               )}
@@ -803,7 +805,7 @@ export default function App() {
                     id={id}
                     value={analysis.total[id]}
                     previous={
-                      s.compare === "none" ? null : analysis.previous[id]
+                      analysis.previous[id]
                     }
                     trend={analysis.trend}
                     n={Number(s.tab === 0 && ["gross_revenue", "net_revenue"].includes(id) ? analysis.total.sales_records : id === "active_base" ? analysis.total.active_records : currentSnapshotMetrics.has(id) && s.tab === 6 ? analysis.total.current_records : ["new_clients", "conversion_rate"].includes(id) && s.tab === 0 ? analysis.total.growth_records : analysis.total.n || analysis.count)}
@@ -928,7 +930,7 @@ export default function App() {
                   <Chart tab={s.tab} data={analysis} secondary />
                 </Register>
               </div>
-              <Register
+              {s.tab === 8 ? <LeadStageScorecard version={version} onDrill={setDrill} /> : <Register
                 index="05"
                 title={
                   includeWeeklyPattern && analysis.heat.length
@@ -979,8 +981,9 @@ export default function App() {
                 ) : (
                   <Chart tab={s.tab} data={analysis} />
                 )}
-              </Register>
-              <MoMTable rows={analysis.trend} ids={bp.columns.slice(0, 9)} />
+              </Register>}
+              <MoMTable version={workspaceVersion} ids={bp.columns.slice(0, 9)} />
+              {s.tab === 4 && <SalesScorecards version={version} onDrill={setDrill} />}
               {s.tab === 5 && <AcquisitionMainTables version={version} />}
               <Register
                 index="07"

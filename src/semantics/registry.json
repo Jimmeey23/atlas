@@ -1065,9 +1065,9 @@
   {
     "id": "lead_conversion_rate",
     "label": "Lead win rate",
-    "expression": "(COUNT(*) FILTER (WHERE status='Won')) / NULLIF((COUNT(*)),0)",
+    "expression": "(COUNT(*) FILTER (WHERE lower(trim(stage))='membership sold')) / NULLIF((COUNT(*)),0)",
     "sources": [
-      "Leads.Status"
+      "Leads.Stage Name"
     ],
     "format": "percent",
     "domain": "people",
@@ -1092,11 +1092,12 @@
   {
     "id": "untouched_leads",
     "label": "Untouched leads",
-    "expression": "COUNT(*) FILTER (WHERE touches=0 AND date_diff('hour',TRY_CAST(date AS TIMESTAMP),TIMESTAMP '{today}')>48 AND status NOT IN ('Won','Lost'))",
+    "expression": "COUNT(*) FILTER (WHERE touches=0 AND date_diff('hour',TRY_CAST(date AS TIMESTAMP),TIMESTAMP '{today}')>48 AND lower(trim(COALESCE(stage,'')))<>'membership sold' AND (status NOT IN ('Lost','Disqualified') OR status IS NULL))",
     "sources": [
       "Leads.Follow Up 1 Date",
       "Leads.Created At",
-      "Leads.Status"
+      "Leads.Status",
+      "Leads.Stage Name"
     ],
     "format": "integer",
     "domain": "people",
@@ -1123,9 +1124,10 @@
   {
     "id": "open_leads",
     "label": "Open pipeline",
-    "expression": "COUNT(*) FILTER (WHERE status NOT IN ('Won','Lost') OR status IS NULL)",
+    "expression": "COUNT(*) FILTER (WHERE lower(trim(COALESCE(stage,'')))<>'membership sold' AND (status NOT IN ('Lost','Disqualified') OR status IS NULL))",
     "sources": [
-      "Leads.Status"
+      "Leads.Status",
+      "Leads.Stage Name"
     ],
     "format": "integer",
     "domain": "people",
@@ -1136,9 +1138,9 @@
   {
     "id": "pipeline_value",
     "label": "Estimated pipeline value",
-    "expression": "(COUNT(*) FILTER (WHERE status NOT IN ('Won','Lost') OR status IS NULL))*(COUNT(*) FILTER (WHERE status='Won'))::DOUBLE/NULLIF(COUNT(*),0)*(SELECT AVG(first_purchase) FROM new WHERE is_new)",
+    "expression": "(COUNT(*) FILTER (WHERE lower(trim(COALESCE(stage,'')))<>'membership sold' AND (status NOT IN ('Lost','Disqualified') OR status IS NULL)))*(COUNT(*) FILTER (WHERE lower(trim(stage))='membership sold'))::DOUBLE/NULLIF(COUNT(*),0)*(SELECT AVG(first_purchase) FROM new WHERE is_new)",
     "sources": [
-      "Leads.Status",
+      "Leads.Stage Name",
       "New.First Purchase Value"
     ],
     "format": "currency",
@@ -1636,5 +1638,31 @@
     "aggregation": "sum",
     "higherIsBetter": false,
     "minSample": 1
+  },
+  {
+    "id": "converted_leads",
+    "label": "Converted leads",
+    "expression": "COUNT(*) FILTER (WHERE lower(trim(stage))='membership sold')",
+    "sources": [
+      "Leads.Stage Name"
+    ],
+    "format": "integer",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "trials_completed",
+    "label": "Trials completed",
+    "expression": "COUNT(*) FILTER (WHERE lower(trim(stage))='trial completed')",
+    "sources": [
+      "Leads.Stage Name"
+    ],
+    "format": "integer",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
   }
 ]

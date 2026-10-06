@@ -8,12 +8,14 @@ export function Register({
   subtitle,
   actions,
   children,
+  dateIndependent = false,
 }: {
   index: string;
   title: string;
   subtitle?: string;
   actions?: ReactNode;
   children: ReactNode;
+  dateIndependent?: boolean;
 }) {
   const page = useStore((s) => s.tab);
   const config = usePreferences((s) => s.preferences.page[page]);
@@ -33,6 +35,7 @@ export function Register({
             subject={`${heading}`}
             detail={subtitle}
             buttonLabel="Summarise"
+            dateIndependent={dateIndependent}
           />
         </div>
       </div>

@@ -139,6 +139,8 @@ export const sqlTypes: Record<string, string> = {
   net: "DOUBLE",
   vat: "DOUBLE",
   discount: "DOUBLE",
+  discount_code: "VARCHAR",
+  purchase_type: "VARCHAR",
   units: "DOUBLE",
   sessions: "DOUBLE",
   empty: "DOUBLE",
@@ -403,6 +405,8 @@ export function normalise(
           : null
         : n("Discount Value In Currency", "Discount Value"),
       units: n("Sale Item Quantity"),
+      discount_code: str("Discount Code"),
+      purchase_type: str("Purchase Type"),
       sessions: roll
         ? n("TotalSessions", "Classes")
         : k === "payroll"
@@ -456,7 +460,7 @@ export function normalise(
         "Revenue Per Session",
       ),
       completed: n("Completed Sessions", "Total Sessions Completed"),
-      session_limit: n("Sessions Limit"),
+      session_limit: n("Sessions Limit", "Sec. Membership Total Classes"),
       remaining: n("Remaining Sessions"),
       attendance_rate: percent(g("Attendance Rate %")),
       cancel_rate: percent(

@@ -1,13 +1,22 @@
-import { renewalCohortSQL } from "../data/renewals";
+import { renewalCohortSQL, renewalDrillPredicate } from "../data/renewals";
+import type { TreeRow } from "./NestedTable";
+import { acquisitionPeriodLabel } from "../data/acquisition";
 import { useEffect, useState } from "react";
 import { query, type Row } from "../data/duckdb";
 import { where, today } from "../data/analytics";
 import { useStore } from "../state/store";
-export function RenewalCohorts({ version }: { version: number }) {
+export function RenewalCohorts({ version, onDrill }: { version: number; onDrill: (entry: TreeRow) => void }) {
   const filters = useStore((s) => s.filters);
   const transient = useStore((s) => s.transient);
   const [rows, setRows] = useState<Row[]>([]);
   const [error, setError] = useState("");
+  function drill(row: Row, state: string) {
+    const end = new Date(today() + "T00:00:00Z");
+    end.setUTCDate(0);
+    const cohortFilters = { ...filters, from: "", to: end.toISOString().slice(0, 10) };
+    const scope = where(cohortFilters, "lapsed", transient);
+    onDrill({ id: `renewal-${row.month}-${state}`, label: `${acquisitionPeriodLabel(row.month)} · ${state === 'due' ? 'Total due' : state === 'grace' ? 'Within grace' : state}`, source: "lapsed", filters: cohortFilters, metrics: ["memberships_count", "membership_revenue"], predicate: renewalDrillPredicate(scope, today(), String(row.month), state), path: [], values: row, children: [] });
+  }
   useEffect(() => {
     let active = true;
     setError("");
@@ -63,17 +72,17 @@ export function RenewalCohorts({ version }: { version: number }) {
             <tbody>
               {rows.map((r) => (
                 <tr key={String(r.month)}>
-                  <td>{r.month}</td>
+                  <td><button className="scorecard-cell" onClick={() => drill(r, 'due')}>{acquisitionPeriodLabel(r.month)}</button></td>
                   {["due", "renewed", "lapsed", "grace", "upcoming"].map(
                     (k) => (
-                      <td key={k}>{r[k]}</td>
+                      <td key={k}><button className="scorecard-cell" aria-label={`Inspect ${k} memberships for ${r.month}`} onClick={() => drill(r, k)}>{r[k]}</button></td>
                     ),
                   )}
                   <td>
-                    {Number(r.due)
+                    <button className="scorecard-cell" aria-label={`Inspect renewal rate for ${r.month}`} onClick={() => drill(r, 'due')}>{Number(r.due)
                       ? ((100 * Number(r.renewed)) / Number(r.due)).toFixed(1) +
                         "%"
-                      : "—"}
+                      : "—"}</button>
                   </td>
                 </tr>
               ))}

@@ -2,168 +2,92 @@ import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 import { WandSparkles, X, Sparkles } from "lucide-react";
 import { useStore, tabs } from "../state/store";
+import { usePreferences } from "../state/preferences";
 import { ChatAnswer } from "./ChatAnswer";
+import { historicalFilters, historicalTransient } from "../data/periods";
+import { today } from "../data/analytics";
 
-function buildPrompt(subject: string, detail?: string, scope?: string) {
-  return [
-    `Write an executive-quality, context-aware summary for this dashboard section: ${subject}.`,
-    detail ? `Displayed data focus: ${detail}.` : "",
-    scope ? `Current scope and filters: ${scope}.` : "",
-    "Return:",
-    "1) A clear summary in 2-3 sentences.",
-    "2) Three evidence-backed insights with metric context and denominators where relevant.",
-    "3) Two concrete recommendations with priority and expected operational impact.",
-    "4) A short caution on data coverage/freshness assumptions.",
-    "Keep the writing polished, practical and decision-oriented.",
-  ]
-    .filter(Boolean)
-    .join("\n");
-}
-
-export function DataInsightAction({
-  subject,
-  detail,
-  buttonLabel = "Section insights",
-  compact = false,
-}: {
-  subject: string;
-  detail?: string;
-  buttonLabel?: string;
-  compact?: boolean;
+export function DataInsightAction({ subject, detail, buttonLabel = "Section insights", compact = false, dateIndependent = false }: {
+  subject: string; detail?: string; buttonLabel?: string; compact?: boolean; dateIndependent?: boolean;
 }) {
   const store = useStore();
-  const [open, setOpen] = useState(false);
+  const key = JSON.stringify([store.tab, subject, detail || ""]);
+  const saved = usePreferences(s => s.preferences.sectionInsights?.[key]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [answer, setAnswer] = useState("");
   const anchor = useRef<HTMLButtonElement>(null);
-  const [pos, setPos] = useState({ left: 16, top: 80, below: true });
-
-  const updatePosition = () => {
-    const rect = anchor.current?.getBoundingClientRect();
-    if (!rect) return;
-    const width = Math.min(460, window.innerWidth - 32);
-    const estHeight = 420;
-    const below = rect.bottom + 10 + estHeight < window.innerHeight;
-    setPos({
-      left: Math.max(16, Math.min(rect.right - width, window.innerWidth - width - 16)),
-      top: below ? rect.bottom + 10 : Math.max(16, rect.top - 10 - estHeight),
-      below,
-    });
-  };
+  const request = useRef<AbortController>();
+  const [target, setTarget] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
-    if (!open) return;
-    updatePosition();
-    const key = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        setOpen(false);
-        anchor.current?.focus();
-      }
-    };
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, true);
-    window.addEventListener("keydown", key, true);
-    return () => {
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, true);
-      window.removeEventListener("keydown", key, true);
-    };
-  }, [open]);
+    const button = anchor.current;
+    if (!button) return;
+    const host = document.createElement("div");
+    host.className = "section-ai-summary-host";
+    const metricHeading = button.closest(".metric-strip-head");
+    if (metricHeading) metricHeading.nextElementSibling?.after(host);
+    else (button.closest(".register,.pulse-wrapper,.insight,.intelligence-panel,section") || button.parentElement)?.append(host);
+    setTarget(host);
+    setError("");
+    setBusy(false);
+    return () => { request.current?.abort(); host.remove(); };
+  }, [key]);
 
-  const run = async () => {
-    if (open) {
-      setOpen(false);
-      return;
-    }
-    setOpen(true);
-    if (answer) return;
+  function save(text: string, scope: string) {
+    const prefs = usePreferences.getState();
+    prefs.update({ sectionInsights: { ...prefs.preferences.sectionInsights, [key]: { text, scope, generatedAt: new Date().toISOString() } } });
+  }
+  function remove() {
+    const prefs = usePreferences.getState();
+    const next = { ...prefs.preferences.sectionInsights };
+    delete next[key];
+    prefs.update({ sectionInsights: next });
+    setError("");
+  }
+  async function run() {
+    if (busy) return;
     setBusy(true);
     setError("");
-    const scope = `${tabs[store.tab]} · ${store.filters.location?.join(", ") || "All studios"} · ${store.filters.from || "all dates"}${store.filters.to ? ` to ${store.filters.to}` : ""}`;
+    const controller = new AbortController();
+    request.current = controller;
+    const filters = dateIndependent ? historicalFilters(store.filters, today()) : store.filters;
+    const cross = dateIndependent ? historicalTransient(store.transient) : store.transient;
+    const dimensions = ["trainer", "format", "source", "category", "day", "time"] as const;
+    const filterLabels = dimensions.filter(field => filters[field].length).map(field => `${field}: ${filters[field].join(", ")}`);
+    if (filters.memberType !== "all") filterLabels.push(`Member type: ${filters.memberType}`);
+    if (filters.sessionType !== "all") filterLabels.push(`Session type: ${filters.sessionType}`);
+    if (filters.capacityBand !== "all") filterLabels.push(`Capacity: ${filters.capacityBand}`);
+    filterLabels.push(filters.imports ? "Imports included" : "Imports excluded");
+    const scope = `${tabs[store.tab]} · ${filters.location.join(", ") || "All studios"} · ${filters.from || "all dates"}${filters.to ? ` to ${filters.to}` : ""} · ${filterLabels.join(" · ")}`;
     try {
       const response = await fetch("/api/intelligence/ask", {
-        method: "POST",
+        method: "POST", signal: controller.signal,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: buildPrompt(subject, detail, scope),
-          page: store.tab,
-          filters: { ...store.filters, cross: store.transient },
-          saveHistory: false,
-          history: [],
+          message: [`Write an evidence-backed summary for this dashboard element: ${subject}.`, detail ? `Displayed focus: ${detail}.` : "", `Scope: ${scope}.`, "Query the source data. Include a short summary, three specific insights, two practical recommendations and relevant denominator/freshness caveats. Do not invent figures."].filter(Boolean).join("\n"),
+          page: store.tab, filters: { ...filters, cross }, saveHistory: false, history: [],
         }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to generate.");
-      setAnswer(String(data.answer || ""));
+      const answer = String(data.answer || "").trim();
+      if (!answer) throw new Error("No content returned. Please retry.");
+      if (!controller.signal.aborted) save(answer, `${scope}${cross.length ? ' · ' + cross.map(t => `${t.field}: ${t.value}`).join(', ') : ''}`);
     } catch (e) {
-      setError(String(e));
+      if (!controller.signal.aborted) setError(String(e));
     } finally {
-      setBusy(false);
+      if (!controller.signal.aborted) setBusy(false);
     }
-  };
-
-  return (
-    <>
-      <button
-        ref={anchor}
-        className={`ai-insight-btn ai-summary-btn ${compact ? "" : "with-label"} ${open ? "is-open" : ""} ${busy ? "is-thinking" : ""}`}
-        aria-label={`Generate insights for ${subject}`}
-        aria-expanded={open}
-        title={`Generate an AI summary for ${subject}`}
-        onClick={() => void run()}
-      >
-        <span className="ai-summary-mark" aria-hidden="true"><WandSparkles size={16} strokeWidth={1.8} /><span className="ai-summary-twinkle" /></span>
-        {!compact && buttonLabel}
-      </button>
-      {open &&
-        createPortal(
-          <div
-            className="insight-popover"
-            style={{
-              position: "fixed",
-              left: pos.left,
-              top: pos.top,
-              width: Math.min(460, window.innerWidth - 32),
-              maxHeight: Math.min(560, window.innerHeight - 32),
-            }}
-            role="dialog"
-            aria-label={`AI insights for ${subject}`}
-          >
-            <header>
-              <div>
-                <span className="insight-popover-eyebrow">
-                  <Sparkles size={11} /> AI section summary
-                </span>
-                <h3>{subject}</h3>
-                {detail && <p className="small">{detail}</p>}
-              </div>
-              <button
-                className="ai-insight-btn"
-                aria-label="Close insights"
-                onClick={() => setOpen(false)}
-              >
-                <X size={13} />
-              </button>
-            </header>
-            <div className="insight-popover-body">
-              {busy ? (
-                <div className="insight-loading" role="status">
-                  <span className="loader-ring small" aria-hidden="true" />
-                  Reading this view with your filters…
-                </div>
-              ) : error ? (
-                <p className="warn">{error}</p>
-              ) : answer ? (
-                <ChatAnswer text={answer} />
-              ) : (
-                <p className="small">No response available yet.</p>
-              )}
-            </div>
-          </div>,
-          document.body,
-        )}
-    </>
-  );
+  }
+  return <>
+    <button ref={anchor} className={`ai-insight-btn ai-summary-btn ${compact ? "" : "with-label"} ${busy ? "is-thinking" : ""}`} aria-label={`Generate insights for ${subject}`} title={`Generate an AI summary for ${subject}`} disabled={busy} onClick={() => void run()}>
+      <span className="ai-summary-mark" aria-hidden="true"><WandSparkles size={16} strokeWidth={1.8} /><span className="ai-summary-twinkle" /></span>{!compact && buttonLabel}
+    </button>
+    {target && (saved || busy || error) && createPortal(<article className="section-ai-summary" aria-label={`AI content for ${subject}`}>
+      <header><span className="icon"><Sparkles size={14} />AI section insights</span><div>{saved && <button className="button" disabled={busy} onClick={() => void run()}>Regenerate</button>}<button className="icon-button" aria-label={`Remove AI content for ${subject}`} disabled={busy} onClick={remove}><X size={14} /></button></div></header>
+      {busy && <p role="status">Reading this element with your filters…</p>}
+      {error && <p role="alert" className="warn">{error}</p>}
+      {saved && <><p className="small">Generated for {saved.scope} · {new Date(saved.generatedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</p><ChatAnswer text={saved.text} /></>}
+    </article>, target)}
+  </>;
 }

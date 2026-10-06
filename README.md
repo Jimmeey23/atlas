@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-Vite normally uses `http://localhost:5173` and selects the next free port if needed. The Sheets gateway uses `http://127.0.0.1:8787`. The verified workspace instance uses **http://localhost:5174**. Node 20 or newer is required.
+Development starts the frontend on port 5173 and the Sheets gateway on port 8787. If either port is occupied, the server selects the next available port and prints its URL. The frontend API proxy automatically follows the selected gateway port. Set `PORT` for the preferred gateway port and `VITE_PORT` (or `npm run dev -- --port 5175`) for the preferred frontend port. Node 20 or newer is required.
 
 ```bash
 npm run build

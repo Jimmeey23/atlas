@@ -98,12 +98,19 @@ export function MetricCard({
   const comparisonMode = scope.compare;
   const isSnapshot = currentSnapshotMetrics.has(id);
   const tooltipId = useId();
-  const priorDates = comparisonDates(scope.filters.from, scope.filters.to, comparisonMode);
+  const priorDates = comparisonDates(scope.filters.from, scope.filters.to, comparisonMode === "none" ? "prior" : comparisonMode);
   const note = metricNotes[id];
   const sourceKeys = [...new Set(m.sources.map((column) => column.split(/[. →]/)[0].toLowerCase()))];
   const sourceInfo = sourceKeys.map((key) => ({ definition: sheets.find((sheet) => sheet.key === key), status: health[key] })).filter((item) => item.definition);
   const trendValues = trend.map((row) => row[id] == null ? null : Number(row[id])).filter((v): v is number => v != null && Number.isFinite(v));
   const canCompare = compare && comparisonMode !== "none" && !isSnapshot && value != null && previous != null;
+  const comparisonReason = isSnapshot
+    ? "Current snapshot only; historical values are not recorded."
+      : !scope.filters.from || !scope.filters.to
+        ? "Select a start and end date to define the comparison period."
+        : previous == null
+          ? "No comparable source value exists for this period and these filters."
+          : "";
   const numerator = evidence?.[`${id}__numerator`];
   const denominator = evidence?.[`${id}__denominator`];
 
@@ -219,9 +226,10 @@ export function MetricCard({
             >
               <div className="metric-tooltip-head"><div><span className="metric-eyebrow">Metric intelligence</span><strong>{m.label}</strong></div><button className="icon-button" aria-label="Close metric details" onClick={() => setInfo(false)}><X size={16} /></button></div>
               <p className="metric-explanation">{note?.definition || `${m.label} is calculated from the source fields below using ${m.aggregation} aggregation.`}</p>
-              <div className="metric-tooltip-values"><div><small>Selected scope</small><strong>{fmt(id, value, true)}</strong></div><div><small>{comparisonMode === "year" ? "Same period last year" : "Previous period"}</small><strong>{canCompare ? fmt(id, previous, true) : "Unavailable"}</strong></div></div>
+              <div className="metric-tooltip-values"><div><small>Selected scope</small><strong>{fmt(id, value, true)}</strong></div><div><small>{comparisonMode === "year" ? "Same period last year" : "Previous period"}</small><strong>{!isSnapshot && scope.filters.from && scope.filters.to && previous != null ? fmt(id, previous, true) : "Unavailable"}</strong></div></div>
+              {comparisonReason && <p className="small">{comparisonReason}</p>}
               {numerator != null && denominator != null && <div className="metric-calculation"><span>{note?.numerator}: <b>{id === "revenue_per_checkin" ? fmt("revenue", numerator, true) : Number(numerator).toLocaleString("en-IN", {maximumFractionDigits: 1})}</b></span><span>{note?.denominator}: <b>{Number(denominator).toLocaleString("en-IN", {maximumFractionDigits: 1})}</b></span></div>}
-              <dl className="metric-facts"><div><dt>Period</dt><dd>{isSnapshot ? "All dates · latest snapshot" : `${scope.filters.from || "All dates"} → ${scope.filters.to || "Present"}`}</dd></div>{canCompare && <div><dt>Comparison</dt><dd>{priorDates.from || "All dates"} → {priorDates.to || "Present"}</dd></div>}<div><dt>Studios</dt><dd>{scope.filters.location.join(", ") || "All studios"}</dd></div><div><dt>Evidence sample</dt><dd>{Number(n).toLocaleString("en-IN")}{n < m.minSample ? " · below ranking minimum" : ""}</dd></div></dl>
+              <dl className="metric-facts"><div><dt>Period</dt><dd>{isSnapshot ? "All dates · latest snapshot" : `${scope.filters.from || "All dates"} → ${scope.filters.to || "Present"}`}</dd></div>{!isSnapshot && scope.filters.from && scope.filters.to && <div><dt>Comparison</dt><dd>{priorDates.from || "All dates"} → {priorDates.to || "Present"}</dd></div>}<div><dt>Studios</dt><dd>{scope.filters.location.join(", ") || "All studios"}</dd></div><div><dt>Evidence sample</dt><dd>{Number(n).toLocaleString("en-IN")}{n < m.minSample ? " · below ranking minimum" : ""}</dd></div></dl>
               {trendValues.length > 1 && !isSnapshot && <div className="metric-history"><span className="metric-eyebrow">{trendValues.length} completed months · same non-date filters</span><div><span>Low <b>{fmt(id, Math.min(...trendValues))}</b></span><span>High <b>{fmt(id, Math.max(...trendValues))}</b></span><span>Latest <b>{fmt(id, trendValues.at(-1))}</b></span></div></div>}
               {(warning || note?.caveat || blueprints[scope.tab].source === "payroll") && <p className="metric-caveat">{warning || note?.caveat || "Payroll is reported by month; partial-month date ranges cannot represent daily payroll."}</p>}
               <details className="metric-method"><summary>Calculation & source evidence</summary><code>{m.description}</code>{sourceInfo.map(({definition, status}) => <p key={definition!.key}><a href={`https://docs.google.com/spreadsheets/d/${definition!.id}/edit`} target="_blank" rel="noreferrer">{definition!.title} ↗</a> · {status?.fetchedAt ? `Snapshot ${new Date(status.fetchedAt).toLocaleString("en-IN", {timeZone: "Asia/Kolkata"})}` : "Source not loaded"}</p>)}<ul>{m.sources.map((source) => <li key={source}>{source}</li>)}</ul><p>Ranking minimum: {m.minSample}. Rates use aggregate numerators and denominators.</p></details>

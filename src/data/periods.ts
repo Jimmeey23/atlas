@@ -63,3 +63,17 @@ export function comparisonDates(from: string, to: string, mode: string) {
   const length = end.getTime() - start.getTime() + 86400000;
   return {from: new Date(start.getTime() - length).toISOString().slice(0,10), to: new Date(end.getTime() - length).toISOString().slice(0,10)};
 }
+
+/** Fixed completed-month history, preserving every non-date filter. */
+export function historicalFilters<T extends { from: string; to: string }>(filters: T, now: string, months = 26): T {
+  const date = new Date(now + "T00:00:00Z");
+  return {
+    ...filters,
+    from: new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() - months, 1)).toISOString().slice(0, 10),
+    to: new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 0)).toISOString().slice(0, 10),
+  };
+}
+
+export function historicalTransient<T extends { field: string }>(filters: T[]): T[] {
+  return filters.filter(item => !["date", "month", "from", "to"].includes(item.field));
+}

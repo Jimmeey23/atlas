@@ -4,6 +4,7 @@ import { query, quote, type Row, health } from "../data/duckdb";
 import { where, today } from "../data/analytics";
 import { acquisitionAggregate, instructorAcquisitionAggregate, acquisitionFactsSQL, acquisitionMeasures, acquisitionMonths, acquisitionPeriodLabel, acquisitionDimensions, acquisitionYoYMonths, acquisitionPivotSQL, type AcquisitionDimension, priorMonth } from "../data/acquisition";
 import { useStore } from "../state/store";
+import { historicalFilters, historicalTransient } from "../data/periods";
 import { fmt } from "../semantics/formats";
 import { AcquisitionTableShell } from "./AcquisitionTableShell";
 import { AcquisitionClientTypes } from "./AcquisitionClientTypes";
@@ -70,7 +71,7 @@ function OutcomeBadge({ value }: { value: unknown }) {
 }
 function DefinitionNote() {
   return <details className="acq-definition"><summary><CircleHelp size={14} />Metric definitions & coverage</summary>
-    <p>Cohort tables count source records; instructor outcomes count distinct identified members. Conversion excludes Money Credits-only purchase lists. Rates use new-client denominators. Outcomes reflect the latest source status. 30-day rates use first visits at least 30 days old; 30-day retained means a recorded second visit within 30 days. Missing outcome or timing fields can understate rates; unavailable timing stays blank.</p>
+    <p>Cohort tables count source records; instructor outcomes count distinct identified members. Conversion excludes Money Credits-only purchase lists. Rates use new-client denominators. Outcomes reflect the latest source status. Same-month outcomes require an eligible conversion purchase on or after the first visit in that same calendar month and year. Retained also requires the source Retained status. These outcomes do not require 30 elapsed days; missing purchase dates stay unavailable.</p>
     <p>Spend and LTV use source-reported values per cohort record. Total LTV sums cohort records; members can appear in multiple cohorts. Totals recompute from source records rather than averaging group rates. These are not historical cash collections. Rate changes use percentage points.</p>
   </details>;
 }
@@ -105,17 +106,16 @@ function CohortComparison({ mode, version, onDrill }: { mode: "mom" | "yoy"; ver
   const months = mode === "mom" ? acquisitionMonths(today()).reverse() : acquisitionYoYMonths(today());
   const monthGroups = mode === "yoy" ? [...new Set(months.map(month => month.slice(5)))].map(key => ({ key, label: acquisitionPeriodLabel(months.find(month => month.slice(5) === key)).split(" - ")[0], size: months.filter(month => month.slice(5) === key).length })) : [];
   const measure = acquisitionMeasures.find(m => m[0] === metric)!;
+  const historyScope = where(historicalFilters(filters, today()), "new", historicalTransient(transient));
   useEffect(() => {
     let active = true;
     setLoading(true); setError("");
-    const start = acquisitionMonths(today(), 26)[0];
-    const end = new Date(today() + "T00:00:00Z"); end.setUTCDate(0);
-    const scope = where({ ...filters, from: start + "-01", to: end.toISOString().slice(0, 10) }, "new", transient);
+    const scope = historyScope;
     Promise.all([query(acquisitionPivotSQL(scope, today(), group, child)), query(acquisitionPivotSQL(scope, today(), group, child, selectedValues))])
       .then(([all, selected]) => { if (active) { setAllRows(all); setRows(selected); setLoading(false); } })
       .catch(e => { if (active) { setError(String(e)); setLoading(false); } });
     return () => { active = false; };
-  }, [filters, transient, version, group, child, selectedValues]);
+  }, [historyScope, version, group, child, selectedValues]);
   const values = useMemo(() => [...new Set(allRows.filter(r => !r.is_total && r.is_parent).map(r => String(r.parent)))].sort(), [allRows]);
   const parentRows = useMemo(() => rows.filter(r => r.is_parent && !r.is_total), [rows]);
   const lookup = useMemo(() => new Map(rows.map(r => [JSON.stringify([r.is_total ? null : r.parent, r.is_parent ? null : r.child, r.month]), r])), [rows]);
@@ -129,9 +129,7 @@ function CohortComparison({ mode, version, onDrill }: { mode: "mom" | "yoy"; ver
   function onSort(key: string) { setSort(s => ({ key, desc: s.key === key ? !s.desc : key !== "parent" })); }
   function toggle(value: string) { setExpanded(current => current.includes(value) ? current.filter(x => x !== value) : [...current, value]); }
   function drillCell(parent: string | null, childValue: string | null, month: string) {
-    const start = acquisitionMonths(today(), 26)[0];
-    const end = new Date(today() + "T00:00:00Z"); end.setUTCDate(0);
-    const scope = where({ ...filters, from: start + "-01", to: end.toISOString().slice(0, 10) }, "new", transient);
+    const scope = historyScope;
     const parentSQL = acquisitionDimensions.find(d => d.key === group)!.sql;
     const childSQL = acquisitionDimensions.find(d => d.key === child)!.sql;
     const parts = [`month=${quote(month)}`];

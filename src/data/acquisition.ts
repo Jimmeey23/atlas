@@ -1,17 +1,17 @@
-// Cohort outcomes are the latest reported source state, grouped by first visit.
+// Cohort outcomes are grouped by first visit. Legacy _30 IDs remain stable for saved table preferences; their displayed definitions now use calendar-month purchases.
 export const acquisitionMeasures = [
   ['cohort_rows', 'Clients / trials', 'integer'],
   ['unique_members', 'Unique members', 'integer'],
   ['newcomers', 'New clients', 'integer'],
   ['converted_members', 'Converted members', 'integer'],
   ['retained_members', 'Retained members', 'integer'],
-  ['converted_30', '30-day converted', 'integer'],
-  ['retained_30', '30-day retained (return)', 'integer'],
-  ['mature_30', '30-day eligible members', 'integer'],
+  ['converted_30', 'Same-month converted', 'integer'],
+  ['retained_30', 'Same-month converted & retained', 'integer'],
+  ['mature_30', 'Calendar-month cohort members', 'integer'],
   ['conversion_rate', 'Conversion rate', 'percent'],
   ['retention_rate', 'Retention rate', 'percent'],
-  ['conversion_30_rate', '30-day conversion rate', 'percent'],
-  ['retention_30_rate', '30-day return rate', 'percent'],
+  ['conversion_30_rate', 'Same-month conversion rate', 'percent'],
+  ['retention_30_rate', 'Same-month retained rate', 'percent'],
   ['avg_ltv', 'Average LTV', 'currency'],
   ['total_ltv', 'Total LTV', 'currency'],
   ['avg_spend', 'Average spend / purchase', 'currency'],
@@ -26,7 +26,7 @@ export const acquisitionMeasures = [
   ['converted_same_month', 'First-month converted', 'integer'],
   ['retained_same_month', 'First-month retained', 'integer'],
   ['conversion_same_month_rate', 'First-month conversion rate', 'percent'],
-  ['retention_same_month_rate', 'First-month return rate', 'percent'],
+  ['retention_same_month_rate', 'First-month retained rate', 'percent'],
 ] as const;
 
 export function acquisitionFactsSQL(scope: string, today: string) {
@@ -38,10 +38,10 @@ export function acquisitionFactsSQL(scope: string, today: string) {
     regexp_matches(lower(COALESCE(format,'')), 'host|p57|birthday|rugby|lrs') AS ref_hosted,
     TRY_CAST(date AS DATE) <= DATE '${today}' - INTERVAL 30 DAY AS mature
     FROM new${scope}), outcomes AS (SELECT *, trim(COALESCE(conversion,''))='Converted' AND ref_membership_eligible AS ref_converted FROM flags)
-    SELECT *, ref_converted AND conversion_days BETWEEN 0 AND 30 AS converted_in_30,
-      second_visit_days BETWEEN 0 AND 30 AS returned_in_30,
-      ref_converted AND substr(first_purchase_date,1,7)=month AS converted_same_month,
-      second_visit_days>=0 AND strftime(TRY_CAST(date AS DATE)+TRY_CAST(second_visit_days AS INTEGER)*INTERVAL 1 DAY,'%Y-%m')=month AS returned_same_month
+    SELECT *, ref_converted AND TRY_CAST(first_purchase_date AS DATE)>=TRY_CAST(date AS DATE) AND substr(first_purchase_date,1,7)=substr(date,1,7) AS converted_in_30,
+      ref_converted AND ref_retained AND TRY_CAST(first_purchase_date AS DATE)>=TRY_CAST(date AS DATE) AND substr(first_purchase_date,1,7)=substr(date,1,7) AS returned_in_30,
+      ref_converted AND TRY_CAST(first_purchase_date AS DATE)>=TRY_CAST(date AS DATE) AND substr(first_purchase_date,1,7)=substr(date,1,7) AS converted_same_month,
+      ref_converted AND ref_retained AND TRY_CAST(first_purchase_date AS DATE)>=TRY_CAST(date AS DATE) AND substr(first_purchase_date,1,7)=substr(date,1,7) AS returned_same_month
     FROM outcomes`;
 }
 // Reference cohort tables count source rows; instructor tables explicitly use unique identities.
@@ -50,13 +50,13 @@ export const acquisitionAggregate = `COUNT(*) AS cohort_rows,
   COUNT(*) FILTER (WHERE ref_new) AS newcomers,
   CASE WHEN COUNT(conversion)>0 THEN COUNT(*) FILTER (WHERE ref_converted) END AS converted_members,
   CASE WHEN COUNT(retention)>0 THEN COUNT(*) FILTER (WHERE ref_retained) END AS retained_members,
-  CASE WHEN COUNT(conversion_days) FILTER (WHERE mature)>0 THEN COUNT(DISTINCT member_id) FILTER (WHERE mature AND converted_in_30) END AS converted_30,
-  CASE WHEN COUNT(second_visit_days) FILTER (WHERE mature)>0 THEN COUNT(DISTINCT member_id) FILTER (WHERE mature AND returned_in_30) END AS retained_30,
-  COUNT(DISTINCT member_id) FILTER (WHERE mature) AS mature_30,
+  CASE WHEN COUNT(first_purchase_date)>0 THEN COUNT(DISTINCT member_id) FILTER (WHERE converted_in_30) END AS converted_30,
+  CASE WHEN COUNT(first_purchase_date)>0 AND COUNT(retention)>0 THEN COUNT(DISTINCT member_id) FILTER (WHERE returned_in_30) END AS retained_30,
+  COUNT(DISTINCT member_id) AS mature_30,
   CASE WHEN COUNT(conversion)>0 THEN COUNT(*) FILTER (WHERE ref_converted)::DOUBLE/NULLIF(COUNT(*) FILTER (WHERE ref_new),0) END AS conversion_rate,
   CASE WHEN COUNT(retention)>0 THEN COUNT(*) FILTER (WHERE ref_retained)::DOUBLE/NULLIF(COUNT(*) FILTER (WHERE ref_new),0) END AS retention_rate,
-  CASE WHEN COUNT(conversion_days) FILTER (WHERE mature)>0 THEN COUNT(DISTINCT member_id) FILTER (WHERE mature AND converted_in_30)::DOUBLE/NULLIF(COUNT(DISTINCT member_id) FILTER (WHERE mature),0) END AS conversion_30_rate,
-  CASE WHEN COUNT(second_visit_days) FILTER (WHERE mature)>0 THEN COUNT(DISTINCT member_id) FILTER (WHERE mature AND returned_in_30)::DOUBLE/NULLIF(COUNT(DISTINCT member_id) FILTER (WHERE mature),0) END AS retention_30_rate,
+  CASE WHEN COUNT(first_purchase_date)>0 THEN COUNT(DISTINCT member_id) FILTER (WHERE converted_in_30)::DOUBLE/NULLIF(COUNT(DISTINCT member_id),0) END AS conversion_30_rate,
+  CASE WHEN COUNT(first_purchase_date)>0 AND COUNT(retention)>0 THEN COUNT(DISTINCT member_id) FILTER (WHERE returned_in_30)::DOUBLE/NULLIF(COUNT(DISTINCT member_id),0) END AS retention_30_rate,
   AVG(ltv) AS avg_ltv, SUM(ltv) AS total_ltv, AVG(avg_purchase_value) AS avg_spend,
   AVG(first_purchase) FILTER (WHERE ref_converted AND first_purchase>0) AS first_purchase,
   AVG(post_trial_ltv) AS post_trial_ltv,
@@ -66,9 +66,9 @@ export const acquisitionAggregate = `COUNT(*) AS cohort_rows,
   AVG(visits_post) FILTER (WHERE visits_post>0) AS visits_post, AVG(post_trial_purchases) AS purchases_post,
   SUM(class_no) AS source_visits,
   CASE WHEN COUNT(first_purchase_date)>0 THEN COUNT(*) FILTER (WHERE converted_same_month) END AS converted_same_month,
-  CASE WHEN COUNT(second_visit_days)>0 THEN COUNT(*) FILTER (WHERE returned_same_month) END AS retained_same_month,
+  CASE WHEN COUNT(first_purchase_date)>0 AND COUNT(retention)>0 THEN COUNT(*) FILTER (WHERE returned_same_month) END AS retained_same_month,
   CASE WHEN COUNT(first_purchase_date)>0 THEN COUNT(*) FILTER (WHERE converted_same_month)::DOUBLE/NULLIF(COUNT(*) FILTER (WHERE ref_new),0) END AS conversion_same_month_rate,
-  CASE WHEN COUNT(second_visit_days)>0 THEN COUNT(*) FILTER (WHERE returned_same_month)::DOUBLE/NULLIF(COUNT(*) FILTER (WHERE ref_new),0) END AS retention_same_month_rate`;
+  CASE WHEN COUNT(first_purchase_date)>0 AND COUNT(retention)>0 THEN COUNT(*) FILTER (WHERE returned_same_month)::DOUBLE/NULLIF(COUNT(*) FILTER (WHERE ref_new),0) END AS retention_same_month_rate`;
 
 export function acquisitionMonths(today: string, count = 14) {
   const now = new Date(today + 'T00:00:00Z');
