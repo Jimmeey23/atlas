@@ -29,11 +29,24 @@ export const reportFileName = (model: ReportModel) =>
  * The export is taken from the live element rather than re-rendered, so what
  * downloads is what was reviewed on screen.
  */
-export function serialiseReport(element: HTMLElement, model: ReportModel) {
+export async function serialiseReport(element: HTMLElement, model: ReportModel) {
   const clone = element.cloneNode(true) as HTMLElement;
   // The in-app chrome has no meaning in a file; the sticky contents rail does.
   clone.setAttribute("data-report-theme", "light");
   clone.querySelectorAll("[data-export='omit']").forEach((node) => node.remove());
+  const embedded = new Map<string, Promise<string>>();
+  await Promise.all(Array.from(clone.querySelectorAll('img')).map(async img => {
+    const source = img.src;
+    if (source.startsWith('data:')) return;
+    if (!embedded.has(source)) embedded.set(source, (async () => {
+      const response = await fetch(source);
+      if (!response.ok) throw new Error('A report image could not be embedded. Retry the export.');
+      const blob = await response.blob();
+      return new Promise<string>((resolve,reject) => { const reader=new FileReader(); reader.onload=()=>resolve(String(reader.result)); reader.onerror=()=>reject(new Error('A report image could not be read.')); reader.readAsDataURL(blob); });
+    })());
+    img.src = await embedded.get(source)!;
+    img.removeAttribute('loading');
+  }));
   const title = `${model.scope.studio} — ${monthLabel(model.scope.month)} performance report`;
   return [
     "<!doctype html>",
@@ -58,8 +71,8 @@ export function serialiseReport(element: HTMLElement, model: ReportModel) {
   ].join("\n");
 }
 
-export function downloadReport(element: HTMLElement, model: ReportModel) {
-  const blob = new Blob([serialiseReport(element, model)], {
+export async function downloadReport(element: HTMLElement, model: ReportModel) {
+  const blob = new Blob([await serialiseReport(element, model)], {
     type: "text/html;charset=utf-8",
   });
   const url = URL.createObjectURL(blob);
@@ -79,30 +92,22 @@ export function downloadReport(element: HTMLElement, model: ReportModel) {
  * searchable and sharp at any zoom — which a canvas rasteriser does not, and
  * costs no vendor bundle.
  */
-export function printReport(element: HTMLElement, model: ReportModel) {
+export async function printReport(element: HTMLElement, model: ReportModel) {
+  const html = await serialiseReport(element, model);
   const frame = document.createElement("iframe");
   frame.setAttribute("aria-hidden", "true");
   frame.style.cssText = "position:fixed;right:0;bottom:0;width:1100px;height:800px;left:-12000px;border:0;";
   document.body.append(frame);
-  const doc = frame.contentDocument;
-  if (!doc) {
-    frame.remove();
-    throw new Error("The browser refused a print frame. Use Download HTML and print the file.");
-  }
-  doc.open();
-  doc.write(serialiseReport(element, model));
-  doc.close();
-  const run = async () => {
+  try {
+    const doc=frame.contentDocument;
+    if (!doc) throw new Error("The browser refused a print frame. Use Download HTML and print the file.");
+    doc.open(); doc.write(html); doc.close();
     await doc.fonts?.ready;
-    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    const target = frame.contentWindow;
-    if (!target) { frame.remove(); return; }
-    // Keep the document alive until the print dialog closes; early removal
-    // can produce blank or partially laid-out PDFs in some browsers.
-    target.addEventListener("afterprint", () => frame.remove(), { once: true });
-    target.focus();
-    target.print();
-  };
-  if (doc.readyState === "complete") void run();
-  else frame.addEventListener("load", () => void run(), { once: true });
+    await Promise.all(Array.from(doc.images).map(img=>img.decode()));
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    const target=frame.contentWindow;
+    if (!target) throw new Error('The print frame is unavailable. Retry the export.');
+    target.addEventListener('afterprint',()=>frame.remove(),{once:true});
+    target.focus(); target.print();
+  } catch(error) { frame.remove(); throw error; }
 }

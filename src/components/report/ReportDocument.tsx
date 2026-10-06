@@ -1,10 +1,13 @@
+import logo from "../../assets/report/logo.png";
+import methodPhoto from "../../assets/report/method.jpg";
+import portraitPhoto from "../../assets/report/portrait.jpg";
 import { forwardRef } from "react";
 import { chapters, chapterNumber } from "../../report/chapters";
 import { monthLabel } from "../../report/compute";
 import { definition } from "../../report/definitions";
 import { reportFmt as fmt } from "../../report/definitions";
 import type { ReportModel } from "../../report/model";
-import { GroupTableView, InsightPane, MetricCards, SectionHeader, TrendChart } from "./kit";
+import { GroupTableView, InsightPane, MetricCards, SectionHeader, TrendChart, RankingBoard, MonthlyHistory } from "./kit";
 
 /**
  * The report document itself. It reads only the model it is handed, holds no
@@ -19,31 +22,33 @@ export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; them
     const appendix = available.filter(
       (spec) => !spec.derived && (model.chapters[spec.id]?.history.length ?? 0) > 1,
     );
+    const headlineIds = ['gross_revenue', 'new_clients', 'conversion_rate', 'fill_rate', 'renewal_rate', 'booking_late_rate'];
+    const headlineData = ['revenue-performance', 'conversion-funnel', 'executive-summary', 'renewals', 'late-cancellations'].map(id => model.chapters[id]).filter(Boolean);
+    const combine = (field: 'total' | 'prior' | 'priorYear') => Object.assign({}, ...headlineData.map(data => data[field]));
+    const headlineHistory = Array.from(new Set(headlineData.flatMap(data => data.history.map(row => String(row.month))))).sort().map(month => Object.assign({month}, ...headlineData.map(data => data.history.find(row => row.month === month) ?? {})));
     return (
       <article className="report-doc" data-report-theme={theme} ref={ref}>
         <div className="r-page-frame" aria-hidden="true" />
-        <header className="r-hero">
+        <div className="r-topbar">
+          <a className="r-brand" href="#report-cover"><img src={logo} alt="Physique 57" /><span>{model.scope.studio} Pulse<small>Performance report · {monthLabel(model.scope.month)}</small></span></a>
+          <nav aria-label="Chapter navigation">{available.map(spec => <a key={spec.id} href={`#${spec.id}`}>{spec.nav}</a>)}</nav>
+        </div>
+        <header className="r-hero" id="report-cover">
           <div className="r-container r-hero-inner">
-            <span className="r-eyebrow">Monthly performance report</span>
-            <h1>{model.scope.studio}</h1>
-            <p>
-              {monthLabel(model.scope.month)} — the month on money, demand, the funnel and the
-              membership base, with what the figures ask management to decide.
-            </p>
-            <div className="r-hero-meta">
-              <span className="r-chip">
-                Period <b>{monthLabel(model.scope.month)}</b>
-              </span>
-              <span className="r-chip">
-                Studio <b>{model.scope.studio}</b>
-              </span>
-              <span className="r-chip">
-                Source rows across chapters <b>{records.toLocaleString("en-IN")} (may overlap)</b>
-              </span>
-              <span className="r-chip">
-                Built <b>{built}</b>
-              </span>
+            <div className="r-hero-topline"><span className="r-hero-badge"><img src={logo} alt="" />Senior management review · Physique 57 India</span><span className="r-period-mark">{model.scope.month.slice(5)} / {model.scope.month.slice(0,4)}</span></div>
+            <h1>{model.scope.studio} studio performance for <span>{monthLabel(model.scope.month)}</span> — the commercial story and the community journey.</h1>
+            <p className="r-hero-sub">A review of cash sales, newcomer conversion, membership continuity and studio demand. Every section connects the evidence to a management decision, with month-on-month and year-on-year context.</p>
+            <div className="r-hero-media" aria-label="Physique 57 brand photography">
+              <figure><img src={methodPhoto} alt="Physique 57 brand portrait with colourful movement artwork" /><figcaption>The Method · Movement in focus</figcaption></figure>
+              <figure><img src={portraitPhoto} alt="Physique 57 brand portrait in black and white" /><figcaption>Strength · Power and presence</figcaption></figure>
             </div>
+            <div className="r-hero-meta">
+              <span className="r-chip">Reporting period <b>{monthLabel(model.scope.month)}</b></span>
+              <span className="r-chip">Studio <b>{model.scope.studio}</b></span>
+              <span className="r-chip">Contributing source rows <b>{records.toLocaleString("en-IN")} · chapters may overlap</b></span>
+              <span className="r-chip">Snapshot built <b>{built}</b></span>
+            </div>
+            <MetricCards ids={headlineIds} total={combine('total')} prior={combine('prior')} priorYear={combine('priorYear')} history={headlineHistory} />
           </div>
         </header>
 
@@ -54,7 +59,7 @@ export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; them
         <nav className="r-container r-contents" aria-label="Report contents">
           {available.map((spec, index) => (
             <a href={`#${spec.id}`} key={spec.id}>
-              {chapterNumber(index)} {spec.nav}
+              <span>{chapterNumber(index)}</span><div><b>{spec.nav}</b><small>{spec.eyebrow}</small></div>
             </a>
           ))}
         </nav>
@@ -73,8 +78,11 @@ export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; them
                 <SectionHeader
                   number={chapterNumber(index)}
                   eyebrow={spec.eyebrow}
-                  title={spec.title}
-                  deck={spec.deck}
+                  title={narrative?.cards[0]?.headline || spec.title}
+                  deck={narrative?.summary || spec.deck}
+                  topic={spec.title}
+                  total={available.length}
+                  highlights={spec.metrics.slice(0,3).filter(id => data?.total[id] != null).map(id => ({ label: definition(id)?.label ?? id, value: fmt(id, data?.total[id]) }))}
                   id={`${spec.id}-title`}
                 />
                 {spec.derived && !narrative?.cards.length ? (
@@ -88,13 +96,14 @@ export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; them
                       No records for {model.scope.studio} in {monthLabel(model.scope.month)} on this
                       chapter's source. This is an absence of data, not a reading of zero. Commentary may discuss available historical context.
                     </p>}
-                    {narrative?.summary && <p className="r-summary">{narrative.summary}</p>}
+                    {data && spec.history.length > 0 && <MonthlyHistory data={data} ids={spec.history} title={spec.title} />}
                     {data && (
                       <MetricCards
                         ids={spec.metrics}
                         total={data.total}
                         prior={data.prior}
                         priorYear={data.priorYear}
+                        history={data.history}
                       />
                     )}
                     <InsightPane title={`${spec.title} analysis`} narrative={opening ? { ...opening, summary: "" } : undefined} />
@@ -111,7 +120,9 @@ export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; them
                     )}
                     {data?.groups.map((table, groupIndex) => (
                       <div className={`r-evidence-layout ${table.columns.length > 4 ? "r-evidence-wide" : ""}`} key={table.id ?? table.field}>
-                        <GroupTableView table={table} />
+                        {spec.groups.find(group => (group.id ?? group.field) === (table.id ?? table.field))?.tails
+                          ? <RankingBoard table={table} criterion={spec.groups.find(group => (group.id ?? group.field) === (table.id ?? table.field))?.rankBy ?? table.columns[0]} />
+                          : <GroupTableView table={table} />}
                         <InsightPane title={`${table.title} commentary`} narrative={focused ? pane(table.id ?? table.field) : narrative?.cards[2 + groupIndex] ? { ...narrative, summary: "", cards: [narrative.cards[2 + groupIndex]] } : undefined} />
                       </div>
                     ))}
@@ -176,7 +187,7 @@ export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; them
           )}
 
           <section className="r-source-basis"><h3>Source and calculation basis</h3><p>Cash collections and session revenue describe different bases. Renewal cohorts follow the app’s paid membership extension rules, with a 30-day grace window. Instructor rankings use the stated criterion and minimum sample; payroll economics use the configured rate. Lead stages are recorded positions, not historical stage transitions. Newcomer outcomes may still mature. Current member snapshots describe the build date.</p>{model.sources?.map(source => <p key={source.key}><strong>{source.title}</strong> · {source.status}{source.stale ? " · stale snapshot" : ""} · {source.fetchedAt ? new Date(source.fetchedAt).toLocaleString("en-IN", {timeZone:"Asia/Kolkata"}) : "Refresh time unavailable"}</p>)}</section>
-          <footer className="r-footer">
+          <footer className="r-footer"><div className="r-footer-brand"><img src={logo} alt="Physique 57" /><strong>{model.scope.studio} Pulse</strong><span>Evidence · Interpretation · Action</span></div>
             <p>
               <strong>{model.scope.studio}</strong> — {monthLabel(model.scope.month)}. Built{" "}
               {built} from the studio's own source snapshots. Comparisons are against the prior

@@ -32,6 +32,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
   const [narrativeError, setNarrativeError] = useState("");
   const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
   const [storageError, setStorageError] = useState("");
+  const [exporting, setExporting] = useState(false);
   const [loadingSaved, setLoadingSaved] = useState(false);
   const document_ = useRef<HTMLElement>(null);
   const run = useRef<AbortController>();
@@ -124,7 +125,15 @@ export function ReportBuilder({ version }: { version: string | number }) {
   }
 
   const ready = !!studio && !!month;
-  const busy = stage !== null || loadingSaved;
+  const busy = stage !== null || loadingSaved || exporting;
+
+  async function exportReport(kind: 'html' | 'pdf') {
+    if (!model || !document_.current) return;
+    setExporting(true); setError('');
+    try { await (kind === 'html' ? downloadReport : printReport)(document_.current, model); }
+    catch(e) { setError(String(e)); }
+    finally { setExporting(false); }
+  }
 
   async function build(regenerate = false) {
     if (!ready) return;
@@ -215,7 +224,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
             <button
               className="button"
               disabled={busy}
-              onClick={() => document_.current && downloadReport(document_.current, model)}
+              onClick={() => void exportReport("html")}
             >
               <Download size={14} />
               Download HTML
@@ -223,13 +232,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
             <button
               className="button"
               disabled={busy}
-              onClick={() => {
-                try {
-                  if (document_.current) printReport(document_.current, model);
-                } catch (e) {
-                  setError(String(e));
-                }
-              }}
+              onClick={() => void exportReport("pdf")}
             >
               <Printer size={14} />
               Export PDF
