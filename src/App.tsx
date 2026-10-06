@@ -66,6 +66,7 @@ import { Heatmap } from "./components/Heatmap";
 import { AcquisitionMainTables, AcquisitionDeepDive, AcquisitionTableView } from "./components/AcquisitionTables";
 import { MoMTable } from "./components/MoMTable";
 import { InstructorEconomics } from "./components/InstructorEconomics";
+import { FormatComparison } from "./components/FormatComparison";
 import { WebsiteLeadPeriods } from "./components/WebsiteLeadPeriods";
 import {
   IntelligenceWorkspace,
@@ -1000,6 +1001,7 @@ export default function App() {
                   instructor's first-visit members became. */}
               {s.tab === 3 && <AcquisitionTableView kind="trainers" version={version} />}
               {s.tab === 3 && <InstructorEconomics version={version} />}
+              {s.tab === 14 && <FormatComparison version={version} />}
               <MoMTable version={workspaceVersion} ids={bp.columns.slice(0, 9)} />
               {s.tab === 4 && <SalesScorecards version={version} onDrill={setDrill} />}
               {s.tab === 5 && <AcquisitionMainTables version={version} />}

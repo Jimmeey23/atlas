@@ -5,7 +5,7 @@ export const metricSource = id => metrics[id]?.sources[0]?.split('.')[0].split('
 export function metricCatalog(config) {
   return Object.values(metrics).filter(m => config.some(s => s.key === metricSource(m.id))).map(m => ({id:m.id,label:m.label,source:metricSource(m.id),format:m.format}));
 }
-const groupsAllowed = new Set(['location','month','trainer','format','category','product','associate','payment_method','day','time','status','source']);
+const groupsAllowed = new Set(['location','month','trainer','format','format_group','category','product','associate','payment_method','day','time','status','source']);
 export function compileMetricQuery(args, defaults, available, rate = 1200) {
   const {source,metric_ids:ids,group_by:groups=[]} = args;
   if (!available.includes(source) || !Array.isArray(ids) || !ids.length || ids.length>12 || ids.some(id=>metricSource(id)!==source)) throw new Error('Choose 1–12 metrics from the same listed source.');

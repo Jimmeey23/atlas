@@ -64,7 +64,21 @@ export function DataInsightAction({ subject, detail, buttonLabel = "Section insi
         method: "POST", signal: controller.signal,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: [`Write an evidence-backed summary for this dashboard element: ${subject}.`, detail ? `Displayed focus: ${detail}.` : "", `Scope: ${scope}.`, "Query the source data. Include a short summary, three specific insights, two practical recommendations and relevant denominator/freshness caveats. Do not invent figures."].filter(Boolean).join("\n"),
+          message: [
+            `Write an evidence-backed summary for this dashboard element: ${subject}.`,
+            detail ? `Displayed focus: ${detail}.` : "",
+            `Scope: ${scope}.`,
+            "Query the source data first. Do not invent figures.",
+            // A fixed shape so the renderer can lay this out as sections,
+            // a figure grid and a table rather than one block of prose.
+            "Reply in Markdown using exactly these sections, in this order and with no others:",
+            "## Summary — at most two sentences, leading with the single most important finding.",
+            "## Key figures — a Markdown table with the columns Measure | Value | Basis. Four to six rows. Basis names the denominator or row count behind the value.",
+            "## What stands out — exactly three numbered items. Start each with a bolded claim of at most six words, then one sentence of evidence citing a figure.",
+            "## Do next — exactly two numbered actions, each naming who acts and on what.",
+            "## Caveats — bullets covering denominators, coverage gaps and data freshness. Omit the section entirely if there are none.",
+            "Keep prose tight. Put every number in the table or inside a sentence that names its basis.",
+          ].filter(Boolean).join("\n"),
           page: store.tab, filters: { ...filters, cross }, saveHistory: false, history: [],
         }),
       });

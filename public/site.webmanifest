@@ -1,0 +1,14 @@
+{
+  "name": "Atlas — Physique 57 India studio intelligence",
+  "short_name": "Atlas",
+  "description": "Attendance, revenue, retention and format performance, read from the source sheets.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "icons": [
+    { "src": "/icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+    { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any" },
+    { "src": "/apple-touch-icon.png", "type": "image/png", "sizes": "180x180", "purpose": "maskable" }
+  ]
+}

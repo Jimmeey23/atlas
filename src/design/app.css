@@ -1776,3 +1776,106 @@ tr:focus-within .row-action {
 .worklist-table td {
   text-align: left;
 }
+
+/* Format comparison · three formats read side by side, so every section keeps
+   one column per format and the same ordering. */
+.format-scorecard .format-group-head th {
+  padding-top: 18px;
+  color: var(--text-1);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--hairline);
+}
+.format-scorecard tbody th[scope="row"] {
+  font-weight: 500;
+  color: var(--text-2);
+  text-align: left;
+  padding: 10px;
+}
+.format-scorecard td {
+  font-variant-numeric: tabular-nums;
+}
+.format-scorecard td.format-leader {
+  color: var(--text-1);
+  font-weight: 650;
+  background: var(--surface-inset);
+}
+.format-share-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+  margin-top: 12px;
+}
+.format-share {
+  padding: 14px;
+  background: var(--surface-inset);
+  border-radius: var(--atlas-radius, 10px);
+}
+.format-share h3 {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  margin-bottom: 10px;
+}
+.format-share-bar {
+  display: flex;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  gap: 2px;
+}
+.format-share-bar span {
+  min-width: 2px;
+  background: var(--attendance);
+}
+.format-share-bar span[data-format="1"] {
+  background: var(--growth);
+}
+.format-share-bar span[data-format="2"] {
+  background: var(--revenue);
+}
+.format-share dl {
+  margin-top: 12px;
+  display: grid;
+  gap: 6px;
+}
+.format-share dl > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.format-share dt {
+  font-size: 11px;
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+.format-share dd {
+  font-size: 12px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.format-share dd small {
+  display: block;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-3);
+}
+.format-slice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+.format-slice-grid h3 {
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--text-1);
+  margin-bottom: 8px;
+}
+.format-slice-grid .worklist-table {
+  min-width: 0;
+}

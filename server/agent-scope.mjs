@@ -55,7 +55,7 @@ export function toolScope(scope, defaults) {
   for (const [key,value] of Object.entries(parsed)) {
     if (['from','to'].includes(key)) {
       if (value != null && (!/^20\d{2}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(Date.parse(value + 'T00:00:00Z')) || new Date(value + 'T00:00:00Z').toISOString().slice(0,10) !== value)) throw new Error('Scope dates must be YYYY-MM-DD or null.');
-    } else if (['location','trainer','format','source','category','day','time'].includes(key)) {
+    } else if (['location','trainer','format','format_group','source','category','day','time'].includes(key)) {
       if (value != null && (!Array.isArray(value) || !value.every(v=>typeof v === 'string'))) throw new Error('Scope dimensions must be string arrays or null.');
     } else if (key === 'imports') {
       if (typeof value !== 'boolean') throw new Error('imports must be true or false.');
