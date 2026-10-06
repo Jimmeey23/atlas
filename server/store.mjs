@@ -42,10 +42,20 @@ export function createStore({ root, cloud = null }) {
     if (error) throw new Error(`Store write failed for ${key}: ${error.message}`);
     return value;
   }
+  // Switching a local install to the cloud backend must not strand documents already on disk:
+  // a cloud miss falls back to the local copy and promotes it on first read.
+  async function readMigrating(key) {
+    const saved = await readCloud(key);
+    if (saved !== null) return saved;
+    const local = await readLocal(key);
+    if (local === null) return null;
+    await writeCloud(key, local);
+    return local;
+  }
   return {
     durable: !!cloud,
     backend: cloud ? "supabase" : "filesystem",
-    read: key => (cloud ? readCloud(key) : readLocal(key)),
+    read: key => (cloud ? readMigrating(key) : readLocal(key)),
     write: (key, value) => (cloud ? writeCloud(key, value) : writeLocal(key, value)),
   };
 }
