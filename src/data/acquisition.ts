@@ -31,13 +31,13 @@ export const acquisitionMeasures = [
 
 export function acquisitionFactsSQL(scope: string, today: string) {
   return `WITH flags AS (SELECT *, COALESCE(entry_type,'Unspecified') AS entry,
-    regexp_matches(lower(trim(COALESCE(entry_type,''))), '^new($| )') AS ref_new,
+    (regexp_matches(lower(trim(COALESCE(entry_type,''))), '(^|[^a-z])new([^a-z]|$)') AND NOT regexp_matches(lower(trim(COALESCE(entry_type,''))), '^not([^a-z]|$)')) AS ref_new,
     (len(list_filter(regexp_split_to_array(COALESCE(purchase_journey,''), '[,;|/]+|\\s-\\s'), token -> trim(token)<>''))=0
       OR len(list_filter(regexp_split_to_array(COALESCE(purchase_journey,''), '[,;|/]+|\\s-\\s'), token -> trim(token)<>'' AND NOT regexp_matches(lower(regexp_replace(trim(token),'\\s+',' ','g')), '^money credits($| )')))>0) AS ref_membership_eligible,
     trim(COALESCE(retention,''))='Retained' AS ref_retained,
     regexp_matches(lower(COALESCE(format,'')), 'host|p57|birthday|rugby|lrs') AS ref_hosted,
     TRY_CAST(date AS DATE) <= DATE '${today}' - INTERVAL 30 DAY AS mature
-    FROM new${scope}), outcomes AS (SELECT *, trim(COALESCE(conversion,''))='Converted' AND ref_membership_eligible AS ref_converted FROM flags)
+    FROM new${scope}), outcomes AS (SELECT *, trim(COALESCE(conversion,''))='Converted' AS ref_converted FROM flags)
     SELECT *, ref_converted AND TRY_CAST(first_purchase_date AS DATE)>=TRY_CAST(date AS DATE) AND substr(first_purchase_date,1,7)=substr(date,1,7) AS converted_in_30,
       ref_converted AND ref_retained AND TRY_CAST(first_purchase_date AS DATE)>=TRY_CAST(date AS DATE) AND substr(first_purchase_date,1,7)=substr(date,1,7) AS returned_in_30,
       ref_converted AND TRY_CAST(first_purchase_date AS DATE)>=TRY_CAST(date AS DATE) AND substr(first_purchase_date,1,7)=substr(date,1,7) AS converted_same_month,
@@ -62,7 +62,9 @@ export const acquisitionAggregate = `COUNT(*) AS cohort_rows,
   AVG(post_trial_ltv) AS post_trial_ltv,
   AVG(conversion_days) FILTER (WHERE conversion_days>0) AS conversion_span,
   MEDIAN(conversion_days) FILTER (WHERE conversion_days>0) AS median_span,
-  CASE WHEN COUNT(visits_post)>0 THEN COUNT(DISTINCT member_id) FILTER (WHERE visits_post>0)::DOUBLE/NULLIF(COUNT(DISTINCT member_id),0) END AS second_visit_rate,
+  -- Same trial cohort and same counting unit as the conversion and retention
+  -- rates, so the three read against one another.
+  CASE WHEN COUNT(visits_post)>0 THEN COUNT(*) FILTER (WHERE ref_new AND visits_post>0)::DOUBLE/NULLIF(COUNT(*) FILTER (WHERE ref_new),0) END AS second_visit_rate,
   AVG(visits_post) FILTER (WHERE visits_post>0) AS visits_post, AVG(post_trial_purchases) AS purchases_post,
   SUM(class_no) AS source_visits,
   CASE WHEN COUNT(first_purchase_date)>0 THEN COUNT(*) FILTER (WHERE converted_same_month) END AS converted_same_month,
@@ -123,4 +125,5 @@ export const instructorAcquisitionAggregate = acquisitionAggregate
   .replace('COUNT(*) FILTER (WHERE ref_new) AS newcomers', 'COUNT(DISTINCT member_id) FILTER (WHERE ref_new) AS newcomers')
   .replaceAll('COUNT(*) FILTER (WHERE ref_converted)', 'COUNT(DISTINCT member_id) FILTER (WHERE ref_converted)')
   .replaceAll('COUNT(*) FILTER (WHERE ref_retained)', 'COUNT(DISTINCT member_id) FILTER (WHERE ref_retained)')
+  .replaceAll('COUNT(*) FILTER (WHERE ref_new AND visits_post>0)', 'COUNT(DISTINCT member_id) FILTER (WHERE ref_new AND visits_post>0)')
   .replaceAll('NULLIF(COUNT(*) FILTER (WHERE ref_new),0)', 'NULLIF(COUNT(DISTINCT member_id) FILTER (WHERE ref_new),0)');

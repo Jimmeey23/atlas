@@ -19,6 +19,38 @@ export const health: Record<
   SourceData & { defects: Defect[]; recordsCount: number }
 > = {};
 export type Row = Record<string, string | number | null>;
+// Every table is created with the full `sqlTypes` column set, so a column a
+// source does not supply exists but is entirely NULL. Filtering such a field
+// would silently return zero rows, so we record which fields each table
+// actually carries and skip the rest when building WHERE clauses.
+export const fieldPresence: Record<string, Set<string>> = {};
+const presenceFields = [
+  "location",
+  "trainer",
+  "format",
+  "source",
+  "category",
+  "day",
+  "time",
+  "member",
+  "month",
+  "status",
+  "product",
+  "associate",
+];
+async function measureFields(key: string) {
+  try {
+    const rows = await connection.query(
+      `SELECT ${presenceFields.map((f) => `COUNT("${f}") AS "${f}"`).join(",")} FROM "${key}"`,
+    );
+    const row = rows.toArray()[0];
+    fieldPresence[key] = new Set(
+      presenceFields.filter((f) => Number(row?.[f] ?? 0) > 0),
+    );
+  } catch {
+    delete fieldPresence[key];
+  }
+}
 export function query(sql: string): Promise<Row[]> {
   const cacheable = /^\s*(SELECT|WITH)/i.test(sql);
   if (cacheable && resultCache.has(sql)) return resultCache.get(sql)!;
@@ -75,7 +107,7 @@ async function restoreSnapshot(key: string) {
           savedAt: number;
         }
       | undefined;
-    if (!entry || entry.schema !== 12) return false;
+    if (!entry || entry.schema !== 13) return false;
     resultCache.clear();
     await database.registerFileBuffer(key + ".parquet", entry.buffer);
     await connection.query(
@@ -83,6 +115,7 @@ async function restoreSnapshot(key: string) {
     );
     await database.dropFile(key + ".parquet");
     health[key] = entry.meta;
+    await measureFields(key);
     return true;
   } catch {
     return false;
@@ -95,7 +128,7 @@ async function persist(key: string) {
     );
     const buffer = await database.copyFileToBuffer(key + ".parquet");
     await writeSnapshot({
-      schema: 12,
+      schema: 13,
       key,
       buffer,
       meta: health[key],
@@ -197,6 +230,7 @@ async function ingestSource(data: SourceData) {
     await database.dropFile(data.key + ".json");
   }
   await persist(data.key);
+  await measureFields(data.key);
 }
 export const quote = (s: string) => `'${s.replaceAll("'", "''")}'`;
 if (import.meta.env.DEV)

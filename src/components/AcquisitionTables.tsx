@@ -71,7 +71,7 @@ function OutcomeBadge({ value }: { value: unknown }) {
 }
 function DefinitionNote() {
   return <details className="acq-definition"><summary><CircleHelp size={14} />Metric definitions & coverage</summary>
-    <p>Cohort tables count source records; instructor outcomes count distinct identified members. Conversion excludes Money Credits-only purchase lists. Rates use new-client denominators. Outcomes reflect the latest source status. Same-month outcomes require an eligible conversion purchase on or after the first visit in that same calendar month and year. Retained also requires the source Retained status. These outcomes do not require 30 elapsed days; missing purchase dates stay unavailable.</p>
+    <p>Cohort tables count source records; instructor outcomes count distinct identified members. Conversion is the source Conversion Status alone. Rates use new-client denominators. Outcomes reflect the latest source status. Same-month outcomes require an eligible conversion purchase on or after the first visit in that same calendar month and year. Retained also requires the source Retained status. These outcomes do not require 30 elapsed days; missing purchase dates stay unavailable.</p>
     <p>Spend and LTV use source-reported values per cohort record. Total LTV sums cohort records; members can appear in multiple cohorts. Totals recompute from source records rather than averaging group rates. These are not historical cash collections. Rate changes use percentage points.</p>
   </details>;
 }

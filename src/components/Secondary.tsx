@@ -19,6 +19,7 @@ const secondaryGroups: Record<number, string[]> = {
   8: ["associate", "status", "touches", "member"],
   9: ["member", "trainer", "format", "member"],
   10: ["trainer", "trainer", "trainer", "trainer"],
+  14: ["location", "trainer", "time", "day"],
 };
 export function Secondary({
   tab,

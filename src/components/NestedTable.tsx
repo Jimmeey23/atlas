@@ -323,6 +323,7 @@ export function NestedTable({
               >
                 {[
                   "location",
+                  "format_group",
                   "format",
                   "day",
                   "time",
@@ -338,7 +339,11 @@ export function NestedTable({
                   <option key={v} value={v}>
                     {v === "trainer"
                       ? "Instructor"
-                      : v[0].toUpperCase() + v.slice(1)}
+                      : v === "format_group"
+                        ? "Format (PowerCycle / Strength Lab / Barre)"
+                        : v === "format"
+                          ? "Class name"
+                          : v[0].toUpperCase() + v.slice(1)}
                   </option>
                 ))}
               </select>

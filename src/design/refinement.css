@@ -76,7 +76,7 @@ main h1 { font-size: clamp(28px, 2.5vw, 40px); letter-spacing: -1.4px; font-weig
 .source-detail-table { overflow: auto; max-height: 520px; border: 1px solid var(--hairline); border-radius: 10px; margin-top: 16px; }
 .source-detail-table table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 12px; }
 .source-detail-table th { position: sticky; top: 0; background: var(--surface-2); color: var(--text-1); z-index: 1; text-align: left; }
-.source-detail-table th, .source-detail-table td { padding: 10px 12px; border-bottom: 1px solid var(--hairline); white-space: nowrap; max-width: 440px; }
+.source-detail-table th, .source-detail-table td { padding: 10px 12px; border-bottom: 1px solid var(--hairline); white-space: nowrap; max-width: 440px; overflow: hidden; text-overflow: ellipsis; }
 .source-detail-table tr:hover td { background: var(--surface-2); }
 .source-detail-table td:first-child { font-weight: 650; }
 .source-pagination { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 16px 0 24px; font-size: 12px; color: var(--text-2); }

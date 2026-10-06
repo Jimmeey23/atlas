@@ -1213,8 +1213,16 @@ tr:focus-within .row-action {
   justify-content: space-between;
   gap: 10px;
 }
+.drill-record > button {
+  min-width: 0;
+  flex: 1;
+}
 .drill-record .record-name {
   font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.drill-record p {
+  overflow-wrap: anywhere;
 }
 .drill-record p {
   font-size: 11px;
@@ -1695,6 +1703,8 @@ tr:focus-within .row-action {
   vertical-align: top;
   line-height: 1.6;
   max-width: 260px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .worklist-table small {
   display: block;

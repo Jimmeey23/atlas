@@ -44,6 +44,16 @@ export function date(v: unknown): string | null {
     return `${m[1]}-${String(+m[2] + 1).padStart(2, "0")}-${m[3].padStart(2, "0")} ${m[4] || "00"}:${m[5] || "00"}:${m[6] || "00"}`;
   return /^\d{4}-\d\d-\d\d/.test(s) ? s.replace(",", "") : null;
 }
+/**
+ * The three studio formats. PowerCycle and Strength Lab name themselves in the
+ * class name; everything else on the timetable is Barre.
+ */
+export const formatGroup = (name: unknown): string => {
+  const text = String(name ?? "");
+  if (/powercycle/i.test(text)) return "PowerCycle";
+  if (/strength\s*lab/i.test(text)) return "Strength Lab";
+  return "Barre";
+};
 export function month(v: unknown): string | null {
   if (!v) return null;
   const s = String(v);
@@ -110,6 +120,7 @@ export const sqlTypes: Record<string, string> = {
   trainer: "VARCHAR",
   trainer_id: "VARCHAR",
   format: "VARCHAR",
+  format_group: "VARCHAR",
   day: "VARCHAR",
   time: "VARCHAR",
   member: "VARCHAR",
@@ -290,6 +301,15 @@ export function normalise(
         field: "Price Excluding VAT In Currency",
         issue: "Net-of-VAT source value exceeds gross payment value.",
       });
+    const formatLabel =
+      str(
+        "Class",
+        "Cleaned Class",
+        "Class Type",
+        "SessionName",
+        "Session Name",
+        "First Visit Entity Name",
+      ) || "Unknown format";
     const r: Record<string, Cell> = {};
     Object.assign(r, {
       row_id: i,
@@ -310,15 +330,8 @@ export function normalise(
       ),
       trainer: str("Trainer", "Teacher Name", "Trainer Name"),
       trainer_id: str("TrainerID", "Teacher ID", "Trainer Id"),
-      format:
-        str(
-          "Class",
-          "Cleaned Class",
-          "Class Type",
-          "SessionName",
-          "Session Name",
-          "First Visit Entity Name",
-        ) || "Unknown format",
+      format: formatLabel,
+      format_group: formatGroup(formatLabel),
       day:
         str("Day", "Day Of Week", "Day of Week", "First Visit Day") ||
         (d
@@ -430,7 +443,18 @@ export function normalise(
       packages: n("Packages"),
       intro: n("IntroOffers"),
       single: n("SingleClasses"),
-      is_new: g("Is New") == null ? null : /^New/i.test(String(g("Is New"))) ? true : /^(existing|returning)/i.test(String(g("Is New"))) ? false : boolean(g("Is New")),
+      // Any Is New label containing the word new is a trial. Labels that name a
+      // known non-trial visit are explicitly false so the existing-member filter
+      // can use them; anything unrecognised stays null rather than guessing.
+      is_new: (() => {
+        const label = g("Is New");
+        if (label == null) return null;
+        const text = String(label).trim();
+        if (/^not\b/i.test(text)) return false;
+        if (/\bnew\b/i.test(text)) return true;
+        if (/^(existing|returning|repeat|staff|family)/i.test(text)) return false;
+        return boolean(text);
+      })(),
       entry_type: str("Is New"),
       first_purchase_date: date(g("First Purchase Date"))?.slice(0, 10) || null,
       post_trial_ltv: n("Ltv Post Trial"),

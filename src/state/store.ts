@@ -15,8 +15,11 @@ export const tabs = [
   "Data quality",
   "Late cancellations",
   "AI workspace",
+  "Format comparison",
 ];
-export const navigationOrder = [0, 4, 8, 5, 6, 9, 7, 12, 1, 2, 3, 10, 13, 11];
+// Instructor economics (10) now renders inside Instructor performance (3), so
+// it keeps its index for saved views and insight links but leaves the nav.
+export const navigationOrder = [0, 4, 8, 5, 6, 9, 7, 12, 1, 2, 14, 3, 13, 11];
 export interface Filters {
   from: string;
   to: string;

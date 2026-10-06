@@ -1,4 +1,4 @@
-import { query, quote, health, type Row } from "./duckdb";
+import { query, quote, health, fieldPresence, type Row } from "./duckdb";
 import { metricSQL, type QueryContext } from "../semantics/metrics";
 import { currentSnapshotMetrics } from "../semantics/evidence";
 import { comparisonDates, historicalFilters, historicalTransient } from "./periods";
@@ -20,6 +20,7 @@ const allowed = [
   "location",
   "trainer",
   "format",
+  "format_group",
   "source",
   "category",
   "day",
@@ -30,6 +31,11 @@ const allowed = [
   "product",
   "associate",
 ];
+// Filters are global while each tab reads a different table. A field the table
+// does not carry is present but all-NULL, so filtering on it would silently
+// empty the tab. Only constrain fields the table actually has.
+const carries = (source: string, field: string) =>
+  !fieldPresence[source] || fieldPresence[source].has(field);
 export function where(
   filters: Filters,
   source: string,
@@ -55,7 +61,7 @@ export function where(
     "day",
     "time",
   ] as const)
-    if (filters[field].length)
+    if (filters[field].length && carries(source, field))
       terms.push(`"${field}" IN (${filters[field].map(quote).join(",")})`);
   if (filters.sessionType && filters.sessionType !== "all")
     terms.push(`session_type=${quote(filters.sessionType)}`);
@@ -76,7 +82,8 @@ export function where(
       "NOT COALESCE(voided,FALSE) AND (status='succeeded' OR status IS NULL)",
     );
   for (const t of transient)
-    if (allowed.includes(t.field)) terms.push(`"${t.field}"=${quote(t.value)}`);
+    if (allowed.includes(t.field) && carries(source, t.field))
+      terms.push(`"${t.field}"=${quote(t.value)}`);
   return terms.length ? " WHERE " + terms.join(" AND ") : "";
 }
 export function comparison(f: Filters, mode: string): Filters {
@@ -252,9 +259,12 @@ export async function options(tab = useStore.getState().tab) {
     "day",
     "time",
   ]) {
-    const sourceTables = [blueprints[tab].source];
+    // Offer every value any table knows about, so a choice made on one tab does
+    // not vanish on the next, but rank by how common it is on the current tab.
+    const sourceTables = ["sessions", "new", "sales", "leads", "lapsed", "checkins", "bookings", "payroll", "recurring", "teacher_recurring"];
+    const current = blueprints[tab].source;
     const result = await query(
-      `SELECT "${field}" AS value,COUNT(*) AS n FROM (${sourceTables.map((table) => `SELECT "${field}" FROM "${table}"`).join(" UNION ALL ")}) WHERE "${field}" IS NOT NULL GROUP BY "${field}" ORDER BY n DESC LIMIT 100`,
+      `SELECT "${field}" AS value,SUM(CASE WHEN "__table"=${quote(current)} THEN 1 ELSE 0 END) AS n FROM (${sourceTables.map((table) => `SELECT "${field}",${quote(table)} AS "__table" FROM "${table}"`).join(" UNION ALL ")}) WHERE "${field}" IS NOT NULL GROUP BY "${field}" ORDER BY n DESC,value LIMIT 200`,
     );
     all[field] = Object.fromEntries(
       result.map((r) => [String(r.value), Number(r.n)]),

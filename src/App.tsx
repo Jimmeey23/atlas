@@ -63,8 +63,10 @@ import { NestedTable, type TreeRow } from "./components/NestedTable";
 import { Chart, Pulse } from "./components/Charts";
 import { Rankings } from "./components/Rankings";
 import { Heatmap } from "./components/Heatmap";
-import { AcquisitionMainTables, AcquisitionDeepDive } from "./components/AcquisitionTables";
+import { AcquisitionMainTables, AcquisitionDeepDive, AcquisitionTableView } from "./components/AcquisitionTables";
 import { MoMTable } from "./components/MoMTable";
+import { InstructorEconomics } from "./components/InstructorEconomics";
+import { WebsiteLeadPeriods } from "./components/WebsiteLeadPeriods";
 import {
   IntelligenceWorkspace,
   SavedElements,
@@ -388,7 +390,7 @@ export default function App() {
   ]
     .filter((c) => c.name.toLowerCase().includes(command.toLowerCase()))
     .slice(0, 12);
-  const includeWeeklyPattern = [0, 1, 2, 3, 4, 5, 7, 8, 12].includes(s.tab);
+  const includeWeeklyPattern = [0, 1, 2, 3, 4, 5, 7, 8, 12, 14].includes(s.tab);
   const weeklyTitle =
     s.tab === 7
       ? "When seats go unclaimed"
@@ -994,6 +996,10 @@ export default function App() {
                   <Chart tab={s.tab} data={analysis} />
                 )}
               </Register>}
+              {/* Session metrics describe the class; these describe who the
+                  instructor's first-visit members became. */}
+              {s.tab === 3 && <AcquisitionTableView kind="trainers" version={version} />}
+              {s.tab === 3 && <InstructorEconomics version={version} />}
               <MoMTable version={workspaceVersion} ids={bp.columns.slice(0, 9)} />
               {s.tab === 4 && <SalesScorecards version={version} onDrill={setDrill} />}
               {s.tab === 5 && <AcquisitionMainTables version={version} />}
@@ -1003,6 +1009,7 @@ export default function App() {
                 subtitle="Focused operational registers"
               >
                 {s.tab === 5 && <AcquisitionDeepDive version={version} />}
+                {s.tab === 8 && <WebsiteLeadPeriods version={version} />}
                 {bp.secondary.map((title, index) =>
                   s.tab === 0 && index === 2 ? (
                     <details className="secondary" key={title}>

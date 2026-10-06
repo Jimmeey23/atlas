@@ -125,7 +125,7 @@ export const blueprints: Blueprint[] = [
   {
     title: "The people behind the progress.",
     subtitle:
-      "Separate popularity from profitability. Compare instructors on fair, consistent terms.",
+      "Separate popularity from profitability. Class performance, first-visit outcomes and payroll economics for every instructor, on fair and consistent terms.",
     source: "sessions",
     domain: "people",
     kpis: [
@@ -463,4 +463,46 @@ blueprints.push({
   subtitle:
     "Query the original Sheets, build custom views and keep your team's knowledge.",
   secondary: [],
+});
+
+// 14 · Format comparison. format_group is derived from the class name in
+// normalise.ts: PowerCycle and Strength Lab name themselves, everything else
+// on the timetable is Barre.
+blueprints.push({
+  title: "Three formats, one timetable.",
+  subtitle:
+    "Compare PowerCycle, Strength Lab and Barre on demand, fill and the revenue each hour of studio time returns.",
+  source: "sessions",
+  domain: "attendance",
+  kpis: [
+    "sessions",
+    "attendance",
+    "avg_class_size_incl",
+    "fill_rate",
+    "empty_sessions",
+    "revenue",
+    "revenue_per_session",
+    "rev_pas",
+  ],
+  columns: [
+    "sessions",
+    "attendance",
+    "avg_class_size_incl",
+    "fill_rate",
+    "empty_sessions",
+    "revenue",
+    "revenue_per_session",
+    "rev_pas",
+    "lost_revenue",
+    "attendance_cv",
+  ],
+  groups: ["format_group", "location", "trainer", "format"],
+  chart: "trend",
+  chartTitle: "How each format trends",
+  secondary: [
+    "Format \u00d7 studio",
+    "Format \u00d7 instructor",
+    "Format \u00d7 time slot",
+    "Format \u00d7 day",
+  ],
 });
