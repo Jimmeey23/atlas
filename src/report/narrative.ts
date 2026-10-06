@@ -1,10 +1,11 @@
 import { fmt, delta } from "../semantics/formats";
+import { metricNotes } from "../semantics/evidence";
 import { metrics } from "../semantics/metrics";
 import { chapters, type ChapterSpec } from "./chapters";
 import { monthLabel, shiftMonth } from "./period";
 import type { ChapterData, ChapterNarrative, InsightCard, ReportModel } from "./model";
 
-const CACHE_PREFIX = "atlas-report-narrative:";
+const CACHE_PREFIX = "atlas-report-narrative:v2:";
 const cacheKey = (model: ReportModel, chapterId: string) =>
   `${CACHE_PREFIX}${model.scope.studio}:${model.scope.month}:${model.figuresHash}:${chapterId}`;
 
@@ -44,6 +45,8 @@ export function chapterPayload(spec: ChapterSpec, data: ChapterData, model: Repo
     `Chapter: ${spec.title}. Studio: ${model.scope.studio}. Month: ${monthLabel(model.scope.month)}.`,
     `Comparisons are against ${monthLabel(shiftMonth(model.scope.month, -1))} and ${monthLabel(shiftMonth(model.scope.month, -12))}.`,
     `Contributing records: ${data.n.toLocaleString("en-IN")}.`,
+    "Definitions: " + spec.metrics.map(id => `${id}: ${metricNotes[id]?.definition ?? metrics[id]?.label ?? id}`).join("; "),
+    "Current-snapshot metrics cannot reconstruct historical member counts. Ranked tables omit groups below three contributing records and may be truncated; totals include all groups. Session revenue is attendance attribution, not cash sales.",
   ];
   const headline = spec.metrics.filter((id) => data.total[id] != null);
   if (headline.length)
@@ -51,7 +54,6 @@ export function chapterPayload(spec: ChapterSpec, data: ChapterData, model: Repo
   for (const group of data.groups) {
     const head = ["Group", ...group.columns.map((id) => metrics[id]?.label ?? id)].join(" | ");
     const body = group.rows
-      .slice(0, 12)
       .map((row) =>
         [row.g, ...group.columns.map((id) => fmt(id, row[id], true))].join(" | "),
       );
@@ -79,8 +81,7 @@ function portfolioPayload(model: ReportModel) {
     .map((spec) => {
       const data = model.chapters[spec.id];
       if (!data) return "";
-      const ids = spec.metrics.filter((id) => data.total[id] != null);
-      return `${spec.title}\n${ids.map((id) => line(id, data)).join("\n")}`;
+      return chapterPayload(spec, data, model);
     })
     .filter(Boolean)
     .join("\n\n");
@@ -88,12 +89,12 @@ function portfolioPayload(model: ReportModel) {
 
 const CARD_RULES = [
   'Return JSON only, in exactly this shape: {"summary":"...","cards":[{"headline":"...","meaning":"...","evidence":"...","action":"..."}]}',
-  "summary: two to three sentences for a senior management reader, leading with the single finding that most changes a decision.",
-  "cards: four to six of them.",
+  "summary: four to six substantive sentences for a senior management reader, leading with the single finding that most changes a decision.",
+  "cards: six to eight editorial passages, fewer only when evidence is sparse. Cover headline movement, YoY context, strongest and weakest breakdowns, mix/concentration, historical trend, risks, data limitations and management response.",
   "headline: one sentence, the finding itself, with the number in it. Never a label like 'Strong performance'.",
-  "meaning: one to two sentences on the mechanism — why the figure looks like this and what it implies.",
-  "evidence: the figures the claim rests on, comma separated. Numbers only, no prose.",
-  "action: one specific, assignable next step. Not 'monitor this' — say what to change and where.",
+  "meaning: three to five connected sentences explaining the finding, comparison and operational implication. Include hypotheses explicitly as hypotheses; do not claim a cause without evidence. Write readable report prose, not a rigid checklist.",
+  "evidence: a short readable sentence naming the source breakdown and supporting figures, sample size and missing comparisons where relevant.",
+  "action: one specific next step with owner role, timing and the metric to review. Not 'monitor this' — say what to change and where.",
   "Every card must be about a different row or a different relationship between rows. No two cards may share an action.",
   "Rank matters: lead with whatever carries the most money or the most risk.",
   "Use only the figures supplied below. Do not query anything and do not invent a number.",
@@ -103,7 +104,7 @@ const DERIVED_RULES: Record<string, string> = {
   recommendations:
     "Write the month's strategic recommendations. Each card is one recommendation: headline states the move and the figure it targets, meaning gives the reasoning, evidence gives the supporting figures, action names the owner role and the first step. Rank by money or risk at stake.",
   predictions:
-    "Write the forward view for next month. Each card is one projection: headline states the projected figure and direction, meaning states the assumption it rests on and what would break it, evidence gives the trailing figures behind the projection, action names what to do now to change the outcome. State assumptions rather than hiding them.",
+    "Write a conditional forward view for next month. Use trailing monthly series rather than only the last observation. When fewer than three populated months exist, describe scenarios without numeric forecasts. Any projected number must state its arithmetic, baseline and assumption; never present it as a recorded result. Each passage is one projection: headline states the projected figure and direction, meaning states the assumption it rests on and what would break it, evidence gives the trailing figures behind the projection, action names what to do now to change the outcome. State assumptions rather than hiding them.",
 };
 
 function parseJson(answer: string): { summary?: string; cards?: InsightCard[] } | null {
@@ -170,7 +171,7 @@ const RETRY_DELAYS_MS = [5000, 15000, 30000];
 
 async function askModel(message: string, signal?: AbortSignal): Promise<string> {
   for (let attempt = 0; ; attempt++) {
-    const response = await fetch("/api/intelligence/ask", {
+    const response = await fetch("/api/reports/narrative", {
       method: "POST",
       signal,
       headers: { "Content-Type": "application/json" },
@@ -218,12 +219,12 @@ export async function generateNarratives(
         const spec = pending.shift()!;
         const key = cacheKey(model, spec.id);
         const cached = readCache(key);
-        if (cached) {
+        if (cached?.generated) {
           finish(spec, cached);
           continue;
         }
         const data = model.chapters[spec.id];
-        const figures = spec.derived ? portfolio : data ? chapterPayload(spec, data, model) : "";
+        const figures = spec.derived ? portfolio : data ? chapterPayload(spec, data, model) + (spec.id === "executive-summary" ? "\n\nCross-chapter context:\n" + portfolio : "") : "";
         if (!figures) {
           finish(spec, fallbackNarrative(spec, data));
           continue;
@@ -232,8 +233,9 @@ export async function generateNarratives(
           `You are a studio performance analyst writing the "${spec.title}" chapter of a board report for ${model.scope.studio}, ${monthLabel(model.scope.month)}.`,
           DERIVED_RULES[spec.id] ?? "",
           CARD_RULES,
+          data?.groups.length ? `Passage order: the first two passages explain the chapter headline and trend. Then write one passage for EACH of these breakdown tables in this exact order: ${data.groups.map(g => g.title).join("; ")}. End with one or two passages on risk, limitations and next steps. Return at least ${data.groups.length + 3} passages so each table has commentary.` : "",
           "Figures:",
-          figures.slice(0, 9000),
+          figures.slice(0, 48000),
         ]
           .filter(Boolean)
           .join("\n\n");
@@ -245,6 +247,9 @@ export async function generateNarratives(
                   !!c && typeof c.headline === "string" && !!c.headline.trim(),
               )
             : [];
+          const valid = cards.every(c => [c.meaning, c.evidence, c.action].every(v => typeof v === "string"));
+          if (!valid || !cards.length || typeof parsed?.summary !== "string" || !parsed.summary.trim())
+            throw new Error("The model returned no complete chapter analysis. Retry writing insights.");
           const narrative: ChapterNarrative = cards.length
             ? { summary: String(parsed?.summary ?? "").trim(), cards, generated: true }
             : fallbackNarrative(spec, data);
@@ -252,7 +257,7 @@ export async function generateNarratives(
           finish(spec, narrative);
         } catch (error) {
           if (signal?.aborted) throw error;
-          finish(spec, fallbackNarrative(spec, data));
+          finish(spec, { ...fallbackNarrative(spec, data), error: error instanceof Error ? error.message : String(error) });
         }
       }
     }),

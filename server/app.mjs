@@ -6,6 +6,7 @@ import path from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import WebSocket from "ws";
 import { kraRoutes } from "./kra.mjs";
+import { reportRoutes } from "./reports.mjs";
 import { createStore } from "./store.mjs";
 import { intelligenceRoutes } from "./intelligence.mjs";
 import { followupRoutes } from "./followups.mjs";
@@ -27,7 +28,9 @@ export async function createApp({ serveStatic = false } = {}) {
   const cacheRoot = process.env.VERCEL ? "/tmp/atlas" : root;
   const store = createStore({ root, cloud, cacheRoot });
   const app = express();
+  app.use("/api/reports", express.json({ limit: "8mb" }));
   app.use(express.json({ limit: "96kb" }));
+  reportRoutes(app, store, cloud);
   const ttl = 15 * 60 * 1000;
   await mkdir(path.join(cacheRoot, ".cache"), { recursive: true });
   if (!process.env.VERCEL) {

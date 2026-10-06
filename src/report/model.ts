@@ -41,8 +41,12 @@ export interface ChapterNarrative {
   cards: InsightCard[];
   /** Rule-based copy is labelled so nobody reads it as analysis. */
   generated: boolean;
+  error?: string;
 }
 export interface ReportModel {
+  id?: string;
+  savedAt?: string;
+  schemaVersion?: number;
   scope: ReportScope;
   /** When the figures were computed, ISO. */
   builtAt: string;

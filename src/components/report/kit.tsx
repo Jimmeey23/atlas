@@ -254,40 +254,17 @@ export function InsightPane({
 }) {
   if (!narrative || (!narrative.summary && !narrative.cards.length)) return null;
   return (
-    <section className="r-pane">
+    <div className="r-editorial" aria-label={title}>
       {narrative.summary && <p className="r-summary">{narrative.summary}</p>}
-      {narrative.cards.length > 0 && (
-        <>
-          <div className="r-pane-head">
-            <h4>{title}</h4>
-            <span className="r-tag" data-kind={narrative.generated ? "ai" : "rule"}>
-              {narrative.generated ? "AI analysis" : "Rule-based"}
-            </span>
-          </div>
-          <div className="r-insights">
-            {narrative.cards.map((card, index) => (
-              <article className="r-insight" key={index}>
-                <h5>{card.headline}</h5>
-                {card.meaning && <p>{card.meaning}</p>}
-                <dl>
-                  {card.evidence && (
-                    <div>
-                      <dt>Evidence</dt>
-                      <dd className="r-evidence">{card.evidence}</dd>
-                    </div>
-                  )}
-                  {card.action && (
-                    <div>
-                      <dt>Do next</dt>
-                      <dd>{card.action}</dd>
-                    </div>
-                  )}
-                </dl>
-              </article>
-            ))}
-          </div>
-        </>
-      )}
-    </section>
+      {!narrative.generated && <p className="r-analysis-note">Data commentary · AI analysis unavailable{narrative.error ? `: ${narrative.error}` : ""}</p>}
+      {narrative.cards.map((passage, index) => (
+        <div className="r-passage" key={index}>
+          <h3>{passage.headline}</h3>
+          {passage.meaning && <p>{passage.meaning}</p>}
+          {passage.evidence && <p className="r-citation">{passage.evidence}</p>}
+          {passage.action && <p>{passage.action}</p>}
+        </div>
+      ))}
+    </div>
   );
 }

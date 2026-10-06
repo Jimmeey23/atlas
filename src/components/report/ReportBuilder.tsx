@@ -7,6 +7,7 @@ import { computeReport, monthLabel } from "../../report/compute";
 import { clearNarrativeCache, generateNarratives } from "../../report/narrative";
 import { downloadReport, printReport } from "../../report/export";
 import type { ReportModel } from "../../report/model";
+import { listReports, loadReport, saveReport, type SavedReport } from "../../report/storage";
 import { ReportDocument } from "./ReportDocument";
 
 type Stage = { label: string; done: number; total: number } | null;
@@ -29,6 +30,9 @@ export function ReportBuilder({ version }: { version: string | number }) {
   const [stage, setStage] = useState<Stage>(null);
   const [error, setError] = useState("");
   const [narrativeError, setNarrativeError] = useState("");
+  const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
+  const [storageError, setStorageError] = useState("");
+  const [loadingSaved, setLoadingSaved] = useState(false);
   const document_ = useRef<HTMLElement>(null);
   const run = useRef<AbortController>();
 
@@ -51,12 +55,12 @@ export function ReportBuilder({ version }: { version: string | number }) {
         setMonths(available);
         // Open on what the dashboard is already looking at, where that exists.
         setStudio((current) =>
-          current && locations.includes(current)
+          current
             ? current
             : locations.find((l) => filters.location.includes(l)) || locations[0] || "",
         );
         setMonth((current) =>
-          current && available.includes(current)
+          current
             ? current
             : available.find((m) => m === filters.to?.slice(0, 7)) || available[0] || "",
         );
@@ -69,8 +73,58 @@ export function ReportBuilder({ version }: { version: string | number }) {
     };
   }, [version]);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoadingSaved(true);
+    void (async () => {
+      try {
+        const history = await listReports(controller.signal);
+        setSavedReports(history);
+        if (history[0]) {
+          const saved = await loadReport(history[0].id, controller.signal);
+          if (!controller.signal.aborted) {
+            setModel(saved);
+            setStudio(saved.scope.studio);
+            setMonth(saved.scope.month);
+          }
+        }
+      } catch (e) {
+        if (!controller.signal.aborted) setStorageError(String(e));
+      } finally {
+        if (!controller.signal.aborted) setLoadingSaved(false);
+      }
+    })();
+    return () => controller.abort();
+  }, []);
+
+  async function persistReport(report: ReportModel, signal?: AbortSignal) {
+    setStorageError("");
+    try {
+      const saved = await saveReport(report, signal);
+      if (signal?.aborted) return;
+      setModel(saved);
+      setSavedReports(current => [{ id: saved.id!, scope: saved.scope, builtAt: saved.builtAt,
+        savedAt: saved.savedAt!, aiChapters: Object.values(saved.narratives).filter(n => n.generated).length }, ...current].slice(0, 50));
+    } catch (e) {
+      if (!signal?.aborted) setStorageError(`This report is not saved. ${String(e)}`);
+    }
+  }
+
+  async function openSaved(id: string) {
+    setLoadingSaved(true);
+    setStorageError("");
+    try {
+      const saved = await loadReport(id);
+      setModel(saved);
+      setStudio(saved.scope.studio);
+      setMonth(saved.scope.month);
+      setNarrativeError("");
+    } catch (e) { setStorageError(String(e)); }
+    finally { setLoadingSaved(false); }
+  }
+
   const ready = !!studio && !!month;
-  const busy = stage !== null;
+  const busy = stage !== null || loadingSaved;
 
   async function build(regenerate = false) {
     if (!ready) return;
@@ -94,7 +148,12 @@ export function ReportBuilder({ version }: { version: string | number }) {
           controller.signal,
         );
         if (controller.signal.aborted) return;
-        setModel({ ...computed, narratives });
+        const completed = { ...computed, narratives };
+        setModel(completed);
+        const failures = Object.entries(narratives).filter(([, n]) => n.error);
+        if (failures.length) setNarrativeError(failures.map(([id, n]) => `${id}: ${n.error}`).join(" · "));
+        setStage({ label: "Saving report to database", done: 0, total: 1 });
+        await persistReport(completed, controller.signal);
       } catch (e) {
         if (!controller.signal.aborted) setNarrativeError(String(e));
       }
@@ -122,7 +181,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
             onChange={(e) => setStudio(e.target.value)}
             disabled={busy || !studios.length}
           >
-            {studios.map((name) => (
+            {Array.from(new Set([studio, ...studios].filter(Boolean))).map((name) => (
               <option key={name} value={name}>
                 {name}
               </option>
@@ -136,7 +195,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
             onChange={(e) => setMonth(e.target.value)}
             disabled={busy || !months.length}
           >
-            {months.map((key) => (
+            {Array.from(new Set([month, ...months].filter(Boolean))).map((key) => (
               <option key={key} value={key}>
                 {monthLabel(key)}
               </option>
@@ -179,6 +238,21 @@ export function ReportBuilder({ version }: { version: string | number }) {
         )}
       </div>
 
+      <div className="report-history" data-export="omit">
+        <label>
+          <span className="small">Saved reports · latest 50 versions</span>
+          <select aria-label="Saved reports" disabled={busy || !savedReports.length} value={model?.id || ""}
+            onChange={e => e.target.value && void openSaved(e.target.value)}>
+            <option value="">{loadingSaved ? "Loading saved reports…" : "Select a saved report"}</option>
+            {savedReports.map(saved => <option key={saved.id} value={saved.id}>
+              {saved.scope.studio} · {monthLabel(saved.scope.month)} · {new Date(saved.savedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} · {saved.aiChapters}/7 AI chapters
+            </option>)}
+          </select>
+        </label>
+        <span className="small" role="status">{model?.savedAt ? "Saved to database · available next session" : model ? "Unsaved report" : "Reports are saved automatically after generation"}</span>
+        {model && !model.id && <button className="button" disabled={busy} onClick={() => void persistReport(model)}>Retry saving</button>}
+      </div>
+      {storageError && <div className="notice" role="alert">{storageError}</div>}
       {stage && (
         <div className="report-progress" role="status" data-export="omit">
           <div className="report-progress-bar">
@@ -198,8 +272,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
       {narrativeError && (
         <div className="notice" role="status" data-export="omit">
           <TriangleAlert size={13} />
-          Figures are complete; the written analysis could not be generated, so chapters show
-          labelled rule-based copy instead. {narrativeError}
+          Some chapters could not be written. Available figures and generated chapters are preserved; use Rewrite insights to retry. {narrativeError}
         </div>
       )}
 

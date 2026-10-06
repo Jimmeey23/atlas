@@ -1,7 +1,7 @@
 import type { ChapterData } from "./model";
 
 /** Months the appendix grid and the forward view read, inclusive of the report month. */
-export const HISTORY_MONTHS = 13;
+export const HISTORY_MONTHS = 14;
 
 /** First and last day of a "2026-07" month key. */
 export function monthBounds(month: string) {
@@ -34,7 +34,9 @@ export function figuresHash(chapterData: Record<string, ChapterData>) {
       id,
       data.total,
       data.prior,
-      data.groups.map((g) => [g.field, g.rows]),
+      data.priorYear,
+      data.history,
+      data.groups.map((g) => [g.field, g.rows, g.total]),
     ]);
   const text = JSON.stringify(material);
   let hash = 2166136261;

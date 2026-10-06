@@ -32,6 +32,7 @@ export const reportFileName = (model: ReportModel) =>
 export function serialiseReport(element: HTMLElement, model: ReportModel) {
   const clone = element.cloneNode(true) as HTMLElement;
   // The in-app chrome has no meaning in a file; the sticky contents rail does.
+  clone.setAttribute("data-report-theme", "light");
   clone.querySelectorAll("[data-export='omit']").forEach((node) => node.remove());
   const title = `${model.scope.studio} — ${monthLabel(model.scope.month)} performance report`;
   return [
@@ -81,7 +82,7 @@ export function downloadReport(element: HTMLElement, model: ReportModel) {
 export function printReport(element: HTMLElement, model: ReportModel) {
   const frame = document.createElement("iframe");
   frame.setAttribute("aria-hidden", "true");
-  frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;";
+  frame.style.cssText = "position:fixed;right:0;bottom:0;width:1100px;height:800px;left:-12000px;border:0;";
   document.body.append(frame);
   const doc = frame.contentDocument;
   if (!doc) {
@@ -91,11 +92,17 @@ export function printReport(element: HTMLElement, model: ReportModel) {
   doc.open();
   doc.write(serialiseReport(element, model));
   doc.close();
-  const run = () => {
-    frame.contentWindow?.focus();
-    frame.contentWindow?.print();
-    setTimeout(() => frame.remove(), 1000);
+  const run = async () => {
+    await doc.fonts?.ready;
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const target = frame.contentWindow;
+    if (!target) { frame.remove(); return; }
+    // Keep the document alive until the print dialog closes; early removal
+    // can produce blank or partially laid-out PDFs in some browsers.
+    target.addEventListener("afterprint", () => frame.remove(), { once: true });
+    target.focus();
+    target.print();
   };
-  if (doc.readyState === "complete") run();
-  else frame.addEventListener("load", run, { once: true });
+  if (doc.readyState === "complete") void run();
+  else frame.addEventListener("load", () => void run(), { once: true });
 }

@@ -70,11 +70,16 @@ async function historyFor(spec: ChapterSpec, scope: ReportScope, ids: string[]) 
   const scoped = where(filters, spec.source, []);
   const conjunction =
     ["sessions", "sales", "checkins"].includes(spec.source) || !scoped ? "WHERE" : "AND";
-  return query(
+  const rows = await query(
     `SELECT ${month} AS month,${metricSQL(historical, context(filters, []))},COUNT(*) AS n` +
       ` FROM ${facts} ${conjunction} ${month} IS NOT NULL AND ${month}>=${quote(start)}` +
       ` GROUP BY ${month} ORDER BY month`,
   );
+  const byMonth = new Map(rows.map(row => [String(row.month), row]));
+  return Array.from({ length: HISTORY_MONTHS }, (_, index) => {
+    const month = shiftMonth(start, index);
+    return byMonth.get(month) ?? { month, n: 0 };
+  });
 }
 
 async function computeChapter(spec: ChapterSpec, scope: ReportScope): Promise<ChapterData> {
