@@ -105,7 +105,7 @@ export async function createApp({ serveStatic = false } = {}) {
           // observed returning a stale, partially-filtered payload for the same URL.
           `https://docs.google.com/spreadsheets/d/${source.id}/gviz/tq?tqx=out:json&headers=1&${source.gid ? `gid=${encodeURIComponent(source.gid)}` : `sheet=${encodeURIComponent(source.title)}`}&range=A:ZZ${force ? `&_=${Date.now()}` : ""}`,
           
-          { cache: "no-store", signal: AbortSignal.timeout(30000) },
+          { cache: "no-store", signal: AbortSignal.timeout(120000) },
         );
         if (!res.ok) throw new Error(`Public sheet HTTP ${res.status}`);
         const text = await res.text();
