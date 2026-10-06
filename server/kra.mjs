@@ -1,22 +1,49 @@
-import {createHash,randomBytes,timingSafeEqual} from 'node:crypto';
-import {readFile,writeFile,rename} from 'node:fs/promises';
+import {createHash,createHmac,randomBytes,timingSafeEqual} from 'node:crypto';
 import path from 'node:path';
+import {createStore} from './store.mjs';
 import {normalise} from '../src/data/normalise.ts';
 import {performanceMarketingTopics} from './kra-curriculum.mjs';
 import {validateKraEdit} from './kra-edits.mjs';
 import {kraPerformance,kraDefinitions} from './kra-metrics.mjs';
 const digest=value=>createHash('sha256').update(value).digest();
-export function kraRoutes(app,root,config,load) {
-  const sessions=new Map(),attempts=new Map(),cookie='p57_kra_session';
+export function kraRoutes(app,root,config,load,store=createStore({root})) {
+  const attempts=new Map(),cookie='p57_kra_session';
   const protectedCode=digest(process.env.KRA_PASSCODE||'9818');
-  const file=path.join(root,'.floor','kra-jimmeey-jun-nov-2026.json');
+  const file='.floor/kra-jimmeey-jun-nov-2026.json';
+  const cache=key=>`.cache/${key}.json`;
+  // Serverless instances do not share memory, so a session cannot live in a Map: the token is
+  // signed instead and verified arithmetically on whichever instance receives the request.
+  const sessionKey=process.env.KRA_SESSION_SECRET||process.env.SUPABASE_SERVICE_ROLE_KEY||(process.env.KRA_PASSCODE??'9818')+'::atlas-kra';
+  const sign=payload=>createHmac('sha256',sessionKey).update(payload).digest('base64url');
+  const issue=()=>{const now=Date.now(),payload=`${now+8*60*60*1000}.${now}.${randomBytes(18).toString('base64url')}`;return `${payload}.${sign(payload)}`;};
+  // Locking has to revoke server-side, not just clear the cookie. A durable epoch does that
+  // without per-instance session state: every token issued before it stops verifying.
+  const epochFile='.floor/kra-session-epoch.json';
+  let epoch={value:0,readAt:0};
+  const revokedBefore=async()=>{
+    if(Date.now()-epoch.readAt<5000)return epoch.value;
+    const saved=await store.read(epochFile).catch(()=>null);
+    epoch={value:Number(saved?.since)||0,readAt:Date.now()};
+    return epoch.value;
+  };
+  const revokeAll=async()=>{const since=Date.now();await store.write(epochFile,{since});epoch={value:since,readAt:Date.now()};};
+  const valid=async token=>{
+    const parts=String(token??'').split('.');
+    if(parts.length!==4)return false;
+    const payload=parts.slice(0,3).join('.'),expected=sign(payload);
+    const given=Buffer.from(parts[3]),want=Buffer.from(expected);
+    if(given.length!==want.length||!timingSafeEqual(given,want))return false;
+    if(!(Number(parts[0])>Date.now()))return false;
+    return Number(parts[1])>=await revokedBefore();
+  };
   const asOf=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
   const auth=(req,res,next)=>{
     res.set('Cache-Control','no-store');
-    for(const [key,expires] of sessions)if(expires<Date.now())sessions.delete(key);
     const token=String(req.headers.cookie??'').split(';').map(part=>part.trim()).find(part=>part.startsWith(cookie+'='))?.slice(cookie.length+1);
-    if(!token||!sessions.has(token))return res.status(401).json({error:'Unlock the KRA view to continue.'});
-    req.kraToken=token;next();
+    valid(token).then(ok=>{
+      if(!ok)return res.status(401).json({error:'Unlock the KRA view to continue.'});
+      req.kraToken=token;next();
+    }).catch(()=>res.status(503).json({error:'The KRA session store is unavailable. Retry.'}));
   };
   app.post('/api/kra/unlock',(req,res)=>{
     res.set('Cache-Control','no-store');
@@ -26,13 +53,13 @@ export function kraRoutes(app,root,config,load) {
     attempt.count++;attempts.set(key,attempt);
     if(typeof req.body?.code!=='string'||!timingSafeEqual(protectedCode,digest(req.body.code)))return res.status(401).json({error:'Incorrect passcode.'});
     attempts.delete(key);
-    const token=randomBytes(32).toString('hex');sessions.set(token,Date.now()+8*60*60*1000);
+    const token=issue();
     res.cookie(cookie,token,{httpOnly:true,sameSite:'strict',secure:req.secure||req.headers['x-forwarded-proto']==='https',maxAge:8*60*60*1000,path:'/api/kra'});
     res.json({unlocked:true});
   });
-  app.post('/api/kra/lock',auth,(req,res)=>{sessions.delete(req.kraToken);res.clearCookie(cookie,{path:'/api/kra'});res.json({locked:true});});
+  app.post('/api/kra/lock',auth,async(_req,res)=>{try{await revokeAll();res.clearCookie(cookie,{path:'/api/kra'});res.json({locked:true});}catch{res.status(503).json({error:'The view could not be locked. Retry.'});}});
   app.get('/api/kra/session',auth,(_req,res)=>res.json({unlocked:true}));
-  const evidence=async()=>{try{return JSON.parse(await readFile(file,'utf8'));}catch(error){if(error.code==='ENOENT')return {};throw error;}};
+  const evidence=async()=>await store.read(file)??{};
   let writes=Promise.resolve();
   app.get('/api/kra/performance',auth,async(req,res)=>{
     try {
@@ -40,7 +67,7 @@ export function kraRoutes(app,root,config,load) {
       await Promise.all(['sales','leads','bookings','lapsed','new'].map(async key=>{
         const source=config.find(item=>item.key===key);
         let data;
-        if(req.query.refresh!=='true')try{data=JSON.parse(await readFile(path.join(root,'.cache',key+'.json'),'utf8'));data.stale=Date.now()-data.fetchedAt>=15*60*1000;}catch{}
+        if(req.query.refresh!=='true')try{data=await store.read(cache(key));if(data)data.stale=Date.now()-data.fetchedAt>=15*60*1000;}catch{}
         if(!data)data=await load(source,req.query.refresh==='true');
         const normalized=normalise(data,false).rows;
         if(key==='leads'){const index=data.columns.indexOf('ID');normalized.forEach((row,i)=>{row.lead_id=index>=0?String(data.rows[i][index]??'').trim()||null:null;});}
@@ -64,7 +91,7 @@ export function kraRoutes(app,root,config,load) {
       const previousInfo=saved.scorecardInfo[req.params.id]??null;
       saved.scorecardInfo[req.params.id]={area:info.area.trim(),target:info.target.trim(),weight:info.weight};saved.scorecardEdits[key]=record;
       saved.scorecardHistory.push({id:randomBytes(12).toString('hex'),key,updatedAt,before,after:record,previousInfo,info:saved.scorecardInfo[req.params.id]});
-      await writeFile(file+'.tmp',JSON.stringify(saved));await rename(file+'.tmp',file);
+      await store.write(file,saved);
       const base=kraDefinitions.find(definition=>definition.id===req.params.id),editedInfo=saved.scorecardInfo[req.params.id];
       return {key,record,info:{...editedInfo,targetEdited:editedInfo.target!==base.target,manual:editedInfo.area!==base.area||editedInfo.target!==base.target||editedInfo.weight!==base.weight},history:saved.scorecardHistory};
     });writes=job.catch(()=>undefined);
@@ -80,7 +107,7 @@ export function kraRoutes(app,root,config,load) {
       const records=await evidence();records.marketingTopics??={};
       const written={};
       for(const id of ids){const record={...stamp,note:(body.note??records.marketingTopics[id]?.note??'').trim()};records.marketingTopics[id]=record;written[id]=record;}
-      await writeFile(file+'.tmp',JSON.stringify(records));await rename(file+'.tmp',file);return written;
+      await store.write(file,records);return written;
     });
     writes=job.catch(()=>undefined);
     try{res.json(await job);}catch{res.status(500).json({error:'Training progress could not be saved.'});}
@@ -89,7 +116,7 @@ export function kraRoutes(app,root,config,load) {
     const body=req.body??{};
     if(!performanceMarketingTopics.some(topic=>topic.id===req.params.id)||!['Not started','In progress','Completed'].includes(body.status)||typeof body.note!=='string'||body.note.length>4000)return res.status(400).json({error:'Invalid training progress.'});
     const record={status:body.status,note:body.note.trim(),date:asOf(),updatedAt:new Date().toISOString(),basis:'Manually reported by user'};
-    const job=writes.then(async()=>{const records=await evidence();records.marketingTopics??={};records.marketingTopics[req.params.id]=record;await writeFile(file+'.tmp',JSON.stringify(records));await rename(file+'.tmp',file);return record;});
+    const job=writes.then(async()=>{const records=await evidence();records.marketingTopics??={};records.marketingTopics[req.params.id]=record;await store.write(file,records);return record;});
     writes=job.catch(()=>undefined);
     try{res.json(await job);}catch{res.status(500).json({error:'Training progress could not be saved.'});}
   });
@@ -100,7 +127,7 @@ export function kraRoutes(app,root,config,load) {
       return res.status(400).json({error:'Provide valid review-period evidence fields and a date no later than today.'});
     if(body.status==='Completed'&&(!body.note.trim()||!body.date||!expected.every(item=>body.checks.includes(item))))return res.status(400).json({error:'Completion requires a dated outcome note and every required milestone.'});
     const record={status:body.status,note:body.note.trim(),url:body.url.trim(),date:body.date,checks:[...new Set(body.checks)],updatedAt:new Date().toISOString(),basis:'Self-reported evidence'};
-    const job=writes.then(async()=>{const records=await evidence();records[req.params.id]=record;await writeFile(file+'.tmp',JSON.stringify(records));await rename(file+'.tmp',file);return record;});
+    const job=writes.then(async()=>{const records=await evidence();records[req.params.id]=record;await store.write(file,records);return record;});
     writes=job.catch(()=>undefined);
     try{res.json(await job);}catch{res.status(500).json({error:'Evidence could not be saved.'});}
   });

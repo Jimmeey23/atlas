@@ -38,6 +38,25 @@ export function intelligenceRoutes(
   loadSource,
   providers = {},
 ) {
+  // DuckDB spills and NDJSON extracts need a writable disk. Serverless gives us only /tmp,
+  // which is per-instance and ephemeral — fine for scratch, so scratch moves there and the
+  // source snapshots are rehydrated from the durable store on each cold instance.
+  const store = providers.store ?? null;
+  const scratch = process.env.VERCEL ? "/tmp/atlas" : root;
+  async function ensureCached(source) {
+    const cacheFile = path.join(scratch, ".cache", source.key + ".json");
+    try {
+      return { cacheFile, info: await stat(cacheFile) };
+    } catch {}
+    const saved = store ? await store.read(`.cache/${source.key}.json`) : null;
+    if (saved) {
+      await mkdir(path.dirname(cacheFile), { recursive: true });
+      await writeFile(cacheFile, JSON.stringify(saved));
+      return { cacheFile, info: await stat(cacheFile) };
+    }
+    if (loadSource) await loadSource(source, false);
+    return { cacheFile, info: await stat(cacheFile) };
+  }
   const db =
     providers.db ??
     (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -93,7 +112,7 @@ export function intelligenceRoutes(
         memory_limit: "384MB",
         threads: "1",
         preserve_insertion_order: "false",
-        temp_directory: path.join(root, ".cache", "agent", "spill"),
+        temp_directory: path.join(scratch, ".cache", "agent", "spill"),
       }).then((i) => i.connect());
     return engine;
   }
@@ -103,7 +122,7 @@ export function intelligenceRoutes(
     validateSQL(sql);
     const job = queue.then(async () => {
       const c = await connection();
-      await mkdir(path.join(root, ".cache", "agent"), { recursive: true });
+      await mkdir(path.join(scratch, ".cache", "agent"), { recursive: true });
       const provenance = [];
       const requested = [
         ...sql.matchAll(/\b(?:from|join)\s+"?([a-z_][\w]*)/gi),
@@ -113,14 +132,7 @@ export function intelligenceRoutes(
           requested.includes(s.key) ||
           requested.includes("scoped_raw_" + s.key),
       )) {
-        const cacheFile = path.join(root, ".cache", source.key + ".json");
-        let fileInfo;
-        try {
-          fileInfo = await stat(cacheFile);
-        } catch {
-          if (loadSource) await loadSource(source, false);
-          fileInfo = await stat(cacheFile);
-        }
+        const { cacheFile, info: fileInfo } = await ensureCached(source);
         let data;
         if (
           !versions.has(source.key) ||
@@ -144,13 +156,13 @@ export function intelligenceRoutes(
         });
         if (data && versions.get(source.key) !== data.fetchedAt) {
           const file = path.join(
-            root,
+            scratch,
             ".cache",
             "agent",
             source.key + ".ndjson",
           );
           const rawFile = path.join(
-            root,
+            scratch,
             ".cache",
             "agent",
             "raw_" + source.key + ".ndjson",

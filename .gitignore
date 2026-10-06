@@ -20,3 +20,5 @@ UPGRADES-VERIFICATION.json
 ATLAS-VERIFICATION.json
 
 supabase/.temp/
+
+api/_app.mjs

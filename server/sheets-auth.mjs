@@ -7,11 +7,18 @@ export async function authenticatedSheet(source, publicError, env = process.env,
     if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_REFRESH_TOKEN) {
       client = new OAuth2Client(env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET);
       client.setCredentials({ refresh_token: env.GOOGLE_REFRESH_TOKEN });
+    } else if (env.GOOGLE_CREDENTIALS_JSON) {
+      // Serverless has no credentials file to point at, so the key travels as inline JSON.
+      client = await new GoogleAuth({
+        credentials: JSON.parse(env.GOOGLE_CREDENTIALS_JSON),
+        scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
+      }).getClient();
+      mode = "Sheets API v4 (inline service account)";
     } else if (env.GOOGLE_APPLICATION_CREDENTIALS) {
       client = await new GoogleAuth({ scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"] }).getClient();
       mode = "Sheets API v4 (service account fallback)";
     } else {
-      throw new Error(`${publicError.message} Authenticated fallback unavailable: configure GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET and GOOGLE_REFRESH_TOKEN on the server.`);
+      throw new Error(`${publicError.message} Authenticated fallback unavailable: configure GOOGLE_CREDENTIALS_JSON, or GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET and GOOGLE_REFRESH_TOKEN on the server.`);
     }
   }
   const headers = await client.getRequestHeaders();
