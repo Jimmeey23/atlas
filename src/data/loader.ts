@@ -61,7 +61,7 @@ export const dependencies = (tab: number) =>
     : [
         ...new Set([
           blueprints[tab].source,
-          ...(tab === 0 ? ["new", "sales"] : tab === 8 ? ["new"] : tab === 6 ? ["new", "checkins"] : []),
+          ...(tab === 0 ? ["new", "sales"] : tab === 5 ? ["sales"] : tab === 8 ? ["new"] : tab === 6 ? ["new", "checkins"] : []),
         ]),
       ];
 export const usable = (key: string) =>

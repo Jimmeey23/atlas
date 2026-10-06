@@ -5,6 +5,7 @@ import { readFile, writeFile, mkdir, copyFile } from "node:fs/promises";
 import path from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import WebSocket from "ws";
+import { kraRoutes } from "./kra.mjs";
 import { intelligenceRoutes } from "./intelligence.mjs";
 import { followupRoutes } from "./followups.mjs";
 import { randomUUID } from "node:crypto";
@@ -40,6 +41,7 @@ followupRoutes(
     : null,
 );
 intelligenceRoutes(app, root, config, load);
+kraRoutes(app, root, config, load);
 const inflight = new Map();
 async function archiveSnapshot(data) {
   await mkdir(path.join(root, ".cache", "snapshots"), { recursive: true });

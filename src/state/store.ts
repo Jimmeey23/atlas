@@ -2,14 +2,14 @@ import { create } from "zustand";
 import { relativePeriod } from "../data/periods";
 export const tabs = [
   "Business overview",
-  "Studio experiences",
+  "Studio overview",
   "Schedule & capacity",
   "Instructor performance",
   "Revenue & sales",
-  "Member acquisition",
+  "Conversion & Acquisition",
   "Renewals & retention",
   "Booking behaviour",
-  "Enquiries & conversion",
+  "Leads & Sales Funnel",
   "Member attendance",
   "Instructor economics",
   "Data quality",
@@ -53,6 +53,7 @@ export const emptyFilters: Filters = {
   capacityBand: "all",
 };
 interface Store {
+  view: string;
   tab: number;
   theme: string;
   density: string;
@@ -67,6 +68,7 @@ interface Store {
   cross: (field: string, value: string) => void;
 }
 export const useStore = create<Store>((set, get) => ({
+  view: "",
   tab: Math.min(13, Math.max(0, Number(params.get("tab") || 0))),
   theme: localStorage.getItem("floor-theme") || "matte",
   density: localStorage.getItem("floor-density") || "compact",
@@ -80,7 +82,7 @@ export const useStore = create<Store>((set, get) => ({
   compare: params.get("compare") || "prior",
   rate: Number(localStorage.getItem("floor-rate") || 1200),
   transient: [],
-  set: (s) => set(s),
+  set: (s) => set({ ...(s.tab != null && s.view == null ? {view: ""} : {}), ...s }),
   filter: (s) => set({ filters: { ...get().filters, ...s } }),
   cross: (field, value) =>
     set({
@@ -98,11 +100,12 @@ useStore.subscribe((s) => {
   localStorage.setItem("floor-rate", String(s.rate));
   const p = new URLSearchParams();
   p.set("tab", String(s.tab));
+  if (s.view) p.set("view", s.view);
   p.set("f", JSON.stringify(s.filters));
   p.set("compare", s.compare);
   history.replaceState(null, "", `?${p}`);
 });
-export const savedPresets = [
+export const savedPresets: {name: string; tab: number; view?: string}[] = [
   { name: "Monday review", tab: 0 },
   { name: "Schedule audit", tab: 2 },
   { name: "Trainer one-to-ones", tab: 3 },

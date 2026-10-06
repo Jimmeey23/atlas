@@ -75,7 +75,7 @@ async function restoreSnapshot(key: string) {
           savedAt: number;
         }
       | undefined;
-    if (!entry || entry.schema !== 10) return false;
+    if (!entry || entry.schema !== 11) return false;
     resultCache.clear();
     await database.registerFileBuffer(key + ".parquet", entry.buffer);
     await connection.query(
@@ -95,7 +95,7 @@ async function persist(key: string) {
     );
     const buffer = await database.copyFileToBuffer(key + ".parquet");
     await writeSnapshot({
-      schema: 10,
+      schema: 11,
       key,
       buffer,
       meta: health[key],

@@ -1,0 +1,57 @@
+import { useEffect, useMemo, useState } from 'react';
+import { ShoppingBag, Users } from 'lucide-react';
+import { query, quote, type Row } from '../data/duckdb';
+import { today, where } from '../data/analytics';
+import { acquisitionAggregate, acquisitionDimensions, acquisitionFactsSQL, type AcquisitionDimension } from '../data/acquisition';
+import type { AcquisitionDrillRequest } from '../data/acquisition-reference';
+import { useStore } from '../state/store';
+import { fmt } from '../semantics/formats';
+import { AcquisitionTableShell } from './AcquisitionTableShell';
+
+type Kind='types'|'memberships'|'purchases';
+const cohortCols=[['cohort_rows','Trials','int'],['newcomers','New','int'],['converted_members','Converted','int'],['retained_members','Retained','int'],['conversion_rate','Conv %','percent'],['retention_rate','Ret %','percent'],['avg_ltv','Avg LTV','currency'],['total_ltv','Total LTV','currency'],['conversion_span','Avg days','days'],['visits_post','Avg visits','decimal']] as const;
+const purchaseCols=[['unique_members','Members','int'],['cohort_rows','First-purchase records','int'],['total_ltv','Total LTV','currency'],['atv','LTV / first purchase','currency'],['auv','LTV / member','currency'],['purchase_freq','Purchase frequency','decimal'],['conversion_span','Avg conv days','days'],['visits_post','Avg visits','decimal']] as const;
+const packageCols=[['units','Package mentions','int'],['unique_members','New clients','int'],['total_ltv','Attributed LTV','currency'],['avg_ltv','Avg LTV','currency'],['conversion_span','Avg conv days','days'],['visits_post','Avg visits','decimal']] as const;
+function format(value:unknown,type:string){return type==='decimal'&&value!=null?Number(value).toFixed(1):fmt(type==='currency'?'avg_ltv':type==='percent'?'conversion_rate':type==='days'?'avg_conversion_span':'new_clients',value);}
+export function AcquisitionReferenceTables({kind,version,onDrill}:{kind:Kind;version:number;onDrill:(request:AcquisitionDrillRequest)=>void}) {
+  const filters=useStore(s=>s.filters),transient=useStore(s=>s.transient);
+  const [group,setGroup]=useState<AcquisitionDimension>('entry'),[purchaseGroup,setPurchaseGroup]=useState('detailed'),[rows,setRows]=useState<Row[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[search,setSearch]=useState(''),[selected,setSelected]=useState<string>('all'),[metric,setMetric]=useState('all'),[sort,setSort]=useState({key:'cohort_rows',desc:true}),[page,setPage]=useState(0);
+  const scope=where(filters,'new',transient),dimension=acquisitionDimensions.find(d=>d.key===group)!;
+  const cols=kind==='types'?cohortCols:kind==='memberships'?purchaseCols:packageCols;
+  const title=kind==='types'?'By client type':kind==='memberships'?'Memberships · converted first purchases':'New client purchases · membership mix';
+  useEffect(()=>{
+    let active=true;setLoading(true);setError('');
+    const facts=acquisitionFactsSQL(scope,today());let sql='';
+    if(kind==='types')sql=`WITH facts AS (${facts}), labelled AS (SELECT *,${dimension.sql} AS label FROM facts) SELECT label,GROUPING(label) AS is_total,${acquisitionAggregate} FROM labelled GROUP BY GROUPING SETS ((label),())`;
+    else if(kind==='memberships')sql=`WITH facts AS (${facts}), labelled AS (SELECT *,COALESCE(NULLIF(trim(product),''),NULLIF(trim(purchase_journey),''),'Unspecified') AS label FROM facts WHERE ref_converted) SELECT label,GROUPING(label) AS is_total,${acquisitionAggregate},COUNT(DISTINCT COALESCE(member_id,email,'row:'||source_row::VARCHAR)) AS purchase_members,SUM(ltv)/NULLIF(COUNT(*),0) AS atv,SUM(ltv)/NULLIF(COUNT(DISTINCT COALESCE(member_id,email,'row:'||source_row::VARCHAR)),0) AS auv,AVG(post_trial_purchases) AS purchase_freq FROM labelled GROUP BY GROUPING SETS ((label),())`;
+    else {
+      const packages="list_filter(regexp_split_to_array(COALESCE(purchase_journey,''), ','),token -> trim(token)<>'')";
+      const label=purchaseGroup==='clientType'?'entry':"trim(package)";
+      const type=purchaseGroup==='detailed'?'entry':"'All client types'";
+      sql=`WITH facts AS (${facts}), exploded AS (SELECT *,UNNEST(CASE WHEN len(${packages})=0 THEN ['No Membership Purchase'] ELSE ${packages} END) AS package FROM facts WHERE ref_new), labelled AS (SELECT *,${label} AS label,${type} AS client_type FROM exploded) SELECT label,client_type,GROUPING(label) AS is_total,${acquisitionAggregate},COUNT(*) FILTER(WHERE package<>'No Membership Purchase') AS units,COUNT(DISTINCT COALESCE(member_id,email,'row:'||source_row::VARCHAR)) AS purchase_members FROM labelled GROUP BY GROUPING SETS ((label,client_type),())`;
+    }
+    query(sql).then(result=>{if(active){setRows(result);setLoading(false);}}).catch(e=>{if(active){setError(String(e));setLoading(false);}});
+    return()=>{active=false;};
+  },[scope,version,kind,dimension.sql,purchaseGroup]);
+  const labels=useMemo(()=>[...new Set(rows.filter(r=>!r.is_total).map(r=>String(r.label)))].sort(),[rows]);
+  const matching=useMemo(()=>rows.filter(row=>!row.is_total&&(selected==='all'||row.label===selected)&&[row.label,row.client_type].some(v=>String(v??'').toLowerCase().includes(search.toLowerCase()))).sort((a,b)=>{const av=metricValue(a,sort.key),bv=metricValue(b,sort.key);if(av==null)return bv==null?0:1;if(bv==null)return-1;const d=typeof av==='number'&&typeof bv==='number'?av-bv:String(av).localeCompare(String(bv));return sort.desc?-d:d;}),[rows,search,selected,sort]);
+  const total=rows.find(r=>r.is_total),displayCols=cols.filter(([key])=>metric==='all'||key===metric),currentPage=Math.min(page,Math.max(0,Math.ceil(matching.length/25)-1));
+  function drill(row:Row,key?:string){
+    let predicate='';
+    if(kind==='types')predicate=row.is_total?'':`${dimension.sql}=${quote(String(row.label))}`;
+    else if(kind==='memberships')predicate=`ref_converted${row.is_total?'':` AND COALESCE(NULLIF(trim(product),''),NULLIF(trim(purchase_journey),''),'Unspecified')=${quote(String(row.label))}`}`;
+    else{
+      predicate='ref_new';
+      if(!row.is_total){if(purchaseGroup==='clientType')predicate+=` AND entry=${quote(String(row.label))}`;else predicate+=row.label==='No Membership Purchase'?" AND len(list_filter(regexp_split_to_array(COALESCE(purchase_journey,''), ','), token -> trim(token)<>''))=0":` AND list_contains(list_transform(regexp_split_to_array(COALESCE(purchase_journey,''),','), token -> trim(token)),${quote(String(row.label))})`;if(purchaseGroup==='detailed')predicate+=` AND entry=${quote(String(row.client_type))}`;}
+    }
+    onDrill({title:`${title} · ${row.is_total?'Full scope':row.label}${row.client_type&&purchaseGroup==='detailed'?` · ${row.client_type}`:''}`,scope,predicate,metric:key === "unique_members" ? "purchase_members" : key});
+  }
+  function sortBy(key:string){setSort(s=>({key,desc:s.key===key?!s.desc:true}));setPage(0);}
+  function metricValue(row:Row,key:string){return key==='unique_members'&&kind!=='types'?row.purchase_members:row[key];}
+  return <AcquisitionTableShell title={title} icon={kind==='types'?Users:ShoppingBag} count={matching.length} description={kind==='types'?'Reference cohort summary by client type, studio, membership or instructor. Click any measure to inspect contributors.':kind==='memberships'?'Converted members grouped by their first purchase item, with value, purchase frequency and conversion timing.':'New-client post-trial packages by membership × client type, including No Membership Purchase.'} onSearch={value=>{setSearch(value);setPage(0);}}
+    actions={<>{kind==='types'&&<label className="acq-control">First column<select value={group} aria-label="Client type grouping" onChange={e=>{setGroup(e.target.value as AcquisitionDimension);setSelected('all');}}>{acquisitionDimensions.map(d=><option key={d.key} value={d.key}>{d.label}</option>)}</select></label>}{kind==='purchases'&&<label className="acq-control">Grouping<select value={purchaseGroup} aria-label="New purchase grouping" onChange={e=>{setPurchaseGroup(e.target.value);setSelected('all');}}>{[['detailed','Membership × client type'],['membership','Membership'],['clientType','Client type']].map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>}<label className="acq-control">First-column values<select value={selected} aria-label={`${kind} first-column values`} onChange={e=>{setSelected(e.target.value);setPage(0);}}><option value="all">All values</option>{labels.map(label=><option key={label}>{label}</option>)}</select></label></>}
+    metricBar={<div className="acq-metric-tabs">{[['all','All metrics'],...cols.map(([key,label])=>[key,label])].map(([key,label])=><button key={key} aria-pressed={metric===key} onClick={()=>setMetric(key)}>{label}</button>)}</div>}
+    footer={<><div className="acq-pagination"><span>{matching.length} groups · page {currentPage+1} of {Math.max(1,Math.ceil(matching.length/25))}</span><div><button disabled={!currentPage} onClick={()=>setPage(currentPage-1)}>Previous</button><button disabled={(currentPage+1)*25>=matching.length} onClick={()=>setPage(currentPage+1)}>Next</button></div></div><span>{kind==='purchases'?'Package mentions follow the source membership list. A member and their LTV can appear in several package groups; attributed LTV is not package cash revenue.':kind==='memberships'?'Value per purchase and value per member use cohort LTV, matching the reference’s LTV proxy; linked cash collections are available in drill-down Transactions.':'Converted and retained source records / new-client records. Money Credits-only purchases are excluded from conversion.'} Missing source amounts remain unavailable; footer totals cover the full global scope.</span></>}>
+    {error?<p role="alert">{error}</p>:loading?<p className="acq-empty" role="status">Loading reference cohort analytics…</p>:<div className="acq-table-scroll"><table className="acq-table"><thead><tr><th className="acq-sticky" aria-sort={sort.key==='label'?(sort.desc?'descending':'ascending'):'none'}><button onClick={()=>sortBy('label')}>{kind==='types'?dimension.label:kind==='memberships'?'First purchase':purchaseGroup==='clientType'?'Client type':'Membership'}</button></th>{kind==='purchases'&&purchaseGroup==='detailed'&&<th className="acq-dimension">Client type</th>}{displayCols.map(([key,label])=><th key={key} aria-sort={sort.key===key?(sort.desc?'descending':'ascending'):'none'}><button onClick={()=>sortBy(key)}>{label}</button></th>)}</tr></thead><tbody>{matching.slice(currentPage*25,currentPage*25+25).map(row=><tr key={JSON.stringify([row.label,row.client_type])}><th scope="row" className="acq-sticky"><button className="acq-cell-button" onClick={()=>drill(row)}>{row.label}</button></th>{kind==='purchases'&&purchaseGroup==='detailed'&&<td className="acq-dimension">{row.client_type}</td>}{displayCols.map(([key,,type])=><td key={key}><button className="acq-cell-button" onClick={()=>drill(row,key)}>{format(metricValue(row,key),type)}</button></td>)}</tr>)}</tbody>{total&&<tfoot><tr><th className="acq-sticky"><button className="acq-cell-button" onClick={()=>drill(total)}>Full scope · total</button></th>{kind==='purchases'&&purchaseGroup==='detailed'&&<td>All types</td>}{displayCols.map(([key,,type])=><td key={key}><button className="acq-cell-button" onClick={()=>drill(total,key)}>{format(metricValue(total,key),type)}</button></td>)}</tr></tfoot>}</table>{!matching.length&&<p className="acq-empty">No source cohorts match the selected filters.</p>}</div>}
+  </AcquisitionTableShell>;
+}

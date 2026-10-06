@@ -4,6 +4,7 @@ import { metrics } from "../semantics/metrics";
 import { fmt, delta } from "../semantics/formats";
 import { useStore } from "../state/store";
 import { today } from "../data/analytics";
+import { acquisitionPeriodLabel } from "../data/acquisition";
 import { Register } from "./Register";
 export function MoMTable({ rows, ids }: { rows: Row[]; ids: string[] }) {
   const [mode, setMode] = useState("absolute");
@@ -18,7 +19,7 @@ export function MoMTable({ rows, ids }: { rows: Row[]; ids: string[] }) {
       const key = d.toISOString().slice(0, 7);
       return {
         key,
-        label: d.toLocaleDateString("en-IN", {
+        label: s.tab === 5 ? acquisitionPeriodLabel(key) : d.toLocaleDateString("en-IN", {
           month: "short",
           year: "2-digit",
           timeZone: "UTC",
@@ -26,7 +27,7 @@ export function MoMTable({ rows, ids }: { rows: Row[]; ids: string[] }) {
         row: rows.find((r) => r.month === key),
       };
     });
-  }, [rows]);
+  }, [rows, s.tab]);
   return (
     <Register
       index="06"

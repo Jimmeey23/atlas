@@ -61,6 +61,7 @@ import { NestedTable, type TreeRow } from "./components/NestedTable";
 import { Chart, Pulse } from "./components/Charts";
 import { Rankings } from "./components/Rankings";
 import { Heatmap } from "./components/Heatmap";
+import { AcquisitionMainTables, AcquisitionDeepDive } from "./components/AcquisitionTables";
 import { MoMTable } from "./components/MoMTable";
 import {
   IntelligenceWorkspace,
@@ -83,6 +84,7 @@ import { metrics } from "./semantics/metrics";
 import "./design/app.css";
 import "./styles.css";
 import "./design/refinement.css";
+import "./design/acquisition.css";
 import { sourceRows } from "./data/raw";
 const blank: Analysis = {
   total: {},
@@ -341,6 +343,7 @@ export default function App() {
       loaderTick % (loaderLines[s.tab] || loaderLines[0]).length
     ];
   const onDrill = useCallback((r: TreeRow) => setDrill(r), []);
+  useEffect(() => { setDrill(null); main.current?.scrollTo({top: 0}); }, [s.view]);
   const closeDrill = useCallback(() => setDrill(null), []);
   const dismiss = (i: Insight) => {
     const d = JSON.parse(localStorage.getItem("floor-dismissals") || "{}");
@@ -354,7 +357,7 @@ export default function App() {
   );
   const sourceProblem = health[bp.source]?.status === "error";
   const domainStyle = {
-    "--accent": pagePrefs.accent || `var(--${bp.domain})`,
+    "--accent": pagePrefs.accent || (s.tab === 5 ? "var(--acquisition-accent)" : `var(--${bp.domain})`),
   } as React.CSSProperties;
   const commands = [
     ...tabs.map((name, i) => ({
@@ -439,6 +442,7 @@ export default function App() {
   return (
     <div
       className="app"
+      data-workspace={s.tab === 5 ? "acquisition" : undefined}
       style={{
         ...domainStyle,
         ...(prefs.contentWidth
@@ -539,15 +543,14 @@ export default function App() {
           >
             <RefreshCw size={14} />
           </button>
-          <button className="button" onClick={() => setModal("export")}>
+          {s.view !== "kra" && <button className="button" onClick={() => setModal("export")}>
             <Download size={12} />
             Export
-          </button>
+          </button>}
         </div>
       </header>
       <CloudSettings />
-      <QuickFilters locations={Object.keys(choices.location || {})} />
-      <Filters options={choices} />
+      {s.view === "kra" ? <div className="kra-fixed-scope">June–November 2026 · All studios · fixed organisation-wide KRA review</div> : <><QuickFilters locations={Object.keys(choices.location || {})} /><Filters options={choices} /></>}
       <nav className="tabbar" aria-label="Performance workspaces">
         {navigationOrder
           .filter((i) => !prefs.page[i]?.hidden)
@@ -560,7 +563,7 @@ export default function App() {
                 style={
                   {
                     "--accent":
-                      prefs.page[i]?.accent || `var(--${blueprints[i].domain})`,
+                      prefs.page[i]?.accent || (i === 5 ? "var(--acquisition-accent)" : `var(--${blueprints[i].domain})`),
                   } as React.CSSProperties
                 }
                 onClick={() => s.set({ tab: i })}
@@ -615,7 +618,7 @@ export default function App() {
           aria-busy={busy}
         >
           <div className="print-context">
-            <h2>Atlas / {tabs[s.tab]}</h2>
+            <h2>Atlas / {s.view === "kra" ? "Jimmeey Gondaa · KRA performance" : tabs[s.tab]}</h2>
             <p>
               Filters: {JSON.stringify(s.filters)} / Cross-filters:{" "}
               {JSON.stringify(s.transient)} / Estimated instructor rate: ₹
@@ -624,13 +627,13 @@ export default function App() {
           </div>
           <div className="page-intro">
             <div>
-              <h1 key={s.tab}>{pagePrefs.heading || bp.title}</h1>
-              <p>{pagePrefs.subtitle ?? bp.subtitle}</p>
+              <h1 key={s.tab}>{s.view === "kra" ? "Jimmeey Gondaa · KRA performance" : pagePrefs.heading || bp.title}</h1>
+              <p>{s.view === "kra" ? "Systems, sales & client servicing · June–November 2026" : pagePrefs.subtitle ?? bp.subtitle}</p>
             </div>
             <div className="intro-meta">
               <span className="pill good">
                 <span className="dot" />
-                {ready
+                {s.view === "kra" ? "Protected saved view" : ready
                   ? dependencies(s.tab).some(
                       (k) => sourceStates[k].state === "error",
                     )
@@ -644,13 +647,13 @@ export default function App() {
               </span>
               <span className="period icon">
                 <CalendarDays size={12} />
-                {s.filters.from
+                {s.view === "kra" ? "June–November 2026" : s.filters.from
                   ? new Date(s.filters.from + "T00:00:00").toLocaleDateString(
                       "en-IN",
                       { month: "long", year: "numeric" },
                     )
                   : "All available history"}
-                <span className="small">
+                <span className="small" style={s.view === "kra" ? {display: "none"} : undefined}>
                   /{" "}
                   {s.compare === "none"
                     ? "No comparison"
@@ -661,12 +664,12 @@ export default function App() {
               </span>
             </div>
           </div>
-          <SourceStatus
+          {s.view !== "kra" && <SourceStatus
             tab={s.tab}
             version={version}
             onRetry={(key) => void ensureSource(key, true)}
-          />
-          {!!tabSummary() && (
+          />}
+          {s.view !== "kra" && !!tabSummary() && (
             <div className="tab-summary">
               <p>{tabSummary()}</p>
               <ul>
@@ -978,11 +981,13 @@ export default function App() {
                 )}
               </Register>
               <MoMTable rows={analysis.trend} ids={bp.columns.slice(0, 9)} />
+              {s.tab === 5 && <AcquisitionMainTables version={version} />}
               <Register
                 index="07"
                 title="Go one level deeper"
                 subtitle="Focused operational registers"
               >
+                {s.tab === 5 && <AcquisitionDeepDive version={version} />}
                 {bp.secondary.map((title, index) =>
                   s.tab === 0 && index === 2 ? (
                     <details className="secondary" key={title}>
@@ -1030,7 +1035,7 @@ export default function App() {
               </p>
             </>
           )}
-          <div className="print-insights">
+          <div className="print-insights" style={s.view === "kra" ? {display: "none"} : undefined}>
             <h2>Operational insights</h2>
             {(s.tab === 0 ? signals : signals.filter((i) => i.tab === s.tab))
               .slice(0, 7)
@@ -1044,7 +1049,7 @@ export default function App() {
               ))}
           </div>
         </main>
-        <SignalRail items={signals} onDismiss={dismiss} />
+        {s.view !== "kra" && <SignalRail items={signals} onDismiss={dismiss} />}
       </div>
       <footer className="statusbar">
         <span>
@@ -1204,6 +1209,7 @@ export default function App() {
                       onClick={() => {
                         s.set({
                           tab: v.tab,
+                          view: v.view || "",
                           transient: [],
                           density: "compact",
                         });
@@ -1211,7 +1217,7 @@ export default function App() {
                       }}
                     >
                       <span>{v.name}</span>
-                      <span className="small">{tabs[v.tab]}</span>
+                      <span className="small">{v.view === "kra" ? "Passcode protected · Jun–Nov 2026" : tabs[v.tab]}</span>
                     </button>
                   ))}
                   {(
