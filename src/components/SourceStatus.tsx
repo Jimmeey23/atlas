@@ -1,6 +1,36 @@
-import { dependencies, sourceStates } from "../data/loader";
+import { dependencies, sourceStates, lastFreshness } from "../data/loader";
 import { health } from "../data/duckdb";
 import { sheets } from "../data/sheets.config";
+/**
+ * What the last change probe concluded. Without Drive metadata the app can
+ * only reason about age, and says so rather than implying it has checked.
+ */
+function probeNote(key: string) {
+  const report = lastFreshness;
+  const entry = report?.sources.find((s) => s.key === key);
+  if (!entry) return { text: "Freshness not checked yet", warn: false };
+  if (!entry.verified)
+    return {
+      text: `Change detection unavailable${entry.reason ? ` (${entry.reason})` : ""}; falling back to age`,
+      warn: false,
+    };
+  if (entry.stale)
+    return { text: "Source sheet edited since this copy; refreshing", warn: true };
+  return {
+    text: `Confirmed current with the sheet at ${new Date(report!.checkedAt).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata" })} IST`,
+    warn: false,
+  };
+}
+
+/** A single word for the summary line, so the state is readable while collapsed. */
+function verdict() {
+  const report = lastFreshness;
+  if (!report) return "";
+  const checked = report.sources.filter((s) => s.verified);
+  if (!checked.length) return " · age-based";
+  return checked.some((s) => s.stale) ? " · update pending" : " · verified current";
+}
+
 export function SourceStatus({
   tab,
   onRetry,
@@ -28,7 +58,7 @@ export function SourceStatus({
       </div>
       <details className="source-status">
         <summary>
-          Source freshness ·{" "}
+          Source freshness{verdict()} ·{" "}
           {dependencies(tab)
             .map((k) => {
               const h = health[k],
@@ -54,6 +84,9 @@ export function SourceStatus({
                   {state.state === "refreshing"
                     ? "Updating; displayed data retains its timestamp"
                     : state.state}
+                </span>
+                <span className={probeNote(source.key).warn ? "warn" : undefined}>
+                  {probeNote(source.key).text}
                 </span>
                 {state.error && (
                   <span className="warn">

@@ -10,6 +10,7 @@ import { kraRoutes } from "./kra.mjs";
 import { presentationRoutes } from "./presentation.mjs";
 import { reportRoutes } from "./reports.mjs";
 import { createStore } from "./store.mjs";
+import { createFreshness } from "./freshness.mjs";
 import { intelligenceRoutes } from "./intelligence.mjs";
 import { followupRoutes } from "./followups.mjs";
 import { fileURLToPath } from "node:url";
@@ -59,6 +60,7 @@ export async function createApp({ serveStatic = false } = {}) {
     await store.write(key, data);
   }
   const metadata = new Map();
+  const freshness = createFreshness();
   async function load(source, force) {
     const start = performance.now();
     const cacheKey = `.cache/${source.key}.json`;
@@ -66,9 +68,20 @@ export async function createApp({ serveStatic = false } = {}) {
     try {
       cached = await store.read(cacheKey);
     } catch {}
-    if (cached && !force && Date.now() - cached.fetchedAt < ttl)
-      return { ...cached, cached: true };
+    if (cached && !force && Date.now() - cached.fetchedAt < ttl) {
+      // Inside the TTL the cache is only trustworthy while the workbook has not
+      // been edited. One metadata call decides it; the TTL is just the fallback
+      // for when no revision can be read.
+      const { revision } = await freshness.revision(source.id);
+      const edited =
+        revision && cached.revision && revision !== cached.revision;
+      if (!edited) return { ...cached, cached: true, revision: revision ?? cached.revision ?? null };
+    }
     try {
+      // Read before the rows, not after: if the workbook is edited mid-fetch,
+      // recording the older revision makes the next probe refetch. Recording
+      // the newer one would make it skip and keep partially stale rows.
+      const { revision } = await freshness.revision(source.id, { maxAge: 0 });
       let rows,
         columns,
         mode,
@@ -153,6 +166,7 @@ export async function createApp({ serveStatic = false } = {}) {
         id: source.id,
         columns,
         rows,
+        revision: revision ?? null,
         fetchedAt: Date.now(),
         loadMs: Math.round(performance.now() - start),
         mode,
@@ -202,6 +216,35 @@ export async function createApp({ serveStatic = false } = {}) {
         load(source, force).finally(() => inflight.delete(source.key)),
       );
     res.set("Cache-Control", "no-store").json(await inflight.get(source.key));
+  });
+  // One small metadata call per workbook answers "is anything on screen out of
+  // date?" for every source at once. The client polls this, not the sheets.
+  app.get("/api/sheets/freshness", async (_, res) => {
+    const revisions = await freshness.revisions(config);
+    const sources = await Promise.all(
+      config.map(async (source) => {
+        let cached;
+        try {
+          cached = await store.read(`.cache/${source.key}.json`);
+        } catch {}
+        const probe = revisions.get(source.id) || {};
+        const current = probe.revision || null;
+        return {
+          key: source.key,
+          fetchedAt: cached?.fetchedAt ?? null,
+          revision: cached?.revision ?? null,
+          currentRevision: current,
+          // Unknown revisions fall back to the age rule rather than claiming
+          // freshness that has not been verified.
+          stale: current
+            ? !cached || cached.revision !== current
+            : !cached || Date.now() - cached.fetchedAt >= ttl,
+          verified: Boolean(current),
+          reason: probe.reason || null,
+        };
+      }),
+    );
+    res.set("Cache-Control", "no-store").json({ checkedAt: Date.now(), sources });
   });
   app.get("/api/field-health", async (_, res) => {
     const result = [];

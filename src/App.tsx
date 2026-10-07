@@ -51,6 +51,7 @@ import {
   subscribeSources,
   dependencies,
   usable,
+  revalidate,
 } from "./data/loader";
 import { SourceStatus } from "./components/SourceStatus";
 import { ReportBuilder } from "./components/report/ReportBuilder";
@@ -90,6 +91,7 @@ import { SignalRail } from "./components/SignalRail";
 import { DrillPanel } from "./components/DrillPanel";
 import { DataHealth } from "./components/DataHealth";
 import { Secondary } from "./components/Secondary";
+import { MetricIndex } from "./components/MetricIndex";
 import { exportCSV } from "./components/exports";
 import { DataInsightAction } from "./components/DataInsightAction";
 import { PinnedInsights } from "./components/PinnedInsights";
@@ -203,10 +205,39 @@ export default function App() {
   useEffect(() => {
     void load();
   }, [s.tab, load]);
+  // Freshness is checked with one small metadata request, never by reloading
+  // sheets on a timer: only a workbook that has actually been edited is pulled
+  // again, so a check that finds nothing costs a few hundred bytes.
+  const refresh = useCallback(
+    async (minInterval = 10000) => {
+      try {
+        const changed = await revalidate(useStore.getState().tab, minInterval);
+        if (changed.length)
+          notify(
+            `Updated ${changed.length === 1 ? changed[0] : `${changed.length} sources`} from the source sheets.`,
+          );
+      } catch {
+        // A failed check leaves what is on screen alone; the next one retries.
+      }
+    },
+    [],
+  );
   useEffect(() => {
-    const timer = setInterval(() => void load(), 60000);
-    return () => clearInterval(timer);
-  }, [load]);
+    // After the first paint, not before it.
+    const idle = setTimeout(() => void refresh(0), 1500);
+    const timer = setInterval(() => void refresh(), 60000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      clearTimeout(idle);
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+  }, [refresh]);
   useEffect(() => {
     if (!ready) return;
     let current = true;
@@ -1082,6 +1113,9 @@ export default function App() {
                   ),
                 )}
               </Register>
+              {s.tab === 1 && (
+                <MetricIndex version={version} onDrill={setDrill} />
+              )}
               <p className="performance-note" style={{ marginTop: 24 }}>
                 Query completed in {Math.round(analysis.elapsed)}ms.{" "}
                 {analysis.count.toLocaleString("en-IN")} contributing rows.

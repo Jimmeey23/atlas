@@ -148,3 +148,64 @@ export async function ensureSource(key: string, force = false): Promise<void> {
     jobs.delete(key);
   }
 }
+
+export interface FreshnessReport {
+  checkedAt: number;
+  sources: {
+    key: string;
+    fetchedAt: number | null;
+    revision: string | null;
+    currentRevision: string | null;
+    stale: boolean;
+    verified: boolean;
+    reason: string | null;
+  }[];
+}
+/** The last probe, for the age indicator in the UI. */
+export let lastFreshness: FreshnessReport | null = null;
+let probing: Promise<FreshnessReport | null> | undefined;
+let probedAt = 0;
+
+/**
+ * One small request that asks the server whether any workbook has been edited
+ * since the rows we hold. It never blocks a render: callers fire it after the
+ * data on screen is already painted.
+ */
+export async function probeFreshness(minInterval = 10000) {
+  if (probing) return probing;
+  if (Date.now() - probedAt < minInterval) return lastFreshness;
+  probing = (async () => {
+    try {
+      const response = await fetch("/api/sheets/freshness");
+      if (!response.ok) return lastFreshness;
+      lastFreshness = (await response.json()) as FreshnessReport;
+      probedAt = Date.now();
+      return lastFreshness;
+    } catch {
+      return lastFreshness;
+    } finally {
+      probing = undefined;
+    }
+  })();
+  return probing;
+}
+
+/**
+ * Refresh only the sources whose workbook has actually changed. Returns the
+ * keys that were reloaded, so the caller can say so.
+ */
+export async function revalidate(tab: number, minInterval = 10000) {
+  const report = await probeFreshness(minInterval);
+  if (!report) return [];
+  const watched = new Set(dependencies(tab));
+  const changed = report.sources
+    .filter((s) => watched.has(s.key) && s.stale)
+    // A source we have never loaded is handled by the normal load path.
+    .filter((s) => usable(s.key))
+    // The probe compares against the server's cache; ours may differ.
+    .filter((s) => !s.currentRevision || s.currentRevision !== health[s.key]?.revision)
+    .map((s) => s.key);
+  if (!changed.length) return [];
+  await Promise.all(changed.map((key) => ensureSource(key, true)));
+  return changed;
+}

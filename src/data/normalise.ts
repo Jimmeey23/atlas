@@ -14,6 +14,8 @@ export interface SourceData {
   status: string;
   error?: string;
   fetchedAt: number | null;
+  /** The workbook's Drive modifiedTime when these rows were read. */
+  revision?: string | null;
   loadMs: number;
   mode?: string;
   stale?: boolean;

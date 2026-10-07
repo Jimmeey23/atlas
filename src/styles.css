@@ -1340,3 +1340,71 @@ main h1 {
   margin: 0;
   color: var(--text-2);
 }
+
+.metric-index-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.metric-index-toolbar input {
+  flex: 1 1 220px;
+  min-width: 180px;
+}
+.metric-index-group {
+  margin-top: 18px;
+}
+.metric-index-group h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+.metric-index-group h3 span {
+  color: var(--text-3);
+  margin-left: 6px;
+}
+.metric-index-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 8px;
+}
+.metric-index-cell {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  text-align: left;
+  border: 1px solid var(--hairline);
+  border-radius: var(--atlas-radius, 10px);
+  background: var(--surface-1);
+  cursor: pointer;
+}
+.metric-index-cell:hover {
+  border-color: var(--accent);
+}
+.metric-index-label {
+  font-size: 11px;
+  color: var(--text-2);
+  line-height: 1.35;
+}
+.metric-index-value {
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-1);
+}
+.metric-index-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--text-3);
+}
+.metric-index-foot em {
+  font-style: normal;
+}
+.metric-index-cell.cell-thin .metric-index-value {
+  opacity: 0.62;
+}
