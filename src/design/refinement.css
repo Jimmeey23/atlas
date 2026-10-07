@@ -1,33 +1,5 @@
-/* Shared visual system: crisp surfaces, saturated signals, restrained depth. */
-:root:is([data-theme="gloss"], [data-theme="ivory"], [data-theme="porcelain"], [data-theme="light-glass"]) {
-  --canvas: #fff;
-  --surface-1: #fff;
-  --surface-2: #f6f8fc;
-  --surface-3: #edf2fc;
-  --surface-inset: #f8faff;
-  --raised: #fff;
-  --text-1: #101a31;
-  --text-2: #384660;
-  --text-3: #53617a;
-  --hairline: #e1e7f1;
-  --hairline-strong: #bac7dd;
-  --attendance: #1749dc;
-  --revenue: #c81657;
-  --growth: #06785b;
-  --people: #6933cf;
-  --risk: #a55a06;
-  --pos: #06785b;
-  --neg: #c81657;
-  --warn: #a55a06;
-  --info: #1749dc;
-  --elev-1: 0 2px 4px #11255004, 0 8px 24px #11255006;
-  --elev-2: 0 8px 30px #1125500c;
-  --elev-3: 0 20px 70px #11255026;
-}
-:root[data-theme="ivory"] { --attendance: #005fce; --people: #8927b8; --surface-inset: #fffdfa; }
-:root[data-theme="porcelain"] { --attendance: #2352d8; --people: #5b39d3; --surface-inset: #f9faff; }
-:root[data-theme="light-glass"] { --attendance: #005cc8; --people: #7729d5; --raised: #ffffffed; }
-:root[data-theme="light-glass"] body { background: #fff; }
+/* Shared visual system: crisp surfaces, saturated signals, restrained depth.
+   Palettes live in tokens.css; this file only carries layout refinements. */
 .titlebar { min-height: 72px; border-top: 3px solid var(--attendance); padding: 0 28px; }
 .floor-logo { font-size: 29px; gap: 12px; }
 .brand-copy { font-size: 12px; letter-spacing: .1px; }
@@ -496,11 +468,6 @@ html[data-presenting=true] .sticky-note-layer,html[data-presenting=true] .sticky
 .acq-pivot tbody td { background: var(--surface-1)!important; }.acq-pivot tbody tr:hover td { background: var(--surface-2)!important; }.acq-pivot .acq-cell-button { background: none; border-radius: 0; }.acq-pivot .acq-up,.acq-pivot .acq-down { background: transparent!important; }
 @media print { .monthly-table-controls { display: none!important; } }
 /* Raised white surfaces and inset controls for the light workspace. */
-:root:is([data-theme=gloss],[data-theme=ivory],[data-theme=porcelain],[data-theme=light-glass]) { --elev-1: 8px 10px 24px #18304a15, -6px -6px 18px #ffffffed, inset 0 1px 0 #fff; --elev-2: 12px 16px 30px #18304a20, -8px -8px 22px #ffffffed, inset 0 1px 0 #fff; --elev-3: 16px 24px 50px #18304a2a, -8px -8px 24px #ffffffc9; }
-:root:is([data-theme=gloss],[data-theme=ivory],[data-theme=porcelain],[data-theme=light-glass]) :is(.metric-card,.register,.attention-card,.format-profile,.acq-shell,.sales-ranking-lane) { box-shadow: var(--elev-1); border-color: #e3e9f2; background-color: #fff; }
-:root:is([data-theme=gloss],[data-theme=ivory],[data-theme=porcelain],[data-theme=light-glass]) .metric-card:hover { box-shadow: var(--elev-2); }
-:root:is([data-theme=gloss],[data-theme=ivory],[data-theme=porcelain],[data-theme=light-glass]) :is(.monthly-table-controls,.sales-ranking-controls,.segmented) { box-shadow: inset 3px 3px 8px #18304a0c,inset -3px -3px 8px #fff; background: #f8faff; }
-:root:is([data-theme=gloss],[data-theme=ivory],[data-theme=porcelain],[data-theme=light-glass]) .tabbar .tab.active { box-shadow: 3px 4px 9px #1749dc15,-3px -3px 9px #fff,inset 0 1px 0 #fff; }
 .sales-ranking-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 14px; margin-bottom: 18px; border: 1px solid var(--hairline); border-radius: 10px; }
 .sales-ranking-controls label { display: flex; align-items: center; gap: 7px; font-size: 10px; color: var(--text-2); }.sales-ranking-controls select,.sales-ranking-controls input { padding: 7px 8px; font: inherit; font-size: 11px; color: var(--text-1); background: var(--surface-1); border: 1px solid var(--hairline); border-radius: 6px; max-width: 175px; }
 .sales-ranking-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; }.sales-ranking-lane { min-width: 0; border: 1px solid var(--hairline); border-radius: 12px; overflow: hidden; background: var(--surface-1); }

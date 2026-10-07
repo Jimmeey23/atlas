@@ -117,6 +117,16 @@ import "./design/refinement.css";
 import "./design/acquisition.css";
 import "./design/report.css";
 import { sourceRows } from "./data/raw";
+// Domain names read better than token names in the workspace eyebrow.
+const domainLabels: Record<string, string> = {
+  attendance: "Attendance & revenue",
+  revenue: "Revenue",
+  people: "People & performance",
+  growth: "Growth",
+  risk: "Retention risk",
+  health: "Source health",
+};
+
 const blank: Analysis = {
   total: {},
   previous: {},
@@ -191,6 +201,7 @@ export default function App() {
   const [thresholdValues, setThresholdValues] =
     useState<Thresholds>(thresholds());
   const main = useRef<HTMLElement>(null);
+  const scrollProgress = useRef<HTMLDivElement>(null);
   const lastTab = useRef(s.tab);
   const sequence = useRef(0);
   const notify = (text: string) => {
@@ -297,6 +308,25 @@ export default function App() {
     publishLayout(() => ({ groups, columns }));
     syncUrl();
   }, [groups, columns]);
+  useEffect(() => {
+    const scroller = main.current;
+    const bar = scrollProgress.current;
+    if (!scroller || !bar) return;
+    const update = () => {
+      const max = scroller.scrollHeight - scroller.clientHeight;
+      bar.style.setProperty(
+        "--progress",
+        max > 0 ? String(Math.min(1, Math.max(0, scroller.scrollTop / max))) : "0",
+      );
+    };
+    update();
+    scroller.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      scroller.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [ready, configuredTab, analysis.count, s.tab]);
   useEffect(() => {
     const root = document.documentElement;
     root.style.setProperty("--atlas-font-size", prefs.fontSize + "px");
@@ -534,6 +564,7 @@ export default function App() {
   return (
     <div
       className="app"
+      data-tab={s.tab}
       data-workspace={s.tab === 5 ? "acquisition" : undefined}
       style={{
         ...domainStyle,
@@ -708,6 +739,9 @@ export default function App() {
           })}
       </nav>
       <div className="workspace">
+        {/* Reading progress: a cheap scroll listener writing one CSS variable,
+            so the header can show how far a long workspace has been read. */}
+        <div className="scroll-progress" ref={scrollProgress} aria-hidden="true" />
         {busy && <div className="loader-bar" />}
         {busy && (
           <div className="loader-shell" role="status" aria-live="polite" aria-atomic="true" style={{ "--loader-accent": `var(--${bp.domain})` } as React.CSSProperties}>
@@ -740,6 +774,23 @@ export default function App() {
           </div>
           <div className="page-intro">
             <div>
+              <div className="page-eyebrow" key={`eyebrow-${s.tab}`}>
+                <span className="rule" aria-hidden="true" />
+                <strong>
+                  {s.view === "kra"
+                    ? "KRA review"
+                    : marketingView
+                      ? "Performance marketing"
+                      : tabs[s.tab]}
+                </strong>
+                <span>
+                  {s.view === "kra"
+                    ? "Fixed organisation-wide scope"
+                    : marketingView
+                      ? "Website leads · CRM · Meta"
+                      : `${domainLabels[bp.domain] || bp.domain} workspace`}
+                </span>
+              </div>
               <h1 key={s.tab}>{s.view === "kra" ? "Jimmeey Gondaa · KRA performance" : marketingView ? "Performance Marketing" : pagePrefs.heading || workspaceHeading.title || bp.title}</h1>
               <p>{s.view === "kra" ? "Systems, sales & client servicing · June–November 2026" : marketingView ? "Website lead journeys, CRM acquisition channels and Meta campaign performance." : pagePrefs.subtitle ?? workspaceHeading.subtitle}</p>
             </div>

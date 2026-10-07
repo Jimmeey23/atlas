@@ -1,0 +1,863 @@
+/* ==========================================================================
+   Atlas · premium layer · surfaces, sections, cards and tables
+   One material, one section rhythm, one table grammar across all workspaces.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1 · Surface material
+   -------------------------------------------------------------------------- */
+.register,
+.chart-surface,
+.secondary,
+.intelligence-panel,
+.overview-module,
+.attention-card,
+.kra-panel,
+.kra-scorecard,
+.kra-lock,
+.kra-comparison-ranges,
+.kra-explanation-grid article,
+.ops-workspace,
+.ops-community,
+.ops-deep-dive,
+.acq-shell,
+.acq-summary,
+.acq-table-selector,
+.retention-worklists,
+.worklist-method,
+.pm-chart-block,
+.pm-wrap,
+.pm-comparison-detail,
+.session-tools,
+.mom,
+.rate-card,
+.health-card,
+.format-share,
+.format-slice-grid > div,
+.source-status,
+.tab-summary,
+.atlas-settings details,
+.agent-settings,
+.presentation-launch,
+.overview-module-nav a,
+.r-signal-strip {
+  position: relative;
+  border: 1px solid var(--hairline);
+  border-radius: var(--atlas-radius, var(--r-l));
+  background:
+    linear-gradient(180deg, var(--glass-highlight), transparent 42%),
+    var(--raised);
+  box-shadow: var(--elev-1);
+  transition:
+    border-color var(--m-base) var(--ease),
+    box-shadow var(--m-base) var(--ease),
+    transform var(--m-base) var(--ease-spring);
+}
+
+/* A single hairline of accent light along the top edge. */
+.register::before,
+.overview-module::before,
+.kra-panel::before,
+.acq-shell::before,
+.attention-card::before,
+.pm-chart-block::before,
+.worklist-method::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 18px;
+  right: 18px;
+  height: 1px;
+  border-radius: var(--r-full);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--module-accent, var(--card-accent, var(--accent))) 55%, transparent),
+    transparent
+  );
+  pointer-events: none;
+}
+
+.register:hover,
+.chart-surface:hover,
+.overview-module:hover,
+.attention-card:hover,
+.kra-panel:hover,
+.pm-chart-block:hover,
+.retention-worklists:hover,
+.ops-workspace:hover .ops-shell {
+  border-color: color-mix(in srgb, var(--hairline-strong) 70%, var(--accent) 30%);
+}
+
+.chart-surface,
+.secondary,
+.mom,
+.ops-workspace,
+.ops-community,
+.ops-deep-dive {
+  overflow: visible;
+}
+
+.secondary {
+  border-radius: var(--atlas-radius, var(--r-m));
+}
+
+.secondary > summary {
+  padding: 13px 16px;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semi);
+  color: var(--text-1);
+  border-radius: inherit;
+  transition: background var(--m-quick) var(--ease);
+}
+
+/* --------------------------------------------------------------------------
+   2 · Section headers
+   -------------------------------------------------------------------------- */
+.register {
+  margin-top: var(--gap-section);
+  padding: clamp(16px, 1.5vw, 22px);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 380px;
+}
+
+.register:first-child {
+  margin-top: 0;
+}
+
+.register-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 0 14px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.register-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  min-width: 0;
+  align-items: baseline;
+}
+
+.register-title .index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: var(--r-xs);
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-1));
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.register-title h2,
+.register-title h2::after {
+  display: inline;
+}
+
+.register-title h2 {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semi);
+  letter-spacing: -0.024em;
+  color: var(--text-1);
+}
+
+.register-title p {
+  flex-basis: 100%;
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-snug);
+}
+
+.register-actions {
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* Every other workspace head adopts the same rhythm. */
+.acq-shell-head,
+.ops-tabs,
+.worklist-tabs,
+.metric-strip-head,
+.overview-module-header,
+.kra-panel > header,
+.kra-header,
+.pm-chart-block > header,
+.signal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 0 14px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--hairline);
+  background: transparent;
+}
+
+.acq-shell-head,
+.ops-tabs,
+.kra-panel > header,
+.pm-chart-block > header {
+  padding: 16px 20px;
+  margin-bottom: 0;
+}
+
+.acq-heading h2,
+.overview-module h3,
+.kra-panel h3,
+.signal-header h2,
+.ops-tabs h3 {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semi);
+  letter-spacing: -0.022em;
+  color: var(--text-1);
+}
+
+.acq-heading p,
+.kra-panel > p,
+.overview-module-note,
+.ops-method,
+.pm-note,
+.ops-status,
+.worklist-scope,
+.worklist-method,
+.em,
+.small {
+  font-size: var(--fs-xs);
+  line-height: var(--lh-base);
+  color: var(--text-3);
+}
+
+.metric-strip-head {
+  border-bottom: 0;
+  align-items: flex-end;
+  padding-bottom: 4px;
+  margin-bottom: 12px;
+}
+
+.metric-strip-head h3 {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semi);
+  letter-spacing: -0.02em;
+}
+
+.metric-strip-head p {
+  margin-top: 4px;
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+/* --------------------------------------------------------------------------
+   3 · Metric cards and stat tiles
+   -------------------------------------------------------------------------- */
+.metric-strip {
+  gap: 12px;
+  margin: 22px 0 var(--gap-section);
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.metric-card {
+  position: relative;
+  padding: 13px 14px 10px;
+  border: 1px solid var(--hairline);
+  border-radius: calc(var(--atlas-radius, 14px) - 1px);
+  background:
+    linear-gradient(180deg, var(--glass-highlight), transparent 46%),
+    var(--surface-1);
+  box-shadow: none;
+  overflow: hidden;
+  transition:
+    transform var(--m-base) var(--ease-spring),
+    border-color var(--m-base) var(--ease),
+    box-shadow var(--m-base) var(--ease),
+    background var(--m-base) var(--ease);
+}
+
+.metric-card::before {
+  left: 14px;
+  right: 14px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--card-accent, var(--accent)) 62%, transparent),
+    transparent
+  );
+}
+
+/* A soft accent wash that only appears on interaction. */
+.metric-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    120% 80% at 50% 0%,
+    color-mix(in srgb, var(--card-accent, var(--accent)) 12%, transparent),
+    transparent 62%
+  );
+  opacity: 0;
+  transition: opacity var(--m-base) var(--ease);
+  pointer-events: none;
+}
+
+.metric-card:hover,
+.metric-card:focus-within {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--card-accent, var(--accent)) 40%, var(--hairline));
+  box-shadow: 0 12px 28px -16px color-mix(in srgb, var(--card-accent, var(--accent)) 55%, transparent);
+}
+
+.metric-card:hover::after,
+.metric-card:focus-within::after {
+  opacity: 1;
+}
+
+.metric-label {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.metric-label button {
+  border-radius: var(--r-xs);
+  transition: color var(--m-quick) var(--ease), background var(--m-quick) var(--ease);
+}
+
+.metric-label button:hover {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.metric-value {
+  font-family: var(--font-display);
+  font-size: clamp(21px, 1.75vw, 28px);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.035em;
+  color: var(--text-1);
+}
+
+.metric-delta {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: 0.01em;
+}
+
+.metric-footer {
+  border-top: 1px solid var(--hairline);
+  color: var(--text-3);
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.02em;
+}
+
+.metric-spark {
+  opacity: 0.85;
+}
+
+/* Tiles that sit beside metric cards read with the same voice. */
+.health-card,
+.acq-summary > div,
+.kra-overview article,
+.overview-module-metrics > div,
+.pm-metric-grid > *,
+.acq-analytics-grid > * {
+  padding: 18px;
+  border-radius: calc(var(--atlas-radius, var(--r-l)) - 4px);
+  background: transparent;
+  transition: background var(--m-base) var(--ease);
+}
+
+.health-cards,
+.acq-summary,
+.overview-module-metrics,
+.pm-metric-grid,
+.acq-analytics-grid {
+  gap: 12px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.health-card strong,
+.acq-summary strong,
+.kra-overview strong {
+  font-family: var(--font-display);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.035em;
+  color: var(--text-1);
+}
+
+.health-card span,
+.acq-summary span,
+.kra-overview span {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+/* --------------------------------------------------------------------------
+   4 · Table grammar
+   -------------------------------------------------------------------------- */
+.table-scroll,
+.acq-table-scroll,
+.ops-scroll,
+.intelligence-table,
+.worklist-table-wrap,
+.source-detail-table,
+.chart-table,
+.overview-module-scroll,
+.r-table-wrap,
+.status-table,
+.kra-panel .table-scroll {
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-m);
+  background: var(--surface-1);
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+.table-scroll {
+  max-height: 460px;
+}
+
+:is(
+    .table-scroll,
+    .acq-table-scroll,
+    .ops-scroll,
+    .intelligence-table,
+    .source-detail-table,
+    .chart-table,
+    .overview-module-scroll
+  )
+  table {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--fs-sm);
+}
+
+:is(
+    .table-scroll,
+    .acq-table-scroll,
+    .ops-scroll,
+    .intelligence-table,
+    .source-detail-table,
+    .chart-table,
+    .overview-module-scroll
+  )
+  th {
+  height: 38px;
+  padding: 0 12px;
+  background: var(--surface-2);
+  color: var(--text-3);
+  font-family: var(--font-ui);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--hairline-strong);
+  white-space: nowrap;
+}
+
+:is(
+    .table-scroll,
+    .acq-table-scroll,
+    .ops-scroll,
+    .intelligence-table,
+    .worklist-table-wrap,
+    .source-detail-table,
+    .chart-table,
+    .overview-module-scroll
+  )
+  th
+  svg {
+  opacity: 0.55;
+}
+
+:is(
+    .table-scroll,
+    .acq-table-scroll,
+    .ops-scroll,
+    .intelligence-table,
+    .source-detail-table,
+    .chart-table,
+    .overview-module-scroll
+  )
+  td {
+  padding: 0 12px;
+  border-bottom: 1px solid var(--hairline);
+  color: var(--text-1);
+  transition: background var(--m-quick) var(--ease);
+}
+
+:is(.table-scroll, .acq-table-scroll, .ops-scroll) tbody tr {
+  transition: background var(--m-quick) var(--ease);
+}
+
+:is(.table-scroll, .acq-table-scroll, .ops-scroll, .intelligence-table, .worklist-table-wrap) tbody tr:hover > td,
+:is(.table-scroll, .acq-table-scroll, .ops-scroll, .intelligence-table) tbody tr:hover > th {
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface-1));
+}
+
+:is(.table-scroll, .acq-table-scroll, .ops-scroll) tbody tr.level-0 > td,
+:is(.table-scroll, .acq-table-scroll, .ops-scroll) tbody tr[data-level="0"] > td {
+  background: var(--surface-2);
+  font-weight: var(--fw-semi);
+  color: var(--text-1);
+}
+
+tr.selected td,
+tr[aria-selected="true"] td,
+.ops-table tr[data-selected="true"] td {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-1));
+}
+
+.totals td,
+.table-scroll tfoot td,
+.acq-table tfoot td {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  background: var(--surface-2);
+  border-top: 1px solid color-mix(in srgb, var(--accent) 45%, var(--hairline-strong));
+  border-bottom: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.02em;
+  height: 44px;
+}
+
+.table-scroll td:first-child,
+.acq-table tbody th,
+.overview-module-scroll td:first-child {
+  font-family: var(--font-ui);
+  font-weight: var(--fw-medium);
+}
+
+.row-name,
+.row-label,
+.overview-row-name {
+  font-weight: var(--fw-medium);
+  letter-spacing: -0.01em;
+}
+
+.row-chevron {
+  border-radius: var(--r-xs);
+  transition: background var(--m-quick) var(--ease), color var(--m-quick) var(--ease), transform var(--m-base) var(--ease);
+}
+
+.row-chevron:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+tr:hover .row-action,
+tr:focus-within .row-action {
+  animation: atlas-fade-in var(--m-quick) var(--ease) both;
+}
+
+.cell-value {
+  border-radius: var(--r-xs);
+  transition: background var(--m-quick) var(--ease), color var(--m-quick) var(--ease);
+}
+
+.cell-value:hover,
+td .cell-value:hover {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.resize:hover {
+  background: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+.table-foot,
+.worklist-pagination,
+.source-pagination,
+.acq-pagination,
+.ops-pagination {
+  color: var(--text-3);
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.02em;
+}
+
+/* --------------------------------------------------------------------------
+   5 · Charts and data texture
+   -------------------------------------------------------------------------- */
+.chart-surface {
+  padding: 16px;
+  border-radius: calc(var(--atlas-radius, var(--r-l)) - 2px);
+  background: var(--surface-1);
+}
+
+.chart {
+  height: var(--atlas-chart-height, 320px);
+}
+
+.chart-caption,
+.chart-labels {
+  color: var(--text-3);
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pulse-total {
+  font-family: var(--font-display);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.045em;
+  background: linear-gradient(120deg, var(--text-1), color-mix(in srgb, var(--accent) 60%, var(--text-1)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.pulse-heading,
+.pulse-legend {
+  font-size: var(--fs-xs);
+  letter-spacing: 0.02em;
+  color: var(--text-3);
+}
+
+.legend-line {
+  border-radius: var(--r-full);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.heat-cell {
+  border-radius: var(--r-xs);
+  border: 1px solid color-mix(in srgb, var(--hairline) 80%, transparent);
+  font-family: var(--font-display);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semi);
+  transition: transform var(--m-quick) var(--ease-spring), box-shadow var(--m-quick) var(--ease), outline-color var(--m-quick);
+}
+
+.heat-cell:hover {
+  outline: 1px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: -1px;
+  transform: translateY(-1px) scale(1.015);
+  box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--accent) 60%, transparent);
+  z-index: 1;
+}
+
+.heatmap .label {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.heat-legend i {
+  border-radius: var(--r-full);
+}
+
+.ranking-item {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--hairline);
+  border-radius: var(--r-xs);
+  transition: background var(--m-quick) var(--ease), transform var(--m-quick) var(--ease);
+}
+
+.ranking-item:hover {
+  background: var(--surface-2);
+  transform: translateX(2px);
+}
+
+.ranking-item .rank {
+  border-radius: var(--r-xs);
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface-1));
+  color: var(--accent);
+  font-weight: var(--fw-semi);
+}
+
+.rank-bar {
+  height: 4px;
+  border-radius: var(--r-full);
+  background: var(--hairline);
+  overflow: hidden;
+}
+
+.rank-bar i {
+  height: 4px;
+  border-radius: var(--r-full);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 60%, transparent), var(--accent));
+}
+
+.ranking-value {
+  font-weight: var(--fw-semi);
+  letter-spacing: -0.02em;
+}
+
+/* Format comparison and share bars -------------------------------------- */
+.format-share-bar {
+  height: 10px;
+  border-radius: var(--r-full);
+  box-shadow: var(--edge-light);
+}
+
+.format-share h3,
+.format-slice-grid h3 {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.format-share dt {
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+.format-share dd {
+  font-weight: var(--fw-semi);
+}
+
+.format-scorecard td.format-leader {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-1));
+  font-weight: var(--fw-semi);
+}
+
+/* Status and source panels ---------------------------------------------- */
+.source-status {
+  padding: 0;
+  margin: 0 0 20px;
+  font-size: var(--fs-xs);
+  overflow: hidden;
+}
+
+.source-status summary {
+  padding: 12px 16px;
+  cursor: pointer;
+  color: var(--text-2);
+  font-weight: var(--fw-medium);
+  transition: background var(--m-quick) var(--ease);
+}
+
+.source-status summary:hover {
+  background: var(--surface-2);
+}
+
+.source-status-grid {
+  gap: 14px;
+  padding: 16px;
+  border-top: 1px solid var(--hairline);
+}
+
+/* Retention worklists --------------------------------------------------- */
+.retention-worklists {
+  padding: clamp(16px, 1.6vw, 22px);
+  margin-bottom: var(--gap-section);
+}
+
+.worklist-tabs {
+  gap: 6px;
+  margin: 18px 0;
+  padding: 0;
+  border-bottom: 0;
+  flex-wrap: wrap;
+}
+
+.worklist-tabs button {
+  padding: 8px 13px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-full);
+  background: var(--surface-1);
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  transition: color var(--m-quick) var(--ease), background var(--m-quick) var(--ease), border-color var(--m-quick) var(--ease);
+}
+
+.worklist-tabs button:hover {
+  color: var(--text-1);
+  background: var(--surface-2);
+}
+
+.worklist-tabs button.active {
+  color: var(--text-inverse);
+  background: var(--risk);
+  border-color: transparent;
+  box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--risk) 70%, transparent);
+}
+
+.worklist-table th {
+  padding: 12px;
+  color: var(--text-3);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  background: var(--surface-2);
+}
+
+.worklist-table td {
+  padding: 12px;
+  line-height: var(--lh-snug);
+}
+
+.member-worklist-link {
+  text-decoration-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  text-underline-offset: 3px;
+}
+
+.member-worklist-link:hover {
+  color: var(--accent);
+}
+
+/* Monthly register ------------------------------------------------------- */
+.mom td {
+  font-size: var(--fs-xs);
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.mom td:last-child,
+.mom th:last-child {
+  border-left: 1px solid color-mix(in srgb, var(--accent) 40%, var(--hairline));
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface-2));
+}
+
+.mom tbody tr:hover td {
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface-1));
+}
+
+/* Drill-down evidence --------------------------------------------------- */
+.detail-field {
+  border-radius: var(--r-s);
+  border: 1px solid var(--hairline);
+  background: var(--surface-inset);
+  padding: 10px 12px;
+}
+
+.detail-field small {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.detail-field span {
+  font-size: var(--fs-sm);
+  color: var(--text-1);
+}

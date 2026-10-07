@@ -59,6 +59,8 @@ try {
       host: values.host,
       port: frontendPort,
       strictPort: false,
+      // Hosted previews proxy the port under another domain; accept any Host.
+      allowedHosts: true,
       proxy: { "/api": `http://127.0.0.1:${selectedApiPort}` },
     },
   });

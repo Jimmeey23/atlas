@@ -1,0 +1,622 @@
+/* ==========================================================================
+   Atlas · premium layer · per-workspace details
+   The last pass: sub-components that only appear in one or two workspaces are
+   brought onto the same scale as everything else.
+   ========================================================================== */
+
+/* Table toolbars: grouping chips and searches read as one control row. ----- */
+.nested-toolbar,
+.pm-table-toolbar,
+.ops-actions,
+.monthly-table-controls,
+.sales-ranking-controls {
+  gap: 10px;
+  padding: 12px 0 16px;
+  border-bottom: 1px solid var(--hairline);
+  margin-bottom: 16px;
+}
+
+.pm-table-toolbar,
+.ops-actions {
+  padding: 12px 20px;
+  margin-bottom: 0;
+}
+
+.grouping {
+  gap: 8px;
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.group-chip {
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-full);
+  background: var(--surface-1);
+  color: var(--text-1);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  text-transform: none;
+  letter-spacing: -0.01em;
+  box-shadow: var(--edge-light);
+  transition: border-color var(--m-quick) var(--ease), transform var(--m-quick) var(--ease-spring), box-shadow var(--m-quick) var(--ease);
+}
+
+.group-chip:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--hairline-strong));
+  transform: translateY(-1px);
+}
+
+.group-chip:active {
+  cursor: grabbing;
+}
+
+.group-chip select {
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+.table-controls {
+  gap: 8px;
+}
+
+.table-controls input {
+  width: 190px;
+  font-size: var(--fs-sm);
+  border-radius: var(--r-full);
+  padding-inline: 13px;
+}
+
+.chart-controls,
+.chart-control-buttons {
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.chart-controls label,
+.chart-controls select {
+  font-size: var(--fs-xs);
+}
+
+/* Ranking lanes (sales) --------------------------------------------------- */
+.sales-ranking-grid {
+  gap: var(--gap-row);
+}
+
+.sales-ranking-lane {
+  border: 1px solid var(--hairline);
+  border-radius: var(--atlas-radius, var(--r-l));
+  background:
+    linear-gradient(180deg, var(--glass-highlight), transparent 42%),
+    var(--raised);
+  box-shadow: var(--elev-1);
+  overflow: hidden;
+}
+
+.sales-ranking-lane > header {
+  padding: 15px 18px;
+  gap: 12px;
+  border-bottom: 1px solid var(--hairline);
+  background: color-mix(in srgb, var(--pos) 6%, var(--surface-1));
+}
+
+.sales-ranking-lane.bottom > header {
+  background: color-mix(in srgb, var(--risk) 6%, var(--surface-1));
+}
+
+.sales-ranking-lane h3 {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semi);
+  letter-spacing: -0.02em;
+}
+
+.sales-ranking-row {
+  padding: 13px 18px;
+  gap: 14px;
+  transition: background var(--m-quick) var(--ease), padding-left var(--m-quick) var(--ease);
+}
+
+.sales-ranking-row:hover {
+  background: var(--surface-2);
+  padding-left: 21px;
+}
+
+.sales-rank-number {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semi);
+  color: var(--text-3);
+}
+
+.sales-rank-value strong {
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.03em;
+}
+
+.sales-rank-detail i {
+  height: 4px;
+  border-radius: var(--r-full);
+  background: var(--hairline);
+}
+
+.sales-rank-detail i b {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--pos) 55%, transparent), var(--pos));
+}
+
+.bottom .sales-rank-detail i b {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--risk) 55%, transparent), var(--risk));
+}
+
+/* Retention cohorts ------------------------------------------------------ */
+.cohort-retention,
+.renewal-cohorts {
+  border: 1px solid var(--hairline);
+  border-radius: var(--atlas-radius, var(--r-l));
+  background:
+    linear-gradient(180deg, var(--glass-highlight), transparent 42%),
+    var(--raised);
+  box-shadow: var(--elev-1);
+  padding: clamp(16px, 1.5vw, 22px);
+  margin-top: var(--gap-section);
+  animation: atlas-rise var(--m-slow) var(--ease-out) both;
+}
+
+.cohort-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding-bottom: 14px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.cohort-head h2,
+.cohort-head h3 {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semi);
+  letter-spacing: -0.024em;
+}
+
+.cohort-table table {
+  border-collapse: separate;
+  border-spacing: 4px;
+}
+
+.cohort-table th[scope="col"] {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--text-3);
+  background: transparent;
+}
+
+.cohort-cell {
+  border-radius: var(--r-s);
+  font-weight: var(--fw-medium);
+  transition: transform var(--m-quick) var(--ease-spring), box-shadow var(--m-quick) var(--ease);
+}
+
+.cohort-cell:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px -12px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+.cohort-empty {
+  color: var(--text-3);
+}
+
+/* Format comparison ------------------------------------------------------ */
+.format-profile {
+  border: 1px solid var(--hairline);
+  border-radius: var(--atlas-radius, var(--r-l));
+  background:
+    linear-gradient(155deg, color-mix(in srgb, var(--format-color) 7%, var(--surface-1)), var(--surface-1) 55%);
+  box-shadow: var(--elev-1);
+  transition: transform var(--m-base) var(--ease-spring), box-shadow var(--m-base) var(--ease), border-color var(--m-base) var(--ease);
+}
+
+.format-profile:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--format-color) 40%, var(--hairline));
+  box-shadow: var(--elev-2);
+}
+
+.format-profile h3 {
+  font-weight: var(--fw-semi);
+  letter-spacing: -0.03em;
+}
+
+.format-profile footer {
+  font-family: var(--font-display);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.03em;
+}
+
+.format-emblem {
+  border-radius: var(--r-m);
+  background: color-mix(in srgb, var(--format-color) 12%, transparent);
+}
+
+.ring-track {
+  stroke: var(--hairline);
+}
+
+/* Pinned insights and saved elements ------------------------------------- */
+.pinned-insights {
+  margin: 0 0 var(--gap-row);
+  padding: 16px 18px;
+  border: 1px solid var(--hairline);
+  border-left: 2px solid var(--growth);
+  border-radius: var(--atlas-radius, var(--r-m));
+  background: color-mix(in srgb, var(--growth) 5%, var(--surface-1));
+  box-shadow: var(--elev-1);
+}
+
+.pinned-insights > header .icon {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--growth);
+}
+
+.pinned-insight-list > article {
+  padding: 12px 14px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-s);
+  background: var(--surface-1);
+  transition: border-color var(--m-quick) var(--ease), transform var(--m-quick) var(--ease-spring);
+}
+
+.pinned-insight-list > article:hover {
+  border-color: color-mix(in srgb, var(--growth) 36%, var(--hairline));
+  transform: translateY(-1px);
+}
+
+.saved-elements {
+  margin-bottom: var(--gap-row);
+}
+
+/* Monthly register ------------------------------------------------------- */
+.monthly-table {
+  border-radius: var(--r-m);
+  overflow: hidden;
+}
+
+.monthly-table th {
+  background: var(--surface-2);
+}
+
+.monthly-value {
+  border-radius: var(--r-xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: -0.01em;
+  transition: background var(--m-quick) var(--ease), color var(--m-quick) var(--ease);
+}
+
+.monthly-value:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+.monthly-value small {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-regular);
+  color: var(--text-3);
+}
+
+/* Data health ------------------------------------------------------------ */
+.health-cards {
+  gap: 12px;
+  margin-bottom: var(--gap-section);
+}
+
+.health-card {
+  border: 1px solid var(--hairline);
+  border-radius: var(--atlas-radius, var(--r-l));
+  background:
+    linear-gradient(180deg, var(--glass-highlight), transparent 46%),
+    var(--surface-1);
+  box-shadow: var(--elev-1);
+  padding: 18px;
+  transition: transform var(--m-base) var(--ease-spring), border-color var(--m-base) var(--ease);
+}
+
+.health-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--hairline));
+}
+
+.health-card strong {
+  font-size: 30px;
+}
+
+.health-card span {
+  color: var(--text-3);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+}
+
+.health-table td {
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+}
+
+.health-table .error-text {
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 7%, transparent);
+  border-radius: var(--r-xs);
+  padding: 10px 12px;
+  line-height: var(--lh-base);
+}
+
+/* Studio operations detail ---------------------------------------------- */
+.ops-ranking-card > header,
+.ops-ranking-head {
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+}
+
+.ops-ranking-name {
+  font-weight: var(--fw-semi);
+  letter-spacing: -0.01em;
+}
+
+.ops-entity,
+.ops-group-path,
+.ops-row-detail {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+.ops-sample-badge {
+  background: color-mix(in srgb, var(--text-3) 12%, transparent);
+}
+
+.ops-subset-control,
+.ops-custom-groups,
+.ops-advanced {
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-m);
+  background: var(--surface-2);
+  padding: 12px;
+}
+
+.ops-resizer:hover {
+  background: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.ref-group-label,
+.ref-table-caption {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+/* Instructors ------------------------------------------------------------ */
+.trainer-avatar {
+  border-radius: var(--r-full);
+  border: 1px solid var(--hairline-strong);
+  box-shadow: var(--edge-light);
+}
+
+.instructor-name-cell {
+  font-weight: var(--fw-medium);
+  letter-spacing: -0.01em;
+}
+
+.session-tools {
+  gap: var(--gap-row);
+  margin-bottom: var(--gap-section);
+}
+
+.session-live-dot,
+.session-driver-dot {
+  box-shadow: 0 0 10px currentColor;
+}
+
+/* Metric index and secondary drawers ------------------------------------- */
+.metric-index-grid {
+  gap: 12px;
+}
+
+.metric-index-group {
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-m);
+  background: var(--surface-1);
+  padding: 14px;
+}
+
+.metric-index-label {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.metric-index-value {
+  font-family: var(--font-display);
+  font-weight: var(--fw-semi);
+  letter-spacing: -0.02em;
+}
+
+.secondary-content {
+  padding: 16px;
+  border-top: 1px solid var(--hairline);
+}
+
+/* AI summary affordances ------------------------------------------------- */
+.ai-summary-btn {
+  border-radius: var(--r-s);
+  transition: background var(--m-quick) var(--ease), color var(--m-quick) var(--ease), transform var(--m-quick) var(--ease-spring);
+}
+
+.ai-summary-btn:hover {
+  transform: translateY(-1px);
+}
+
+.ai-summary-toggle {
+  border-radius: var(--r-full);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semi);
+}
+
+.chart-data-preview {
+  border-radius: var(--r-m);
+  border: 1px solid var(--hairline);
+  background: var(--surface-2);
+  padding: 12px;
+}
+
+/* Presentation ----------------------------------------------------------- */
+.presentation-launch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 13px;
+  border-radius: var(--r-s);
+  border: 1px solid var(--hairline);
+  background: var(--surface-1);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  transition: transform var(--m-quick) var(--ease-spring), border-color var(--m-quick) var(--ease), color var(--m-quick) var(--ease);
+}
+
+.presentation-launch:hover {
+  transform: translateY(-1px);
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--hairline));
+}
+
+/* Data insight action button -------------------------------------------- */
+.ai-insight-btn {
+  border-radius: var(--r-s);
+}
+
+.ai-insight-btn.with-label {
+  padding: 6px 11px;
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semi);
+  border: 1px solid var(--hairline);
+  background: var(--surface-1);
+  color: var(--text-2);
+}
+
+.ai-insight-btn.with-label:hover {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 36%, var(--hairline));
+}
+
+/* Two-column layout rhythm ---------------------------------------------- */
+.two-up {
+  gap: var(--gap-row);
+}
+
+.overview-decision-pair {
+  align-items: start;
+}
+
+/* Insight impact figures ------------------------------------------------ */
+.insight-impact {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.03em;
+}
+
+.insight-severity {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+}
+
+/* Studio operations tables adopt the shared header grammar. ------------- */
+.ops-table thead th,
+.ops-table th {
+  background: var(--surface-2);
+  color: var(--text-3);
+  font-family: var(--font-ui);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--hairline-strong);
+}
+
+.ops-table th button {
+  color: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+
+.ops-table td {
+  font-size: var(--fs-sm);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.ops-table tbody tr:hover td {
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface-1));
+}
+
+.ops-table td:first-child,
+.ops-table th:first-child {
+  font-family: var(--font-ui);
+  font-weight: var(--fw-medium);
+}
+
+.ops-ranking-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-s);
+  border: 1px solid var(--hairline);
+  background: var(--surface-2);
+  color: var(--accent);
+}
+
+.ops-summary {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+.ops-chart-note {
+  color: var(--text-3);
+  font-size: var(--fs-2xs);
+}
+
+.ref-expand,
+.ref-child-inspect,
+.ref-child-arrow {
+  color: var(--text-3);
+  border-radius: var(--r-xs);
+  transition: color var(--m-quick) var(--ease), background var(--m-quick) var(--ease);
+}
+
+.ref-expand:hover,
+.ref-child-inspect:hover {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.ref-trainer-formats {
+  color: var(--text-3);
+  font-size: var(--fs-2xs);
+}

@@ -73,7 +73,7 @@ React 18 + strict TypeScript + Vite; DuckDB-WASM executes SQL in its worker; Tan
 - `src/data/views.sql`: explicit joins, including validated composite booking identity.
 - `src/semantics/registry.json` and `metrics.ts`: single metric registry and SQL definitions.
 - `src/data/blueprints.ts`: tab definitions, source, hierarchy and metric selection.
-- `src/design/`: the Matte and Gloss materials, density, typography and colour ramps.
+- `src/design/`: the eight theme materials, density, typography and colour ramps. `tokens.css` declares the palettes and the type, space, radius and motion scales; `premium.css`, `premium-surfaces.css`, `premium-controls.css` and `premium-details.css` are imported last from `main.tsx` and own the shared look of every workspace — one section rhythm, one control set, one motion language — plus the single standalone KRA page.
 - `src/insights/`: declarative evidence thresholds, impact sorting, deduplication and dismissals.
 
 ## Add a metric or workspace

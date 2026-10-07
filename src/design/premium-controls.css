@@ -1,0 +1,1215 @@
+/* ==========================================================================
+   Atlas · premium layer · controls and per-workspace harmonisation
+   Every workspace inherits the same controls, badges and card chrome.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1 · Buttons
+   -------------------------------------------------------------------------- */
+.button {
+  gap: 7px;
+  min-height: 34px;
+  padding: 7px 13px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-s);
+  background: var(--surface-1);
+  color: var(--text-1);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: -0.005em;
+  box-shadow: var(--edge-light);
+  transition:
+    transform var(--m-quick) var(--ease-spring),
+    border-color var(--m-quick) var(--ease),
+    background var(--m-quick) var(--ease),
+    color var(--m-quick) var(--ease),
+    box-shadow var(--m-quick) var(--ease);
+}
+
+.button:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--hairline-strong));
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface-1));
+  color: var(--text-1);
+}
+
+.button:active {
+  transform: translateY(0) scale(0.985);
+}
+
+.button.primary {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 62%, var(--people)));
+  color: var(--text-inverse);
+  box-shadow:
+    0 10px 22px -12px color-mix(in srgb, var(--accent) 75%, transparent),
+    var(--edge-light);
+}
+
+.button.primary:hover {
+  filter: brightness(1.05);
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 52%, var(--people)));
+}
+
+.icon-button {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-s);
+  border: 1px solid transparent;
+  color: var(--text-2);
+  transition:
+    color var(--m-quick) var(--ease),
+    background var(--m-quick) var(--ease),
+    border-color var(--m-quick) var(--ease),
+    transform var(--m-quick) var(--ease-spring);
+}
+
+.icon-button:hover {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 22%, transparent);
+  transform: translateY(-1px);
+}
+
+.icon-button:active {
+  transform: translateY(0) scale(0.95);
+}
+
+/* Buttons declared inside workspace stylesheets share the base button. */
+:is(
+    .ops-tabs,
+    .ops-toolbar,
+    .ops-actions,
+    .ops-pagination,
+    .ops-comparison,
+    .ops-ranking-actions,
+    .acq-shell-actions,
+    .acq-pagination,
+    .worklist-pagination,
+    .worklist-tabs,
+    .pm-controls,
+    .pm-comparison-actions,
+    .kra-bulk-actions,
+    .kra-table-toolbar,
+    .r-history-controls,
+    .monthly-table-controls,
+    .sales-ranking-controls,
+    .cohort-actions,
+    .ref-table-controls,
+    .ops-chart-controls
+  )
+  button,
+.ops-workspace button.ops-action,
+.acq-shell button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 6px 11px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-s);
+  background: var(--surface-1);
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  transition:
+    color var(--m-quick) var(--ease),
+    background var(--m-quick) var(--ease),
+    border-color var(--m-quick) var(--ease),
+    transform var(--m-quick) var(--ease-spring);
+}
+
+:is(
+    .ops-tabs,
+    .ops-toolbar,
+    .ops-actions,
+    .ops-pagination,
+    .ops-comparison,
+    .ops-ranking-actions,
+    .acq-shell-actions,
+    .acq-pagination,
+    .worklist-pagination,
+    .worklist-tabs,
+    .pm-controls,
+    .pm-comparison-actions,
+    .kra-bulk-actions,
+    .kra-table-toolbar,
+    .r-history-controls,
+    .monthly-table-controls,
+    .sales-ranking-controls,
+    .cohort-actions,
+    .ref-table-controls,
+    .ops-chart-controls
+  )
+  button:hover:not(:disabled),
+.ops-workspace button.ops-action:hover,
+.acq-shell button:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--hairline));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-1));
+  transform: translateY(-1px);
+}
+
+:is(.ops-tabs, .worklist-tabs, .pm-section-nav, .acq-metric-tabs) button[aria-pressed="true"],
+:is(.ops-tabs, .worklist-tabs) button.active {
+  color: var(--text-inverse);
+  background: var(--text-1);
+  border-color: transparent;
+}
+
+/* --------------------------------------------------------------------------
+   2 · Fields
+   -------------------------------------------------------------------------- */
+input,
+select,
+textarea {
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-s);
+  background: var(--surface-inset);
+  color: var(--text-1);
+  min-height: 36px;
+  padding: 8px 11px;
+  font: inherit;
+  font-size: var(--fs-sm);
+  transition:
+    border-color var(--m-quick) var(--ease),
+    background var(--m-quick) var(--ease),
+    box-shadow var(--m-quick) var(--ease);
+}
+
+textarea {
+  line-height: var(--lh-base);
+  min-height: 84px;
+}
+
+input:hover:not(:disabled),
+select:hover:not(:disabled),
+textarea:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--hairline-strong));
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 0;
+  border-color: color-mix(in srgb, var(--accent) 65%, transparent);
+  background: var(--surface-1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: color-mix(in srgb, var(--text-3) 80%, transparent);
+}
+
+select,
+:is(
+    .toolbar,
+    .ops-chart-controls,
+    .ops-toolbar,
+    .ops-pagination,
+    .ops-ranking-head,
+    .ref-table-controls,
+    .pm-controls,
+    .acq-control,
+    .worklist-controls,
+    .followup-form,
+    .kra-table-toolbar,
+    .kra-period-control,
+    .insight-editor,
+    .intelligence-panel,
+    .monthly-table-controls,
+    .sales-ranking-controls,
+    .format-allocation-controls,
+    .chat-destination,
+    .acq-shell-head,
+    .ops-tabs
+  )
+  select {
+  cursor: pointer;
+  appearance: none;
+  padding-right: 30px;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) calc(50% + 1px),
+    calc(100% - 11px) calc(50% + 1px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  min-height: 0;
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 0;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 5px;
+  border-radius: var(--r-full);
+  background: color-mix(in srgb, var(--text-3) 22%, transparent);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -5.5px;
+  border-radius: 50%;
+  border: 2px solid var(--surface-1);
+  background: var(--accent);
+  box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--accent) 70%, transparent);
+  transition: transform var(--m-quick) var(--ease-spring);
+}
+
+input[type="range"]:hover::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+
+input[type="range"]::-moz-range-track {
+  height: 5px;
+  border-radius: var(--r-full);
+  background: color-mix(in srgb, var(--text-3) 22%, transparent);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--surface-1);
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* Field groups declared in workspace stylesheets. */
+:is(
+    .ops-chart-controls,
+    .ops-toolbar,
+    .ops-pagination,
+    .ops-ranking-head,
+    .ref-table-controls,
+    .pm-controls,
+    .acq-control,
+    .worklist-controls,
+    .followup-form,
+    .kra-evidence-form,
+    .kra-table-toolbar,
+    .kra-period-control,
+    .insight-editor,
+    .intelligence-panel,
+    .monthly-table-controls,
+    .sales-ranking-controls
+  )
+  :is(input, select, textarea) {
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-s);
+  background: var(--surface-inset);
+  color: var(--text-1);
+  font-size: var(--fs-sm);
+  min-height: 36px;
+}
+
+:is(
+    .ops-chart-controls,
+    .ops-toolbar,
+    .ops-pagination,
+    .ops-ranking-head,
+    .ref-table-controls,
+    .pm-controls,
+    .acq-control,
+    .worklist-controls,
+    .followup-form,
+    .kra-evidence-form,
+    .kra-table-toolbar,
+    .kra-period-control,
+    .insight-editor,
+    .intelligence-panel,
+    .monthly-table-controls,
+    .sales-ranking-controls
+  )
+  label {
+  gap: 6px;
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+}
+
+/* --------------------------------------------------------------------------
+   3 · Segmented controls
+   -------------------------------------------------------------------------- */
+.segmented,
+.ops-segmented,
+.acq-segmented,
+.ref-mode,
+.pm-segmented,
+.r-switches,
+.chat-modes,
+.heat-metric-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-full);
+  background: color-mix(in srgb, var(--surface-3) 70%, transparent);
+}
+
+.segmented button,
+.ops-segmented button,
+.acq-segmented button,
+.ref-mode button,
+.pm-segmented button,
+.r-switches button,
+.chat-modes button,
+.heat-metric-switch button {
+  border: 0;
+  border-radius: var(--r-full);
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  padding: 6px 12px;
+  min-height: 28px;
+  transition:
+    color var(--m-quick) var(--ease),
+    background var(--m-quick) var(--ease),
+    box-shadow var(--m-quick) var(--ease);
+}
+
+.segmented button:hover,
+.ops-segmented button:hover,
+.acq-segmented button:hover,
+.ref-mode button:hover,
+.r-switches button:hover,
+.chat-modes button:hover {
+  color: var(--text-1);
+  background: color-mix(in srgb, var(--surface-1) 70%, transparent);
+}
+
+.segmented button.active,
+.segmented button[aria-pressed="true"],
+.ops-segmented button[aria-pressed="true"],
+.acq-segmented button[aria-pressed="true"],
+.ref-mode button[aria-pressed="true"],
+.pm-segmented button[aria-pressed="true"],
+.r-switches button[aria-pressed="true"],
+.chat-modes button[aria-pressed="true"],
+.heat-metric-switch button.active {
+  color: var(--text-1);
+  background: var(--surface-1);
+  box-shadow: var(--elev-1), var(--edge-light);
+}
+
+:root[data-theme] .acq-segmented button[aria-pressed="true"] {
+  color: color-mix(in srgb, var(--acquisition-accent, var(--people)) 88%, var(--text-1));
+}
+
+.acq-metric-tabs {
+  gap: 4px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.acq-metric-tabs button {
+  padding: 11px 12px;
+  border-bottom: 2px solid transparent;
+  border-radius: var(--r-s) var(--r-s) 0 0;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  color: var(--text-2);
+  transition: color var(--m-quick) var(--ease), background var(--m-quick) var(--ease);
+}
+
+.acq-metric-tabs button:hover {
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+
+.acq-metric-tabs button[aria-pressed="true"] {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+/* Legacy theme-locked rule in acquisition.css tinted the selected pill's text
+   for the old violet-filled control; the shared segmented control above keeps
+   a surface fill, so the text colour is set here with matching specificity. */
+
+/* --------------------------------------------------------------------------
+   4 · Badges, chips and status
+   -------------------------------------------------------------------------- */
+.pill,
+.acq-badge,
+.acq-count,
+.kra-status-pill,
+.severity-pill,
+.ops-sample-badge,
+.worklist-tabs span,
+.overview-status,
+.metric-eyebrow,
+.pm-scope,
+.acq-rank,
+.kra-topic-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--hairline);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.pill.good,
+.acq-badge.positive,
+.kra-status-pill.is-positive,
+.overview-status.ok,
+.status-source.ok .dot {
+  color: var(--pos);
+  border-color: color-mix(in srgb, var(--pos) 28%, transparent);
+  background: color-mix(in srgb, var(--pos) 11%, var(--surface-1));
+}
+
+.pill.warning,
+.acq-badge.warning,
+.overview-status.warning {
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 28%, transparent);
+  background: color-mix(in srgb, var(--warn) 11%, var(--surface-1));
+}
+
+.acq-badge.neutral,
+.kra-status-pill.is-neutral {
+  color: var(--text-2);
+  background: var(--surface-2);
+}
+
+.kra-status-pill.is-negative,
+.status-source.error {
+  color: var(--neg);
+  border-color: color-mix(in srgb, var(--neg) 28%, transparent);
+  background: color-mix(in srgb, var(--neg) 11%, var(--surface-1));
+}
+
+.acq-delta,
+.ops-delta,
+.kra-score-movement,
+.metric-delta,
+.scorecard-cell.delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semi);
+}
+
+.acq-delta.up,
+.ops-delta.up,
+.kra-score-movement.is-positive,
+.metric-delta.positive {
+  color: var(--pos);
+}
+
+.acq-delta.down,
+.ops-delta.down,
+.kra-score-movement.is-negative,
+.metric-delta.negative {
+  color: var(--neg);
+}
+
+.acq-delta.flat,
+.ops-delta.flat {
+  color: var(--text-3);
+}
+
+.dot {
+  box-shadow: 0 0 8px color-mix(in srgb, currentColor 60%, transparent);
+}
+
+a {
+  color: color-mix(in srgb, var(--accent) 92%, var(--text-1));
+  text-decoration: none;
+  transition: color var(--m-quick) var(--ease);
+}
+
+a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+/* --------------------------------------------------------------------------
+   5 · Workspace-specific chrome
+   -------------------------------------------------------------------------- */
+
+/* Studio operations ------------------------------------------------------- */
+.ops-workspace,
+.ops-community,
+.ops-deep-dive {
+  gap: var(--gap-section);
+  margin: var(--gap-section) 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.ops-workspace::before,
+.ops-community::before,
+.ops-deep-dive::before {
+  display: none;
+}
+
+.ops-shell {
+  border: 1px solid var(--hairline);
+  border-radius: var(--atlas-radius, var(--r-l));
+  background:
+    linear-gradient(180deg, var(--glass-highlight), transparent 42%),
+    var(--raised);
+  box-shadow: var(--elev-1);
+  overflow: hidden;
+}
+
+.ops-toolbar {
+  gap: 12px;
+  padding: 16px 20px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.ops-method,
+.ops-status {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--hairline);
+  margin: 0;
+}
+
+.ops-actions {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.ops-ranking-card,
+.ops-ranking-icon,
+.ops-compare-card {
+  border: 1px solid var(--hairline);
+  border-radius: var(--atlas-radius, var(--r-m));
+  background: var(--surface-1);
+  box-shadow: var(--elev-1);
+}
+
+.ops-ranking-line,
+.ops-ranking-facts > div {
+  border-bottom: 1px solid var(--hairline);
+  padding: 9px 0;
+  font-size: var(--fs-xs);
+}
+
+.ops-rank-track,
+.ops-rank-track i,
+.rank-track {
+  border-radius: var(--r-full);
+  height: 4px;
+}
+
+.ops-rank-track i {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 55%, transparent), var(--accent));
+}
+
+.ops-column-menu,
+.pm-column-menu,
+.ops-advanced-body {
+  border-radius: var(--r-m);
+  border: 1px solid var(--hairline-strong);
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  box-shadow: var(--elev-3);
+  padding: 12px;
+  animation: atlas-pop var(--m-base) var(--ease-spring) both;
+}
+
+.ops-column-menu label:hover,
+.pm-column-menu label:hover {
+  background: var(--surface-3);
+  border-radius: var(--r-xs);
+}
+
+/* Acquisition ------------------------------------------------------------- */
+.acquisition-tables {
+  gap: var(--gap-row);
+}
+
+.acq-workspace-heading h2 {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semi);
+  letter-spacing: -0.026em;
+}
+
+.acq-icon {
+  border-radius: var(--r-m);
+  border: 1px solid color-mix(in srgb, var(--acquisition-accent, var(--people)) 22%, transparent);
+  background: color-mix(in srgb, var(--acquisition-accent, var(--people)) 11%, var(--surface-1));
+  color: var(--acquisition-accent, var(--people));
+}
+
+.acq-table-selector {
+  gap: 8px;
+  padding: 8px;
+}
+
+.acq-table-selector button {
+  border-radius: var(--r-m);
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 12px 13px;
+  transition: border-color var(--m-quick) var(--ease), background var(--m-quick) var(--ease), transform var(--m-quick) var(--ease-spring);
+}
+
+.acq-table-selector button:hover {
+  transform: translateY(-1px);
+  background: var(--surface-1);
+}
+
+.acq-table-selector button[aria-selected="true"] {
+  background: var(--surface-1);
+  border-color: color-mix(in srgb, var(--acquisition-accent, var(--people)) 40%, transparent);
+  color: var(--acquisition-accent, var(--people));
+  box-shadow: var(--elev-2);
+}
+
+.acq-table thead th {
+  background: color-mix(in srgb, var(--acquisition-accent, var(--people)) 6%, var(--surface-2));
+  color: var(--text-3);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.acq-table tbody tr:nth-child(even) > td,
+.acq-table tbody tr:nth-child(even) > th {
+  background: color-mix(in srgb, var(--acquisition-accent, var(--people)) 3%, var(--surface-1));
+}
+
+.acq-cell-button:hover {
+  background: color-mix(in srgb, var(--acquisition-accent, var(--people)) 14%, transparent);
+  border-radius: var(--r-xs);
+}
+
+.acq-detail-row td,
+.acq-expanded-purchase > td {
+  background: var(--surface-2);
+}
+
+.acq-search {
+  border-radius: var(--r-full);
+  padding: 0 12px;
+}
+
+.acq-missing,
+.kra-score-muted {
+  color: var(--text-3);
+  font-style: normal;
+}
+
+/* Performance marketing --------------------------------------------------- */
+.pm-page {
+  gap: var(--gap-section);
+}
+
+.pm-section-nav a,
+.pm-scope {
+  border-radius: var(--r-full);
+}
+
+.pm-section-nav a {
+  padding: 6px 12px;
+  border: 1px solid var(--hairline);
+  background: var(--surface-1);
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  transition: color var(--m-quick) var(--ease), border-color var(--m-quick) var(--ease), background var(--m-quick) var(--ease);
+}
+
+.pm-section-nav a:hover {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--hairline));
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface-1));
+  text-decoration: none;
+}
+
+.pm-chart-block,
+.pm-wrap {
+  padding: clamp(16px, 1.5vw, 20px);
+}
+
+.pm-group-label {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.pm-cell,
+.scorecard-cell {
+  border-radius: var(--r-xs);
+  transition: background var(--m-quick) var(--ease);
+}
+
+.pm-cell:hover:not(:disabled),
+.scorecard-cell:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.pm-funnel-step {
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-m);
+  background: var(--surface-1);
+  padding: 14px;
+  transition: transform var(--m-base) var(--ease-spring), border-color var(--m-base) var(--ease);
+}
+
+.pm-funnel-step:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--hairline));
+}
+
+.pm-funnel-bar {
+  border-radius: var(--r-full);
+  overflow: hidden;
+  height: 8px;
+}
+
+.pm-funnel-bar i {
+  border-radius: var(--r-full);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 60%, transparent), var(--accent));
+}
+
+.pm-note {
+  border-left: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  padding-left: 12px;
+}
+
+/* KRA -------------------------------------------------------------------- */
+.kra-workspace,
+.kra-standalone {
+  gap: var(--gap-section);
+}
+
+.kra-standalone {
+  display: block;
+  padding: clamp(16px, 2vw, 28px);
+}
+
+.kra-header h2,
+.kra-panel h3,
+.kra-scorecard h3 {
+  letter-spacing: -0.026em;
+}
+
+.kra-overview {
+  display: grid;
+  gap: 12px;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.kra-overview article {
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-m);
+  background:
+    linear-gradient(180deg, var(--glass-highlight), transparent 46%),
+    var(--surface-1);
+  box-shadow: var(--elev-1);
+}
+
+.kra-score-table td:first-child > strong {
+  font-weight: var(--fw-semi);
+  letter-spacing: -0.01em;
+}
+
+.kra-score-value strong {
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.03em;
+}
+
+.kra-detail-section {
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-m);
+  background: var(--surface-1);
+  overflow: hidden;
+}
+
+.kra-detail-section > summary {
+  padding: 13px 16px;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semi);
+  cursor: pointer;
+  transition: background var(--m-quick) var(--ease);
+}
+
+.kra-detail-section > summary:hover {
+  background: var(--surface-2);
+}
+
+.kra-fixed-scope {
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--hairline);
+  background: color-mix(in srgb, var(--people) 7%, var(--surface-1));
+  font-size: var(--fs-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--people) 80%, var(--text-1));
+}
+
+.kra-lock {
+  padding: 32px;
+  text-align: center;
+}
+
+.kra-lock form > button {
+  margin-top: 14px;
+}
+
+.kra-trajectory {
+  border-radius: var(--r-s);
+  padding: 8px 12px;
+  background: var(--surface-2);
+}
+
+.kra-trajectory.positive {
+  background: color-mix(in srgb, var(--pos) 10%, var(--surface-1));
+  color: var(--pos);
+}
+
+.kra-trajectory.attention {
+  background: color-mix(in srgb, var(--warn) 12%, var(--surface-1));
+  color: var(--warn);
+}
+
+/* Monthly report ---------------------------------------------------------- */
+.report-doc {
+  border-radius: var(--r-xl);
+}
+
+.report-doc .r-card,
+.report-doc .r-evidence-block,
+.report-doc .r-criterion-block,
+.report-doc .r-contents {
+  border-radius: var(--r-m);
+  border-color: var(--hairline);
+  box-shadow: var(--elev-1);
+  transition: border-color var(--m-base) var(--ease), box-shadow var(--m-base) var(--ease);
+}
+
+.report-doc .r-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 32%, var(--hairline));
+  box-shadow: var(--elev-2);
+}
+
+.report-doc .r-container {
+  border-radius: var(--r-2xl);
+  box-shadow: var(--elev-3);
+}
+
+.report-doc .r-topbar {
+  border-radius: var(--r-2xl) var(--r-2xl) 0 0;
+}
+
+.report-doc h1,
+.report-doc h2,
+.report-doc h3,
+.report-doc .r-card-value {
+  letter-spacing: -0.026em;
+}
+
+.report-controls,
+.r-history-controls {
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-l);
+  background: var(--surface-1);
+  padding: 14px;
+}
+
+.presenter-toolbar,
+.annotation-toolbar,
+.presentation-panel {
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-l);
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  box-shadow: var(--elev-3);
+}
+
+/* Overview modules ------------------------------------------------------- */
+.overview-module {
+  padding: 20px;
+}
+
+.overview-module-icon {
+  border-radius: var(--r-m);
+}
+
+.overview-module-nav {
+  gap: 8px;
+  padding-bottom: 18px;
+}
+
+.overview-module-nav a:hover {
+  transform: translateY(-1px);
+}
+
+.overview-module-metrics {
+  border-bottom: 1px solid var(--hairline);
+}
+
+.attention-card {
+  padding: 18px 18px 0;
+}
+
+.attention-card h3 {
+  font-size: var(--fs-sm);
+  letter-spacing: -0.018em;
+}
+
+/* Intelligence and insight surfaces --------------------------------------- */
+.intelligence-panel {
+  padding: 20px;
+}
+
+.intelligence-table th {
+  text-transform: uppercase;
+}
+
+.insight-editor {
+  padding: 14px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-m);
+  background: var(--surface-2);
+  margin-bottom: 18px;
+}
+
+/* Studio chat ------------------------------------------------------------- */
+.chat-composer {
+  border-radius: var(--r-l);
+  border: 1px solid var(--hairline);
+  background: var(--surface-1);
+  padding: 12px;
+  box-shadow: var(--elev-1);
+  transition: border-color var(--m-base) var(--ease), box-shadow var(--m-base) var(--ease);
+}
+
+.chat-composer:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.chat-send {
+  border-radius: var(--r-s);
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 60%, var(--people)));
+  transition: transform var(--m-quick) var(--ease-spring), filter var(--m-quick) var(--ease);
+}
+
+.chat-send:hover:not(:disabled) {
+  transform: scale(1.05);
+  filter: brightness(1.06);
+}
+
+.studio-chat .agent-message {
+  border-radius: var(--r-l);
+  box-shadow: var(--elev-1);
+  animation: atlas-fade-up var(--m-base) var(--ease-out) both;
+}
+
+.studio-chat .agent-message.user {
+  border-radius: var(--r-l) var(--r-l) var(--r-xs) var(--r-l);
+}
+
+.chat-suggestions button,
+.chat-saved {
+  border-radius: var(--r-m);
+  transition: border-color var(--m-quick) var(--ease), transform var(--m-quick) var(--ease-spring), box-shadow var(--m-quick) var(--ease);
+}
+
+.chat-suggestions button:hover,
+.chat-saved:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--hairline));
+  box-shadow: var(--elev-2);
+}
+
+/* Settings and theme picker ---------------------------------------------- */
+.theme-choice {
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-m);
+  background: var(--surface-1);
+  padding: 10px;
+  text-align: left;
+  transition: border-color var(--m-quick) var(--ease), transform var(--m-quick) var(--ease-spring), box-shadow var(--m-quick) var(--ease);
+}
+
+.theme-choice:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--elev-2);
+}
+
+.theme-choice.selected {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.theme-preview {
+  border-radius: var(--r-s);
+  border: 1px solid var(--hairline-strong);
+  box-shadow: var(--edge-light);
+}
+
+/* Every theme gets a preview swatch that matches its real palette. */
+.theme-choice[data-preview-theme="matte"] .theme-preview {
+  background: linear-gradient(120deg, #07080b 62%, #34d5f2 62% 78%, #a274ff 78%);
+}
+.theme-choice[data-preview-theme="gloss"] .theme-preview {
+  background: linear-gradient(120deg, #ffffff 62%, #2563eb 62% 78%, #7c3aed 78%);
+}
+.theme-choice[data-preview-theme="midnight"] .theme-preview {
+  background: linear-gradient(120deg, #080c16 62%, #6ad4f0 62% 78%, #b4a4ff 78%);
+}
+.theme-choice[data-preview-theme="obsidian"] .theme-preview {
+  background: linear-gradient(120deg, #1c1f25 62%, #62d3f0 62% 78%, #b3a6ff 78%);
+}
+.theme-choice[data-preview-theme="dark-glass"] .theme-preview {
+  background: linear-gradient(120deg, #0b1120 62%, #79d9f5 62% 78%, #bda6ff 78%);
+}
+.theme-choice[data-preview-theme="ivory"] .theme-preview {
+  background: linear-gradient(120deg, #fffdfa 62%, #0f5fd1 62% 78%, #7f36ad 78%);
+}
+.theme-choice[data-preview-theme="porcelain"] .theme-preview {
+  background: linear-gradient(120deg, #eaedf3 62%, #2352d8 62% 78%, #5b39d3 78%);
+}
+.theme-choice[data-preview-theme="light-glass"] .theme-preview {
+  background: linear-gradient(120deg, #eef2fc 62%, #0b62d6 62% 78%, #6c34dd 78%);
+}
+
+.atlas-settings details > summary {
+  cursor: pointer;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semi);
+  padding: 12px 0;
+  letter-spacing: -0.01em;
+}
+
+.atlas-settings details[open] > summary {
+  border-bottom: 1px solid var(--hairline);
+  margin-bottom: 14px;
+}
+
+.settings-grid label,
+.section-options label {
+  gap: 6px;
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+}
+
+/* Sticky notes ----------------------------------------------------------- */
+.sticky-note {
+  border-radius: var(--r-m);
+  box-shadow: var(--elev-3);
+  border: 1px solid var(--glass-border);
+}
+
+/* --------------------------------------------------------------------------
+   6 · Small screens
+   -------------------------------------------------------------------------- */
+@media (max-width: 1100px) {
+  .metric-strip,
+  .metric-strip.eight {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .overview-module-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 700px) {
+  .metric-strip,
+  .metric-strip.eight {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .register {
+    padding: 14px;
+    border-radius: var(--r-m);
+  }
+
+  .register-title h2 {
+    font-size: var(--fs-md);
+  }
+
+  .page-intro {
+    align-items: flex-start;
+  }
+
+  .intro-meta {
+    align-items: flex-start;
+  }
+
+  .tabbar {
+    gap: 2px;
+  }
+
+  .tab {
+    padding: 0 10px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   7 · Print
+   -------------------------------------------------------------------------- */
+@media print {
+  body::after {
+    display: none;
+  }
+
+  .register,
+  .chart-surface,
+  .overview-module,
+  .metric-card,
+  .acq-shell,
+  .kra-panel,
+  .ops-workspace {
+    animation: none !important;
+    box-shadow: none;
+    break-inside: avoid;
+  }
+
+  .page-intro h1 {
+    -webkit-text-fill-color: currentColor;
+    color: var(--text-1);
+  }
+}
