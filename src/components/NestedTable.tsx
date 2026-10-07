@@ -23,6 +23,7 @@ import {
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { metrics } from "../semantics/metrics";
 import { fmt } from "../semantics/formats";
+import { derived, cellDelta, provenance } from "../semantics/cells";
 import { query, quote, type Row } from "../data/duckdb";
 import { blueprints } from "../data/blueprints";
 import { where, context, metricFacts } from "../data/analytics";
@@ -69,6 +70,7 @@ export function tree(rows: Row[], groups: string[]): TreeRow[] {
 }
 export function NestedTable({
   rows,
+  priorRows = [],
   groups,
   columns,
   total,
@@ -77,6 +79,8 @@ export function NestedTable({
   onDrill,
 }: {
   rows: Row[];
+  /** The same rollup over the comparison period; empty when not comparing. */
+  priorRows?: Row[];
   groups: string[];
   columns: string[];
   total: Row;
@@ -108,6 +112,19 @@ export function NestedTable({
       ),
     [rows, groups, search],
   );
+  // Prior-period values are matched on the grouping path, so a row keeps its
+  // comparison even when the ordering or the row count changes between periods.
+  const prior = useMemo(() => {
+    const map = new Map<string, Row>();
+    for (const node of tree(priorRows, groups)) {
+      const walk = (r: TreeRow) => {
+        map.set(r.id, r.values);
+        r.children.forEach(walk);
+      };
+      walk(node);
+    }
+    return map;
+  }, [priorRows, groups]);
   useEffect(() => {
     const all: TreeRow[] = [];
     function walk(list: TreeRow[]) {
@@ -213,9 +230,13 @@ export function NestedTable({
         cell: ({ row }: { row: { original: TreeRow } }) => {
           const v = row.original.values[id];
           const heat = metrics[id].format === "percent";
+          const n = Number(row.original.values.n ?? 0);
+          const thin = derived(id) && n > 0 && n < metrics[id].minSample;
+          const before = prior.get(row.original.id)?.[id];
+          const change = cellDelta(id, v, before);
           return (
             <button
-              className="cell-value"
+              className={`cell-value${thin ? " cell-thin" : ""}`}
               style={{
                 width: "100%",
                 textAlign: "right",
@@ -224,16 +245,22 @@ export function NestedTable({
                     ? `color-mix(in srgb,var(--accent) ${Math.min(25, Math.max(0, Number(v) * 25))}%,transparent)`
                     : undefined,
               }}
-              title={`${metrics[id].label}: ${fmt(id, v, true)}. n = ${fmt("records", row.original.values.n)}. ${metrics[id].description}`}
+              title={provenance(id, v, n, thin, before)}
               onClick={() => onDrill(row.original, id)}
             >
-              {fmt(id, v, metrics[id].format === "currency")}
+              <span className="cell-figure">
+                {fmt(id, v, metrics[id].format === "currency")}
+                {thin && <span aria-hidden="true" className="cell-thin-mark">*</span>}
+              </span>
+              {change && (
+                <span className={`cell-delta ${change.tone}`}>{change.text}</span>
+              )}
             </button>
           );
         },
       })),
     ],
-    [columns, selected, onDrill, store, expanded],
+    [columns, selected, onDrill, store, expanded, prior],
   );
   const tableDefs = [...defs];
   if (store.tab === 2)

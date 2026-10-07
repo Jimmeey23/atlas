@@ -94,6 +94,8 @@ export interface Analysis {
   previous: Row;
   trend: Row[];
   groups: Row[];
+  /** The same grouping over the comparison period, for per-cell deltas. */
+  previousGroups: Row[];
   heat: Row[];
   raw: Row[];
   count: number;
@@ -177,14 +179,16 @@ async function performAnalysis(
   const end = new Date(today() + "T00:00:00Z");
   end.setUTCDate(0);
   const wide = { ...filters, from: "", to: end.toISOString().slice(0, 10) };
-  const [total, previous, groupRows, trend, heat, raw] = await Promise.all([
+  const rollup = (f: Filters, ctx = context(f)) =>
+    `SELECT ${groupExpressions.map((g, i) => `${g} AS g${i}`).join(",")}, ${metricSQL(ids, ctx)}, ${sample} AS n, GROUPING_ID(${groupExpressions.join(",")}) AS level FROM ${facts(f)} GROUP BY ROLLUP(${groupExpressions.join(",")}) HAVING GROUPING_ID(${groupExpressions.join(",")}) < ${2 ** parts.length - 1} ORDER BY level DESC,g0 LIMIT 50000`;
+  const [total, previous, groupRows, previousGroups, trend, heat, raw] = await Promise.all([
     query(
       `SELECT ${aggregate},${sample} AS n,COUNT(*) AS records_n FROM ${facts(filters)}`,
     ),
     query(`SELECT ${metricSQL(ids, context(prev))}, ${sample} AS n FROM ${facts(prev)}`),
-    query(
-      `SELECT ${groupExpressions.map((g, i) => `${g} AS g${i}`).join(",")}, ${aggregate}, ${sample} AS n, GROUPING_ID(${groupExpressions.join(",")}) AS level FROM ${facts(filters)} GROUP BY ROLLUP(${groupExpressions.join(",")}) HAVING GROUPING_ID(${groupExpressions.join(",")}) < ${2 ** parts.length - 1} ORDER BY level DESC,g0 LIMIT 50000`,
-    ),
+    query(rollup(filters, context(filters))),
+    // Skipped entirely when nothing is being compared against.
+    compare === "none" ? Promise.resolve([] as Row[]) : query(rollup(prev)),
     query(
       `SELECT ${b.source === "lapsed" ? "SUBSTR(end_date,1,7)" : "month"} AS month, ${metricSQL(ids, context(wide))},${sample} AS n FROM ${facts(wide)} ${["sessions", "sales", "checkins"].includes(b.source) || !where(wide, b.source) ? "WHERE" : "AND"} month IS NOT NULL GROUP BY ${b.source === "lapsed" ? "SUBSTR(end_date,1,7)" : "month"} ORDER BY month DESC LIMIT 14`,
     ).then((r) => [...r].reverse()),
@@ -252,6 +256,7 @@ async function performAnalysis(
     previous: previous[0],
     trend,
     groups: groupRows,
+    previousGroups,
     heat,
     raw,
     count: Number(total[0].records_n),

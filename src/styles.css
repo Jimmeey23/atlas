@@ -1178,3 +1178,71 @@ main h1 {
   color: var(--text-3);
   opacity: 0.4;
 }
+
+.cell-value {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.cell-figure {
+  white-space: nowrap;
+}
+.cell-thin .cell-figure {
+  opacity: 0.62;
+}
+.cell-thin-mark {
+  margin-left: 1px;
+  font-size: 0.85em;
+}
+.cell-delta {
+  font-size: 0.78em;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+.cell-delta.positive {
+  color: var(--pos);
+}
+.cell-delta.negative {
+  color: var(--neg);
+}
+.cell-delta.muted {
+  color: var(--text-3);
+  opacity: 0.6;
+}
+
+.drill-export {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.drill-provenance {
+  margin-top: 22px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--atlas-radius, 10px);
+  padding: 10px 12px;
+  background: var(--surface-inset);
+}
+.drill-provenance > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.drill-formula {
+  margin-top: 10px;
+}
+.drill-formula code {
+  display: block;
+  margin: 4px 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.drill-formula p {
+  margin: 0;
+  color: var(--text-2);
+}

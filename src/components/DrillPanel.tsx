@@ -14,7 +14,7 @@ import { blueprints } from "../data/blueprints";
 import { where, context, metricFacts } from "../data/analytics";
 import { useStore } from "../state/store";
 import { sheets } from "../data/sheets.config";
-import { metricSQL } from "../semantics/metrics";
+import { metricSQL, metrics } from "../semantics/metrics";
 import { MetricCard } from "./MetricCard";
 import { currentSnapshotMetrics } from "../semantics/evidence";
 import { fmt, formatField } from "../semantics/formats";
@@ -35,6 +35,8 @@ export function DrillPanel({
   const [loading, setLoading] = useState(false);
   const [sourceData, setSourceData] = useState<Record<string, unknown>[]>([]);
   const pageSize = 50;
+  // A browser download of a sheet export stops being useful well before this.
+  const EXPORT_LIMIT = 20000;
 
   const [records, setRecords] = useState<Row[]>([]);
   const [summary, setSummary] = useState<Row>({});
@@ -59,6 +61,9 @@ export function DrillPanel({
     };
   }, [record, tab, entry?.source]);
   const [err, setErr] = useState("");
+  // The exact SQL scope behind this panel, for the explanation and the export.
+  const [scope, setScope] = useState<{ where: string; path: string }>({ where: "", path: "" });
+  const [exporting, setExporting] = useState(false);
   const s = useStore();
   useEffect(() => { setPage(0); }, [entry, tab, s.filters, s.transient]);
   const panel = useRef<HTMLDivElement>(null);
@@ -115,6 +120,7 @@ export function DrillPanel({
       .join(" AND ");
     const path = [groupingPath, entry.predicate].filter(Boolean).join(" AND ");
     const w = where(filters, source);
+    setScope({ where: w, path });
     Promise.all([
       query(
         `SELECT * FROM "${source}"${w}${path ? (w ? " AND " : " WHERE ") + path : ""} ORDER BY date DESC, source_row DESC LIMIT ${pageSize} OFFSET ${page * pageSize}`,
@@ -224,19 +230,79 @@ export function DrillPanel({
               <span>{trend.at(-1)?.month}</span>
             </div>
             </>}
+            <details className="drill-provenance">
+              <summary>How this number is built</summary>
+              {metricIds.slice(0, 4).map((id) => (
+                <div key={id} className="drill-formula">
+                  <strong>{metrics[id].label}</strong>
+                  <code>{metrics[id].description}</code>
+                  <p className="small">
+                    Source columns: {metrics[id].sources.join(", ")}. Ranking
+                    minimum {metrics[id].minSample} records
+                    {Number(summary.n || 0) < metrics[id].minSample
+                      ? ` · this scope has ${Number(summary.n || 0)}, so read it as a hint rather than a result`
+                      : ""}
+                    .
+                  </p>
+                </div>
+              ))}
+              <div className="drill-formula">
+                <strong>Records selected</strong>
+                <code>
+                  {`SELECT * FROM "${source}"${scope.where}${scope.path ? (scope.where ? " AND " : " WHERE ") + scope.path : ""}`}
+                </code>
+                <p className="small">
+                  {definition.title} · snapshot of the sheet currently loaded.
+                  Every figure above is computed over exactly these rows.
+                </p>
+              </div>
+            </details>
             <div className="register-head" style={{ marginTop: 24 }}>
               <h3>Contributing source rows</h3>
-              <button
-                className="button"
-                onClick={() => {
-                  sourceRows(source, records).then((r) =>
-                    exportCSV("floor-source-rows", r),
-                  );
-                }}
-              >
-                <Download size={12} />
-                Export page
-              </button>
+              <div className="drill-export">
+                <button
+                  className="button"
+                  onClick={() => {
+                    sourceRows(source, records).then((r) =>
+                      exportCSV("floor-source-rows", r),
+                    );
+                  }}
+                >
+                  <Download size={12} />
+                  Export page
+                </button>
+                <button
+                  className="button"
+                  disabled={exporting || !total}
+                  // The whole scope, not just the page on screen: a drill-down
+                  // export should match the number that was clicked.
+                  onClick={async () => {
+                    setExporting(true);
+                    try {
+                      const all = await query(
+                        `SELECT * FROM "${source}"${scope.where}${scope.path ? (scope.where ? " AND " : " WHERE ") + scope.path : ""} ORDER BY date DESC, source_row DESC LIMIT ${EXPORT_LIMIT}`,
+                      );
+                      exportCSV(
+                        `floor-${(entry?.label || "scope").toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+                        await sourceRows(source, all),
+                      );
+                      if (total > EXPORT_LIMIT)
+                        setErr(
+                          `Exported the first ${EXPORT_LIMIT.toLocaleString("en-IN")} of ${total.toLocaleString("en-IN")} records. Narrow the scope to export the rest.`,
+                        );
+                    } catch (e) {
+                      setErr(String(e));
+                    } finally {
+                      setExporting(false);
+                    }
+                  }}
+                >
+                  <Download size={12} />
+                  {exporting
+                    ? "Preparing…"
+                    : `Export all ${total.toLocaleString("en-IN")}`}
+                </button>
+              </div>
             </div>
             {err && <p className="warn">{err}</p>}
             <p className="small">

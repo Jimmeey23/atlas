@@ -110,6 +110,7 @@ const blank: Analysis = {
   previous: {},
   trend: [],
   groups: [],
+  previousGroups: [],
   heat: [],
   raw: [],
   count: 0,
@@ -929,6 +930,7 @@ export default function App() {
                 >
                   <NestedTable
                     rows={analysis.groups}
+                    priorRows={s.compare === "none" ? [] : analysis.previousGroups}
                     groups={groups}
                     columns={columns}
                     total={analysis.total}

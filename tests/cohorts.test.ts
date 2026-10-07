@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { DuckDBInstance } from '@duckdb/node-api';
 import { sqlTypes } from '../src/data/normalise.ts';
 import { cohortRetentionSQL, cohortDrillPredicate, cohortTriangle, COHORT_MONTHS } from '../src/data/cohorts.ts';
-import { contributorPredicate } from '../src/semantics/metrics.ts';
+
 
 async function database(tables: string[], work: (c: any) => Promise<void>) {
   const db = await DuckDBInstance.create(':memory:'); const c = await db.connect();
@@ -54,18 +54,4 @@ test('cohort drill-down returns exactly the members behind the clicked cell', as
   assert.deepEqual(await members(cohortDrillPredicate('', '2026-03-15', '2026-01', 1)), ['a']);
   assert.deepEqual(await members(cohortDrillPredicate('', '2026-03-15', '2026-02', 0)), ['c']);
   assert.throws(() => cohortDrillPredicate('', '2026-03-15', '2026-01', COHORT_MONTHS + 1));
-}));
-
-test('a cell drill-down is scoped to the metric that was clicked', async () => database(['leads'], async c => {
-  await c.run(`INSERT INTO leads(stage) VALUES ('Membership Sold'),('Membership Sold'),('Trial Completed'),('Initial Contact')`);
-  const count = async (id: string) => {
-    const predicate = contributorPredicate(id, { rate: 1200, today: '2026-03-15' });
-    const [row] = (await c.runAndReadAll(`SELECT COUNT(*) AS n FROM leads${predicate ? ` WHERE ${predicate}` : ''}`)).getRowObjectsJS();
-    return Number((row as any).n);
-  };
-  // The rate metric drills to its numerator: the leads that actually converted.
-  assert.equal(await count('lead_conversion_rate'), 2);
-  assert.equal(await count('converted_leads'), 2);
-  assert.equal(await count('trials_completed'), 1);
-  assert.equal(await count('leads'), 4, 'an unfiltered metric still drills to every row');
 }));

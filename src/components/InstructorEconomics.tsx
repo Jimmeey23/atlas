@@ -15,7 +15,7 @@ import type { Row } from "../data/duckdb";
 // so the page keeps one source of truth for both halves of an instructor.
 const ECONOMICS_TAB = 10;
 const bp = blueprints[ECONOMICS_TAB];
-const blank: Analysis = { total: {}, previous: {}, trend: [], groups: [], heat: [], raw: [], count: 0, elapsed: 0 };
+const blank: Analysis = { total: {}, previous: {}, trend: [], groups: [], previousGroups: [], heat: [], raw: [], count: 0, elapsed: 0 };
 
 export function InstructorEconomics({ version }: { version: string | number }) {
   const s = useStore();
