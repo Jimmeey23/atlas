@@ -1,0 +1,1102 @@
+.ops-workspace {
+  margin: 18px 0;
+}
+.ops-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--hairline);
+}
+.ops-workspace button,
+.ops-workspace select,
+.ops-workspace input {
+  font: inherit;
+}
+.ops-workspace button {
+  cursor: pointer;
+}
+.ops-tabs button,
+.ops-toolbar button,
+.ops-actions button,
+.ops-pagination button,
+.ops-comparison > button {
+  background: var(--surface-1);
+  color: var(--text-2);
+  border: 1px solid var(--hairline);
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: 11px;
+}
+.ops-tabs button[aria-pressed="true"] {
+  background: var(--text-1);
+  color: var(--surface-1);
+  border-color: var(--text-1);
+}
+.ops-toolbar {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 14px 18px;
+  background: var(--surface-2);
+}
+.ops-toolbar label,
+.ops-pagination label,
+.ops-ranking-head label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--text-2);
+}
+.ops-toolbar select,
+.ops-toolbar input,
+.ops-pagination select,
+.ops-ranking-head select {
+  border: 1px solid var(--hairline);
+  background: var(--surface-1);
+  color: var(--text-1);
+  border-radius: 6px;
+  padding: 7px;
+  max-width: 200px;
+}
+.ops-toolbar input[type="number"] {
+  width: 82px;
+}
+.ops-toolbar .ops-search {
+  flex-direction: row;
+  align-items: center;
+  align-self: center;
+  gap: 8px;
+}
+.ops-search input {
+  width: 245px;
+  max-width: 100%;
+}
+.ops-toolbar .ops-check {
+  flex-direction: row;
+  align-items: center;
+  align-self: center;
+}
+.ops-method,
+.ops-status {
+  padding: 10px 18px;
+  color: var(--text-2);
+  font-size: 11px;
+  line-height: 1.6;
+  margin: 0;
+}
+.ops-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 18px;
+  font-size: 11px;
+}
+.ops-actions button,
+.ops-actions summary {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.ops-actions details {
+  position: relative;
+}
+.ops-actions summary {
+  cursor: pointer;
+}
+.ops-column-menu {
+  position: absolute;
+  top: 24px;
+  left: 0;
+  z-index: 5;
+  width: 240px;
+  max-height: 300px;
+  overflow: auto;
+  background: var(--surface-1);
+  border: 1px solid var(--hairline);
+  box-shadow: 0 8px 30px #0002;
+  padding: 12px;
+  border-radius: 8px;
+}
+.ops-column-menu label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px;
+}
+.ops-scroll {
+  max-width: 100%;
+  overflow: auto;
+  border-top: 1px solid var(--hairline);
+  max-height: 660px;
+}
+.ops-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 100%;
+  font-size: 11px;
+  table-layout: fixed;
+}
+.ops-table th {
+  background: var(--surface-2);
+  font-weight: 600;
+  position: relative;
+  text-align: left;
+}
+.ops-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.ops-table td,
+.ops-table th {
+  border-bottom: 1px solid var(--hairline);
+  padding: 9px 12px;
+  height: 38px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-1);
+  box-sizing: border-box;
+}
+.ops-table th button {
+  color: inherit;
+  background: none;
+  border: 0;
+  text-align: left;
+  padding: 0;
+  font-size: 11px;
+}
+.ops-table tr:hover td {
+  background: var(--surface-2);
+}
+.ops-table tr[data-selected="true"] td {
+  background: color-mix(in srgb, var(--attendance) 9%, var(--surface-1));
+}
+.ops-table input {
+  accent-color: var(--attendance);
+}
+.ops-resizer {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 7px;
+  cursor: col-resize;
+  touch-action: none;
+  border-right: 1px solid var(--hairline);
+}
+.ops-resizer:hover {
+  background: var(--attendance);
+}
+.ops-entity {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.ops-entity button {
+  background: none;
+  border: 0;
+  color: inherit;
+  padding: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ops-delta {
+  display: block;
+  font-size: 9px;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+.ops-row-detail {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+}
+.ops-row-detail button {
+  background: none;
+  border: 0;
+  color: var(--attendance);
+  font-size: 11px;
+}
+.ops-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 12px 18px;
+  font-size: 11px;
+}
+.ops-pagination label {
+  flex-direction: row;
+  align-items: center;
+}
+.ops-workspace button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.ops-comparison {
+  padding: 12px 18px;
+}
+.ops-comparison h3 {
+  font-size: 13px;
+}
+.ops-ranking-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 18px 8px;
+  font-size: 11px;
+}
+.ops-ranking-head h3 {
+  font-size: 13px;
+  margin: 0;
+}
+.ops-ranking-head label {
+  flex-direction: row;
+  align-items: center;
+}
+.ops-rankings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  padding: 0 18px 18px;
+}
+.ops-rankings section {
+  min-width: 0;
+}
+.ops-rankings h4 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-2);
+}
+.ops-rankings section > button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--hairline);
+  padding: 10px 0;
+  text-align: left;
+  color: var(--text-1);
+  font-size: 11px;
+}
+.ops-rankings section > button > span:nth-child(2) {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ops-rankings small {
+  display: block;
+  font-size: 9px;
+  color: var(--text-3);
+  margin-top: 3px;
+}
+.ops-rank {
+  width: 23px;
+  height: 23px;
+  display: grid;
+  place-items: center;
+  background: var(--surface-2);
+  border-radius: 5px;
+}
+.ops-rankings p {
+  font-size: 11px;
+  color: var(--text-2);
+}
+.ops-scroll[data-compact="false"] .ops-table td {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+.ops-workspace :focus-visible {
+  outline: 2px solid var(--attendance);
+  outline-offset: 2px;
+}
+@media (max-width: 700px) {
+  .ops-rankings {
+    grid-template-columns: 1fr;
+  }
+  .ops-toolbar {
+    padding: 10px;
+  }
+  .ops-pagination {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  .ops-ranking-head {
+    flex-wrap: wrap;
+  }
+  .ops-row-detail {
+    gap: 10px;
+  }
+  .ops-tabs button {
+    flex: 1 0 auto;
+  }
+}
+
+/* One continuous operations workspace. */
+.ops-workspace {
+  --ops-accent: var(--attendance);
+  margin: 8px 0 20px;
+  display: grid;
+  gap: 22px;
+  min-width: 0;
+}
+.ops-workspace > .register,
+.ops-community > .register {
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  overflow: visible;
+  background: var(--surface-1);
+  box-shadow: 0 5px 22px color-mix(in srgb, var(--text-1) 4%, transparent);
+}
+.ops-workspace .register-head,
+.ops-community .register-head {
+  padding: 18px 20px;
+  background: var(--surface-1);
+  border-radius: 16px 16px 0 0;
+  gap: 12px;
+}
+.ops-workspace .register-title h2 {
+  font-size: 18px;
+  letter-spacing: -0.035em;
+}
+.ops-workspace .register-title .index {
+  background: color-mix(in srgb, var(--attendance) 12%, var(--surface-1));
+  color: var(--attendance);
+  border-radius: 6px;
+}
+.ops-grouping {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: linear-gradient(
+    110deg,
+    color-mix(in srgb, var(--attendance) 7%, var(--surface-1)),
+    var(--surface-1)
+  );
+  border-block: 1px solid var(--hairline);
+}
+.ops-grouping-title {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 190px;
+  color: var(--attendance);
+}
+.ops-grouping-title > div {
+  display: grid;
+  gap: 4px;
+}
+.ops-grouping-title strong {
+  font-size: 12px;
+  color: var(--text-1);
+}
+.ops-grouping-title small {
+  font-size: 10px;
+  color: var(--text-2);
+}
+.ops-grouping input,
+.ops-grouping select,
+.ops-workspace .register-actions select {
+  font: inherit;
+  font-size: 12px;
+  background: var(--surface-1);
+  color: var(--text-1);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 8px;
+  padding: 10px 12px;
+  min-width: 0;
+  max-width: 100%;
+}
+.ops-grouping > input {
+  width: 170px;
+}
+.ops-grouping > label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--text-2);
+}
+.ops-grouping select {
+  width: 270px;
+  font-weight: 600;
+}
+.ops-group-path {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+}
+.ops-group-path > span {
+  font-size: 10px;
+  background: var(--surface-1);
+  border: 1px solid var(--hairline);
+  padding: 5px 8px;
+  border-radius: 5px;
+  color: var(--text-2);
+}
+.ops-custom-groups {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+}
+.ops-custom-groups button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--surface-1);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: var(--text-2);
+  font-size: 11px;
+}
+.ops-custom-groups button[aria-pressed="true"] {
+  color: var(--attendance);
+  border-color: var(--attendance);
+}
+.ops-custom-groups b {
+  width: 17px;
+  height: 17px;
+  border-radius: 4px;
+  background: var(--attendance);
+  color: var(--surface-1);
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+}
+.ops-custom-groups small {
+  color: var(--text-2);
+  font-size: 10px;
+}
+.ops-toolbar {
+  padding: 14px 20px;
+  align-items: center;
+  background: var(--surface-1);
+  gap: 12px;
+  border-bottom: 1px solid var(--hairline);
+}
+.ops-toolbar label {
+  font-size: 10px;
+  font-weight: 500;
+}
+.ops-toolbar select {
+  font-size: 11px;
+  min-height: 35px;
+  max-width: 230px;
+}
+.ops-toolbar > button {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-height: 35px;
+  font-weight: 600;
+}
+.ops-toolbar .ops-search {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding-left: 10px;
+  flex: 1;
+  min-width: 200px;
+  max-width: 370px;
+  color: var(--text-3);
+}
+.ops-toolbar .ops-search input {
+  border: 0;
+  max-width: none;
+  width: 100%;
+  padding: 10px 8px;
+  font-size: 12px;
+  background: none;
+}
+.ops-advanced {
+  position: relative;
+  align-self: flex-end;
+  margin-bottom: 1px;
+}
+.ops-advanced > summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 10px 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 7px;
+  cursor: pointer;
+  color: var(--text-2);
+  list-style: none;
+}
+.ops-advanced > summary::-webkit-details-marker {
+  display: none;
+}
+.ops-advanced[open] > summary {
+  color: var(--attendance);
+  border-color: var(--attendance);
+}
+.ops-advanced-body {
+  position: absolute;
+  right: 0;
+  top: 44px;
+  z-index: 7;
+  padding: 18px;
+  background: var(--surface-1);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  box-shadow: var(--elev-3);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  width: 340px;
+}
+.ops-advanced-body .ops-check {
+  grid-column: 1/-1;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.ops-actions {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--hairline);
+  background: var(--surface-2);
+  gap: 8px;
+}
+.ops-actions .ops-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  margin-right: 6px;
+}
+.ops-subset-control {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface-1);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+}
+.ops-subset-control button {
+  border: 0;
+  padding: 6px 9px;
+  font-size: 10px;
+  background: none;
+}
+.ops-subset-control button[aria-pressed="true"] {
+  background: var(--text-1);
+  color: var(--surface-1);
+}
+.ops-actions > button {
+  font-size: 10px;
+  min-height: 32px;
+}
+.ops-actions details {
+  margin-left: auto;
+}
+.ops-table {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.ops-table td,
+.ops-table th {
+  padding: 6px 12px;
+  height: 40px;
+  max-height: 40px;
+}
+.ops-table thead th {
+  height: 42px;
+  max-height: none;
+  color: var(--text-2);
+  font-size: 10px;
+  letter-spacing: 0.025em;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--hairline-strong);
+}
+.ops-table th button {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.ops-table tbody tr:nth-child(even) > td {
+  background: color-mix(in srgb, var(--surface-2) 40%, var(--surface-1));
+}
+.ops-table tbody tr:hover > td {
+  background: color-mix(in srgb, var(--attendance) 6%, var(--surface-1));
+}
+.ops-table thead th:first-child,
+.ops-table tbody td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--surface-1);
+}
+.ops-table thead th:nth-child(2),
+.ops-table tbody td:nth-child(2) {
+  position: sticky;
+  left: 42px;
+  z-index: 2;
+  background: var(--surface-1);
+  border-right: 1px solid var(--hairline);
+}
+.ops-table thead th:first-child,
+.ops-table thead th:nth-child(2) {
+  z-index: 4;
+  background: var(--surface-2);
+}
+.ops-workspace #ops-schedule-table th,
+.ops-workspace #ops-schedule-table td {
+  position: static;
+}
+.ops-workspace #ops-schedule-table thead th {
+  position: sticky;
+  top: 0;
+}
+.ops-entity {
+  gap: 8px;
+}
+.ops-entity > button:first-child {
+  width: 20px;
+  min-width: 20px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+}
+.ops-entity > button:last-child {
+  text-align: left;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.ops-entity strong {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ops-entity small {
+  font-size: 9px;
+  line-height: 1.25;
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ops-delta {
+  display: inline-block;
+  margin: 0 0 0 5px;
+  font-size: 9px;
+}
+.ops-cell-track {
+  display: block;
+  width: 72px;
+  height: 3px;
+  background: var(--surface-3);
+  border-radius: 9px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+.ops-cell-track i {
+  display: block;
+  height: 100%;
+  background: var(--attendance);
+}
+.ops-method {
+  padding: 10px 20px;
+  font-size: 10px;
+  color: var(--text-3);
+}
+.ops-row-detail {
+  white-space: normal;
+  flex-wrap: wrap;
+  font-size: 11px;
+}
+.ops-table tr:has(.ops-row-detail) > td {
+  height: auto;
+  max-height: none;
+  padding: 12px 20px;
+  position: static;
+}
+.ops-pagination {
+  background: var(--surface-1);
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--hairline);
+}
+.ops-scroll[data-compact="false"] .ops-table td {
+  padding-block: 8px;
+}
+.ops-ranking-head {
+  padding: 24px 20px 14px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.ops-ranking-head > div {
+  margin-right: auto;
+}
+.ops-ranking-head h3 {
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+}
+.ops-ranking-head p {
+  margin: 5px 0 0;
+  color: var(--text-3);
+  font-size: 10px;
+}
+.ops-ranking-head > button {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  background: var(--surface-1);
+  border: 1px solid var(--hairline);
+  border-radius: 7px;
+  padding: 9px 11px;
+  color: var(--text-2);
+  font-size: 10px;
+}
+.ops-ranking-head select {
+  padding: 7px;
+  min-height: 32px;
+}
+.ops-rankings {
+  gap: 16px;
+  padding: 0 20px 22px;
+}
+.ops-rankings > section {
+  --rank-accent: var(--growth);
+  border: 1px solid var(--hairline);
+  background: var(--surface-1);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.ops-rankings > section[data-side="bottom"] {
+  --rank-accent: var(--risk);
+}
+.ops-rankings > section > header {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 14px 14px;
+  background: color-mix(in srgb, var(--rank-accent) 7%, var(--surface-1));
+  border-bottom: 1px solid var(--hairline);
+}
+.ops-ranking-icon {
+  width: 35px;
+  height: 35px;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--rank-accent) 22%, var(--hairline));
+  border-radius: 9px;
+  background: var(--surface-1);
+  color: var(--rank-accent);
+  flex-shrink: 0;
+}
+.ops-rankings h4 {
+  font-size: 12px;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  margin: 0;
+  color: var(--text-1);
+  font-weight: 650;
+}
+.ops-rankings header p {
+  font-size: 10px;
+  line-height: 1.3;
+  margin: 4px 0 0;
+  color: var(--text-3);
+}
+.ops-rankings header > button {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  border: 0;
+  background: none;
+  color: var(--rank-accent);
+  padding: 5px;
+  white-space: nowrap;
+  font-size: 9px;
+}
+.ops-ranking-card {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--hairline);
+  transition: background 160ms ease;
+}
+.ops-ranking-card:last-child {
+  border-bottom: 0;
+}
+.ops-ranking-card:hover {
+  background: color-mix(in srgb, var(--rank-accent) 4%, var(--surface-1));
+}
+.ops-ranking-card[data-selected="true"] {
+  box-shadow: inset 3px 0 var(--rank-accent);
+  background: color-mix(in srgb, var(--rank-accent) 5%, var(--surface-1));
+}
+.ops-rank {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--rank-accent);
+  background: color-mix(in srgb, var(--rank-accent) 9%, var(--surface-1));
+  border-radius: 7px;
+}
+.ops-ranking-body {
+  min-width: 0;
+  flex: 1;
+}
+.ops-ranking-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ops-ranking-name {
+  border: 0;
+  background: none;
+  font-size: 12px;
+  text-align: left;
+  color: var(--text-1);
+  padding: 0;
+  font-weight: 650;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ops-ranking-line > strong {
+  font-size: 17px;
+  letter-spacing: -0.04em;
+  font-weight: 650;
+  color: var(--rank-accent);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ops-ranking-body > p {
+  margin: 4px 0 9px;
+  font-size: 10px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ops-rank-track {
+  height: 4px;
+  background: var(--surface-3);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.ops-rank-track i {
+  display: block;
+  height: 100%;
+  border-radius: 6px;
+  background: var(--rank-accent);
+}
+.ops-ranking-facts {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  padding-top: 8px;
+  color: var(--text-2);
+  font-size: 9px;
+}
+.ops-rank-change {
+  margin-left: auto;
+  color: var(--text-3);
+}
+.ops-ranking-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.ops-ranking-actions > button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  background: var(--surface-1);
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  padding: 6px 8px;
+  color: var(--text-2);
+  transition:
+    border-color 160ms,
+    color 160ms;
+}
+.ops-ranking-actions > button:hover,
+.ops-ranking-actions > button[aria-pressed="true"] {
+  border-color: var(--rank-accent);
+  color: var(--rank-accent);
+}
+.ops-ranking-empty {
+  padding: 24px 16px;
+  font-size: 11px;
+  color: var(--text-3);
+  line-height: 1.5;
+}
+.ops-community {
+  display: grid;
+  gap: 22px;
+  min-width: 0;
+}
+.ops-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--hairline);
+  background: var(--surface-1);
+}
+.ops-summary > div {
+  border-right: 1px solid var(--hairline);
+  padding: 0 18px;
+}
+.ops-summary > div:first-child {
+  padding-left: 0;
+}
+.ops-summary > div:last-child {
+  border: 0;
+}
+.ops-summary small {
+  display: block;
+  color: var(--text-3);
+  font-size: 10px;
+  margin-bottom: 7px;
+}
+.ops-summary strong {
+  font-size: 23px;
+  letter-spacing: -0.04em;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 900px) {
+  .ops-group-path {
+    flex-basis: 100%;
+  }
+  .ops-rankings {
+    grid-template-columns: 1fr;
+  }
+  .ops-grouping > label {
+    flex: 1;
+  }
+  .ops-grouping select {
+    width: 100%;
+  }
+  .ops-advanced-body {
+    right: 0;
+  }
+  .ops-ranking-head > button {
+    flex-grow: 1;
+    justify-content: center;
+  }
+}
+@media (max-width: 600px) {
+  .ops-grouping {
+    padding: 12px;
+  }
+  .ops-grouping > input {
+    width: 100%;
+  }
+  .ops-grouping > label {
+    width: 100%;
+    flex-basis: 100%;
+  }
+  .ops-toolbar {
+    padding: 12px;
+  }
+  .ops-advanced {
+    position: static;
+  }
+  .ops-toolbar {
+    position: relative;
+  }
+  .ops-advanced-body {
+    width: calc(100% - 24px);
+    left: 12px;
+    right: 12px;
+    top: auto;
+    margin-top: 5px;
+  }
+  .ops-rankings {
+    padding-inline: 12px;
+  }
+  .ops-ranking-card {
+    padding: 12px;
+    gap: 9px;
+  }
+  .ops-ranking-head {
+    padding-inline: 12px;
+  }
+  .ops-rankings header > button {
+    white-space: normal;
+    max-width: 60px;
+  }
+  .ops-actions details {
+    margin-left: 0;
+  }
+  .ops-summary {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .ops-summary > div:nth-child(3) {
+    padding-left: 0;
+  }
+  .ops-summary > div:nth-child(2) {
+    border: 0;
+  }
+  .ops-summary strong {
+    font-size: 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ops-workspace * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
+.ops-comparison .ops-table th,
+.ops-comparison .ops-table td {
+  position: static !important;
+  left: auto !important;
+  min-width: 160px;
+}
+.ops-comparison .ops-table {
+  table-layout: auto;
+  min-width: 600px;
+}
+.ops-comparison .ops-table th {
+  white-space: normal;
+  line-height: 1.5;
+  vertical-align: top;
+}
+.ops-summary > div:last-child strong {
+  color: var(--revenue);
+}
+.ops-sample-badge {
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--text-3);
+  border: 1px solid var(--hairline);
+  background: var(--surface-1);
+  padding: 5px 7px;
+  border-radius: 5px;
+}

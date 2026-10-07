@@ -1,0 +1,26 @@
+.format-allocation-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 16px;
+  padding: 0 0 12px;
+}
+.format-allocation-controls label {
+  display: grid;
+  gap: 6px;
+  color: var(--text-2);
+  font-size: 11px;
+}
+.format-allocation-controls select,
+.format-allocation-controls input {
+  height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  color: var(--text-1);
+  background: var(--surface-1);
+  font: inherit;
+}
+.format-allocation-controls input {
+  width: 100px;
+}
