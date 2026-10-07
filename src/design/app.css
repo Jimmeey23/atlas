@@ -1121,14 +1121,17 @@ tr:focus-within .row-action {
   content: "";
   display: block;
   height: 2px;
-  width: 30%;
+  width: 28%;
+  border-radius: 0 2px 2px 0;
   background: linear-gradient(
     90deg,
     transparent,
-    color-mix(in srgb, var(--accent) 70%, white),
+    color-mix(in srgb, var(--accent) 55%, transparent) 35%,
     var(--accent)
   );
-  animation: loading 1.4s cubic-bezier(0.45, 0.05, 0.2, 0.95) infinite;
+  /* Matched to the loader beat so the sweep and the bars stay in step. */
+  animation: loading calc(var(--loader-beat, 1.5s) * 0.95) cubic-bezier(0.5, 0, 0.3, 1)
+    infinite;
 }
 .empty-state {
   padding: 46px 20px;
@@ -1376,7 +1379,7 @@ tr:focus-within .row-action {
     transform: translateX(-100%);
   }
   to {
-    transform: translateX(430%);
+    transform: translateX(457%);
   }
 }
 @keyframes bar-grow {

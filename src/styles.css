@@ -196,49 +196,143 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 22px;
+  gap: 18px;
   text-align: center;
   pointer-events: none;
-  background: color-mix(in srgb, var(--canvas) 55%, transparent);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  background: color-mix(in srgb, var(--canvas) 62%, transparent);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: atlas-loader-in 0.22s var(--loader-ease);
+}
+@keyframes atlas-loader-in {
+  from {
+    opacity: 0;
+  }
 }
 .loader-copy {
   background: transparent;
   border: 0;
   box-shadow: none;
   width: min(440px, calc(100% - 40px));
-  min-height: 78px;
+  min-height: 70px;
 }
 .loader-shell strong {
   display: block;
   font-size: 10px;
   font-weight: 650;
-  letter-spacing: 1.5px;
+  letter-spacing: 1.3px;
   text-transform: uppercase;
   color: var(--loader-accent, var(--accent));
 }
 .loader-shell p {
-  margin: 9px 0 0;
-  font-size: clamp(16px, 1.5vw, 20px);
+  margin: 7px 0 0;
+  font-size: clamp(15px, 1.4vw, 19px);
   font-weight: 550;
   line-height: 1.5;
   letter-spacing: -.35px;
   color: var(--text-1);
   text-wrap: balance;
 }
-.loader-graphic { position: relative; width: 88px; height: 88px; flex: none; }
-.loader-orbit { display: block; width: 100%; height: 100%; overflow: visible; animation: atlas-orbit 2.4s linear infinite; }
-.loader-orbit-track { fill: none; stroke: var(--loader-accent, var(--accent)); stroke-opacity: .1; stroke-width: 1; }
-.loader-orbit-arc { fill: none; stroke: var(--loader-accent, var(--accent)); stroke-width: 1.5; stroke-linecap: round; stroke-dasharray: 52 187; }
-.loader-orbit-dot { fill: var(--loader-accent, var(--accent)); }
-.loader-mark { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 6px; padding-left: 25px; transform: rotate(-12deg); }
-.loader-mark i { display: block; width: 38px; height: 5px; border-radius: 5px; background: var(--loader-accent, var(--accent)); transform-origin: left center; animation: atlas-mark-wave 1.8s cubic-bezier(.45, 0, .2, 1) infinite; }
-.loader-mark i:nth-child(2) { width: 27px; animation-delay: 140ms; opacity: .8; }
-.loader-mark i:nth-child(3) { width: 16px; animation-delay: 280ms; opacity: .6; }
-@keyframes atlas-orbit { to { transform: rotate(360deg); } }
-@keyframes atlas-mark-wave { 0%, 65%, 100% { transform: scaleX(1); } 30% { transform: scaleX(.65); } 48% { transform: scaleX(1.06); } }
-@media (prefers-reduced-motion: reduce) { .loader-orbit, .loader-mark i, .loader-line { animation: none !important; } }
+/* One timing system for the whole loader, so the orbit, the bars and the
+   copy read as a single object rather than three animations sharing a box. */
+.loader-shell,
+.loader-bar {
+  --loader-beat: 1.5s;
+  --loader-ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+.loader-graphic {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  flex: none;
+}
+.loader-orbit {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  animation: atlas-loader-orbit calc(var(--loader-beat) * 1.6) linear infinite;
+}
+.loader-orbit-track {
+  fill: none;
+  stroke: var(--loader-accent, var(--accent));
+  stroke-opacity: 0.12;
+  stroke-width: 1;
+}
+.loader-orbit-arc {
+  fill: none;
+  stroke: var(--loader-accent, var(--accent));
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 46 193;
+  animation: atlas-orbit-draw calc(var(--loader-beat) * 1.6) var(--loader-ease) infinite;
+}
+.loader-orbit-dot {
+  fill: var(--loader-accent, var(--accent));
+}
+/* The bars sit level: they read as the measure the product is drawing. */
+.loader-mark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+.loader-mark i {
+  display: block;
+  width: 32px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--loader-accent, var(--accent));
+  transform-origin: center;
+  animation: atlas-mark-wave var(--loader-beat) var(--loader-ease) infinite;
+}
+.loader-mark i:nth-child(2) {
+  width: 22px;
+  animation-delay: calc(var(--loader-beat) / -9);
+  opacity: 0.74;
+}
+.loader-mark i:nth-child(3) {
+  width: 13px;
+  animation-delay: calc(var(--loader-beat) / -4.5);
+  opacity: 0.5;
+}
+/* Named for the loader specifically: `atlas-orbit` belongs to the logo dot,
+   and sharing the name silently scaled this ring to nothing. */
+@keyframes atlas-loader-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes atlas-orbit-draw {
+  0%,
+  100% {
+    stroke-dasharray: 34 205;
+  }
+  50% {
+    stroke-dasharray: 76 163;
+  }
+}
+@keyframes atlas-mark-wave {
+  0%,
+  100% {
+    transform: scaleX(1);
+  }
+  42% {
+    transform: scaleX(0.46);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loader-orbit,
+  .loader-orbit-arc,
+  .loader-mark i,
+  .loader-line,
+  .loader-bar::after {
+    animation: none !important;
+  }
+}
 .loader-ring {
   position: relative;
   width: 44px;
@@ -332,7 +426,7 @@
   border-width: 1.6px;
 }
 .loader-line {
-  animation: atlas-loader-line 0.4s ease;
+  animation: atlas-loader-line 0.32s cubic-bezier(0.4, 0, 0.2, 1);
 }
 @keyframes atlas-loader-line {
   from {
