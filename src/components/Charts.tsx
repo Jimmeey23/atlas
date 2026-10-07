@@ -254,7 +254,7 @@ export function Chart({
   const state = useStore();
   const prefs = usePreferences((s) => s.preferences);
   const bp = blueprints[tab];
-  const chartTitle = tab === 4 && !salesActivity ? (secondary ? "Sales relationship" : "Revenue by category") : bp.chartTitle;
+  const chartTitle = tab === 14 && secondary ? "Format performance relationship" : tab === 4 && !salesActivity ? (secondary ? "Sales relationship" : "Revenue by category") : bp.chartTitle;
   useEffect(() => {
     let active = true;
     if (!data.count) {
@@ -505,7 +505,7 @@ export function Chart({
           {
             type: "bar",
             stack: "bridge",
-            name: "Session revenue",
+            name: "Earned revenue",
             tooltip: {valueFormatter: (v: unknown) => fmt("revenue", v, true)},
             data: steps.map((value, i) => ({
               value,

@@ -47,7 +47,7 @@ export function chapterPayload(spec: ChapterSpec, data: ChapterData, model: Repo
     ...data.diagnostics ?? [],
     ...data.notes ?? [],
     "Definitions: " + spec.metrics.map(id => `${id}: ${definition(id)?.label ?? id}. ${metricNotes[id]?.definition ?? ""} Governed calculation: ${definition(id)?.description ?? "unavailable"}. ${metricNotes[id]?.caveat ?? ""}`).join("; "),
-    "Membership revenue share is a share of gross collected payments, not net revenue. Newcomer lifetime value and return counts are observed to the source snapshot date: recent cohorts have less time to mature, so lower observed values do not prove weaker eventual outcomes. Churn outcomes can mature as renewals are recorded. Current-snapshot metrics cannot reconstruct historical member counts. Ranked tables omit groups below three contributing records and may be truncated; totals include all groups. Session revenue is attendance attribution, not cash sales.",
+    "Membership revenue share is a share of gross collected payments, not net revenue. Newcomer lifetime value and return counts are observed to the source snapshot date: recent cohorts have less time to mature, so lower observed values do not prove weaker eventual outcomes. Churn outcomes can mature as renewals are recorded. Current-snapshot metrics cannot reconstruct historical member counts. Ranked tables omit groups below three contributing records and may be truncated; totals include all groups. Earned revenue is attendance attribution, not cash sales.",
   ];
   const headline = spec.metrics.filter((id) => data.total[id] != null);
   if (headline.length)
@@ -117,7 +117,7 @@ const CARD_RULES = [
   'evidence: a short sentence with exact supporting figures and comparison/sample limits; at most 20 words. confidence describes the strength of the interpretation, not a statistical confidence interval.',
   'Use only supplied figures and verified diagnostics. Separate additive contributions, changes within groups, and changes in mix. Never add overlapping distinct transaction or member counts from groups.',
   'Higher AOV alone does not establish a price increase: distinguish recorded product-mix changes from unverified pricing hypotheses. Missing-ID warnings must use the supplied coverage counts and reflect their scale. Do not assert that a price change caused demand or conversion changes without evidence.',
-  'Cash sales and session revenue are different populations. Membership revenue share is based on gross payments, never net payments. Payroll costs are estimates at the configured rate, not actual salaries.',
+  'Cash sales and earned revenue are different populations. Membership revenue share is based on gross payments, never net payments. Payroll costs are estimates at the configured rate, not actual salaries.',
   'Newcomer LTV is cumulative observed spend to the source date, not first-month spend or predicted lifetime spend. Recent cohorts have less follow-up time; equal-age outcomes are needed to attribute eventual differences.',
   'Recorded lead stages are current cohort outcomes, not evidence of transitions during the selected month. Renewal grace is pending, not confirmed churn. Do not compare historical active snapshots or sum recurring and Sessions totals.',
   'Do not invent causes, policy thresholds, uplift promises, record claims beyond supplied history, or certainty from small samples. Hypotheses must include the specific check that could confirm or reject them.',

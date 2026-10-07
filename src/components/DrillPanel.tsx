@@ -119,7 +119,10 @@ export function DrillPanel({
       )
       .join(" AND ");
     const path = [groupingPath, entry.predicate].filter(Boolean).join(" AND ");
-    const w = where(filters, source);
+    const summaryPath = [groupingPath, entry.summaryPredicate ?? entry.predicate].filter(Boolean).join(" AND ");
+    const transient = entry.transient ?? s.transient;
+    const metricContext = entry.queryContext ?? context(filters, transient);
+    const w = where(filters, source, transient);
     setScope({ where: w, path });
     Promise.all([
       query(
@@ -128,11 +131,11 @@ export function DrillPanel({
       query(
         `SELECT month,${metricSQL(
           entry.metrics || [...new Set([...blueprints[tab].kpis, ...blueprints[tab].columns])].filter((id) => !["new_clients", "conversion_rate", "active_base"].includes(id) || tab !== 0),
-          context(),
-        )} FROM ${metricFacts(filters, source)}${path ? (!["sessions", "sales", "checkins"].includes(source) && w ? " AND " : " WHERE ") + path : ""} GROUP BY month ORDER BY month DESC LIMIT 14`,
+          metricContext,
+        )} FROM ${metricFacts(filters, source, transient)}${summaryPath ? (!["sessions", "sales", "checkins"].includes(source) && w ? " AND " : " WHERE ") + summaryPath : ""} GROUP BY month ORDER BY month DESC LIMIT 14`,
       ),
       query(`SELECT COUNT(*) AS n FROM "${source}"${w}${path ? (w ? " AND " : " WHERE ") + path : ""}`),
-      query(`SELECT ${metricSQL(metricIds, context(filters))}, COUNT(*) AS n FROM ${metricFacts(filters, source)}${path ? (!["sessions", "sales", "checkins"].includes(source) && w ? " AND " : " WHERE ") + path : ""}`),
+      query(`SELECT ${metricSQL(metricIds, metricContext)}, COUNT(*) AS n FROM ${metricFacts(filters, source, transient)}${summaryPath ? (!["sessions", "sales", "checkins"].includes(source) && w ? " AND " : " WHERE ") + summaryPath : ""}`),
     ])
       .then(async ([raw, t, count, aggregate]) => {
         if (!current) return;

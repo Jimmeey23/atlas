@@ -24,6 +24,6 @@ Standard KPI questions now use `query_metrics`, which compiles the same registry
 
 Conversation scope is recovered before a query, including temporary conversations. “What about May?” after the April Kwality House question retains that studio and resolves May 2026. Live GPT verification returned ₹24,28,385.7 gross collections for that follow-up. A separate September 2026 attendance question returned 2,090 visits and 45.4% weighted fill for Kwality House, using the shared attendance and fill-rate definitions.
 
-Business overview now displays gross and net collections from Sales alongside a clearly separate Session revenue card. Its payment pulse uses daily payment dates, while the attendance/yield bridge and session registers are labeled as session attribution. These cash totals reconcile with Revenue & sales for the same filter scope.
+Business overview now displays gross and net collections from Sales alongside a clearly separate Earned revenue card. Its payment pulse uses daily payment dates, while the attendance/yield bridge and session registers are labeled as session attribution. These cash totals reconcile with Revenue & sales for the same filter scope.
 
 Chart tooltips, chart data previews, original-row inspectors and generated/evidence tables use shared numeric formatters. Display precision is limited to one decimal; source data, identifiers and export precision remain intact. Percent series retain percentage formatting and financial series retain currency formatting.

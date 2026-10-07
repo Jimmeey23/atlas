@@ -34,10 +34,12 @@ function verdict() {
 export function SourceStatus({
   tab,
   onRetry,
+  additionalSources = [],
 }: {
   tab: number;
   version: number;
   onRetry: (key: string) => void;
+  additionalSources?: string[];
 }) {
   return (
     <>
@@ -59,11 +61,11 @@ export function SourceStatus({
       <details className="source-status">
         <summary>
           Source freshness{verdict()} ·{" "}
-          {dependencies(tab)
+          {[...new Set([...dependencies(tab), ...additionalSources])]
             .map((k) => {
               const h = health[k],
                 state = sourceStates[k];
-              return `${sheets.find((s) => s.key === k)?.title}: ${!h?.fetchedAt ? state.state : Date.now() - h.fetchedAt >= 900000 ? "saved snapshot" : state.state === "refreshing" ? "updating" : "ready"}`;
+              return `${sheets.find((s) => s.key === k)?.title}: ${!h?.fetchedAt ? state.state : state.state === "error" ? "saved snapshot; refresh unavailable" : Date.now() - h.fetchedAt >= 900000 ? "saved snapshot" : state.state === "refreshing" ? "updating" : "ready"}`;
             })
             .join(" / ")}
         </summary>

@@ -27,7 +27,7 @@ Scope: the saved source-sheet snapshots in `.cache`, with September 2026 as the 
 | Attendees — Sessions and attended Check-ins | 4,653 |
 | Available seats | 10,925 |
 | Weighted fill | 42.6% |
-| Session revenue and attended check-in revenue | ₹40,54,923.3 |
+| Earned revenue and attended check-in revenue | ₹40,54,923.3 |
 | Payroll's rounded monthly attributed revenue | ₹40,54,927 |
 | Successful non-voided cash collection | ₹59,54,184.9 |
 | Payment VAT | ₹2,84,261 |
@@ -38,7 +38,7 @@ Scope: the saved source-sheet snapshots in `.cache`, with September 2026 as the 
 | Converted newcomers | 42 |
 | Trial conversion | 10.9% |
 
-Cash revenue belongs to payment dates; attributed session revenue belongs to session dates. These different bases should not be forced to equal one another. Payroll reports whole monthly totals with rounded amounts; partial-month selections include the corresponding payroll months. Retention registers use expiry cohorts; current-stock cards explicitly use the latest snapshot instead. Current membership balances and lifecycle statuses do not provide historical stock balances. Source duration damage remains unavailable. Opportunity and pipeline values remain labeled estimates.
+Cash revenue belongs to payment dates; attributed earned revenue belongs to session dates. These different bases should not be forced to equal one another. Payroll reports whole monthly totals with rounded amounts; partial-month selections include the corresponding payroll months. Retention registers use expiry cohorts; current-stock cards explicitly use the latest snapshot instead. Current membership balances and lifecycle statuses do not provide historical stock balances. Source duration damage remains unavailable. Opportunity and pipeline values remain labeled estimates.
 
 Metric-card drill-downs now use the card's own source and population, including newcomer cohorts and current active-access snapshots. Older browser snapshots are invalidated after normalization changes.
 

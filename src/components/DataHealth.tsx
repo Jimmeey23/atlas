@@ -79,7 +79,7 @@ export function DataHealth({
     Promise.all([
       query(joinSQL),
       query(
-        `SELECT 'Session revenue vs booking value (different recognition)' AS measure,(SELECT SUM(revenue) FROM ${scoped("sessions")}) AS primary_value,(SELECT SUM(revenue) FROM ${scoped("bookings")} WHERE NOT imported) AS secondary_value UNION ALL SELECT 'Attendance: matched session IDs',(SELECT SUM(checked_in) FROM ${scoped("sessions")} WHERE session_id IN (SELECT session_id FROM ${scoped("checkins")})),(SELECT COUNT(*) FROM ${scoped("checkins")} WHERE attended AND session_id IN (SELECT session_id FROM ${scoped("sessions")})) UNION ALL SELECT 'Members: New vs Checkins',(SELECT COUNT(DISTINCT member_id) FROM ${scoped("new")}),(SELECT COUNT(DISTINCT member_id) FROM ${scoped("checkins")})`,
+        `SELECT 'Earned revenue vs booking value (different recognition)' AS measure,(SELECT SUM(revenue) FROM ${scoped("sessions")}) AS primary_value,(SELECT SUM(revenue) FROM ${scoped("bookings")} WHERE NOT imported) AS secondary_value UNION ALL SELECT 'Attendance: matched session IDs',(SELECT SUM(checked_in) FROM ${scoped("sessions")} WHERE session_id IN (SELECT session_id FROM ${scoped("checkins")})),(SELECT COUNT(*) FROM ${scoped("checkins")} WHERE attended AND session_id IN (SELECT session_id FROM ${scoped("sessions")})) UNION ALL SELECT 'Members: New vs Checkins',(SELECT COUNT(DISTINCT member_id) FROM ${scoped("new")}),(SELECT COUNT(DISTINCT member_id) FROM ${scoped("checkins")})`,
       ),
       query(
         Object.keys(health)

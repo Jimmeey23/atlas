@@ -1,0 +1,44 @@
+/* Marketing-specific layout only. Visual styles come from Atlas shared components. */
+.pm-page, .pm-meta { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; }
+.pm-page .register { scroll-margin-top: 220px; }
+.pm-page .register, .pm-two, .pm-table, .pm-chart-block, .pm-scope { min-width: 0; max-width: 100%; }
+.pm-scope { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; color: var(--text-2); font-size: 12px; }
+.pm-scope strong { color: var(--accent); }
+.pm-section-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 12px; }
+.pm-section-nav a { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+.pm-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 24px; }
+.pm-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding-bottom: 10px; }
+.pm-controls label { display: flex; align-items: center; gap: 6px; color: var(--text-3); font-size: 11px; }
+.pm-controls select { max-width: 310px; }
+.pm-controls input { max-width: 250px; }
+.pm-table-toolbar { flex-wrap: wrap; }
+.pm-table-toolbar .grouping, .pm-table-toolbar .table-controls { flex-wrap: wrap; }
+.pm-table-toolbar .group-chip select { width: auto; max-width: 180px; }
+.pm-chart-block { margin: 10px 0 16px; }
+.pm-chart { min-width: 0; }
+.pm-table { contain: inline-size; }
+.pm-table .pm-wrap { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pm-group-label .pm-wrap { display: inline-block; }
+.pm-table .pm-text { text-align: left; }
+.pm-table .pm-cell:disabled { cursor: default; }
+.pm-column-menu { position: relative; font-size: 11px; }
+.pm-column-menu summary { cursor: pointer; }
+.pm-column-menu > div { position: absolute; z-index: 10; top: 34px; right: 0; display: grid; gap: 6px; width: 230px; max-height: 310px; overflow: auto; padding: 12px; border: 1px solid var(--hairline-strong); border-radius: 8px; background: var(--surface-1); box-shadow: var(--elev-2); }
+.pm-column-menu input { width: 14px; height: 14px; }
+.pm-note { margin: 10px 0 0; color: var(--text-3); font-size: 11px; }
+.pm-funnel { display: grid; gap: 8px; }
+.pm-funnel-step { display: grid; grid-template-columns: 150px 1fr 190px; gap: 12px; align-items: center; width: 100%; padding: 2px 0; text-align: left; font-size: 12px; }
+.pm-funnel-bar { display: block; height: 26px; border-radius: 4px; background: var(--surface-inset); overflow: hidden; }
+.pm-funnel-bar i { display: block; height: 100%; min-width: 2px; background: var(--accent); opacity: .85; }
+.pm-funnel-step small { color: var(--text-2); text-align: right; }
+.pm-pagination { padding-top: 12px; justify-content: flex-end; font-size: 12px; }
+.pm-pagination span { margin-right: auto; }
+.pm-comparison-actions { padding-top: 12px; justify-content: flex-end; }
+.pm-comparison-detail { margin-top: 12px; }
+@media (max-width: 700px) {
+  .pm-controls { gap: 8px; }
+  .pm-controls label { flex-wrap: wrap; max-width: 100%; }
+  .pm-controls select, .pm-controls input { max-width: min(270px, 72vw); }
+  .pm-funnel-step { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .pm-funnel-step small { grid-column: 1 / -1; text-align: left; }
+}

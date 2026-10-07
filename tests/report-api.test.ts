@@ -49,7 +49,7 @@ test('missing database is an explicit failure, never a false save confirmation',
 test('report narration bypasses chat tools and returns a structured chapter', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'atlas-report-'));
   let call: any;
-  const narrative = { summary: 'Session revenue rose.', cards: [{ headline: 'A recorded increase', meaning: 'A comparison, not proof of causation.', evidence: 'Source figures.', action: 'Studio management to review the mix this week.' }] };
+  const narrative = { summary: 'Earned revenue rose.', cards: [{ headline: 'A recorded increase', meaning: 'A comparison, not proof of causation.', evidence: 'Source figures.', action: 'Studio management to review the mix this week.' }] };
   const ai = { responses: { create: async (request: any) => { call = request; return { status: 'completed', output_text: JSON.stringify(narrative) }; } } };
   const app = express(); app.use(express.json()); intelligenceRoutes(app, root, [], undefined, { ai });
   const api = await serve(app);

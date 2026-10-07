@@ -234,7 +234,7 @@
   },
   {
     "id": "revenue",
-    "label": "Session revenue",
+    "label": "Earned revenue",
     "expression": "SUM(revenue)",
     "sources": [
       "Sessions.Revenue"
@@ -756,6 +756,20 @@
     "format": "percent",
     "domain": "risk",
     "aggregation": "weighted",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
+    "id": "lapsed_members",
+    "label": "Lapsed members",
+    "expression": "COUNT(DISTINCT member_id) FILTER (WHERE churned_date IS NOT NULL)",
+    "sources": [
+      "Lapsed.Churned Date",
+      "Lapsed.Member ID"
+    ],
+    "format": "integer",
+    "domain": "risk",
+    "aggregation": "sum",
     "higherIsBetter": false,
     "minSample": 5
   },
@@ -1721,5 +1735,511 @@
     "higherIsBetter": false,
     "minSample": 5,
     "description": "Source sale values attributed to late-cancelled booking rows, excluding imported rows. This is not lost cash or a cancellation fee."
+  },
+  {
+    "id": "website_contacted",
+    "label": "Followed-up leads",
+    "expression": "COUNT(*) FILTER (WHERE touches>0)",
+    "sources": [
+      "Leads.Follow Up 1 Date"
+    ],
+    "format": "integer",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "website_trials",
+    "label": "Completed trials",
+    "expression": "COUNT(*) FILTER (WHERE lower(trim(COALESCE(trial_status,'')))='trial completed')",
+    "sources": [
+      "Leads.Trial Status"
+    ],
+    "format": "integer",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "website_members",
+    "label": "Converted leads",
+    "expression": "COUNT(*) FILTER (WHERE lower(trim(COALESCE(conversion,'')))='converted')",
+    "sources": [
+      "Leads.Conversion Status"
+    ],
+    "format": "integer",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "website_retained",
+    "label": "Retained leads",
+    "expression": "COUNT(*) FILTER (WHERE lower(trim(COALESCE(retention,'')))='retained')",
+    "sources": [
+      "Leads.Retention Status"
+    ],
+    "format": "integer",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "website_trial_members",
+    "label": "Converted trial leads",
+    "expression": "COUNT(*) FILTER (WHERE lower(trim(COALESCE(trial_status,'')))='trial completed' AND lower(trim(COALESCE(conversion,'')))='converted')",
+    "sources": [
+      "Leads.Conversion Status"
+    ],
+    "format": "integer",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "website_open",
+    "label": "Open Website pipeline",
+    "expression": "COUNT(*) FILTER (WHERE NOT (lower(trim(COALESCE(conversion,'')))='converted') AND (status NOT IN ('Lost','Disqualified') OR status IS NULL))",
+    "sources": [
+      "Leads.Conversion Status"
+    ],
+    "format": "integer",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "website_untouched",
+    "label": "Untouched Website leads",
+    "expression": "COUNT(*) FILTER (WHERE touches=0 AND date_diff('hour',TRY_CAST(date AS TIMESTAMP),TIMESTAMP '{today}')>48 AND NOT (lower(trim(COALESCE(conversion,'')))='converted') AND (status NOT IN ('Lost','Disqualified') OR status IS NULL))",
+    "sources": [
+      "Leads.Follow Up 1 Date"
+    ],
+    "format": "integer",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "website_contact_rate",
+    "label": "Followed-up rate",
+    "expression": "(COUNT(*) FILTER (WHERE touches>0)) / NULLIF((COUNT(*)),0)",
+    "sources": [
+      "Leads.Follow Up 1 Date"
+    ],
+    "format": "percent",
+    "domain": "people",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "website_trial_rate",
+    "label": "Lead to trial",
+    "expression": "(COUNT(*) FILTER (WHERE lower(trim(COALESCE(trial_status,'')))='trial completed')) / NULLIF((COUNT(*)),0)",
+    "sources": [
+      "Leads.Trial Status"
+    ],
+    "format": "percent",
+    "domain": "people",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "website_win_rate",
+    "label": "Lead to member",
+    "expression": "(COUNT(*) FILTER (WHERE lower(trim(COALESCE(conversion,'')))='converted')) / NULLIF((COUNT(*)),0)",
+    "sources": [
+      "Leads.Conversion Status"
+    ],
+    "format": "percent",
+    "domain": "people",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "website_trial_win_rate",
+    "label": "Trial to member",
+    "expression": "(COUNT(*) FILTER (WHERE lower(trim(COALESCE(trial_status,'')))='trial completed' AND lower(trim(COALESCE(conversion,'')))='converted')) / NULLIF((COUNT(*) FILTER (WHERE lower(trim(COALESCE(trial_status,'')))='trial completed')),0)",
+    "sources": [
+      "Leads.Trial Status",
+      "Leads.Conversion Status"
+    ],
+    "format": "percent",
+    "domain": "people",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "website_ltv",
+    "label": "LTV per converted lead",
+    "expression": "AVG(ltv) FILTER (WHERE lower(trim(COALESCE(conversion,'')))='converted' AND ltv>0)",
+    "sources": [
+      "Leads.LTV",
+      "Leads.Conversion Status"
+    ],
+    "format": "currency",
+    "domain": "revenue",
+    "aggregation": "avg",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "website_pipeline_value",
+    "label": "Estimated Website pipeline value",
+    "expression": "(COUNT(*) FILTER (WHERE NOT (lower(trim(COALESCE(conversion,'')))='converted') AND (status NOT IN ('Lost','Disqualified') OR status IS NULL)))*(COUNT(*) FILTER (WHERE lower(trim(COALESCE(conversion,'')))='converted'))::DOUBLE/NULLIF(COUNT(*),0)*(SELECT AVG(first_purchase) FROM new WHERE is_new)",
+    "sources": [
+      "Leads.Conversion Status",
+      "New.First Purchase Value"
+    ],
+    "format": "currency",
+    "domain": "revenue",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "meta_records",
+    "label": "Meta source records",
+    "expression": "COUNT(*)",
+    "sources": [
+      "Meta.date"
+    ],
+    "format": "integer",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "meta_spend",
+    "label": "Meta spend",
+    "expression": "SUM(spend)",
+    "sources": [
+      "Meta.spend"
+    ],
+    "format": "currency",
+    "domain": "revenue",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "meta_impressions",
+    "label": "Impressions",
+    "expression": "SUM(impressions)",
+    "sources": [
+      "Meta.impressions"
+    ],
+    "format": "integer",
+    "domain": "growth",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "meta_reach",
+    "label": "Summed row reach",
+    "expression": "SUM(reach)",
+    "sources": [
+      "Meta.reach"
+    ],
+    "format": "integer",
+    "domain": "growth",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "meta_clicks",
+    "label": "Clicks",
+    "expression": "SUM(clicks)",
+    "sources": [
+      "Meta.clicks"
+    ],
+    "format": "integer",
+    "domain": "growth",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "meta_link_clicks",
+    "label": "Link clicks",
+    "expression": "SUM(inline_link_clicks)",
+    "sources": [
+      "Meta.inline_link_clicks"
+    ],
+    "format": "integer",
+    "domain": "growth",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "meta_leads",
+    "label": "Meta-reported leads",
+    "expression": "SUM(meta_leads)",
+    "sources": [
+      "Meta.leads"
+    ],
+    "format": "integer",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "meta_instant_leads",
+    "label": "On-Facebook leads",
+    "expression": "SUM(on_facebook_lead)",
+    "sources": [
+      "Meta.on_facebook_lead"
+    ],
+    "format": "integer",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "meta_purchases",
+    "label": "Meta-reported purchases",
+    "expression": "SUM(meta_purchases)",
+    "sources": [
+      "Meta.purchases"
+    ],
+    "format": "integer",
+    "domain": "revenue",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "meta_purchase_value",
+    "label": "Meta purchase value",
+    "expression": "SUM(purchase_value)",
+    "sources": [
+      "Meta.purchase_value"
+    ],
+    "format": "currency",
+    "domain": "revenue",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "meta_add_to_cart",
+    "label": "Add to cart",
+    "expression": "SUM(add_to_cart)",
+    "sources": [
+      "Meta.add_to_cart"
+    ],
+    "format": "integer",
+    "domain": "growth",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "meta_checkout",
+    "label": "Checkout initiated",
+    "expression": "SUM(initiate_checkout)",
+    "sources": [
+      "Meta.initiate_checkout"
+    ],
+    "format": "integer",
+    "domain": "growth",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "meta_ctr",
+    "label": "CTR",
+    "expression": "SUM(clicks)/NULLIF(SUM(impressions),0)",
+    "sources": [
+      "Meta.impressions",
+      "Meta.clicks"
+    ],
+    "format": "percent",
+    "domain": "growth",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "meta_cpc",
+    "label": "CPC",
+    "expression": "SUM(spend)/NULLIF(SUM(clicks),0)",
+    "sources": [
+      "Meta.clicks",
+      "Meta.spend"
+    ],
+    "format": "currency",
+    "domain": "revenue",
+    "aggregation": "weighted",
+    "higherIsBetter": false,
+    "minSample": 3
+  },
+  {
+    "id": "meta_cpm",
+    "label": "CPM",
+    "expression": "SUM(spend*1000)/NULLIF(SUM(impressions),0)",
+    "sources": [
+      "Meta.impressions",
+      "Meta.spend"
+    ],
+    "format": "currency",
+    "domain": "revenue",
+    "aggregation": "weighted",
+    "higherIsBetter": false,
+    "minSample": 3
+  },
+  {
+    "id": "meta_cpl",
+    "label": "CPL",
+    "expression": "SUM(spend)/NULLIF(SUM(meta_leads),0)",
+    "sources": [
+      "Meta.leads",
+      "Meta.spend"
+    ],
+    "format": "currency",
+    "domain": "revenue",
+    "aggregation": "weighted",
+    "higherIsBetter": false,
+    "minSample": 3
+  },
+  {
+    "id": "meta_cpa",
+    "label": "Cost per purchase",
+    "expression": "SUM(spend)/NULLIF(SUM(meta_purchases),0)",
+    "sources": [
+      "Meta.purchases",
+      "Meta.spend"
+    ],
+    "format": "currency",
+    "domain": "revenue",
+    "aggregation": "weighted",
+    "higherIsBetter": false,
+    "minSample": 3
+  },
+  {
+    "id": "meta_roas",
+    "label": "ROAS",
+    "expression": "SUM(purchase_value)/NULLIF(SUM(spend),0)",
+    "sources": [
+      "Meta.spend",
+      "Meta.purchase_value"
+    ],
+    "format": "ratio",
+    "domain": "revenue",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "meta_frequency",
+    "label": "Row-weighted frequency",
+    "expression": "SUM(impressions)/NULLIF(SUM(reach),0)",
+    "sources": [
+      "Meta.reach",
+      "Meta.impressions"
+    ],
+    "format": "ratio",
+    "domain": "revenue",
+    "aggregation": "weighted",
+    "higherIsBetter": false,
+    "minSample": 3
+  },
+  {
+    "id": "crm_trials",
+    "label": "Completed trials",
+    "expression": "COUNT(*) FILTER (WHERE lower(trim(COALESCE(trial_status,'')))='trial completed')",
+    "sources": [
+      "Leads.Trial Status"
+    ],
+    "format": "integer",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "crm_members",
+    "label": "Converted leads",
+    "expression": "COUNT(*) FILTER (WHERE lower(trim(COALESCE(conversion,'')))='converted')",
+    "sources": [
+      "Leads.Conversion Status"
+    ],
+    "format": "integer",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "crm_retained",
+    "label": "Retained leads",
+    "expression": "COUNT(*) FILTER (WHERE lower(trim(COALESCE(retention,'')))='retained')",
+    "sources": [
+      "Leads.Retention Status"
+    ],
+    "format": "integer",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "crm_win_rate",
+    "label": "CRM lead to member",
+    "expression": "(COUNT(*) FILTER (WHERE lower(trim(COALESCE(conversion,'')))='converted')) / NULLIF((COUNT(*)),0)",
+    "sources": [
+      "Leads.Conversion Status"
+    ],
+    "format": "percent",
+    "domain": "people",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "crm_google_leads",
+    "label": "Google CRM leads",
+    "expression": "COUNT(*) FILTER (WHERE acquisition_channel='Google')",
+    "sources": [
+      "Leads.Source Name",
+      "Leads.UTM Source"
+    ],
+    "format": "integer",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
+  },
+  {
+    "id": "crm_meta_leads",
+    "label": "Meta CRM leads",
+    "expression": "COUNT(*) FILTER (WHERE acquisition_channel='Meta')",
+    "sources": [
+      "Leads.Source Name",
+      "Leads.UTM Source"
+    ],
+    "format": "integer",
+    "domain": "people",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 3
   }
 ]

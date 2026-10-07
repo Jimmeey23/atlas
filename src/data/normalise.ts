@@ -1,3 +1,5 @@
+import { getCleanedClass } from "./class-intelligence-cleaners";
+import { marketingChannel } from "./marketing-channels";
 export type Cell = string | number | boolean | null;
 export interface Defect {
   source: string;
@@ -132,12 +134,38 @@ export const sqlTypes: Record<string, string> = {
   category: "VARCHAR",
   product: "VARCHAR",
   source: "VARCHAR",
+  acquisition_channel: "VARCHAR",
+  account_id: "VARCHAR",
+  account_name: "VARCHAR",
+  campaign_id: "VARCHAR",
+  campaign_name: "VARCHAR",
+  objective: "VARCHAR",
+  adset_id: "VARCHAR",
+  adset_name: "VARCHAR",
+  ad_id: "VARCHAR",
+  ad_name: "VARCHAR",
+  publisher_platform: "VARCHAR",
+  impressions: "DOUBLE",
+  reach: "DOUBLE",
+  spend: "DOUBLE",
+  clicks: "DOUBLE",
+  inline_link_clicks: "DOUBLE",
+  meta_leads: "DOUBLE",
+  on_facebook_lead: "DOUBLE",
+  meta_purchases: "DOUBLE",
+  purchase_value: "DOUBLE",
+  add_to_cart: "DOUBLE",
+  initiate_checkout: "DOUBLE",
   associate: "VARCHAR",
   status: "VARCHAR",
   lifecycle: "VARCHAR",
   conversion: "VARCHAR",
   retention: "VARCHAR",
   session_id: "VARCHAR",
+  session_name: "VARCHAR",
+  reference_class: "VARCHAR",
+  class_type: "VARCHAR",
+  waitlisted: "DOUBLE",
   unique_id1: "VARCHAR",
   unique_id2: "VARCHAR",
   sale_id: "VARCHAR",
@@ -204,6 +232,11 @@ export const sqlTypes: Record<string, string> = {
   days_frozen: "DOUBLE",
   freeze_count: "DOUBLE",
   lead_time: "DOUBLE",
+  utm_source: "VARCHAR",
+  utm_medium: "VARCHAR",
+  utm_campaign: "VARCHAR",
+  utm_content: "VARCHAR",
+  trial_status: "VARCHAR",
   response_hours: "DOUBLE",
   touches: "DOUBLE",
   converted: "DOUBLE",
@@ -262,10 +295,17 @@ export function normalise(
                       ? "Session Date"
                       : k === "leads"
                         ? "Created At"
+                        : k === "meta"
+                          ? "date"
                         : "Date",
               "Date (IST)",
             ),
           );
+    // Sheets API unformatted dates may be serial numbers; only this new source
+    // uses them here. Preserve the local calendar day without timezone shifts.
+    const metaDate = k === "meta" && typeof g("date") === "number"
+      ? new Date(Date.UTC(1899, 11, 30) + Number(g("date")) * 86400000).toISOString().slice(0, 10)
+      : d;
     const durationValue = g("Duration (Minutes)");
     let duration = number(durationValue);
     // Google Sheets dates encode numeric minutes as days from 1899-12-30.
@@ -333,6 +373,10 @@ export function normalise(
       trainer: str("Trainer", "Teacher Name", "Trainer Name"),
       trainer_id: str("TrainerID", "Teacher ID", "Trainer Id"),
       format: formatLabel,
+      session_name: str("SessionName", "Session Name") || formatLabel,
+      reference_class: getCleanedClass(str("SessionName", "Session Name") || formatLabel),
+      class_type: str("Type"),
+      waitlisted: n("Waitlisted", "Waitlist"),
       format_group: formatGroup(formatLabel),
       day:
         str("Day", "Day Of Week", "Day of Week", "First Visit Day") ||
@@ -472,14 +516,14 @@ export function normalise(
       refunded: boolean(g("Refunded")),
       complimentary: boolean(g("Complementary", "Complimentary")),
       voided: boolean(g("Sec. Is Voided")),
-      ltv: n("Ltv"),
+      ltv: n("Ltv", "LTV"),
       first_purchase: n("First Purchase Value"),
       visits_post: n("Visits Post Trial"),
-      visits: n("No of Visits", "Total Sessions"),
+      visits: n("No of Visits", "Total Sessions", "Visits"),
       days_absent: n("Days Since Last Visit"),
       conversion_days: n("Conversion Span (Days)"),
       second_visit_days: n("Days To Second Visit"),
-      purchases: n("Total Purchases All Time"),
+      purchases: n("Total Purchases All Time", "Purchases Made"),
       classes_left: n("Sec. Membership Classes Left"),
       money_left: n("Sec. Membership Money Left"),
       rev_credit: n(
@@ -530,7 +574,7 @@ export function normalise(
       barre_revenue: n("Barre Paid"),
       strength_revenue: n("Strength Paid"),
       session_type: /hosted|partnership| x /i.test(
-        String(g("Class", "SessionName", "First Visit Entity Name")) + " " + String(g("Is New")),
+        String(g("Class", "Cleaned Class", "SessionName", "Session Name", "First Visit Entity Name")) + " " + String(g("Is New")),
       )
         ? "Hosted"
         : "Regular",
@@ -545,9 +589,28 @@ export function normalise(
         ? String(g("Membership Used")).split(",").length
         : null,
       stage: str("Stage Name"),
+      utm_source: str("UTM Source"),
+      utm_medium: str("UTM Medium"),
+      utm_campaign: str("UTM Campaign"),
+      utm_content: str("UTM Content"),
+      trial_status: str("Trial Status"),
       class_no: n("Class No"),
       raw_json: withRaw ? JSON.stringify(raw) : null,
     });
+    if (k === "leads") r.acquisition_channel = marketingChannel(r.source,r.utm_source);
+    if (k === "meta") {
+      r.date = metaDate?.slice(0, 10) || null;
+      r.month = month(metaDate);
+      // Meta contains no studio identity. Account/campaign names are kept as
+      // their own dimensions; do not guess a studio from their text.
+      r.location = null;
+      for (const field of ["account_id", "account_name", "campaign_id", "campaign_name", "objective", "adset_id", "adset_name", "ad_id", "ad_name", "publisher_platform"])
+        r[field] = str(field);
+      for (const field of ["impressions", "reach", "spend", "clicks", "inline_link_clicks", "on_facebook_lead", "purchase_value", "add_to_cart", "initiate_checkout"])
+        r[field] = n(field);
+      r.meta_leads = n("leads");
+      r.meta_purchases = n("purchases");
+    }
     if (r.response_hours != null && +r.response_hours < 0) {
       defects.push({
         source: k,

@@ -9,6 +9,7 @@ export function Register({
   actions,
   children,
   dateIndependent = false,
+  id,
 }: {
   index: string;
   title: string;
@@ -16,12 +17,13 @@ export function Register({
   actions?: ReactNode;
   children: ReactNode;
   dateIndependent?: boolean;
+  id?: string;
 }) {
   const page = useStore((s) => s.tab);
   const config = usePreferences((s) => s.preferences.page[page]);
   const heading = config?.sectionTitles?.[index] || title;
   return (
-    <section className="register" data-index={index}>
+    <section id={id} className="register" data-index={index}>
       <div className="register-head">
         <div className="register-title">
           <span className="index">{index}</span>

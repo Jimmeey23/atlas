@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { relativePeriod } from "../data/periods";
 export const tabs = [
   "Business overview",
-  "Studio overview",
+  "Studio operations",
   "Schedule & capacity",
   "Instructor performance",
   "Revenue & sales",
@@ -20,7 +20,15 @@ export const tabs = [
 ];
 // Instructor economics (10) now renders inside Instructor performance (3), so
 // it keeps its index for saved views and insight links but leaves the nav.
-export const navigationOrder = [0, 4, 8, 5, 6, 9, 7, 12, 1, 2, 14, 3, 15, 13, 11];
+// Legacy studio workspace indices resolve to one operations page.
+export const consolidated: Record<number, number[]> = { 1: [1, 2, 9, 7] };
+export const consolidatedLabels: Record<number, string> = { 1: "Studio operations" };
+export const parentTab = (tab: number) => {
+  for (const [parent, members] of Object.entries(consolidated))
+    if (members.includes(tab)) return Number(parent);
+  return tab;
+};
+export const navigationOrder = [0, 4, 8, 5, 6, 12, 1, 14, 3, 15, 13, 11];
 export interface Filters {
   from: string;
   to: string;
@@ -99,8 +107,8 @@ interface Store {
   cross: (field: string, value: string) => void;
 }
 export const useStore = create<Store>((set, get) => ({
-  view: "",
-  tab: Math.min(15, Math.max(0, Number(params.get("tab") || 0))),
+  view: params.get("view") === "performance-marketing" ? "performance-marketing" : "",
+  tab: parentTab(Math.min(15, Math.max(0, Number(params.get("tab") || 0)))),
   theme: localStorage.getItem("floor-theme") || "matte",
   density: localStorage.getItem("floor-density") || "compact",
   filters: {
@@ -113,7 +121,7 @@ export const useStore = create<Store>((set, get) => ({
   compare: params.get("compare") || "prior",
   rate: Number(localStorage.getItem("floor-rate") || 1200),
   transient: initialTransient,
-  set: (s) => set({ ...(s.tab != null && s.view == null ? {view: ""} : {}), ...s }),
+  set: (s) => set({ ...(s.tab != null && s.view == null ? {view: ""} : {}), ...s, ...(s.tab != null ? { tab: parentTab(s.tab) } : {}) }),
   filter: (s) => set({ filters: { ...get().filters, ...s } }),
   cross: (field, value) =>
     set({
@@ -150,9 +158,11 @@ let layoutParams: () => { groups?: string[]; columns?: string[] } = () => ({});
 export const publishLayout = (read: () => { groups?: string[]; columns?: string[] }) => {
   layoutParams = read;
 };
+export const PERFORMANCE_MARKETING_VIEW = "performance-marketing";
 export const savedPresets: {name: string; tab: number; view?: string}[] = [
   { name: "Monday review", tab: 0 },
   { name: "Schedule audit", tab: 2 },
   { name: "Trainer one-to-ones", tab: 3 },
   { name: "Month-end close", tab: 10 },
+  { name: "Performance Marketing", tab: 8, view: PERFORMANCE_MARKETING_VIEW },
 ];

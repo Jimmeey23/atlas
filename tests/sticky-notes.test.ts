@@ -49,7 +49,7 @@ test("sticky notes validate placement and persist independent documents across g
             selector: '[data-note-anchor="metric-revenue"]',
             x: 0.4,
             y: 0.6,
-            label: "Session revenue",
+            label: "Earned revenue",
           },
         },
       ],

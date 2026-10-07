@@ -1,3 +1,4 @@
+import { tree } from "../data/hierarchy";
 import { InstructorAvatar } from "./InstructorAvatar";
 import { usePreferences } from "../state/preferences";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -34,40 +35,19 @@ import { useStore } from "../state/store";
 export interface TreeRow {
   source?: string;
   filters?: import("../state/store").Filters;
+  transient?: { field: string; value: string }[];
   metrics?: string[];
   predicate?: string;
+  /** Full analysis population when raw records show a metric numerator only. */
+  summaryPredicate?: string;
+  queryContext?: import("../semantics/metrics").QueryContext;
   label: string;
   path: { field: string; value: string }[];
   values: Row;
   children: TreeRow[];
   id: string;
 }
-export function tree(rows: Row[], groups: string[]): TreeRow[] {
-  const roots: TreeRow[] = [];
-  const map = new Map<string, TreeRow>();
-  for (const row of rows) {
-    const depth = groups.length - Math.round(Math.log2(Number(row.level) + 1));
-    const path = groups.slice(0, depth).map((field, i) => ({
-      field,
-      value: String(row["g" + i] ?? "Unspecified"),
-    }));
-    const id = JSON.stringify(path);
-    const node = {
-      id,
-      label: path.at(-1)!.value,
-      path,
-      values: row,
-      children: [],
-    };
-    map.set(id, node);
-  }
-  for (const node of map.values()) {
-    const parent = map.get(JSON.stringify(node.path.slice(0, -1)));
-    if (parent) parent.children.push(node);
-    else roots.push(node);
-  }
-  return roots;
-}
+export { tree } from "../data/hierarchy";
 export function NestedTable({
   rows,
   priorRows = [],
@@ -77,8 +57,12 @@ export function NestedTable({
   onGroups,
   onColumns,
   onDrill,
+  source: sourceOverride,
+  predicate,
 }: {
   rows: Row[];
+  source?: string;
+  predicate?: string;
   /** The same rollup over the comparison period; empty when not comparing. */
   priorRows?: Row[];
   groups: string[];
@@ -153,20 +137,20 @@ export function NestedTable({
           ")",
       )
       .join(" OR ");
-    const source = blueprints[store.tab].source;
+    const source = sourceOverride || blueprints[store.tab].source;
     const w = where(store.filters, source);
     const facts =
       metricFacts(store.filters, source);
     let active = true;
     query(
-      `SELECT ${metricSQL(columns, context())},COUNT(*) AS n FROM ${facts}${["sessions", "sales", "checkins"].includes(source) || !w ? " WHERE " : " AND "}(${terms})`,
+      `SELECT ${columns.length ? metricSQL(columns, context())+"," : ""}COUNT(*) AS n FROM ${facts}${["sessions", "sales", "checkins"].includes(source) || !w ? " WHERE " : " AND "}(${terms})${predicate ? " AND (" + predicate + ")" : ""}`,
     ).then((r) => {
       if (active) setSelectionTotal(r[0]);
     });
     return () => {
       active = false;
     };
-  }, [selected, columns, data, store.filters, store.tab]);
+  }, [selected, columns, data, store.filters, store.transient, store.tab, sourceOverride, predicate]);
   const defs = useMemo<ColumnDef<TreeRow>[]>(
     () => [
       {
@@ -364,6 +348,8 @@ export function NestedTable({
                   "status",
                   "member",
                   "month",
+                  ...(groups.includes("capacity") ? ["capacity"] : []),
+                  ...(groups.includes("payment_method") ? ["payment_method"] : []),
                 ].map((v) => (
                   <option key={v} value={v}>
                     {v === "trainer"
@@ -418,7 +404,7 @@ export function NestedTable({
           {Object.keys(metrics)
             .filter(
               (id) =>
-                columns.includes(id) ||
+                (columns.includes(id) ||
                 [
                   "sessions",
                   "attendance",
@@ -432,7 +418,7 @@ export function NestedTable({
                   "aov",
                   "risk_score",
                   "contribution",
-                ].includes(id),
+                ].includes(id)) && (!sourceOverride || metrics[id].sources.some((source) => source.split(".")[0].toLowerCase() === sourceOverride.toLowerCase())),
             )
             .map((id) => (
               <label key={id}>

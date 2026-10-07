@@ -3,6 +3,7 @@ import { sheets } from "./sheets.config";
 import { blueprints } from "./blueprints";
 import views from "./views.sql?raw";
 import { clearAnalyses } from "./analytics";
+import { useStore, PERFORMANCE_MARKETING_VIEW } from "../state/store";
 export type SourceState = {
   state: "idle" | "loading" | "ready" | "refreshing" | "error";
   error?: string;
@@ -61,7 +62,7 @@ export const dependencies = (tab: number) =>
     : [
         ...new Set([
           blueprints[tab].source,
-          ...(tab === 0 ? ["new", "sales", "lapsed", "leads", "bookings", "checkins"] : tab === 3 ? ["payroll", "new"] : tab === 5 ? ["sales"] : tab === 8 ? ["new"] : tab === 9 ? ["sessions"] : tab === 6 ? ["new", "checkins"] : tab === 15 ? ["sales", "new", "lapsed", "leads", "payroll", "recurring", "bookings"] : []),
+          ...(tab === 1 ? ["bookings", "checkins"] : tab === 0 ? ["new", "sales", "lapsed", "leads", "bookings", "checkins"] : tab === 3 ? ["payroll", "new"] : tab === 5 ? ["sales"] : tab === 8 ? ["new"] : tab === 9 ? ["sessions"] : tab === 6 ? ["new", "checkins"] : tab === 15 ? ["sales", "new", "lapsed", "leads", "payroll", "recurring", "bookings"] : []),
         ]),
       ];
 export const usable = (key: string) =>
@@ -198,6 +199,7 @@ export async function revalidate(tab: number, minInterval = 10000) {
   const report = await probeFreshness(minInterval);
   if (!report) return [];
   const watched = new Set(dependencies(tab));
+  if (tab===8 && useStore.getState().view===PERFORMANCE_MARKETING_VIEW) watched.add("meta");
   const changed = report.sources
     .filter((s) => watched.has(s.key) && s.stale)
     // A source we have never loaded is handled by the normal load path.

@@ -28,6 +28,7 @@ const presenceFields = [
   "location",
   "trainer",
   "format",
+  "format_group",
   "source",
   "category",
   "day",
@@ -37,6 +38,10 @@ const presenceFields = [
   "status",
   "product",
   "associate",
+  "capacity",
+  "payment_method",
+  "session_type",
+  "is_new",
 ];
 async function measureFields(key: string) {
   try {
@@ -107,7 +112,7 @@ async function restoreSnapshot(key: string) {
           savedAt: number;
         }
       | undefined;
-    if (!entry || entry.schema !== 14) return false;
+    if (!entry || entry.schema !== 17) return false;
     resultCache.clear();
     await database.registerFileBuffer(key + ".parquet", entry.buffer);
     await connection.query(
@@ -128,7 +133,7 @@ async function persist(key: string) {
     );
     const buffer = await database.copyFileToBuffer(key + ".parquet");
     await writeSnapshot({
-      schema: 14,
+      schema: 17,
       key,
       buffer,
       meta: health[key],
@@ -156,6 +161,7 @@ export async function init() {
     "new",
     "sales",
     "leads",
+    "meta",
     "lapsed",
     "checkins",
     "bookings",

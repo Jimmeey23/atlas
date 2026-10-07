@@ -1,8 +1,14 @@
+import { StudioOperationsOverview } from "./components/StudioOperationsOverview";
+import { StudioOperationsDeepDive } from "./components/StudioOperationsDeepDive";
+import { StudioCommunityOperations } from "./components/StudioCommunityOperations";
+import { StudioOperations } from "./components/StudioOperations";
 import { SalesRankings } from "./components/SalesRankings";
 import { StickyNotes } from "./components/StickyNotes";
 import { workspaceIcons, useWorkspaceCopy } from "./data/workspaceCopy";
+import { OverviewModules } from "./components/OverviewModules";
 import { OverviewAttention } from "./components/OverviewAttention";
-import { SessionRevenueChange } from "./components/SessionRevenueChange";
+import { PerformanceMarketing } from "./components/PerformanceMarketing";
+import { EarnedRevenueChange } from "./components/EarnedRevenueChange";
 import { PresentationTools } from "./components/PresentationTools";
 import { motion } from "framer-motion";
 import { AtlasSettings } from "./components/AtlasSettings";
@@ -36,8 +42,11 @@ import {
   useStore,
   tabs,
   navigationOrder,
+  consolidatedLabels,
+  parentTab,
   emptyFilters,
   savedPresets,
+  PERFORMANCE_MARKETING_VIEW,
   linkedLayout,
   publishLayout,
   syncUrl,
@@ -80,6 +89,7 @@ import { AcquisitionMainTables, AcquisitionDeepDive, AcquisitionTableView } from
 import { MoMTable } from "./components/MoMTable";
 import { InstructorEconomics } from "./components/InstructorEconomics";
 import { FormatComparison } from "./components/FormatComparison";
+import { FormatAllocationChart } from "./components/FormatAllocationChart";
 import { WebsiteLeadPeriods } from "./components/WebsiteLeadPeriods";
 import {
   IntelligenceWorkspace,
@@ -134,7 +144,9 @@ function metricScope(
         ? "sales"
         : tab === 0 && ["new_clients", "conversion_rate", "active_base"].includes(id)
           ? "new"
-          : fallback;
+          : tab === 0 && id === "lapsed_members"
+            ? "lapsed"
+            : fallback;
   const predicate = contributorPredicate(id, context(filters));
   return {
     source,
@@ -148,6 +160,7 @@ export default function App() {
   const { preferences: prefs, page: updatePage } = usePreferences();
   const pagePrefs = prefs.page[s.tab] || {};
   const bp = blueprints[s.tab];
+  const marketingView = s.view === PERFORMANCE_MARKETING_VIEW && s.tab === 8;
   const workspaceHeading = useWorkspaceCopy(s.tab, bp.subtitle);
   const workspaceVersion = dependencies(s.tab)
     .map((k) => health[k]?.fetchedAt || "unavailable")
@@ -187,6 +200,10 @@ export default function App() {
   const load = useCallback(async (force = false) => {
     try {
       await ensureWorkspace(useStore.getState().tab, force);
+      if (useStore.getState().tab === 0)
+        await Promise.all([ensureSource("meta", force), ensureSource("payroll", force)]);
+      else if (useStore.getState().view === PERFORMANCE_MARKETING_VIEW)
+        await ensureSource("meta", force);
     } catch (e) {
       setError(String(e));
       setBusy(false);
@@ -292,7 +309,7 @@ export default function App() {
   }, [prefs, pagePrefs]);
   useEffect(() => {
     if (configuredTab !== s.tab) return;
-    if (!ready || s.tab === 11 || s.tab === 13 || s.tab === 15) {
+    if (!ready || s.tab === 11 || s.tab === 13 || s.tab === 15 || marketingView) {
       setBusy(
         !ready &&
           !dependencies(s.tab).some((k) => sourceStates[k].state === "error"),
@@ -329,6 +346,7 @@ export default function App() {
     configuredTab,
     ready,
     s.tab,
+    marketingView,
     groups,
     columns,
     s.filters,
@@ -648,12 +666,13 @@ export default function App() {
         {navigationOrder
           .filter((i) => !prefs.page[i]?.hidden)
           .map((i) => {
-            const name = prefs.page[i]?.name || tabs[i];
+            const name = prefs.page[i]?.name || consolidatedLabels[i] || tabs[i];
             const TabIcon = workspaceIcons[i];
+            const active = i === parentTab(s.tab);
             return (
               <button
                 key={i}
-                className={`tab ${i === s.tab ? "active" : ""}`}
+                className={`tab ${active ? "active" : ""}`}
                 style={
                   {
                     "--accent":
@@ -661,7 +680,7 @@ export default function App() {
                   } as React.CSSProperties
                 }
                 onClick={() => s.set({ tab: i })}
-                aria-current={i === s.tab ? "page" : undefined}
+                aria-current={active ? "page" : undefined}
               >
                 <TabIcon size={15} strokeWidth={1.7} aria-hidden="true" /><span>{name}</span>
                 {i === 11 &&
@@ -673,7 +692,7 @@ export default function App() {
                       }
                     </span>
                   )}
-                {i === s.tab && (
+                {active && (
                   <motion.span
                     layoutId="atlas-active-tab"
                     className="barre"
@@ -712,7 +731,7 @@ export default function App() {
           aria-busy={busy}
         >
           <div className="print-context">
-            <h2>Atlas / {s.view === "kra" ? "Jimmeey Gondaa · KRA performance" : tabs[s.tab]}</h2>
+            <h2>Atlas / {s.view === "kra" ? "Jimmeey Gondaa · KRA performance" : marketingView ? "Performance Marketing" : tabs[s.tab]}</h2>
             <p>
               Filters: {JSON.stringify(s.filters)} / Cross-filters:{" "}
               {JSON.stringify(s.transient)} / Estimated instructor rate: ₹
@@ -721,8 +740,8 @@ export default function App() {
           </div>
           <div className="page-intro">
             <div>
-              <h1 key={s.tab}>{s.view === "kra" ? "Jimmeey Gondaa · KRA performance" : pagePrefs.heading || workspaceHeading.title || bp.title}</h1>
-              <p>{s.view === "kra" ? "Systems, sales & client servicing · June–November 2026" : pagePrefs.subtitle ?? workspaceHeading.subtitle}</p>
+              <h1 key={s.tab}>{s.view === "kra" ? "Jimmeey Gondaa · KRA performance" : marketingView ? "Performance Marketing" : pagePrefs.heading || workspaceHeading.title || bp.title}</h1>
+              <p>{s.view === "kra" ? "Systems, sales & client servicing · June–November 2026" : marketingView ? "Website lead journeys, CRM acquisition channels and Meta campaign performance." : pagePrefs.subtitle ?? workspaceHeading.subtitle}</p>
             </div>
             <div className="intro-meta">
               <span className="pill good">
@@ -759,6 +778,7 @@ export default function App() {
             </div>
           </div>
           {s.view !== "kra" && <SourceStatus
+            additionalSources={s.tab === 0 ? ["meta", "payroll"] : marketingView ? ["meta"] : []}
             tab={s.tab}
             version={version}
             onRetry={(key) => void ensureSource(key, true)}
@@ -830,7 +850,18 @@ export default function App() {
             ready ? (
               <DataHealth version={version} onRefresh={() => void load(true)} />
             ) : null
-          ) : !ready || configuredTab !== s.tab ? null : (
+          ) : !ready || configuredTab !== s.tab ? null : marketingView ? (
+            <PerformanceMarketing version={version} onDrill={setDrill} />
+          ) : s.tab === 1 ? (
+            <div className="studio-operations-page">
+              <StudioOperationsOverview version={version} onDrill={setDrill} />
+              <PinnedInsights page={1} />
+              <SavedElements page={1} version={version} />
+              <StudioOperations version={version} onDrill={setDrill} />
+              <StudioCommunityOperations version={version} onDrill={setDrill} />
+              <StudioOperationsDeepDive version={version} onDrill={setDrill} />
+            </div>
+          ) : (
             <>
               {!busy && !error && analysis.count === 0 && (
                 <div className="notice" role="status">
@@ -873,7 +904,7 @@ export default function App() {
                       analysis.previous[id]
                     }
                     trend={analysis.trend}
-                    n={Number(s.tab === 9 && ["complimentary_visits", "session_complimentary_rate"].includes(id) ? analysis.total.complimentary_source_records : s.tab === 0 && ["gross_revenue", "net_revenue"].includes(id) ? analysis.total.sales_records : id === "active_base" ? analysis.total.active_records : currentSnapshotMetrics.has(id) && s.tab === 6 ? analysis.total.current_records : ["new_clients", "conversion_rate"].includes(id) && s.tab === 0 ? analysis.total.growth_records : analysis.total.n || analysis.count)}
+                    n={Number(s.tab === 9 && ["complimentary_visits", "session_complimentary_rate"].includes(id) ? analysis.total.complimentary_source_records : s.tab === 0 && ["gross_revenue", "net_revenue"].includes(id) ? analysis.total.sales_records : s.tab === 0 && id === "lapsed_members" ? analysis.total.lapsed_records : id === "active_base" ? analysis.total.active_records : currentSnapshotMetrics.has(id) && s.tab === 6 ? analysis.total.current_records : ["new_clients", "conversion_rate"].includes(id) && s.tab === 0 ? analysis.total.growth_records : analysis.total.n || analysis.count)}
                     evidence={analysis.total}
                     compare={s.compare !== "none"}
                     warning={
@@ -893,7 +924,7 @@ export default function App() {
                       main.current
                         ?.querySelector("#main-register")
                         ?.scrollIntoView({ behavior: "smooth" });
-                      if (recordGroups.length || currentSnapshotMetrics.has(id) || s.tab === 0 && ["gross_revenue", "net_revenue"].includes(id))
+                      if (recordGroups.length || currentSnapshotMetrics.has(id) || s.tab === 0 && ["gross_revenue", "net_revenue", "lapsed_members"].includes(id))
                         setDrill({
                           id: "all",
                           label: metrics[id].label + " in scope",
@@ -910,6 +941,7 @@ export default function App() {
               <PinnedInsights page={s.tab} />
               <SavedElements page={s.tab} version={version} />
               {s.tab === 0 && <Pulse data={analysis} />}
+              {s.tab === 0 && <OverviewModules version={version} />}
               {s.tab === 6 && (
                 <>
                   <RenewalCohorts version={version} onDrill={setDrill} />
@@ -922,14 +954,16 @@ export default function App() {
                   index="02"
                   title={bp.chartTitle}
                   subtitle={
-                    s.tab === 4
+                    s.tab === 14
+                      ? "Compare scheduled session share with attendance and revenue share"
+                      : s.tab === 4
                       ? "Separate purchase volume from collection value · click a day to inspect it"
                       : s.tab === 2
                       ? "Observed weekly fill, in the selected period"
                       : "Compare the shape, then inspect the detail"
                   }
                 >
-                  {s.tab === 2 ? (
+                  {s.tab === 14 ? <FormatAllocationChart version={version} /> : s.tab === 2 ? (
                     <div className="chart-surface">
                       <Heatmap rows={analysis.heat} schedule />
                     </div>
@@ -941,10 +975,10 @@ export default function App() {
               {s.tab === 0 && (
                 <Register
                   index="02"
-                  title="What changed session revenue"
+                  title="What changed earned revenue"
                   subtitle="Session-attributed revenue · attendance × realised yield; separate from payments collected"
                 >
-                  <SessionRevenueChange data={analysis} />
+                  <EarnedRevenueChange data={analysis} />
                 </Register>
               )}
               <div id="main-register">
@@ -1142,7 +1176,7 @@ export default function App() {
       </div>
       <footer className="statusbar">
         <span>
-          {availableRows().toLocaleString("en-IN")} source rows / {loaded} / 10
+          {availableRows().toLocaleString("en-IN")} source rows / {loaded} / {Object.keys(sourceStates).length}
           sources loaded on demand
         </span>
         <div className="status-sources">
@@ -1306,7 +1340,7 @@ export default function App() {
                       }}
                     >
                       <span>{v.name}</span>
-                      <span className="small">{v.view === "kra" ? "Passcode protected · Jun–Nov 2026" : tabs[v.tab]}</span>
+                      <span className="small">{v.view === "kra" ? "Passcode protected · Jun–Nov 2026" : v.view === PERFORMANCE_MARKETING_VIEW ? "Website leads · journeys & conversions" : tabs[v.tab]}</span>
                     </button>
                   ))}
                   {(

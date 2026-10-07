@@ -423,5 +423,42 @@
       "UniqueID2"
     ],
     "gid": "0"
+  },
+  {
+    "key": "meta",
+    "title": "Meta",
+    "id": "1mfZQlccKdAVHzkP2eo_HpHK6lZe6Y0oQbtaVS9o6aeI",
+    "gid": "1995330774",
+    "columns": [
+      "date",
+      "account_id",
+      "account_name",
+      "campaign_id",
+      "campaign_name",
+      "objective",
+      "adset_id",
+      "adset_name",
+      "ad_id",
+      "ad_name",
+      "publisher_platform",
+      "impressions",
+      "reach",
+      "frequency",
+      "spend",
+      "clicks",
+      "inline_link_clicks",
+      "ctr",
+      "cpc",
+      "cpm",
+      "leads",
+      "on_facebook_lead",
+      "purchases",
+      "purchase_value",
+      "add_to_cart",
+      "initiate_checkout",
+      "cpl",
+      "cpa",
+      "roas"
+    ]
   }
 ]

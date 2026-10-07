@@ -350,17 +350,17 @@ main h1 { font-size: clamp(28px, 2.5vw, 40px); letter-spacing: -1.4px; font-weig
 .pinned-insight-list .chat-answer { margin-top: 10px; }
 
 /* Equal space for the revenue evidence and its interpretation. */
-.session-revenue-split{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;gap:0}
-.session-revenue-chart{min-width:0;padding-right:24px}
-.session-revenue-explanation{min-width:0;padding:20px 0 20px 26px;border-left:1px solid var(--hairline);display:flex;flex-direction:column;justify-content:center;color:var(--text-2)}
-.session-revenue-eyebrow{font-size:10px;font-weight:750;letter-spacing:.12em;text-transform:uppercase;color:var(--attendance)}
-.session-revenue-explanation h3{font-size:clamp(20px,1.8vw,28px);font-weight:700;letter-spacing:-.6px;line-height:1.2;color:var(--text-1);margin:10px 0 12px}
-.session-revenue-explanation p{font-size:13px;line-height:1.7;margin:0 0 16px}
-.session-revenue-endpoints{display:flex;align-items:center;gap:22px;padding:14px 16px;border-radius:12px;background:var(--surface-inset);border:1px solid var(--hairline);margin-bottom:18px}
-.session-revenue-endpoints div{display:grid;gap:6px;flex:1}.session-revenue-endpoints div span{font-size:11px;color:var(--text-3)}.session-revenue-endpoints strong{font-size:21px;color:var(--text-1);font-variant-numeric:tabular-nums}.session-revenue-endpoints>span{color:var(--text-3)}
-.session-revenue-drivers{margin:0;display:grid;gap:17px}.session-revenue-drivers dt{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--text-1)}.session-revenue-drivers dt strong{margin-left:auto;font-size:15px;font-variant-numeric:tabular-nums}.session-revenue-drivers dd{margin:7px 0 0;font-size:12px;line-height:1.65}.session-driver-dot{width:7px;height:7px;border-radius:50%;background:var(--growth);flex-shrink:0}.session-driver-dot.yield{background:var(--people)}
-.session-revenue-explanation .session-revenue-footnote{font-size:11px;color:var(--text-3);border-top:1px solid var(--hairline);padding-top:14px;margin:18px 0 0}.session-revenue-unavailable{padding:14px;background:var(--surface-inset);border-radius:10px}
-@media(max-width:760px){.session-revenue-split{grid-template-columns:minmax(0,1fr)}.session-revenue-chart{padding-right:0}.session-revenue-explanation{border-left:0;border-top:1px solid var(--hairline);padding:24px 0 10px}}
+.earned-revenue-split{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;gap:0}
+.earned-revenue-chart{min-width:0;padding-right:24px}
+.earned-revenue-explanation{min-width:0;padding:20px 0 20px 26px;border-left:1px solid var(--hairline);display:flex;flex-direction:column;justify-content:center;color:var(--text-2)}
+.earned-revenue-eyebrow{font-size:10px;font-weight:750;letter-spacing:.12em;text-transform:uppercase;color:var(--attendance)}
+.earned-revenue-explanation h3{font-size:clamp(20px,1.8vw,28px);font-weight:700;letter-spacing:-.6px;line-height:1.2;color:var(--text-1);margin:10px 0 12px}
+.earned-revenue-explanation p{font-size:13px;line-height:1.7;margin:0 0 16px}
+.earned-revenue-endpoints{display:flex;align-items:center;gap:22px;padding:14px 16px;border-radius:12px;background:var(--surface-inset);border:1px solid var(--hairline);margin-bottom:18px}
+.earned-revenue-endpoints div{display:grid;gap:6px;flex:1}.earned-revenue-endpoints div span{font-size:11px;color:var(--text-3)}.earned-revenue-endpoints strong{font-size:21px;color:var(--text-1);font-variant-numeric:tabular-nums}.earned-revenue-endpoints>span{color:var(--text-3)}
+.earned-revenue-drivers{margin:0;display:grid;gap:17px}.earned-revenue-drivers dt{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--text-1)}.earned-revenue-drivers dt strong{margin-left:auto;font-size:15px;font-variant-numeric:tabular-nums}.earned-revenue-drivers dd{margin:7px 0 0;font-size:12px;line-height:1.65}.session-driver-dot{width:7px;height:7px;border-radius:50%;background:var(--growth);flex-shrink:0}.session-driver-dot.yield{background:var(--people)}
+.earned-revenue-explanation .earned-revenue-footnote{font-size:11px;color:var(--text-3);border-top:1px solid var(--hairline);padding-top:14px;margin:18px 0 0}.earned-revenue-unavailable{padding:14px;background:var(--surface-inset);border-radius:10px}
+@media(max-width:760px){.earned-revenue-split{grid-template-columns:minmax(0,1fr)}.earned-revenue-chart{padding-right:0}.earned-revenue-explanation{border-left:0;border-top:1px solid var(--hairline);padding:24px 0 10px}}
 
 /* The Atlas ribbons open into a fan, weave together, then return to the mark. */
 .logo-mark{position:relative;isolation:isolate;animation:atlas-ribbon-float 6.4s ease-in-out infinite;filter:drop-shadow(0 2px 4px color-mix(in srgb,var(--people) 18%,transparent))}
@@ -507,3 +507,11 @@ html[data-presenting=true] .sticky-note-layer,html[data-presenting=true] .sticky
 .sales-ranking-lane > header { display: flex; align-items: center; gap: 11px; padding: 16px; border-bottom: 1px solid var(--hairline); color: var(--pos); }.sales-ranking-lane.bottom > header { color: var(--risk); }.sales-ranking-lane h3 { margin: 0; color: var(--text-1); font-size: 14px; }.sales-ranking-lane header span { display: block; font-size: 10px; color: var(--text-3); margin-top: 4px; }
 .sales-ranking-row { display: flex; align-items: center; width: 100%; gap: 12px; padding: 14px 16px; border: 0; border-bottom: 1px solid var(--hairline); text-align: left; color: var(--text-1); background: transparent; }.sales-ranking-row:hover { background: var(--surface-2); }.sales-rank-number { color: var(--text-3); font-size: 10px; font-variant-numeric: tabular-nums; }.sales-rank-detail { min-width: 0; flex: 1; }.sales-rank-detail > strong { display: block; font-size: 12px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.sales-rank-detail > span { font-size: 9px; color: var(--text-3); display: block; margin-top: 4px; }.sales-rank-detail i { display: block; background: var(--surface-3); height: 3px; margin-top: 8px; border-radius: 3px; overflow: hidden; }.sales-rank-detail i b { display: block; height: 100%; background: var(--pos); border-radius: inherit; }.bottom .sales-rank-detail i b { background: var(--risk); }.sales-rank-value { display: flex; align-items: center; gap: 6px; }.sales-rank-value strong { font-size: 15px; font-variant-numeric: tabular-nums; }.sales-rank-value svg { color: var(--text-3); }
 @media(max-width:800px) { .sales-ranking-grid { grid-template-columns: 1fr; }.sales-ranking-controls label { flex: 1; min-width: 125px; flex-direction: column; align-items: flex-start; }.sales-ranking-controls select,.sales-ranking-controls input { width: 100%; max-width: none; } }
+
+/* Studio operations: one nav entry, four source-backed views. */
+.subtabbar { display: flex; gap: 6px; align-items: center; padding: 8px 28px; overflow-x: auto; background: var(--surface-1); border-bottom: 1px solid var(--hairline); scrollbar-width: thin; }
+.subtabbar .subtab { flex-shrink: 0; height: 30px; padding: 0 12px; border: 1px solid var(--hairline); border-radius: 999px; background: transparent; color: var(--text-3); font-size: 11px; font-weight: 600; cursor: pointer; transition: background .18s, color .18s, border-color .18s; }
+.subtabbar .subtab:hover { background: var(--surface-2); color: var(--text-1); }
+.subtabbar .subtab.active { color: var(--accent); background: color-mix(in srgb,var(--accent) 10%,var(--surface-1)); border-color: color-mix(in srgb,var(--accent) 30%,transparent); }
+@media (max-width: 860px) { .subtabbar { padding-left: 12px; padding-right: 12px; } }
+@media print { .subtabbar { display: none; } }

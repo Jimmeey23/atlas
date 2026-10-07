@@ -30,6 +30,8 @@ const allowed = [
   "status",
   "product",
   "associate",
+  "capacity",
+  "payment_method",
 ];
 // Filters are global while each tab reads a different table. A field the table
 // does not carry is present but all-NULL, so filtering on it would silently
@@ -65,7 +67,7 @@ export function where(
       terms.push(`"${field}" IN (${filters[field].map(quote).join(",")})`);
   if (filters.sessionType && filters.sessionType !== "all")
     terms.push(`session_type=${quote(filters.sessionType)}`);
-  if (filters.capacityBand && filters.capacityBand !== "all")
+  if (filters.capacityBand && filters.capacityBand !== "all" && carries(source, "capacity"))
     terms.push(
       filters.capacityBand === "small"
         ? "capacity<=10"
@@ -73,7 +75,7 @@ export function where(
           ? "capacity>10 AND capacity<=20"
           : "capacity>20",
     );
-  if (filters.memberType !== "all")
+  if (filters.memberType !== "all" && carries(source, "is_new"))
     terms.push(`is_new=${filters.memberType === "new" ? "TRUE" : "FALSE"}`);
   if (!filters.imports && ["bookings", "new", "sales"].includes(source))
     terms.push("NOT imported");
@@ -167,7 +169,7 @@ async function performAnalysis(
   const ids = [...new Set([...b.kpis, ...b.columns, ...columns])].filter(
     (x) =>
       (tab !== 9 || !["complimentary_visits", "session_complimentary_rate"].includes(x)) && (tab !== 0 ||
-      !["new_clients", "conversion_rate", "active_base", "gross_revenue", "net_revenue"].includes(x)),
+      !["new_clients", "conversion_rate", "active_base", "lapsed_members", "gross_revenue", "net_revenue"].includes(x)),
   );
   const w = where(filters, b.source);
   const prev = comparison(filters, compare === "none" ? "prior" : compare);
@@ -228,8 +230,18 @@ async function performAnalysis(
     }
     trend.sort((a,b) => String(a.month).localeCompare(String(b.month)));
     if (trend.length > 14) trend.splice(0,trend.length - 14);
-    Object.assign(total[0], g[0], active[0]);
-    Object.assign(previous[0], p[0], { active_base: null });
+    // Lapsed is its own sheet: memberships that recorded a churn date, scoped
+    // by the expiry window the other lapsed metrics use.
+    const [lapsedNow, lapsedPrior, lapsedMonthly] = await Promise.all([
+      query(`SELECT ${metricSQL(["lapsed_members"], context(filters))},COUNT(*) AS lapsed_records FROM lapsed${where(filters, "lapsed")}`),
+      query(`SELECT ${metricSQL(["lapsed_members"], context(prev))} FROM lapsed${where(prev, "lapsed")}`),
+      query(`SELECT SUBSTR(end_date,1,7) AS month,${metricSQL(["lapsed_members"], context(wide))} FROM lapsed${where(wide, "lapsed")} ${where(wide, "lapsed") ? "AND" : "WHERE"} end_date IS NOT NULL GROUP BY SUBSTR(end_date,1,7)`),
+    ]);
+    Object.assign(total[0], g[0], active[0], lapsedNow[0]);
+    Object.assign(previous[0], p[0], lapsedPrior[0], { active_base: null });
+    trend.forEach((row) =>
+      Object.assign(row, lapsedMonthly.find((m) => m.month === row.month) || {}),
+    );
     trend.forEach((t) =>
       Object.assign(t, monthly.find((g) => g.month === t.month) || {}),
     );

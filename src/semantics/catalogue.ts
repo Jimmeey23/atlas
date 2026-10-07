@@ -4,7 +4,7 @@ import { sheets } from "../data/sheets.config";
 /**
  * Which table a metric is computed over. A metric names its source columns as
  * "Sheet Title.Column"; several metrics read two sheets (payroll cost against
- * session revenue, say) and are computed over the first, which is the one the
+ * earned revenue, say) and are computed over the first, which is the one the
  * analytics layer joins the rest onto.
  */
 export function metricTable(id: string): string | null {

@@ -45,6 +45,7 @@ export const blueprints: Blueprint[] = [
       "new_clients",
       "conversion_rate",
       "active_base",
+      "lapsed_members",
       "complimentary_visits",
     ],
     columns: [
@@ -519,7 +520,7 @@ blueprints.push({
   ],
   groups: ["format_group", "location", "trainer", "format"],
   chart: "trend",
-  chartTitle: "How each format trends",
+  chartTitle: "Timetable allocation vs demand",
   secondary: [
     "Format \u00d7 studio",
     "Format \u00d7 instructor",
