@@ -34,3 +34,20 @@ export const metrics: Record<string, MetricDef> = Object.fromEntries(
 );
 export const metricSQL = (ids: string[], ctx: QueryContext) =>
   ids.map((id) => `${metrics[id].sql(ctx)} AS "${id}"${evidenceSQL(id)}`).join(", ");
+
+// The records behind a single cell: a metric's first FILTER (WHERE …) clause is
+// its numerator condition, so a drill-down can show only the contributing rows.
+export function contributorPredicate(id: string, ctx: QueryContext) {
+  const expression = metrics[id]?.sql(ctx);
+  if (!expression) return undefined;
+  const start = expression.indexOf("FILTER (WHERE ");
+  if (start < 0) return undefined;
+  let depth = 1;
+  let i = start + "FILTER (".length;
+  const from = i + "WHERE ".length;
+  for (i = from; i < expression.length && depth > 0; i++) {
+    if (expression[i] === "(") depth++;
+    else if (expression[i] === ")") depth--;
+  }
+  return depth === 0 ? expression.slice(from, i - 1).trim() : undefined;
+}

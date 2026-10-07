@@ -82,7 +82,7 @@ export function NestedTable({
   total: Row;
   onGroups: (v: string[]) => void;
   onColumns: (v: string[]) => void;
-  onDrill: (r: TreeRow) => void;
+  onDrill: (r: TreeRow, metric?: string) => void;
 }) {
   const [expanded, setExpanded] = useState<ExpandedState>({});
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -225,7 +225,7 @@ export function NestedTable({
                     : undefined,
               }}
               title={`${metrics[id].label}: ${fmt(id, v, true)}. n = ${fmt("records", row.original.values.n)}. ${metrics[id].description}`}
-              onClick={() => onDrill(row.original)}
+              onClick={() => onDrill(row.original, id)}
             >
               {fmt(id, v, metrics[id].format === "currency")}
             </button>

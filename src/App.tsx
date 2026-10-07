@@ -22,6 +22,7 @@ import {
   Download,
   RefreshCw,
   Bookmark,
+  Link2,
   Settings2,
   ArrowUpRight,
   CalendarDays,
@@ -37,6 +38,9 @@ import {
   navigationOrder,
   emptyFilters,
   savedPresets,
+  linkedLayout,
+  publishLayout,
+  syncUrl,
 } from "./state/store";
 
 import { health, query, type Row } from "./data/duckdb";
@@ -51,12 +55,14 @@ import {
 import { SourceStatus } from "./components/SourceStatus";
 import { ReportBuilder } from "./components/report/ReportBuilder";
 import { RetentionWorklists } from "./components/RetentionWorklists";
+import { CohortRetention } from "./components/CohortRetention";
 import {
   analyse,
   clearAnalyses,
   options as getOptions,
   availableRows,
   today,
+  context,
   type Analysis,
 } from "./data/analytics";
 import { blueprints } from "./data/blueprints";
@@ -92,7 +98,7 @@ import type { Insight } from "./insights/rules";
 import { defaults, thresholds, type Thresholds } from "./insights/thresholds";
 import { fmt } from "./semantics/formats";
 import { currentSnapshotMetrics } from "./semantics/evidence";
-import { metrics } from "./semantics/metrics";
+import { metrics, contributorPredicate } from "./semantics/metrics";
 import "./design/app.css";
 import "./styles.css";
 import "./design/refinement.css";
@@ -109,6 +115,30 @@ const blank: Analysis = {
   count: 0,
   elapsed: 0,
 };
+
+// A drill-down is scoped to the cell that was clicked: the metric decides which
+// source table and which record predicate explain that single number.
+function metricScope(
+  tab: number,
+  id: string,
+  filters: ReturnType<typeof useStore.getState>["filters"],
+  fallback: string,
+) {
+  const source =
+    tab === 9 && ["complimentary_visits", "session_complimentary_rate"].includes(id)
+      ? "sessions"
+      : tab === 0 && ["gross_revenue", "net_revenue"].includes(id)
+        ? "sales"
+        : tab === 0 && ["new_clients", "conversion_rate", "active_base"].includes(id)
+          ? "new"
+          : fallback;
+  const predicate = contributorPredicate(id, context(filters));
+  return {
+    source,
+    predicate,
+    filters: currentSnapshotMetrics.has(id) ? { ...filters, from: "", to: "" } : filters,
+  };
+}
 
 export default function App() {
   const s = useStore();
@@ -132,8 +162,9 @@ export default function App() {
   const [choices, setChoices] = useState<
     Record<string, Record<string, number>>
   >({});
-  const [groups, setGroups] = useState(pagePrefs.groups || bp.groups);
-  const [columns, setColumns] = useState(pagePrefs.columns || bp.columns);
+  const linked = linkedLayout?.tab === s.tab ? linkedLayout : null;
+  const [groups, setGroups] = useState(linked?.groups || pagePrefs.groups || bp.groups);
+  const [columns, setColumns] = useState(linked?.columns || pagePrefs.columns || bp.columns);
   const [configuredTab, setConfiguredTab] = useState(s.tab);
   const [signals, setSignals] = useState<Insight[]>([]);
   const [drill, setDrill] = useState<TreeRow | null>(null);
@@ -213,6 +244,10 @@ export default function App() {
     if (pagePrefs.columns) setColumns(pagePrefs.columns);
     if (pagePrefs.groups) setGroups(pagePrefs.groups);
   }, [pagePrefs.columns, pagePrefs.groups]);
+  useEffect(() => {
+    publishLayout(() => ({ groups, columns }));
+    syncUrl();
+  }, [groups, columns]);
   useEffect(() => {
     const root = document.documentElement;
     root.style.setProperty("--atlas-font-size", prefs.fontSize + "px");
@@ -359,7 +394,30 @@ export default function App() {
     (loaderLines[s.tab] || loaderLines[0])[
       loaderTick % (loaderLines[s.tab] || loaderLines[0]).length
     ];
-  const onDrill = useCallback((r: TreeRow) => setDrill(r), []);
+  const onDrill = useCallback(
+    (r: TreeRow, metric?: string) => {
+      if (!metric) return setDrill(r);
+      const base = r.source || bp.source;
+      const scope = metricScope(s.tab, metric, r.filters || s.filters, base);
+      // Keep the row's own grouping path: only narrow it to the clicked metric.
+      setDrill(
+        scope.source === base
+          ? {
+              ...r,
+              label: `${r.label} · ${metrics[metric].label}`,
+              metrics: [metric],
+              filters: scope.filters,
+              predicate:
+                [r.predicate, scope.predicate]
+                  .filter(Boolean)
+                  .map((p) => `(${p})`)
+                  .join(" AND ") || undefined,
+            }
+          : { ...r, label: `${r.label} · ${metrics[metric].label}`, metrics: [metric] },
+      );
+    },
+    [bp.source, s.tab, s.filters],
+  );
   useEffect(() => { setDrill(null); main.current?.scrollTo({top: 0}); }, [s.view]);
   const closeDrill = useCallback(() => setDrill(null), []);
   const dismiss = (i: Insight) => {
@@ -477,6 +535,22 @@ export default function App() {
           <span className="small hide-small" style={{ marginRight: 10 }}>
             {Object.keys(choices.location || {}).length} studios
           </span>
+          <button
+            className="icon-button hide-small"
+            aria-label="Copy a link to this exact view"
+            title="Copy link to this view"
+            onClick={async () => {
+              syncUrl();
+              try {
+                await navigator.clipboard.writeText(location.href);
+                notify("Link to this view copied — filters, grouping and columns included.");
+              } catch {
+                notify("Could not copy. The address bar holds this exact view.");
+              }
+            }}
+          >
+            <Link2 size={16} />
+          </button>
           <button
             className="button hide-small"
             onClick={() => setModal("views")}
@@ -792,10 +866,8 @@ export default function App() {
                           id: "all",
                           label: metrics[id].label + " in scope",
                           path: [],
-                          source: s.tab === 9 && ["complimentary_visits", "session_complimentary_rate"].includes(id) ? "sessions" : s.tab === 0 && ["gross_revenue", "net_revenue"].includes(id) ? "sales" : s.tab === 0 && ["new_clients", "conversion_rate", "active_base"].includes(id) ? "new" : bp.source,
-                          filters: currentSnapshotMetrics.has(id) ? { ...s.filters, from: "", to: "" } : s.filters,
+                          ...metricScope(s.tab, id, s.filters, bp.source),
                           metrics: [id],
-                          predicate: id === "active_base" ? "lifecycle='Active'" : ["new_clients", "conversion_rate"].includes(id) ? "is_new" : id === "active_memberships" ? `status='Active' AND start_date<='${today()}' AND (end_date IS NULL OR end_date>='${today()}')` : id === "dormant_actives" ? `status='Active' AND start_date<='${today()}' AND (end_date IS NULL OR end_date>='${today()}') AND days_absent>21` : id === "revenue_at_risk_30d" ? `TRY_CAST(end_date AS DATE) BETWEEN DATE '${today()}' AND DATE '${today()}'+INTERVAL 30 DAY` : undefined,
                           values: analysis.total,
                           children: [],
                         });
@@ -809,6 +881,7 @@ export default function App() {
               {s.tab === 6 && (
                 <>
                   <RenewalCohorts version={version} onDrill={setDrill} />
+                  <CohortRetention version={version} onDrill={setDrill} />
                   <RetentionWorklists version={version} />
                 </>
               )}

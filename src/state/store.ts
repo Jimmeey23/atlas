@@ -41,6 +41,33 @@ let initial: Partial<Filters> = {};
 try {
   initial = JSON.parse(params.get("f") || "{}");
 } catch {}
+// Cross-filters are part of what someone sees, so a shared link must carry them.
+let initialTransient: { field: string; value: string }[] = [];
+try {
+  const parsed = JSON.parse(params.get("x") || "[]");
+  if (Array.isArray(parsed))
+    initialTransient = parsed.filter(
+      (t) => t && typeof t.field === "string" && typeof t.value === "string",
+    );
+} catch {}
+// Grouping and columns are per-tab preferences; a link may override them for
+// this visit without overwriting what the viewer has saved locally.
+export const linkedLayout: { tab: number; groups?: string[]; columns?: string[] } | null =
+  (() => {
+    const read = (key: string) => {
+      try {
+        const v = JSON.parse(params.get(key) || "null");
+        return Array.isArray(v) && v.every((x) => typeof x === "string") ? v : undefined;
+      } catch {
+        return undefined;
+      }
+    };
+    const groups = read("g"),
+      columns = read("c");
+    return groups || columns
+      ? { tab: Number(params.get("tab") || 0), groups, columns }
+      : null;
+  })();
 export const emptyFilters: Filters = {
   from: "",
   to: "",
@@ -85,7 +112,7 @@ export const useStore = create<Store>((set, get) => ({
   signalOpen: false,
   compare: params.get("compare") || "prior",
   rate: Number(localStorage.getItem("floor-rate") || 1200),
-  transient: [],
+  transient: initialTransient,
   set: (s) => set({ ...(s.tab != null && s.view == null ? {view: ""} : {}), ...s }),
   filter: (s) => set({ filters: { ...get().filters, ...s } }),
   cross: (field, value) =>
@@ -96,7 +123,7 @@ export const useStore = create<Store>((set, get) => ({
       ],
     }),
 }));
-useStore.subscribe((s) => {
+function writeState(s: Store) {
   document.documentElement.dataset.theme = s.theme;
   document.documentElement.dataset.density = s.density;
   localStorage.setItem("floor-theme", s.theme);
@@ -107,8 +134,22 @@ useStore.subscribe((s) => {
   if (s.view) p.set("view", s.view);
   p.set("f", JSON.stringify(s.filters));
   p.set("compare", s.compare);
+  if (s.transient.length) p.set("x", JSON.stringify(s.transient));
+  const layout = layoutParams();
+  if (layout.groups) p.set("g", JSON.stringify(layout.groups));
+  if (layout.columns) p.set("c", JSON.stringify(layout.columns));
   history.replaceState(null, "", `?${p}`);
-});
+}
+useStore.subscribe(writeState);
+// Grouping and column changes live outside the store; they call this to keep
+// the address bar a complete description of the current view.
+export const syncUrl = () => writeState(useStore.getState());
+// App owns the active grouping and columns; it registers them here so the URL
+// subscription above can keep a shareable link in sync without a circular import.
+let layoutParams: () => { groups?: string[]; columns?: string[] } = () => ({});
+export const publishLayout = (read: () => { groups?: string[]; columns?: string[] }) => {
+  layoutParams = read;
+};
 export const savedPresets: {name: string; tab: number; view?: string}[] = [
   { name: "Monday review", tab: 0 },
   { name: "Schedule audit", tab: 2 },

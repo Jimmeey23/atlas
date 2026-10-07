@@ -1034,6 +1034,7 @@ body {
 :root[data-hide-monthly="true"] .renewal-cohorts,
 :root[data-hide-secondary="true"] .register[data-index="07"],
 :root[data-hide-retention="true"] .retention-worklists,
+:root[data-hide-retention="true"] .cohort-retention,
 :root[data-hide-sources="true"] .source-status,
 :root[data-hide-insights="true"] .signal-rail,
 :root[data-hide-saved="true"] .saved-elements {
@@ -1145,3 +1146,35 @@ main h1 {
   }
 }
 :root[data-hide-charts="true"] .chart-surface,:root[data-hide-charts="true"] .chart-controls{display:none!important}.theme-choice small{color:var(--text-3);font-size:10px}.section-options input[type=checkbox]{accent-color:var(--accent)}
+
+.cohort-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.cohort-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.cohort-table table {
+  font-variant-numeric: tabular-nums;
+}
+.cohort-table th[scope="col"] {
+  white-space: nowrap;
+}
+.cohort-table td {
+  padding: 2px;
+  text-align: right;
+}
+.cohort-cell {
+  width: 100%;
+  text-align: right;
+  border-radius: 4px;
+}
+.cohort-empty {
+  color: var(--text-3);
+  opacity: 0.4;
+}
