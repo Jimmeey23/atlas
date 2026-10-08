@@ -24,6 +24,10 @@ const kpis = [
   "revenue_per_session",
   "show_up_rate",
   "empty_session_rate",
+  "capacity",
+  "late_cancel_rate",
+  "rev_pas",
+  "lost_revenue",
 ];
 const chartMetrics = [
   "fill_rate",

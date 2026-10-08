@@ -646,6 +646,149 @@
     "minSample": 3
   },
   {
+    "id": "first_visitors",
+    "label": "First visitors",
+    "expression": "COUNT(*)",
+    "sources": [
+      "New.Member Id",
+      "New.First Visit Date"
+    ],
+    "format": "integer",
+    "domain": "growth",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "new_converted",
+    "label": "Converted",
+    "expression": "COUNT(*) FILTER (WHERE is_new AND conversion='Converted')",
+    "sources": [
+      "New.Is New",
+      "New.Conversion Status"
+    ],
+    "format": "integer",
+    "domain": "growth",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "new_retained",
+    "label": "Retained",
+    "expression": "COUNT(*) FILTER (WHERE is_new AND retention='Retained')",
+    "sources": [
+      "New.Is New",
+      "New.Retention Status"
+    ],
+    "format": "integer",
+    "domain": "growth",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "new_total_spend",
+    "label": "Total spend",
+    "expression": "SUM(ltv) FILTER (WHERE is_new)",
+    "sources": [
+      "New.Ltv",
+      "New.Is New"
+    ],
+    "format": "currency",
+    "domain": "revenue",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "new_post_trial_spend",
+    "label": "Spend post trial",
+    "expression": "SUM(post_trial_ltv) FILTER (WHERE is_new)",
+    "sources": [
+      "New.Ltv Post Trial",
+      "New.Is New"
+    ],
+    "format": "currency",
+    "domain": "revenue",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "new_post_trial_purchases",
+    "label": "Purchases post trial",
+    "expression": "SUM(post_trial_purchases) FILTER (WHERE is_new)",
+    "sources": [
+      "New.Purchase Count Post Trial",
+      "New.Is New"
+    ],
+    "format": "integer",
+    "domain": "growth",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "new_total_purchases",
+    "label": "Total purchases",
+    "expression": "SUM(purchases) FILTER (WHERE is_new)",
+    "sources": [
+      "New.Total Purchases All Time",
+      "New.Is New"
+    ],
+    "format": "integer",
+    "domain": "growth",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "new_visits",
+    "label": "Visits",
+    "expression": "SUM(visits) FILTER (WHERE is_new)",
+    "sources": [
+      "New.No of Visits",
+      "New.Is New"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "new_revenue_per_visit",
+    "label": "Revenue / visit",
+    "expression": "SUM(ltv) FILTER (WHERE is_new)/NULLIF(SUM(visits) FILTER (WHERE is_new AND ltv IS NOT NULL),0)",
+    "sources": [
+      "New.Ltv",
+      "New.No of Visits",
+      "New.Is New"
+    ],
+    "format": "currency",
+    "domain": "revenue",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "new_late_cancels",
+    "label": "Late cancellations",
+    "expression": "CAST(NULL AS DOUBLE)",
+    "sources": [
+      "Bookings.Late Cancelled",
+      "Bookings.Member Id",
+      "New.Member Id",
+      "New.Is New"
+    ],
+    "format": "integer",
+    "domain": "risk",
+    "aggregation": "sum",
+    "higherIsBetter": false,
+    "minSample": 5
+  },
+  {
     "id": "avg_first_purchase",
     "label": "Average first purchase",
     "expression": "AVG(first_purchase) FILTER (WHERE is_new AND conversion='Converted' AND first_purchase>0)",
@@ -734,7 +877,7 @@
   {
     "id": "active_memberships",
     "label": "Active memberships",
-    "expression": "COUNT(*) FILTER (WHERE status='Active' AND start_date<='{today}' AND (end_date IS NULL OR end_date >= '{today}'))",
+    "expression": "COUNT(*) FILTER (WHERE status NOT IN ('Lapsed','Not Activated','Frozen') AND start_date<='{today}' AND (end_date IS NULL OR end_date >= '{today}'))",
     "sources": [
       "Lapsed.Status",
       "Lapsed.End Date",
@@ -762,10 +905,14 @@
   {
     "id": "lapsed_members",
     "label": "Lapsed members",
-    "expression": "COUNT(DISTINCT member_id) FILTER (WHERE churned_date IS NOT NULL)",
+    "expression": "COUNT(DISTINCT member_id) FILTER (WHERE latest_lapse)",
     "sources": [
       "Lapsed.Churned Date",
-      "Lapsed.Member ID"
+      "Lapsed.Member ID",
+      "Lapsed.Start Date",
+      "Lapsed.Status",
+      "Lapsed.Amount Paid",
+      "Lapsed.Membership Name"
     ],
     "format": "integer",
     "domain": "risk",
@@ -790,9 +937,13 @@
   {
     "id": "zero_usage_memberships",
     "label": "Unused memberships",
-    "expression": "COUNT(*) FILTER (WHERE completed=0 AND date_diff('day',TRY_CAST(start_date AS DATE),DATE '{today}')>7)",
+    "expression": "COUNT(*) FILTER (WHERE status<>'Renewed' AND date_diff('day',TRY_CAST(start_date AS DATE),DATE '{today}')>7 AND (COALESCE(completed, CASE WHEN session_limit>0 AND remaining BETWEEN 0 AND session_limit THEN session_limit-remaining END)=0 OR (COALESCE(completed, CASE WHEN session_limit>0 AND remaining BETWEEN 0 AND session_limit THEN session_limit-remaining END) IS NULL AND last_visit IS NULL)))",
     "sources": [
-      "Lapsed.Completed Sessions",
+      "Lapsed.Total Sessions Completed",
+      "Lapsed.Sessions Limit",
+      "Lapsed.Remaining Sessions",
+      "Lapsed.Most Recent Visit Date",
+      "Lapsed.Status",
       "Lapsed.Start Date"
     ],
     "format": "integer",
@@ -804,7 +955,7 @@
   {
     "id": "dormant_actives",
     "label": "Dormant active memberships",
-    "expression": "COUNT(*) FILTER (WHERE status='Active' AND start_date<='{today}' AND (end_date IS NULL OR end_date >= '{today}') AND days_absent>21)",
+    "expression": "COUNT(*) FILTER (WHERE status NOT IN ('Lapsed','Not Activated','Frozen') AND start_date<='{today}' AND (end_date IS NULL OR end_date >= '{today}') AND days_absent>21)",
     "sources": [
       "Lapsed.Status",
       "Lapsed.Days Since Last Visit",
@@ -820,10 +971,11 @@
   {
     "id": "revenue_at_risk_30d",
     "label": "Expiring in 30 days",
-    "expression": "SUM(amount_paid) FILTER (WHERE TRY_CAST(end_date AS DATE) BETWEEN DATE '{today}' AND DATE '{today}'+INTERVAL 30 DAY)",
+    "expression": "SUM(amount_paid) FILTER (WHERE status NOT IN ('Renewed','Lapsed','Not Activated') AND TRY_CAST(end_date AS DATE) BETWEEN DATE '{today}' AND DATE '{today}'+INTERVAL 30 DAY)",
     "sources": [
       "Lapsed.Amount Paid",
-      "Lapsed.End Date"
+      "Lapsed.End Date",
+      "Lapsed.Status"
     ],
     "format": "currency",
     "domain": "risk",
@@ -834,10 +986,11 @@
   {
     "id": "risk_score",
     "label": "Member risk score",
-    "expression": "AVG(100*(0.3*(1-LEAST(completed/NULLIF(session_limit,0),1))+0.35*LEAST(days_absent/60,1)+0.15*cancel_rate+0.20*(1-attendance_rate)))",
+    "expression": "AVG(100*(0.3*(1-COALESCE(LEAST(COALESCE(completed, CASE WHEN session_limit>0 AND remaining BETWEEN 0 AND session_limit THEN session_limit-remaining END)/NULLIF(session_limit,0),1),attendance_rate,0.5))+0.35*LEAST(days_absent/60,1)+0.15*cancel_rate+0.20*(1-attendance_rate)))",
     "sources": [
-      "Lapsed.Completed Sessions",
+      "Lapsed.Total Sessions Completed",
       "Lapsed.Sessions Limit",
+      "Lapsed.Remaining Sessions",
       "Lapsed.Days Since Last Visit",
       "Lapsed.Cancellation Rate %",
       "Lapsed.Attendance Rate %"

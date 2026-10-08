@@ -3,10 +3,11 @@ import assert from "node:assert/strict";
 import { authenticatedSheet } from "../server/sheets-auth.mjs";
 import { fmt } from "../src/semantics/formats";
 
-test("revenue uses at most one decimal in compact and full views", () => {
+test("revenue uses one decimal only with L / Cr and whole rupees in full", () => {
   assert.equal(fmt("revenue", 1234567.89), "₹12.3L");
   assert.equal(fmt("revenue", 12345678.91), "₹1.2Cr");
-  assert.equal(fmt("revenue", 1234.89, true), "₹1,234.9");
+  assert.equal(fmt("revenue", 1234.89, true), "₹1,235");
+  assert.equal(fmt("revenue", 11255.5), "₹11,256");
   assert.equal(fmt("revenue", 1200, true), "₹1,200");
   assert.equal(fmt("revenue", null), "—");
 });

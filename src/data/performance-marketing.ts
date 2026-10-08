@@ -67,9 +67,9 @@ export const metaDimensions: Record<string, MarketingDimension> = {
   adset: { label: "Ad set", sql: "CASE WHEN adset_id IS NULL THEN 'Not supplied' ELSE COALESCE(adset_name,'Unnamed ad set') || ' [' || adset_id || ']' END" },
   ad: { label: "Ad", sql: "CASE WHEN ad_id IS NULL THEN 'Not supplied' ELSE COALESCE(ad_name,'Unnamed ad') || ' [' || ad_id || ']' END" },
 };
-export const websiteKPIs = ["leads", "website_trials", "website_members", "website_win_rate", "website_retained", "response_time_hours", "touches", "website_untouched", "website_open", "website_pipeline_value"];
+export const websiteKPIs = ["leads", "website_trials", "website_members", "website_win_rate", "website_retained", "response_time_hours", "touches", "website_untouched", "website_open", "website_pipeline_value", "website_contact_rate", "website_trial_rate"];
 export const websiteColumns = ["leads", "website_contacted", "website_trials", "website_trial_rate", "website_members", "website_win_rate", "website_trial_win_rate", "website_retained", "response_time_hours", "touches", "website_ltv"];
-export const metaKPIs = ["meta_spend", "meta_leads", "meta_cpl", "meta_purchases", "meta_cpa", "meta_roas", "meta_impressions", "meta_clicks", "meta_ctr"];
+export const metaKPIs = ["meta_spend", "meta_leads", "meta_cpl", "meta_purchases", "meta_cpa", "meta_roas", "meta_impressions", "meta_clicks", "meta_ctr", "meta_reach", "meta_cpc", "meta_cpm"];
 export const metaColumns = ["meta_spend", "meta_impressions", "meta_reach", "meta_clicks", "meta_link_clicks", "meta_ctr", "meta_cpc", "meta_cpm", "meta_leads", "meta_instant_leads", "meta_cpl", "meta_purchases", "meta_purchase_value", "meta_cpa", "meta_roas", "meta_add_to_cart", "meta_checkout"];
 
 export function marketingGroupSQL(source: "leads" | "meta", scope: string, groups: string[], ids: string[], ctx: QueryContext) {

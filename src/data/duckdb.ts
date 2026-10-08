@@ -1,3 +1,4 @@
+import { latestLapseSQL } from "../semantics/membership-eligibility";
 import * as duckdb from "@duckdb/duckdb-wasm";
 import wasmMVP from "@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url";
 import wasmEH from "@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url";
@@ -112,7 +113,7 @@ async function restoreSnapshot(key: string) {
           savedAt: number;
         }
       | undefined;
-    if (!entry || entry.schema !== 17) return false;
+    if (!entry || entry.schema !== 19) return false;
     resultCache.clear();
     await database.registerFileBuffer(key + ".parquet", entry.buffer);
     await connection.query(
@@ -133,7 +134,7 @@ async function persist(key: string) {
     );
     const buffer = await database.copyFileToBuffer(key + ".parquet");
     await writeSnapshot({
-      schema: 17,
+      schema: 19,
       key,
       buffer,
       meta: health[key],
@@ -235,6 +236,7 @@ async function ingestSource(data: SourceData) {
     );
     await database.dropFile(data.key + ".json");
   }
+  if (data.key === "lapsed") await connection.query(latestLapseSQL());
   await persist(data.key);
   await measureFields(data.key);
 }

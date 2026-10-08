@@ -1,3 +1,4 @@
+import { comparisonDates, comparisonOptions } from "../data/periods";
 import { InstructorName } from "./InstructorAvatar";
 import { useState } from "react";
 import { ChevronDown, Check, Filter, X } from "lucide-react";
@@ -148,12 +149,14 @@ export function Filters({
           <label>
             Compare to
             <select
-              value={s.compare}
-              onChange={(e) => s.set({ compare: e.target.value })}
+              value={s.compare.startsWith("custom:") ? "custom" : s.compare}
+              onChange={(e) => {
+                if (e.target.value !== "custom") return s.set({ compare: e.target.value });
+                const start = comparisonDates(s.filters.from, s.filters.to, "prior");
+                s.set({ compare: `custom:${start.from}:${start.to}` });
+              }}
             >
-              <option value="prior">Prior period</option>
-              <option value="year">Same period last year</option>
-              <option value="none">None</option>
+              {comparisonOptions.map(([mode, label]) => <option key={mode} value={mode}>{label}</option>)}
             </select>
           </label>
           {(

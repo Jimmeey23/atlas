@@ -1,3 +1,4 @@
+import { comparisonDates, comparisonLabel, comparisonOptions } from "./data/periods";
 import { StudioOperationsOverview } from "./components/StudioOperationsOverview";
 import { StudioOperationsDeepDive } from "./components/StudioOperationsDeepDive";
 import { StudioCommunityOperations } from "./components/StudioCommunityOperations";
@@ -36,8 +37,7 @@ import {
   X,
   Check,
   TriangleAlert,
-  Columns3,
-} from "lucide-react";
+  Columns3, GitCompareArrows } from "lucide-react";
 import {
   useStore,
   tabs,
@@ -89,6 +89,7 @@ import { AcquisitionMainTables, AcquisitionDeepDive, AcquisitionTableView } from
 import { MoMTable } from "./components/MoMTable";
 import { InstructorEconomics } from "./components/InstructorEconomics";
 import { FormatComparison } from "./components/FormatComparison";
+import { PerformanceScorecard } from "./components/PerformanceScorecard";
 import { FormatAllocationChart } from "./components/FormatAllocationChart";
 import { WebsiteLeadPeriods } from "./components/WebsiteLeadPeriods";
 import {
@@ -103,7 +104,6 @@ import { DataHealth } from "./components/DataHealth";
 import { Secondary } from "./components/Secondary";
 import { MetricIndex } from "./components/MetricIndex";
 import { exportCSV } from "./components/exports";
-import { DataInsightAction } from "./components/DataInsightAction";
 import { PinnedInsights } from "./components/PinnedInsights";
 import { insights as runInsights } from "./insights/engine";
 import type { Insight } from "./insights/rules";
@@ -116,6 +116,7 @@ import "./styles.css";
 import "./design/refinement.css";
 import "./design/acquisition.css";
 import "./design/report.css";
+import "./design/chrome.css";
 import { sourceRows } from "./data/raw";
 const blank: Analysis = {
   total: {},
@@ -481,9 +482,17 @@ export default function App() {
     (g) => Number(g.level) === 2 ** (groups.length - 1) - 1,
   );
   const sourceProblem = health[bp.source]?.status === "error";
+  // Each workspace owns a two-stop accent (see design/chrome.css). It goes on the
+  // document root so chrome outside the app shell — logo, Ask GPT, loader — follows it.
+  const accentKey = marketingView ? "mk" : s.tab;
   const domainStyle = {
-    "--accent": pagePrefs.accent || (s.tab === 5 ? "var(--acquisition-accent)" : `var(--${bp.domain})`),
+    "--accent": pagePrefs.accent || `var(--tab-${accentKey})`,
+    "--accent-2": pagePrefs.accent ? `color-mix(in srgb, ${pagePrefs.accent} 55%, #fff)` : `var(--tab-${accentKey}-2)`,
   } as React.CSSProperties;
+  useEffect(() => {
+    const root = document.documentElement.style;
+    for (const [key, value] of Object.entries(domainStyle)) root.setProperty(key, String(value));
+  }, [accentKey, pagePrefs.accent]);
   const commands = [
     ...tabs.map((name, i) => ({
       name,
@@ -560,7 +569,7 @@ export default function App() {
               <span className="logo-orbit-dot"/>
               <span className="logo-glint"/>
             </span>
-            Atlas<span style={{ color: "var(--attendance)" }}>.</span>
+            Atlas<span className="logo-dot">.</span>
           </a>
           <span className="brand-divider" />
           <div className="brand-copy">
@@ -568,93 +577,122 @@ export default function App() {
           </div>
         </div>
         <div className="toolbar">
-          <PresentationTools /><StickyNotes />
-          <select
-            aria-label="Theme"
-            className="theme-select"
-            value={s.theme}
-            onChange={(e) => s.set({ theme: e.target.value })}
-          >
-            {themeOptions.map((theme) => (
-              <option value={theme.id} key={theme.id}>
-                {theme.name}
-              </option>
-            ))}
-          </select>
-
-          <span className="small hide-small" style={{ marginRight: 10 }}>
-            {Object.keys(choices.location || {}).length} studios
-          </span>
-          <button
-            className="icon-button hide-small"
-            aria-label="Copy a link to this exact view"
-            title="Copy link to this view"
-            onClick={async () => {
-              syncUrl();
-              try {
-                await navigator.clipboard.writeText(location.href);
-                notify("Link to this view copied — filters, grouping and columns included.");
-              } catch {
-                notify("Could not copy. The address bar holds this exact view.");
+          <div className="toolbar-group" aria-label="Workspace tools">
+            <PresentationTools /><StickyNotes />
+            <button
+              className="button hide-mobile"
+              title="Command palette (⌘K)"
+              onClick={() => setModal("command")}
+            >
+              <Command size={12} />
+              <span style={{ color: "var(--text-3)" }}>K</span>
+            </button>
+            <button
+              className="button hide-small"
+              aria-label="Saved views"
+              title="Saved views"
+              onClick={() => setModal("views")}
+            >
+              <Bookmark size={12} />
+              <span className="toolbar-label">Saved views</span>
+              <ChevronDown size={10} />
+            </button>
+            <button
+              className="icon-button hide-small"
+              aria-label="Copy a link to this exact view"
+              title="Copy link to this view"
+              onClick={async () => {
+                syncUrl();
+                try {
+                  await navigator.clipboard.writeText(location.href);
+                  notify("Link to this view copied — filters, grouping and columns included.");
+                } catch {
+                  notify("Could not copy. The address bar holds this exact view.");
+                }
+              }}
+            >
+              <Link2 size={16} />
+            </button>
+          </div>
+          <span className="toolbar-divider hide-mobile" />
+          <label className={`toolbar-compare ${s.compare !== "none" ? "is-on" : ""}`} title="Compare every tab against another period">
+            <GitCompareArrows size={14} aria-hidden="true" />
+            <span className="hide-mobile">Compare</span>
+            <select
+              aria-label="Comparison period"
+              value={s.compare.startsWith("custom:") ? "custom" : s.compare}
+              onChange={(e) => {
+                if (e.target.value !== "custom") return s.set({ compare: e.target.value });
+                const start = comparisonDates(s.filters.from, s.filters.to, "prior");
+                s.set({ compare: `custom:${start.from}:${start.to}` });
+              }}
+            >
+              {comparisonOptions.map(([mode, label]) => <option key={mode} value={mode}>{label}</option>)}
+            </select>
+            {s.compare.startsWith("custom:") && (() => {
+              const [, from, to] = s.compare.split(":");
+              return <span className="toolbar-compare-range">
+                <input type="date" aria-label="Comparison start" value={from} max={to} onChange={(e) => e.target.value && s.set({ compare: `custom:${e.target.value}:${to}` })} />
+                <span aria-hidden="true">→</span>
+                <input type="date" aria-label="Comparison end" value={to} min={from} onChange={(e) => e.target.value && s.set({ compare: `custom:${from}:${e.target.value}` })} />
+              </span>;
+            })()}
+          </label>
+          <span className="toolbar-divider hide-mobile" />
+          <div className="toolbar-group" aria-label="Display">
+            <select
+              aria-label="Theme"
+              className="theme-select"
+              value={s.theme}
+              onChange={(e) => s.set({ theme: e.target.value })}
+            >
+              {themeOptions.map((theme) => (
+                <option value={theme.id} key={theme.id}>
+                  {theme.name}
+                </option>
+              ))}
+            </select>
+            <button
+              className="icon-button"
+              aria-label={`Switch to ${s.theme === "matte" ? "gloss" : "matte"} theme`}
+              title="Toggle theme (T)"
+              onClick={() =>
+                s.set({ theme: s.theme === "matte" ? "gloss" : "matte" })
               }
-            }}
-          >
-            <Link2 size={16} />
-          </button>
-          <button
-            className="button hide-small"
-            onClick={() => setModal("views")}
-          >
-            <Bookmark size={12} />
-            Saved views
-            <ChevronDown size={10} />
-          </button>
-          <select
-            aria-label="Display density"
-            value={s.density}
-            onChange={(e) => s.set({ density: e.target.value })}
-          >
-            <option value="compact">Compact</option>
-            <option value="comfortable">Comfortable</option>
-            <option value="dense">Dense</option>
-          </select>
-          <button
-            className="icon-button"
-            aria-label={`Switch to ${s.theme === "matte" ? "gloss" : "matte"} theme`}
-            title="Toggle theme (T)"
-            onClick={() =>
-              s.set({ theme: s.theme === "matte" ? "gloss" : "matte" })
-            }
-          >
-            {s.theme === "matte" ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-          <button
-            className="button hide-mobile"
-            title="Command palette (⌘K)"
-            onClick={() => setModal("command")}
-          >
-            <Command size={12} />
-            <span style={{ color: "var(--text-3)" }}>K</span>
-          </button>
+            >
+              {s.theme === "matte" ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+            <select
+              aria-label="Display density"
+              value={s.density}
+              onChange={(e) => s.set({ density: e.target.value })}
+            >
+              <option value="compact">Compact</option>
+              <option value="comfortable">Comfortable</option>
+              <option value="dense">Dense</option>
+            </select>
+          </div>
           <span className="toolbar-divider" />
-          <button
-            className="icon-button"
-            aria-label="Settings"
-            onClick={() => setModal("settings")}
-          >
-            <Settings2 size={15} />
-          </button>
-          <button
-            className="icon-button"
-            aria-label="Refresh source data"
-            onClick={() => void load(true)}
-            disabled={dependencies(s.tab).some((k) =>
-              ["loading", "refreshing"].includes(sourceStates[k].state),
-            )}
-          >
-            <RefreshCw size={14} />
-          </button>
-          {s.view !== "kra" && <button className="button" aria-label="Export" onClick={() => setModal("export")}>
+          <div className="toolbar-group">
+            <button
+              className="icon-button"
+              aria-label="Refresh source data"
+              onClick={() => void load(true)}
+              disabled={dependencies(s.tab).some((k) =>
+                ["loading", "refreshing"].includes(sourceStates[k].state),
+              )}
+            >
+              <RefreshCw size={14} />
+            </button>
+            <button
+              className="icon-button"
+              aria-label="Settings"
+              onClick={() => setModal("settings")}
+            >
+              <Settings2 size={15} />
+            </button>
+          </div>
+          {s.view !== "kra" && <button className="button toolbar-primary" aria-label="Export" onClick={() => setModal("export")}>
             <Download size={12} />
             Export
           </button>}
@@ -675,8 +713,8 @@ export default function App() {
                 className={`tab ${active ? "active" : ""}`}
                 style={
                   {
-                    "--accent":
-                      prefs.page[i]?.accent || (i === 5 ? "var(--acquisition-accent)" : `var(--${blueprints[i].domain})`),
+                    "--accent": prefs.page[i]?.accent || `var(--tab-${i})`,
+                    "--accent-2": prefs.page[i]?.accent ? `color-mix(in srgb, ${prefs.page[i]?.accent} 55%, #fff)` : `var(--tab-${i}-2)`,
                   } as React.CSSProperties
                 }
                 onClick={() => s.set({ tab: i })}
@@ -710,7 +748,7 @@ export default function App() {
       <div className="workspace">
         {busy && <div className="loader-bar" />}
         {busy && (
-          <div className="loader-shell" role="status" aria-live="polite" aria-atomic="true" style={{ "--loader-accent": `var(--${bp.domain})` } as React.CSSProperties}>
+          <div className="loader-shell" role="status" aria-live="polite" aria-atomic="true" style={{ "--loader-accent": "var(--accent)" } as React.CSSProperties}>
             <div className="loader-graphic" aria-hidden="true">
               <svg className="loader-orbit" viewBox="0 0 88 88"><circle className="loader-orbit-track" cx="44" cy="44" r="38" /><circle className="loader-orbit-arc" cx="44" cy="44" r="38" /><circle className="loader-orbit-dot" cx="44" cy="6" r="3" /></svg>
               <span className="loader-mark"><i /><i /><i /></span>
@@ -768,11 +806,7 @@ export default function App() {
                   : "All available history"}
                 <span className="small" style={s.view === "kra" ? {display: "none"} : undefined}>
                   /{" "}
-                  {s.compare === "none"
-                    ? "No comparison"
-                    : s.compare === "year"
-                      ? "vs last year"
-                      : "vs prior period"}
+                  {s.compare === "none" ? "No comparison" : comparisonLabel(s.compare)}
                 </span>
               </span>
             </div>
@@ -872,28 +906,8 @@ export default function App() {
                   </button>
                 </div>
               )}
-              <div className="metric-strip-head">
-                <div>
-                  <h3>Metric cards</h3>
-                  <p>Snapshot signals for the active scope and filters.</p>
-                </div>
-                <DataInsightAction
-                  compact
-                  subject={`${tabs[s.tab]} · Metric cards`}
-                  detail={`Displayed metrics: ${bp.kpis.map((id) => metrics[id]?.label || id).join(", ")}`}
-                />
-              </div>
               <div
-                className={`metric-strip ${bp.kpis.length > 6 ? "eight" : ""}`}
-                style={
-                  {
-                    "--metric-cols": String(
-                      bp.kpis.length > 6
-                        ? Math.ceil(bp.kpis.length / 2)
-                        : bp.kpis.length,
-                    ),
-                  } as React.CSSProperties
-                }
+                className="metric-strip"
               >
                 {bp.kpis.map((id) => (
                   <MetricCard
@@ -941,7 +955,7 @@ export default function App() {
               <PinnedInsights page={s.tab} />
               <SavedElements page={s.tab} version={version} />
               {s.tab === 0 && <Pulse data={analysis} />}
-              {s.tab === 0 && <OverviewModules version={version} />}
+              {s.tab === 0 && <OverviewModules version={version} onDrill={setDrill} />}
               {s.tab === 6 && (
                 <>
                   <RenewalCohorts version={version} onDrill={setDrill} />
@@ -972,7 +986,7 @@ export default function App() {
                   )}
                 </Register>
               )}
-              {s.tab === 0 && (
+              {s.tab === 0 && s.compare !== "none" && (
                 <Register
                   index="02"
                   title="What changed earned revenue"
@@ -1095,8 +1109,10 @@ export default function App() {
               </Register> : null}
               {/* Session metrics describe the class; these describe who the
                   instructor's first-visit members became. */}
+              {s.tab === 3 && <PerformanceScorecard dimension="trainer" index="08" version={version} onDrill={setDrill} />}
               {s.tab === 3 && <AcquisitionTableView kind="trainers" version={version} />}
               {s.tab === 3 && <InstructorEconomics version={version} />}
+              {s.tab === 14 && <PerformanceScorecard dimension="format_group" index="08" version={version} onDrill={setDrill} />}
               {s.tab === 14 && <FormatComparison version={version} />}
               <MoMTable version={workspaceVersion} ids={bp.columns.slice(0, 9)} />
               {s.tab === 4 && <SalesScorecards version={version} onDrill={setDrill} />}

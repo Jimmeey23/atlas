@@ -58,11 +58,24 @@ export const defaultPreferences = {
       tab?: number;
       pinned?: boolean;
       collapsed?: boolean;
+      layout?: InsightLayout;
     }
   >,
   page: {} as Record<number, PagePreference>,
 };
 export type Preferences = typeof defaultPreferences;
+/** How a reader arranged one AI insight panel; every field is optional and resets independently. */
+export type InsightLayout = {
+  floating?: boolean;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  wrap?: boolean;
+  align?: "left" | "center" | "right" | "justify";
+  fontSize?: number;
+  columns?: 1 | 2;
+};
 function load() {
   try {
     return {

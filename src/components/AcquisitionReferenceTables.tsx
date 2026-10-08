@@ -1,3 +1,4 @@
+import { usable } from "../data/loader";
 import { InstructorName } from "./InstructorAvatar";
 import { useEffect, useMemo, useState } from 'react';
 import { ShoppingBag, Users } from 'lucide-react';
@@ -10,7 +11,7 @@ import { fmt } from '../semantics/formats';
 import { AcquisitionTableShell } from './AcquisitionTableShell';
 
 type Kind='types'|'memberships'|'purchases';
-const cohortCols=[['cohort_rows','Trials','int'],['newcomers','New','int'],['converted_members','Converted','int'],['retained_members','Retained','int'],['conversion_rate','Conv %','percent'],['retention_rate','Ret %','percent'],['avg_ltv','Avg LTV','currency'],['total_ltv','Total LTV','currency'],['conversion_span','Avg days','days'],['visits_post','Avg visits','decimal']] as const;
+const cohortCols=[['cohort_rows','Trials','int'],['newcomers','New','int'],['converted_members','Converted','int'],['retained_members','Retained','int'],['conversion_rate','Conv %','percent'],['retention_rate','Ret %','percent'],['avg_ltv','Avg LTV','currency'],['total_ltv','Total LTV','currency'],['conversion_span','Avg days','days'],['visits_post','Avg visits','decimal'],['post_trial_spend','Spend post trial','currency'],['post_trial_purchases_total','Purchases post trial','int'],['total_purchases','Total purchases','int'],['total_visits','Visits','int'],['revenue_per_visit','Rev / visit','currency'],['late_cancels','Late cancels','int']] as const;
 const purchaseCols=[['unique_members','Members','int'],['cohort_rows','First-purchase records','int'],['total_ltv','Total LTV','currency'],['atv','LTV / first purchase','currency'],['auv','LTV / member','currency'],['purchase_freq','Purchase frequency','decimal'],['conversion_span','Avg conv days','days'],['visits_post','Avg visits','decimal']] as const;
 const packageCols=[['units','Package mentions','int'],['unique_members','New clients','int'],['total_ltv','Attributed LTV','currency'],['avg_ltv','Avg LTV','currency'],['conversion_span','Avg conv days','days'],['visits_post','Avg visits','decimal']] as const;
 function format(value:unknown,type:string){return type==='decimal'&&value!=null?Number(value).toFixed(1):fmt(type==='currency'?'avg_ltv':type==='percent'?'conversion_rate':type==='days'?'avg_conversion_span':'new_clients',value);}
@@ -22,7 +23,7 @@ export function AcquisitionReferenceTables({kind,version,onDrill}:{kind:Kind;ver
   const title=kind==='types'?'By client type':kind==='memberships'?'Memberships · converted first purchases':'New client purchases · membership mix';
   useEffect(()=>{
     let active=true;setLoading(true);setError('');
-    const facts=acquisitionFactsSQL(scope,today());let sql='';
+    const facts=acquisitionFactsSQL(scope,today(),usable("bookings"));let sql='';
     if(kind==='types')sql=`WITH facts AS (${facts}), labelled AS (SELECT *,${dimension.sql} AS label FROM facts) SELECT label,GROUPING(label) AS is_total,${acquisitionAggregate} FROM labelled GROUP BY GROUPING SETS ((label),())`;
     else if(kind==='memberships')sql=`WITH facts AS (${facts}), labelled AS (SELECT *,COALESCE(NULLIF(trim(product),''),NULLIF(trim(purchase_journey),''),'Unspecified') AS label FROM facts WHERE ref_converted) SELECT label,GROUPING(label) AS is_total,${acquisitionAggregate},COUNT(DISTINCT COALESCE(member_id,email,'row:'||source_row::VARCHAR)) AS purchase_members,SUM(ltv)/NULLIF(COUNT(*),0) AS atv,SUM(ltv)/NULLIF(COUNT(DISTINCT COALESCE(member_id,email,'row:'||source_row::VARCHAR)),0) AS auv,AVG(post_trial_purchases) AS purchase_freq FROM labelled GROUP BY GROUPING SETS ((label),())`;
     else {

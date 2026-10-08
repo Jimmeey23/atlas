@@ -1,3 +1,4 @@
+import { newSheetFields } from "./new-fields";
 import { getCleanedClass } from "./class-intelligence-cleaners";
 import { marketingChannel } from "./marketing-channels";
 export type Cell = string | number | boolean | null;
@@ -24,8 +25,16 @@ export interface SourceData {
   refreshError?: string;
   missing?: string[];
 }
+// Google Sheets day 0. A numeric cell formatted as a date arrives as e.g.
+// "1903-11-17, 12:00:00"; the underlying value is its serial day count.
+const SHEETS_EPOCH = Date.UTC(1899, 11, 30);
 export const number = (v: unknown): number | null => {
   if (v == null || v === "" || v === "-") return null;
+  const serial = /^(1[89]\d\d|190\d)-(\d\d)-(\d\d), (\d\d):(\d\d):(\d\d)$/.exec(String(v));
+  if (serial) {
+    const [, y, mo, d, h, mi, s] = serial.map(Number);
+    return Math.round(((Date.UTC(y, mo - 1, d, h, mi, s) - SHEETS_EPOCH) / 86400000) * 100) / 100;
+  }
   const n = Number(String(v).replace(/[₹,\s]/g, ""));
   return Number.isFinite(n) ? n : null;
 };
@@ -227,6 +236,8 @@ export const sqlTypes: Record<string, string> = {
   end_date: "VARCHAR",
   start_date: "VARCHAR",
   churned_date: "VARCHAR",
+  latest_lapse: "BOOLEAN",
+  ...Object.fromEntries(newSheetFields.map(([, field]) => [field, "VARCHAR"])),
   duration: "DOUBLE",
   days_active: "DOUBLE",
   days_frozen: "DOUBLE",
@@ -620,6 +631,9 @@ export function normalise(
       });
       r.response_hours = null;
     }
+    if (k === "new")
+      for (const [header, field] of newSheetFields)
+        r[field] = raw[header] == null ? null : String(raw[header]);
     return Object.fromEntries(Object.entries(r).filter(([, v]) => v != null));
   });
   return { rows, defects };

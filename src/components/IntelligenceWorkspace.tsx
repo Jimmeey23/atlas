@@ -1,5 +1,5 @@
 import { InstructorName } from "./InstructorAvatar";
-import { ArrowUp, ArrowUpRight, Sparkles, MessageSquare, ChartNoAxesCombined, Check, Database, Pencil, Trash2, Paperclip, Mic, Square } from "lucide-react";
+import { ArrowUp, ArrowUpRight, Sparkles, MessageSquare, ChartNoAxesCombined, Check, Database, Pencil, Trash2, Paperclip, Mic, Square, Settings2 } from "lucide-react";
 import { fmt, formatField } from "../semantics/formats";
 import { metrics } from "../semantics/metrics";
 import { ChatAnswer } from "./ChatAnswer";
@@ -16,8 +16,11 @@ async function api(url: string, options: RequestInit = {}) {
     ...options,
     headers: { "Content-Type": "application/json", ...options.headers },
   });
-  const data = await r.json();
-  if (!r.ok) throw new Error(data.error || "Request failed");
+  const text = await r.text();
+  let data: any = {};
+  try { data = text ? JSON.parse(text) : {}; } catch { /* non-JSON body handled below */ }
+  if (!r.ok) throw new Error(data.error || `The assistant server answered ${r.status}. Please retry.`);
+  if (!text) throw new Error("The assistant server returned an empty reply — it may be restarting. Please retry in a moment.");
   return data;
 }
 const changed = () => window.dispatchEvent(new Event("p57-documents"));
@@ -82,7 +85,6 @@ export function CloudSettings() {
             theme: b.theme || "matte",
             density: b.density || "compact",
             rate: Number(b.rate) || 1200,
-            compare: b.compare || "prior",
           });
           for (const [key, value] of Object.entries(b.localPreferences || {}))
             if (
@@ -709,21 +711,37 @@ export function IntelligenceWorkspace({
   };
   return (
     <section className={"intelligence-panel studio-chat " + (compact ? "compact" : "expanded")}>
-      <div className="agent-heading">
-        <h2>Atlas Intelligence</h2>
-        <button className="button" onClick={() => setControls(!controls)}>
-          Agent settings
-        </button>
-      </div>
-      {controls && <AgentSettings />}
-      <div className="chat-modes" role="group" aria-label="Assistant function">
-        <button aria-pressed={mode === "ask"} onClick={() => setMode("ask")}><MessageSquare size={15}/> Ask a question</button>
-        <button aria-pressed={mode === "build"} onClick={() => setMode("build")}><ChartNoAxesCombined size={16}/> Build an element</button>
-      </div>
-      <p className="chat-scope"><Database size={13}/><span>{s.filters.location?.join(" · ") || "All studios"} · {s.filters.from} → {s.filters.to}</span></p>
-      <p className="chat-scope-hint">Name a studio or period to query that scope directly. Creation requests automatically use Build.</p>
-      <div className="agent-capabilities"><span><Database size={13}/> Governed KPI queries</span><span>Source coverage checks</span><span>Studio & period comparisons</span><span>Validated charts & tables</span></div>
-      <p className="small" role="status">{status ? `${status.openai ? "GPT connected" : "GPT requires configuration"} · ${status.supabase ? "Workspace storage connected" : "Workspace storage requires configuration"}` : "Checking agent connections…"}</p>
+      {compact ? (
+        // Floating chat: one slim row, so the conversation gets the height.
+        <div className="chat-compact-bar">
+          <div className="chat-modes" role="group" aria-label="Assistant function">
+            <button aria-pressed={mode === "ask"} onClick={() => setMode("ask")}><MessageSquare size={14}/> Ask</button>
+            <button aria-pressed={mode === "build"} onClick={() => setMode("build")}><ChartNoAxesCombined size={14}/> Build</button>
+          </div>
+          <span className="chat-scope" title="Name a studio or period in your question to query that scope directly."><Database size={12}/><span>{s.filters.location?.join(" · ") || "All studios"} · {s.filters.from} → {s.filters.to}</span></span>
+          <span className={`chat-status-dot ${status ? (status.openai ? "ok" : "warn") : ""}`} title={status ? `${status.openai ? "GPT connected" : "GPT requires configuration"} · ${status.supabase ? "Workspace storage connected" : "Workspace storage requires configuration"}` : "Checking agent connections…"} />
+          <button className={`icon-button ${controls ? "is-active" : ""}`} aria-pressed={controls} aria-label="Agent settings" title="Agent settings" onClick={() => setControls(!controls)}><Settings2 size={15}/></button>
+        </div>
+      ) : (
+        <>
+        <div className="agent-heading">
+          <h2>Atlas Intelligence</h2>
+          <button className="button" onClick={() => setControls(!controls)}>
+            Agent settings
+          </button>
+        </div>
+        {!compact && controls && <AgentSettings />}
+        <div className="chat-modes" role="group" aria-label="Assistant function">
+          <button aria-pressed={mode === "ask"} onClick={() => setMode("ask")}><MessageSquare size={15}/> Ask a question</button>
+          <button aria-pressed={mode === "build"} onClick={() => setMode("build")}><ChartNoAxesCombined size={16}/> Build an element</button>
+        </div>
+        <p className="chat-scope"><Database size={13}/><span>{s.filters.location?.join(" · ") || "All studios"} · {s.filters.from} → {s.filters.to}</span></p>
+        <p className="chat-scope-hint">Name a studio or period to query that scope directly. Creation requests automatically use Build.</p>
+        <div className="agent-capabilities"><span><Database size={13}/> Governed KPI queries</span><span>Source coverage checks</span><span>Studio & period comparisons</span><span>Validated charts & tables</span></div>
+        <p className="small" role="status">{status ? `${status.openai ? "GPT connected" : "GPT requires configuration"} · ${status.supabase ? "Workspace storage connected" : "Workspace storage requires configuration"}` : "Checking agent connections…"}</p>
+        </>
+      )}
+      {compact && controls && <AgentSettings />}
       {!!messages.at(-1)?.activity?.length && <details className="agent-tool-log"><summary>Agent tool activity · {messages.at(-1).activity.length} actions</summary>{messages.at(-1).activity.map((a:any,i:number)=><p key={i}>{a.tool.replaceAll("_"," ")} · {a.status}{a.error ? ` · ${a.error}` : ""}</p>)}</details>}
       <div className="agent-layout">
         <aside>

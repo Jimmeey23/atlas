@@ -1,0 +1,466 @@
+/* App chrome: per-tab accent palette, title bar, quick filters and tab bar.
+   Loaded last so it settles the layered titlebar/tab rules in app.css,
+   styles.css and refinement.css. Every workspace gets a two-stop accent:
+   --tab-N is the primary, --tab-N-2 the gradient partner. App.tsx maps the
+   active workspace onto --accent / --accent-2 on the document root. */
+
+:root {
+  --tab-0: #a78bfa; --tab-0-2: #f472b6;  /* Business overview — violet → pink */
+  --tab-1: #38bdf8; --tab-1-2: #818cf8;  /* Studio operations — azure → periwinkle */
+  --tab-2: #2dd4bf; --tab-2-2: #a3e635;  /* Schedule & capacity — turquoise → lime */
+  --tab-3: #fbbf24; --tab-3-2: #fb7185;  /* Instructor performance — amber → rose */
+  --tab-4: #34d399; --tab-4-2: #22d3ee;  /* Revenue & sales — emerald → cyan */
+  --tab-5: #f472b6; --tab-5-2: #fdba74;  /* Conversion & acquisition — pink → peach */
+  --tab-6: #818cf8; --tab-6-2: #c084fc;  /* Renewals & retention — indigo → lavender */
+  --tab-7: #22d3ee; --tab-7-2: #60a5fa;  /* Booking behaviour — cyan → blue */
+  --tab-8: #fb923c; --tab-8-2: #facc15;  /* Leads & sales funnel — orange → yellow */
+  --tab-9: #a3e635; --tab-9-2: #34d399;  /* Member attendance — lime → emerald */
+  --tab-10: #fde047; --tab-10-2: #f97316;  /* Instructor economics — gold → tangerine */
+  --tab-11: #60a5fa; --tab-11-2: #2dd4bf;  /* Data quality — blue → teal */
+  --tab-12: #fb7185; --tab-12-2: #e11d48;  /* Late cancellations — rose → crimson */
+  --tab-13: #e879f9; --tab-13-2: #a78bfa;  /* AI workspace — fuchsia → violet */
+  --tab-14: #a855f7; --tab-14-2: #22d3ee;  /* Format comparison — electric purple → cyan */
+  --tab-15: #93c5fd; --tab-15-2: #f0abfc;  /* Monthly report — iridescent sky → orchid */
+  --tab-mk: #ff5c8a; --tab-mk-2: #a78bfa;  /* Performance marketing — watermelon → violet */
+  --accent-2: color-mix(in srgb, var(--accent) 55%, #fff);
+}
+/* Light themes use the saturated 600 step: vivid, but readable on white. Every tab's pair is unique. */
+:root:is([data-theme="gloss"], [data-theme="ivory"], [data-theme="porcelain"], [data-theme="light-glass"]) {
+  --tab-0: #7c3aed; --tab-0-2: #db2777;
+  --tab-1: #0284c7; --tab-1-2: #4f46e5;
+  --tab-2: #0d9488; --tab-2-2: #65a30d;
+  --tab-3: #d97706; --tab-3-2: #e11d48;
+  --tab-4: #059669; --tab-4-2: #0891b2;
+  --tab-5: #db2777; --tab-5-2: #ea580c;
+  --tab-6: #4f46e5; --tab-6-2: #9333ea;
+  --tab-7: #0891b2; --tab-7-2: #2563eb;
+  --tab-8: #ea580c; --tab-8-2: #ca8a04;
+  --tab-9: #65a30d; --tab-9-2: #059669;
+  --tab-10: #ca8a04; --tab-10-2: #ea580c;
+  --tab-11: #2563eb; --tab-11-2: #0d9488;
+  --tab-12: #e11d48; --tab-12-2: #9f1239;
+  --tab-13: #c026d3; --tab-13-2: #7c3aed;
+  --tab-14: #9333ea; --tab-14-2: #0891b2;
+  --tab-15: #6d5dfc; --tab-15-2: #db2777;
+  --tab-mk: #f43f5e; --tab-mk-2: #7c3aed;
+}
+
+/* ── Title bar ─────────────────────────────────────────────── */
+:root:is([data-theme]) .titlebar {
+  position: relative;
+  border-top: 0;
+  min-height: 68px;
+  gap: 20px;
+  background:
+    radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 46%),
+    var(--surface-1);
+  transition: background 400ms var(--ease);
+}
+:root:is([data-theme]) .titlebar::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+}
+.floor-logo .logo-dot { color: var(--accent); transition: color 300ms; }
+.brand-copy span { color: var(--accent); opacity: .9; }
+
+/* Logo ribbons and sparkles follow the workspace accent. */
+:root:is([data-theme]) .logo-mark { filter: drop-shadow(0 1px 2px color-mix(in srgb, var(--accent) 18%, transparent)); }
+:root:is([data-theme]) .logo-mark i {
+  background: linear-gradient(105deg, var(--accent) 10%, var(--accent-2) 45%, color-mix(in srgb, var(--accent-2) 40%, #fff) 52%, var(--accent) 75%);
+  background-size: 260% 100%;
+}
+:root:is([data-theme]) .logo-orbit-dot { background: var(--accent-2); box-shadow: 0 0 6px color-mix(in srgb, var(--accent-2) 45%, transparent); }
+:root:is([data-theme]) .logo-glint::before,
+:root:is([data-theme]) .logo-glint::after { background: var(--accent-2); }
+
+/* Toolbar: grouped segments inside one quiet capsule; Export is the one primary action. */
+:root:is([data-theme]) .titlebar .toolbar {
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 6%, transparent);
+}
+.toolbar-group { display: flex; align-items: center; gap: 2px; }
+:root:is([data-theme]) .titlebar .toolbar .toolbar-divider {
+  width: 1px; height: 20px; margin: 0 4px; background: var(--hairline-strong); opacity: .7;
+}
+:root:is([data-theme]) .titlebar .toolbar :is(.button, .icon-button, select) {
+  min-height: 32px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  transition: background 160ms, color 160ms;
+}
+:root:is([data-theme]) .titlebar .toolbar .icon-button { width: 32px; justify-content: center; }
+:root:is([data-theme]) .titlebar .toolbar :is(.button, .icon-button, select):hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-1));
+  color: var(--text-1);
+}
+:root:is([data-theme]) .titlebar .toolbar .button.toolbar-primary {
+  padding: 0 14px;
+  margin-left: 2px;
+  color: var(--text-inverse);
+  background: linear-gradient(120deg, var(--accent), var(--accent-2));
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+:root:is([data-theme]) .titlebar .toolbar .button.toolbar-primary:hover {
+  color: var(--text-inverse);
+  background: linear-gradient(120deg, var(--accent-2), var(--accent));
+}
+:root:is([data-theme]) .titlebar .toolbar .theme-select { max-width: 120px; }
+
+/* ── Quick filters ─────────────────────────────────────────── */
+:root:is([data-theme]) .quick-filters {
+  align-items: center;
+  gap: 18px;
+  padding: 10px 28px;
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--hairline);
+}
+.quick-label {
+  flex-shrink: 0;
+  margin-right: 6px;
+  color: var(--text-3);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .9px;
+  text-transform: uppercase;
+}
+:root:is([data-theme]) .quick-periods {
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 11px;
+  background: var(--surface-inset);
+  border: 1px solid var(--hairline);
+}
+:root:is([data-theme]) .quick-periods .quick-label { margin: 0 6px 0 8px; }
+:root:is([data-theme]) .quick-studios { align-items: center; gap: 6px; border-left: 1px solid var(--hairline); padding-left: 18px; }
+:root:is([data-theme]) .quick-filters :is(.quick-periods, .quick-studios) button {
+  min-height: 30px;
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  border-radius: 8px;
+  box-shadow: none;
+  transform: none;
+  transition: background 160ms, color 160ms, border-color 160ms;
+}
+:root:is([data-theme]) .quick-periods button { border: 0; background: transparent; }
+:root:is([data-theme]) .quick-periods button:hover { color: var(--text-1); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+:root:is([data-theme]) .quick-periods button.selected {
+  color: var(--text-inverse);
+  background: linear-gradient(120deg, var(--accent), var(--accent-2));
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+:root:is([data-theme]) .quick-studios button {
+  border: 1px solid var(--hairline);
+  background: var(--surface-1);
+  border-radius: 999px;
+}
+:root:is([data-theme]) .quick-studios button:hover { color: var(--text-1); border-color: color-mix(in srgb, var(--accent) 45%, var(--hairline)); }
+:root:is([data-theme]) .quick-studios button.selected {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-1));
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+/* ── Tab bar ───────────────────────────────────────────────── */
+:root:is([data-theme]) .tabbar { gap: 4px; padding: 8px 28px; height: 58px; }
+:root:is([data-theme]) .tabbar .tab {
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 11px;
+  border: 1px solid transparent;
+  color: var(--text-2);
+  font-weight: 600;
+  background: transparent;
+  box-shadow: none;
+  transition: background 200ms, color 200ms, border-color 200ms;
+}
+/* Each workspace's icon carries its own accent, so the bar reads as a legend. */
+:root:is([data-theme]) .tabbar .tab svg { color: var(--accent); opacity: .65; transition: opacity 200ms, transform 200ms var(--ease); }
+:root:is([data-theme]) .tabbar .tab:hover { color: var(--text-1); background: color-mix(in srgb, var(--accent) 7%, transparent); transform: none; }
+:root:is([data-theme]) .tabbar .tab:hover svg { opacity: 1; }
+:root:is([data-theme]) .tabbar .tab.active {
+  color: var(--text-1);
+  font-weight: 700;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, var(--surface-1)), color-mix(in srgb, var(--accent-2) 9%, var(--surface-1)));
+  border-color: color-mix(in srgb, var(--accent) 38%, transparent);
+  box-shadow: none;
+}
+:root:is([data-theme]) .tabbar .tab.active svg { opacity: 1; transform: scale(1.08); }
+:root:is([data-theme]) .tabbar .tab.active .barre {
+  left: 14px;
+  right: 14px;
+  bottom: -1px;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  opacity: 1;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  box-shadow: none;
+}
+
+/* ── Ask GPT launcher ──────────────────────────────────────── */
+:root:is([data-theme]) .atlas-chat-launcher {
+  color: var(--text-inverse);
+  border: 1px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  background: linear-gradient(120deg, var(--accent), var(--accent-2));
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+:root:is([data-theme]) .atlas-chat-launcher:hover { background: linear-gradient(120deg, var(--accent-2), var(--accent)); }
+:root:is([data-theme]) .atlas-chat-launcher i { background: var(--text-inverse); box-shadow: 0 0 0 3px color-mix(in srgb, var(--text-inverse) 25%, transparent); }
+
+/* ── Loader ────────────────────────────────────────────────── */
+:root:is([data-theme]) .loader-bar::after { background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+
+@media (max-width: 1100px) {
+  :root:is([data-theme]) .quick-filters, :root:is([data-theme]) .tabbar { padding-left: 16px; padding-right: 16px; }
+}
+@media (max-width: 700px) {
+  .quick-label { display: none; }
+  :root:is([data-theme]) .quick-filters, :root:is([data-theme]) .tabbar { padding-left: 12px; padding-right: 12px; }
+  :root:is([data-theme]) .titlebar .toolbar { padding: 2px; gap: 2px; }
+}
+.floor-logo .logo-dot { margin-left: -12px; }
+
+/* ── Softer elevation ──────────────────────────────────────── 
+   Replaces the heavy neumorphic/drop shadows with a light lift. */
+:root[data-theme]:is([data-theme="gloss"], [data-theme="ivory"], [data-theme="porcelain"], [data-theme="light-glass"]) {
+  --elev-1: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --elev-2: 0 4px 12px -6px rgba(16, 24, 40, 0.10);
+  --elev-3: 0 12px 28px -12px rgba(16, 24, 40, 0.16);
+}
+:root[data-theme]:not([data-theme="gloss"], [data-theme="ivory"], [data-theme="porcelain"], [data-theme="light-glass"]) {
+  --elev-1: 0 1px 2px rgba(0, 0, 0, 0.18);
+  --elev-2: 0 6px 16px -8px rgba(0, 0, 0, 0.40);
+  --elev-3: 0 14px 32px -14px rgba(0, 0, 0, 0.50);
+}
+:root:is([data-theme]) .metric-card:hover,
+:root:is([data-theme]) .metric-card:focus-within { box-shadow: 0 4px 12px -6px color-mix(in srgb, var(--card-accent) 22%, transparent); }
+:root:is([data-theme]) .titlebar .toolbar { box-shadow: none; }
+
+/* Share meter: stands in for the sparkline on snapshot cards without history. */
+.metric-card .metric-reading .metric-share { display: flex; flex-direction: column; justify-content: center; gap: 5px; height: 36px; }
+.metric-share-value { display: flex; align-items: baseline; justify-content: flex-end; gap: 4px; font-size: 12px; font-weight: 700; color: var(--share-color); font-variant-numeric: tabular-nums; }
+.metric-share-value small { font-size: 9.5px; font-weight: 600; color: var(--text-3); }
+.metric-share-track { display: block; height: 6px; border-radius: 999px; background: color-mix(in srgb, var(--share-color) 14%, var(--surface-2)); overflow: hidden; }
+.metric-share-track i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+
+/* Format / instructor scorecard */
+.performance-scorecard { max-height: 560px; }
+.performance-scorecard table { border-collapse: separate; border-spacing: 0; min-width: 100%; font-size: 11.5px; }
+.performance-scorecard th, .performance-scorecard td { padding: 8px 10px; border-bottom: 1px solid var(--hairline); white-space: nowrap; text-align: right; background: var(--surface-1); }
+.performance-scorecard thead th { position: sticky; top: 0; z-index: 2; background: var(--surface-2); font-size: 10.5px; font-weight: 650; color: var(--text-2); }
+.performance-scorecard tr > :first-child { position: sticky; left: 0; z-index: 1; text-align: left; font-weight: 650; color: var(--text-1); box-shadow: 1px 0 0 var(--hairline); }
+.performance-scorecard thead tr > :first-child { z-index: 3; }
+.performance-scorecard td:nth-last-child(-n+5) { text-align: left; color: var(--text-2); }
+.performance-scorecard tbody tr:hover > * { background: color-mix(in srgb, var(--accent) 5%, var(--surface-1)); }
+.scorecard-sort { all: unset; cursor: pointer; }
+.scorecard-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.scorecard-score { display: inline-flex; align-items: center; justify-content: center; min-width: 42px; padding: 3px 8px; border-radius: 999px; font-weight: 700; color: var(--accent); background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 18%, transparent) var(--score), color-mix(in srgb, var(--accent) 5%, transparent) var(--score)); }
+
+/* "Others" studio menu in the quick filters */
+.quick-others { position: relative; flex-shrink: 0; }
+.quick-others > summary { list-style: none; display: inline-flex; align-items: center; gap: 5px; min-height: 30px; padding: 0 12px; border: 1px solid var(--hairline); border-radius: 999px; background: var(--surface-1); color: var(--text-2); font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.quick-others > summary::-webkit-details-marker { display: none; }
+.quick-others > summary:hover { color: var(--text-1); border-color: color-mix(in srgb, var(--accent) 45%, var(--hairline)); }
+.quick-others > summary.selected { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface-1)); border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+.quick-others[open] > summary svg { transform: rotate(180deg); }
+.quick-others-menu { position: fixed; z-index: 60; display: grid; gap: 4px; min-width: 200px; max-height: 320px; overflow: auto; padding: 8px; border: 1px solid var(--hairline); border-radius: 12px; background: var(--surface-1); box-shadow: var(--elev-3); }
+:root:is([data-theme]) .quick-others-menu button { justify-content: flex-start; text-align: left; border-radius: 8px; }
+
+/* ── AI insight panels: tab-accented card, editable layout ─────────── */
+:root:is([data-theme]) .section-ai-summary {
+  position: relative;
+  margin: 16px 0;
+  padding: 0 0 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--hairline));
+  border-left: 1px solid color-mix(in srgb, var(--accent) 22%, var(--hairline));
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 5%, var(--surface-1)), var(--surface-1) 140px);
+  box-shadow: var(--elev-1);
+  overflow: auto;
+  resize: both;
+  max-width: 100%;
+  min-width: 260px;
+  min-height: 90px;
+  font-size: var(--ai-font, 13px);
+}
+.section-ai-summary::before { content: ""; position: sticky; top: 0; display: block; height: 3px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); z-index: 2; }
+.section-ai-summary[data-pinned]::before { background: linear-gradient(90deg, var(--growth), var(--accent)); }
+:root:is([data-theme]) .section-ai-summary > header {
+  position: sticky; top: 3px; z-index: 1;
+  margin: 0; padding: 10px 16px;
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface-1));
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 14%, var(--hairline));
+}
+.section-ai-summary > header .icon { color: var(--accent) !important; }
+.section-ai-summary > header .icon-button.is-active { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.section-ai-summary > :not(header):not(.ai-layout-bar) { margin-left: 16px; margin-right: 16px; }
+.ai-summary-scope { margin-top: 12px !important; color: var(--text-3); }
+.ai-summary-body { margin-top: 8px; }
+.section-ai-summary .chat-answer p, .section-ai-summary .chat-answer li { font-size: var(--ai-font, 13px); }
+.section-ai-summary .chat-section h3 { margin: 14px 0 6px; font-size: calc(var(--ai-font, 13px) + 1px); font-weight: 700; color: var(--accent); letter-spacing: -.1px; }
+.section-ai-summary .chat-section h4 { margin: 10px 0 4px; font-size: var(--ai-font, 13px); color: var(--text-1); }
+.section-ai-summary .chat-section:first-child h3 { margin-top: 4px; }
+.section-ai-summary .chat-result { border: 1px solid var(--hairline); border-radius: 10px; overflow: auto; }
+.section-ai-summary .chat-result thead th { background: color-mix(in srgb, var(--accent) 7%, var(--surface-2)); color: var(--text-2); font-size: 11px; font-weight: 650; }
+.section-ai-summary .chat-figures > div { border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--hairline)); background: color-mix(in srgb, var(--accent) 4%, var(--surface-1)); }
+.section-ai-summary .chat-figures dd { color: var(--accent); }
+.section-ai-summary .chat-ranked { counter-reset: rank; list-style: none; padding-left: 0; }
+.section-ai-summary .chat-ranked li { counter-increment: rank; position: relative; padding-left: 30px; }
+.section-ai-summary .chat-ranked li::before { content: counter(rank); position: absolute; left: 0; top: 2px; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 10.5px; font-weight: 700; color: var(--text-inverse); background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+.section-ai-summary .chat-answer strong { color: var(--text-1); }
+.section-ai-summary .chat-callout { border-left-color: var(--accent); }
+/* Layout options */
+.section-ai-summary[data-nowrap] .chat-answer :is(p, li, td, th) { white-space: nowrap; overflow-wrap: normal; }
+.section-ai-summary[data-columns="2"] .chat-answer { display: block; column-count: 2; column-gap: 28px; }
+.section-ai-summary[data-columns="2"] .chat-section { break-inside: avoid; }
+.section-ai-summary :is(.chat-answer p, .chat-answer li, .chat-section h3) { text-align: inherit; }
+:root:is([data-theme]) .section-ai-summary[data-floating] { position: fixed; z-index: 400; margin: 0; max-height: calc(100vh - 32px); max-width: calc(100vw - 32px); box-shadow: var(--elev-3); }
+:root:is([data-theme]) .section-ai-summary[data-floating]:not([style*="width"]) { width: 520px; }
+:root:is([data-theme]) .section-ai-summary[data-floating]:not([style*="height"]) { max-height: 70vh; }
+.section-ai-summary[data-floating] > header { cursor: grab; user-select: none; }
+.section-ai-summary[data-floating] > header:active { cursor: grabbing; }
+.ai-summary-grip { color: var(--text-3); }
+.ai-layout-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px;
+  padding: 10px 16px; border-bottom: 1px solid var(--hairline);
+  background: var(--surface-2); font-size: 11px; color: var(--text-2);
+}
+.ai-layout-bar label { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.ai-layout-bar input[type="range"] { width: 110px; accent-color: var(--accent); }
+.ai-layout-bar .link-button { all: unset; cursor: pointer; color: var(--accent); font-weight: 600; }
+.ai-layout-segment { display: inline-flex; padding: 2px; border-radius: 8px; border: 1px solid var(--hairline); background: var(--surface-1); }
+.ai-layout-segment button { all: unset; display: grid; place-items: center; width: 26px; height: 24px; border-radius: 6px; cursor: pointer; color: var(--text-2); }
+.ai-layout-segment button[aria-checked="true"] { color: var(--text-inverse); background: linear-gradient(120deg, var(--accent), var(--accent-2)); }
+.ai-layout-check input { accent-color: var(--accent); }
+.ai-summary-editor { margin-top: 12px; display: grid; gap: 8px; }
+.ai-summary-editor textarea { width: 100%; min-height: 260px; resize: vertical; padding: 12px; border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--hairline)); border-radius: 10px; background: var(--surface-inset); color: var(--text-1); font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.ai-summary-editor > div { display: flex; gap: 8px; }
+@media (max-width: 700px) { .section-ai-summary[data-floating] { left: 8px !important; right: 8px; width: auto !important; } }
+
+/* Toolbar comparison switch: neutral when off, accent-filled when a period is chosen. */
+.toolbar-compare { display: inline-flex; align-items: center; gap: 6px; padding: 0 4px 0 10px; min-height: 32px; border-radius: 10px; color: var(--text-2); font-size: 11px; font-weight: 600; }
+:root:is([data-theme]) .titlebar .toolbar .toolbar-compare select { min-height: 28px; padding: 0 22px 0 8px; border-radius: 8px; color: var(--text-1); background-color: var(--surface-1); border: 1px solid var(--hairline); }
+.toolbar-compare.is-on { color: var(--text-inverse); background: linear-gradient(120deg, var(--accent), var(--accent-2)); }
+:root:is([data-theme]) .titlebar .toolbar .toolbar-compare.is-on select { border-color: transparent; }
+/* A collapsed AI panel shrinks to its header, whatever size it was given. */
+:root:is([data-theme]) .section-ai-summary[data-collapsed] { height: auto !important; min-height: 0; resize: none; overflow: hidden; padding-bottom: 0; }
+.section-ai-summary[data-collapsed] > :not(header) { display: none; }
+/* Periods sit left, studios align right across the filter strip. */
+:root:is([data-theme]) .quick-studios { margin-left: auto; }
+
+/* ── Title bar fit: brand never wraps, controls size to content ── */
+:root:is([data-theme]) .titlebar { flex-wrap: nowrap; gap: 16px; }
+:root:is([data-theme]) .titlebar .brand { flex-shrink: 0; }
+:root:is([data-theme]) .brand-copy { white-space: nowrap; line-height: 1.3; }
+:root:is([data-theme]) .brand-copy span { display: block; white-space: nowrap; }
+:root:is([data-theme]) .titlebar .toolbar { flex-wrap: nowrap; min-width: 0; margin-left: auto; overflow: visible; }
+:root:is([data-theme]) .titlebar .toolbar select { width: auto; flex: 0 0 auto; max-width: 168px; padding-right: 24px; text-overflow: ellipsis; }
+:root:is([data-theme]) .titlebar .toolbar .theme-select { max-width: 112px; }
+:root:is([data-theme]) .titlebar .toolbar :is(.button, .icon-button) { flex-shrink: 0; white-space: nowrap; }
+.toolbar-compare-range { display: inline-flex; align-items: center; gap: 4px; }
+:root:is([data-theme]) .toolbar-compare-range input { min-height: 28px; padding: 0 6px; border-radius: 8px; border: 1px solid var(--hairline); background: var(--surface-1); color: var(--text-1); font: inherit; font-size: 11px; }
+/* Tool buttons are icon-only; their names stay in aria-label / title tooltips. */
+:root:is([data-theme]) .titlebar .toolbar :is(.presentation-launch, .sticky-note-trigger) > span,
+:root:is([data-theme]) .titlebar .toolbar .toolbar-label { display: none; }
+:root:is([data-theme]) .titlebar .toolbar :is(.presentation-launch, .sticky-note-trigger) { width: 32px; padding: 0; justify-content: center; }
+:root:is([data-theme]) .toolbar-compare-range input { width: 118px; }
+@media (max-width: 1280px) {
+  :root:is([data-theme]) .titlebar .toolbar .toolbar-compare > span:not(.toolbar-compare-range) { display: none; }
+  :root:is([data-theme]) .brand-copy { display: none; }
+}
+:root:is([data-theme]) .titlebar .toolbar .toolbar-compare:has(.toolbar-compare-range) select { max-width: 96px; }
+:root:is([data-theme]) .titlebar .toolbar select:not([aria-label="Comparison period"]) { max-width: 104px; }
+:root:is([data-theme]) .toolbar-compare-range input { width: 112px; }
+
+/* Sticky-note author line */
+.sticky-note .note-byline { margin: 0; padding: 4px 10px 6px; font-size: 10.5px; color: color-mix(in srgb, currentColor 70%, transparent); border-bottom: 1px dashed color-mix(in srgb, currentColor 18%, transparent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sticky-note .note-byline strong { font-weight: 700; }
+
+/* ── Insights drawer: docked (pinned / overlay), floating, popped out ── */
+:root:is([data-theme]) .signal-rail.open { position: relative; max-width: 70vw; animation: none; }
+.signal-rail .signal-header { cursor: default; }
+.signal-actions { display: flex; align-items: center; gap: 2px; }
+.signal-actions .icon-button.is-active { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.signal-resize { position: absolute; left: -3px; top: 0; bottom: 0; width: 7px; cursor: col-resize; z-index: 5; }
+.signal-resize:hover, .signal-resize:active { background: linear-gradient(90deg, transparent 2px, color-mix(in srgb, var(--accent) 60%, transparent) 2px 5px, transparent 5px); }
+/* Unpinned: overlays the workspace instead of narrowing it. */
+:root:is([data-theme]) .signal-rail.open.overlay { position: fixed; right: 0; top: 0; bottom: 0; z-index: 300; box-shadow: var(--elev-3); }
+/* Floating: free position, corner-resizable. */
+:root:is([data-theme]) .signal-rail.open.floating {
+  position: fixed; z-index: 350; resize: both; overflow: auto; max-width: calc(100vw - 16px); max-height: calc(100vh - 16px);
+  min-width: 260px; min-height: 220px; border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--hairline)); border-radius: 14px; box-shadow: var(--elev-3);
+}
+.signal-rail.open.floating .signal-header { cursor: grab; user-select: none; border-radius: 14px 14px 0 0; }
+.signal-rail.open.floating .signal-header:active { cursor: grabbing; }
+/* Popped out: the page keeps a slim marker that brings the drawer back. */
+:root:is([data-theme]) .signal-rail.open.popped { width: 42px !important; }
+.signal-rail.popout-window { width: 100% !important; max-width: none; min-height: 100vh; border-left: 0; }
+.signal-popout { min-height: 100vh; background: var(--surface-1); }
+
+/* ── Ask GPT launcher & chat window ── */
+:root:is([data-theme]) .atlas-chat-launcher { gap: 10px; padding: 8px 18px 8px 8px; border-radius: 999px; font-size: 13px; letter-spacing: -.1px; }
+.atlas-chat-launcher .atlas-chat-avatar { width: 34px; height: 34px; }
+.atlas-chat-avatar {
+  display: grid; place-items: center; flex-shrink: 0; width: 36px; height: 36px; border-radius: 50%;
+  color: var(--text-inverse); background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, #fff 28%, transparent);
+}
+:root:is([data-theme]) .atlas-chat-launcher .atlas-chat-avatar { background: color-mix(in srgb, var(--text-inverse) 18%, transparent); color: var(--text-inverse); }
+:root:is([data-theme]) .atlas-chat-launcher i { width: 7px; height: 7px; animation: atlas-agent-pulse 2.4s ease-in-out infinite; }
+@keyframes atlas-agent-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { :root:is([data-theme]) .atlas-chat-launcher i { animation: none; } }
+
+:root:is([data-theme]) .atlas-floating-chat {
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--hairline));
+  border-radius: 18px; overflow: hidden; background: var(--surface-1); box-shadow: var(--elev-3);
+}
+:root:is([data-theme]) .atlas-floating-chat > header {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; border-top: 0;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 12%, var(--surface-1)), color-mix(in srgb, var(--accent-2) 8%, var(--surface-1)));
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 18%, var(--hairline));
+}
+:root:is([data-theme]) .atlas-floating-chat > header::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+:root:is([data-theme]) .atlas-floating-chat { position: fixed; }
+.atlas-chat-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.atlas-chat-title > span:last-child { display: grid; gap: 2px; min-width: 0; }
+.atlas-chat-title strong { font-size: 14px; font-weight: 700; color: var(--text-1); letter-spacing: -.2px; }
+.atlas-chat-title small { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 500; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+:root:is([data-theme]) .atlas-floating-chat > header > div { display: flex; gap: 4px; }
+:root:is([data-theme]) .atlas-floating-chat > header > div button { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; color: var(--text-2); background: transparent; border: 0; cursor: pointer; }
+:root:is([data-theme]) .atlas-floating-chat > header > div button:hover { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+/* Full height: the chat runs from just below the top edge to the bottom, keeping its usual width at the right. */
+:root:is([data-theme]) .atlas-floating-chat.maximized { top: 16px; bottom: 16px; left: auto; right: 24px; height: auto; max-height: none; z-index: 600; }
+:root:is([data-theme]) .atlas-floating-chat.maximized .studio-chat .agent-messages { max-height: none; }
+:root:is([data-theme]) .atlas-floating-chat .chat-composer button[type="submit"], :root:is([data-theme]) .atlas-floating-chat .chat-composer .button.primary { color: var(--text-inverse); background: linear-gradient(120deg, var(--accent), var(--accent-2)); border: 0; }
+
+:root:is([data-theme]) .atlas-floating-chat .chat-modes button[aria-pressed="true"] { color: var(--text-inverse); background: linear-gradient(120deg, var(--accent), var(--accent-2)); box-shadow: 0 2px 6px color-mix(in srgb, var(--accent) 22%, transparent); }
+
+/* Floating chat: one slim control row; the conversation takes the rest of the height. */
+:root:is([data-theme]) .atlas-floating-chat .studio-chat.compact { padding: 10px 14px 12px; gap: 0; }
+.chat-compact-bar { display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-bottom: 6px; min-width: 0; }
+:root:is([data-theme]) .chat-compact-bar .chat-modes { flex: 0 0 auto; padding: 3px; gap: 2px; border-radius: 10px; }
+:root:is([data-theme]) .chat-compact-bar .chat-modes button { flex: 0 0 auto; padding: 5px 10px; font-size: 11.5px; gap: 5px; border-radius: 7px; }
+:root:is([data-theme]) .chat-compact-bar .chat-scope { display: inline-flex; align-items: center; gap: 5px; margin: 0; min-width: 0; flex: 1; font-size: 11px; color: var(--text-3); }
+.chat-compact-bar .chat-scope > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--text-3); }
+.chat-status-dot.ok { background: var(--pos); box-shadow: 0 0 0 3px color-mix(in srgb, var(--pos) 18%, transparent); }
+.chat-status-dot.warn { background: var(--warn); }
+.chat-compact-bar .icon-button.is-active { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+:root:is([data-theme]) .atlas-floating-chat .studio-chat .agent-layout { margin-top: 0; }
+:root:is([data-theme]) .atlas-floating-chat .agent-layout > aside { margin-bottom: 4px; }
+:root:is([data-theme]) .atlas-floating-chat .agent-layout > aside summary { font-size: 11px; color: var(--text-3); }
+:root:is([data-theme]) .atlas-floating-chat .studio-chat .agent-messages { flex: 1 1 auto; min-height: 0; overflow: auto; }
+:root:is([data-theme]) .atlas-floating-chat .chat-welcome { margin-top: auto; margin-bottom: auto; }

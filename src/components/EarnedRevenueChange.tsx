@@ -1,3 +1,4 @@
+import { comparisonLabel } from '../data/periods';
 import { Chart } from './Charts';
 import type { Analysis } from '../data/analytics';
 import { revenueBridge } from '../semantics/aggregations';
@@ -8,7 +9,7 @@ export function EarnedRevenueChange({data}:{data:Analysis}) {
   const comparison = useStore(s=>s.compare);
   const bridge = revenueBridge(data.total,data.previous);
   const available = bridge.length === 4 && bridge.every(step=>Number.isFinite(step.value));
-  const baseline = comparison === 'year' ? 'the same period last year' : 'the previous period';
+  const baseline = `the comparison period (${comparisonLabel(comparison).replace(/^vs /, '')})`;
   const change = available ? bridge[3].value - bridge[0].value : null;
   const signed = (amount:number) => `${amount > 0 ? '+' : amount < 0 ? '−' : ''}${fmt('revenue',Math.abs(amount))}`;
   return <div className="earned-revenue-split">

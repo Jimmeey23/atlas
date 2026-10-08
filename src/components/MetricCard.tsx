@@ -1,7 +1,7 @@
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState, useId } from "react";
 import { Info, TriangleAlert, X, ArrowUpRight, ArrowDownRight } from "lucide-react";
-import { comparisonDates } from "../data/periods";
+import { comparisonDates, comparisonLabel } from "../data/periods";
 import { currentSnapshotMetrics, metricNotes } from "../semantics/evidence";
 import { health } from "../data/duckdb";
 import { sheets } from "../data/sheets.config";
@@ -10,6 +10,20 @@ import { metrics } from "../semantics/metrics";
 import { fmt, delta } from "../semantics/formats";
 import { useStore } from "../state/store";
 import type { Row } from "../data/duckdb";
+// Snapshot measures with no reconstructable history show their share of a base instead.
+const snapshotShare: Record<string, [base: string, label: string]> = {
+  dormant_actives: ["active_memberships", "of running"],
+  active_base: ["active_records", "of members"],
+};
+function ShareMeter({ value, base, label, color }: { value: number; base: number; label: string; color: string }) {
+  const share = Math.max(0, Math.min(1, value / base));
+  return (
+    <span className="metric-spark metric-share" aria-hidden="true" style={{ "--share-color": color } as React.CSSProperties}>
+      <span className="metric-share-value">{Math.round(share * 100)}%<small>{label}</small></span>
+      <span className="metric-share-track"><i style={{ width: `${share * 100}%` }} /></span>
+    </span>
+  );
+}
 export function Sparkline({
   values,
   color = "var(--accent)",
@@ -152,7 +166,7 @@ export function MetricCard({
     <article
       data-note-anchor={`metric-${id}`}
       className="metric-card"
-      style={{ "--card-accent": `var(--${m.domain})` } as React.CSSProperties}
+      style={{ "--card-accent": `var(--accent, var(--${m.domain}))` } as React.CSSProperties}
     >
       <div className="metric-label">
         <span title={m.label}>{m.label}</span>
@@ -173,31 +187,37 @@ export function MetricCard({
           display: "block",
           padding: 0,
           textAlign: "left",
-          color: warning ? "var(--warn)" : undefined,
         }}
         onClick={onDrill}
         aria-label={`Drill into ${m.label}: ${fmt(id, value)}`}
       >
         {fmt(id, value)}
       </button>
-      <Sparkline
-        color={`var(--${m.domain})`}
-        values={trend.map((t) => (t[id] == null ? null : Number(t[id])))}
-      />
+      {snapshotShare[id] && Number(evidence?.[snapshotShare[id][0]]) > 0 && value != null ? (
+        <ShareMeter
+          value={Number(value)}
+          base={Number(evidence![snapshotShare[id][0]])}
+          label={snapshotShare[id][1]}
+          color={`var(--accent, var(--${m.domain}))`}
+        />
+      ) : (
+        <Sparkline
+          color={`var(--accent, var(--${m.domain}))`}
+          values={trend.map((t) => (t[id] == null ? null : Number(t[id])))}
+        />
+      )}
       </div>
       <div
         className={`metric-delta ${!canCompare || unchanged ? "muted" : positive ? "positive" : "negative"}`}
       >
         {canCompare && !unchanged && (Number(value) >= Number(previous) ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />)}
-        {canCompare ? delta(id, value, previous) : isSnapshot ? "Current snapshot" : "No comparison"}
+        {canCompare ? delta(id, value, previous) : isSnapshot ? "Current snapshot" : comparisonMode === "none" ? "" : "No comparison"}
         {n < m.minSample && <span className="small">n = {n}</span>}
       </div>
       <div className="metric-footer">
         <span>
           {canCompare
-            ? comparisonMode === "year"
-              ? "vs last year"
-              : "vs prior period"
+            ? comparisonLabel(comparisonMode)
             : isSnapshot ? "All dates · snapshot" : "Source-backed"}
         </span>
         <span>
@@ -227,7 +247,7 @@ export function MetricCard({
             >
               <div className="metric-tooltip-head"><div><span className="metric-eyebrow">Metric intelligence</span><strong>{m.label}</strong></div><button className="icon-button" aria-label="Close metric details" onClick={() => setInfo(false)}><X size={16} /></button></div>
               <p className="metric-explanation">{note?.definition || `${m.label} is calculated from the source fields below using ${m.aggregation} aggregation.`}</p>
-              <div className="metric-tooltip-values"><div><small>Selected scope</small><strong>{fmt(id, value, true)}</strong></div><div><small>{comparisonMode === "year" ? "Same period last year" : "Previous period"}</small><strong>{!isSnapshot && scope.filters.from && scope.filters.to && previous != null ? fmt(id, previous, true) : "Unavailable"}</strong></div></div>
+              <div className="metric-tooltip-values"><div><small>Selected scope</small><strong>{fmt(id, value, true)}</strong></div><div><small>{comparisonLabel(comparisonMode).replace(/^vs /, "Comparison: ")}</small><strong>{!isSnapshot && scope.filters.from && scope.filters.to && previous != null ? fmt(id, previous, true) : "Unavailable"}</strong></div></div>
               {comparisonReason && <p className="small">{comparisonReason}</p>}
               {numerator != null && denominator != null && <div className="metric-calculation"><span>{note?.numerator}: <b>{id === "revenue_per_checkin" ? fmt("revenue", numerator, true) : Number(numerator).toLocaleString("en-IN", {maximumFractionDigits: 1})}</b></span><span>{note?.denominator}: <b>{Number(denominator).toLocaleString("en-IN", {maximumFractionDigits: 1})}</b></span></div>}
               <dl className="metric-facts"><div><dt>Period</dt><dd>{isSnapshot ? "All dates · latest snapshot" : `${scope.filters.from || "All dates"} → ${scope.filters.to || "Present"}`}</dd></div>{!isSnapshot && scope.filters.from && scope.filters.to && <div><dt>Comparison</dt><dd>{priorDates.from || "All dates"} → {priorDates.to || "Present"}</dd></div>}<div><dt>Studios</dt><dd>{scope.filters.location.join(", ") || "All studios"}</dd></div><div><dt>Evidence sample</dt><dd>{Number(n).toLocaleString("en-IN")}{n < m.minSample ? " · below ranking minimum" : ""}</dd></div></dl>

@@ -1,3 +1,4 @@
+import { newFieldLabel, newSheetFields } from "../data/new-fields";
 import { tree } from "../data/hierarchy";
 import { InstructorAvatar } from "./InstructorAvatar";
 import { usePreferences } from "../state/preferences";
@@ -350,9 +351,11 @@ export function NestedTable({
                   "month",
                   ...(groups.includes("capacity") ? ["capacity"] : []),
                   ...(groups.includes("payment_method") ? ["payment_method"] : []),
+                  // The Conversion register can group by any column of the New sheet.
+                  ...((sourceOverride || blueprints[store.tab].source) === "new" ? newSheetFields.map(([, field]) => field) : []),
                 ].map((v) => (
                   <option key={v} value={v}>
-                    {v === "trainer"
+                    {newFieldLabel[v] ? `New sheet · ${newFieldLabel[v]}` : v === "trainer"
                       ? "Instructor"
                       : v === "format_group"
                         ? "Format (PowerCycle / Strength Lab / Barre)"

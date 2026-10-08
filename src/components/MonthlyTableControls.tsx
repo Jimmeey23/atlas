@@ -4,6 +4,11 @@ import {
   ArrowUpWideNarrow,
   ListFilter,
 } from "lucide-react";
+import { useEffect } from "react";
+import { useStore } from "../state/store";
+
+/** Display modes that compare periods; hidden while the global comparison is off. */
+export const comparisonModes = new Set(["change", "year"]);
 export type MonthlyTableState = {
   periods: number;
   newest: boolean;
@@ -27,10 +32,15 @@ export function MonthlyTableControls({
   modes?: string[][];
   children?: React.ReactNode;
 }) {
+  const compareOff = useStore((s) => s.compare) === "none";
+  const shown = compareOff ? modes.filter(([key]) => !comparisonModes.has(key)) : modes;
+  useEffect(() => {
+    if (compareOff && comparisonModes.has(state.mode) && shown[0]) onChange({ mode: shown[0][0] });
+  }, [compareOff, state.mode]);
   return (
     <div className="monthly-table-controls">
-      <div className="segmented" aria-label="Monthly comparison display">
-        {modes.map(([key, label]) => (
+      <div className="segmented" aria-label="Monthly comparison display" hidden={shown.length < 2}>
+        {shown.map(([key, label]) => (
           <button
             key={key}
             aria-pressed={state.mode === key}

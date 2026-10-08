@@ -37,7 +37,8 @@ export function Secondary({
   const state = useStore();
   const bp = blueprints[tab];
   const group = secondaryGroups[tab]?.[index] || bp.groups[0];
-  const columns = bp.columns.slice(0, 7);
+  // Conversion's explore tables carry the full newcomer measure set; others stay compact.
+  const columns = tab === 5 ? bp.columns : bp.columns.slice(0, 7);
   useEffect(() => {
     if (!open) return;
     let active = true;

@@ -42,6 +42,7 @@ import { marketingDrill } from "./MarketingAnalytics";
 
 export function WebsiteLeadPeriods({ version, onDrill }: { version: string | number; onDrill?: (entry: TreeRow) => void }) {
   const s = useStore();
+  const compareOff = s.compare === "none";
   const [group, setGroup] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
   const [error, setError] = useState("");
@@ -146,10 +147,10 @@ export function WebsiteLeadPeriods({ version, onDrill }: { version: string | num
               <tr>
                 <th rowSpan={2}>Performance measure</th>
                 {windows.map((w) => (
-                  <th key={w.key} colSpan={3}>
+                  <th key={w.key} colSpan={compareOff ? 1 : 3}>
                     {w.title}
                     <small>
-                      {label(w.current)} vs {label(w.prior)}
+                      {label(w.current)}{compareOff ? "" : ` vs ${label(w.prior)}`}
                     </small>
                   </th>
                 ))}
@@ -157,8 +158,7 @@ export function WebsiteLeadPeriods({ version, onDrill }: { version: string | num
               <tr>
                 {windows.flatMap((w) => [
                   <th key={w.key + "c"}>Current</th>,
-                  <th key={w.key + "p"}>Prior</th>,
-                  <th key={w.key + "d"}>Δ</th>,
+                  ...(compareOff ? [] : [<th key={w.key + "p"}>Prior</th>, <th key={w.key + "d"}>Δ</th>]),
                 ])}
               </tr>
             </thead>
@@ -171,8 +171,10 @@ export function WebsiteLeadPeriods({ version, onDrill }: { version: string | num
                     const prior = bucket(`${w.key}:prior`,segment)?.[id];
                     return [
                       <td key={w.key + "c"}><button className="pm-cell" disabled={!onDrill||current==null} onClick={()=>inspect(w.key,"current",segment,id)}>{fmt(id, current)}</button></td>,
-                      <td key={w.key + "p"}><button className="pm-cell" disabled={!onDrill||prior==null} onClick={()=>inspect(w.key,"prior",segment,id)}>{fmt(id, prior)}</button></td>,
-                      <td key={w.key + "d"}>{delta(id, current, prior)}</td>,
+                      ...(compareOff ? [] : [
+                        <td key={w.key + "p"}><button className="pm-cell" disabled={!onDrill||prior==null} onClick={()=>inspect(w.key,"prior",segment,id)}>{fmt(id, prior)}</button></td>,
+                        <td key={w.key + "d"}>{delta(id, current, prior)}</td>,
+                      ]),
                     ];
                   })}
                 </tr>
@@ -183,10 +185,12 @@ export function WebsiteLeadPeriods({ version, onDrill }: { version: string | num
                   <td key={w.key + "c"}>
                     <button className="pm-cell" disabled={!onDrill} onClick={()=>inspect(w.key,"current",segment,"leads")}>{fmt("records", bucket(`${w.key}:current`,segment)?.n)}</button>
                   </td>,
-                  <td key={w.key + "p"}>
-                    <button className="pm-cell" disabled={!onDrill} onClick={()=>inspect(w.key,"prior",segment,"leads")}>{fmt("records", bucket(`${w.key}:prior`,segment)?.n)}</button>
-                  </td>,
-                  <td key={w.key + "d"}>—</td>,
+                  ...(compareOff ? [] : [
+                    <td key={w.key + "p"}>
+                      <button className="pm-cell" disabled={!onDrill} onClick={()=>inspect(w.key,"prior",segment,"leads")}>{fmt("records", bucket(`${w.key}:prior`,segment)?.n)}</button>
+                    </td>,
+                    <td key={w.key + "d"}>—</td>,
+                  ]),
                 ])}
               </tr>)}
             </tbody>

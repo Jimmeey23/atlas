@@ -21,6 +21,12 @@ import { fmt, formatField } from "../semantics/formats";
 import { exportCSV } from "./exports";
 import { sourceRows } from "../data/raw";
 import { Sparkline } from "./MetricCard";
+// Sheet columns kept out of the record table. The Lapsed sheet's "Derived Status" is
+// its own renewal guess (it treats free classes as renewals) and contradicts the
+// Lapsed members rule, so only the recorded Status is shown.
+const hiddenColumns: Record<string, string[]> = { lapsed: ["Derived Status"] };
+const shownColumn = (source: string, key: string) => !/token/i.test(key) && !hiddenColumns[source]?.includes(key);
+
 export function DrillPanel({
   entry,
   tab,
@@ -315,10 +321,10 @@ export function DrillPanel({
             {!loading && sourceData.length > 0 && (
               <div className="source-detail-table" tabIndex={0} aria-label="Original item-level sheet rows">
                 <table>
-                  <thead><tr><th scope="col">Sheet row</th>{Object.keys(sourceData[0]).filter((k) => !/token/i.test(k)).map((k) => <th scope="col" key={k}>{k}</th>)}</tr></thead>
+                  <thead><tr><th scope="col">Sheet row</th>{Object.keys(sourceData[0]).filter((k) => shownColumn(source, k)).map((k) => <th scope="col" key={k}>{k}</th>)}</tr></thead>
                   <tbody>{sourceData.map((row, i) => <tr key={String(records[i]?.source_row)}>
                     <td><a target="_blank" rel="noreferrer" href={`https://docs.google.com/spreadsheets/d/${definition.id}/edit#range=${encodeURIComponent("'" + definition.title + "'!A" + records[i]?.source_row)}`}>{String(records[i]?.source_row)} ↗</a></td>
-                    {Object.entries(row).filter(([k]) => !/token/i.test(k)).map(([k,v]) => <td key={k}>{formatField(k, v)}</td>)}
+                    {Object.entries(row).filter(([k]) => shownColumn(source, k)).map(([k,v]) => <td key={k}>{formatField(k, v)}</td>)}
                   </tr>)}</tbody>
                 </table>
               </div>

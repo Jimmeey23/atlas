@@ -1413,9 +1413,6 @@ tr:focus-within .row-action {
   .toolbar .button {
     padding: 6px 8px;
   }
-  .metric-strip.eight {
-    grid-template-columns: repeat(4, 1fr);
-  }
   .signal-rail.open {
     width: 270px;
   }
@@ -1444,12 +1441,6 @@ tr:focus-within .row-action {
   }
   .two-up {
     grid-template-columns: 1fr;
-  }
-  .metric-strip {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .metric-strip.eight {
-    grid-template-columns: repeat(4, 1fr);
   }
   h1 {
     font-size: 27px;
@@ -1484,10 +1475,6 @@ tr:focus-within .row-action {
   }
   .brand {
     gap: 8px;
-  }
-  .metric-strip,
-  .metric-strip.eight {
-    grid-template-columns: repeat(2, 1fr);
   }
   .filter-summary {
     overflow: hidden;

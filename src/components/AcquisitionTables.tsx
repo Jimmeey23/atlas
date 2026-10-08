@@ -1,3 +1,4 @@
+import { usable } from "../data/loader";
 import { exportCSV } from "./exports";
 import { MonthlyTableControls, type MonthlyTableState } from "./MonthlyTableControls";
 import { InstructorName } from "./InstructorAvatar";
@@ -100,6 +101,8 @@ function CohortComparison({ mode, version, onDrill }: { mode: "mom" | "yoy"; ver
   const [error, setError] = useState("");
   const [metric, setMetric] = useState<string>("cohort_rows");
   const [display, setDisplay] = useState("values");
+  const compareOff = useStore((s) => s.compare) === "none";
+  useEffect(() => { if (compareOff && display !== "values") { setDisplay("values"); setControls((c) => ({ ...c, mode: "values" })); } }, [compareOff, display]);
   const [controls,setControls]=useState<MonthlyTableState>({periods:14,newest:true,dense:true,mode:"values"});
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<string[]>([]);
@@ -159,7 +162,7 @@ function CohortComparison({ mode, version, onDrill }: { mode: "mom" | "yoy"; ver
       <label className="acq-control">First column<select aria-label={`${mode.toUpperCase()} first column`} value={group} onChange={e => { setGroup(e.target.value as AcquisitionDimension); setSelectedValues(null); setExpanded([]); }}>{acquisitionDimensions.map(d => <option value={d.key} key={d.key}>{d.label}</option>)}</select></label>
       <ValueSelection options={values} selected={selectedValues} onChange={setSelectedValues} label={`${mode.toUpperCase()} first-column values`} />
       <label className="acq-control">Child rows<select aria-label={`${mode.toUpperCase()} child rows`} value={child} onChange={e => setChildGroup(e.target.value as AcquisitionDimension)}>{acquisitionDimensions.filter(d => d.key !== group).map(d => <option value={d.key} key={d.key}>{d.label}</option>)}</select></label>
-      <div className="acq-segmented" aria-label="Comparison display">{["values", "change"].map(d => <button key={d} aria-pressed={d === display} onClick={() => {setDisplay(d);setControls(c=>({...c,mode:d}));}}>{d === "values" ? "Values" : mode === "mom" ? "MoM Δ" : "YoY Δ"}</button>)}</div>
+      <div className="acq-segmented" aria-label="Comparison display" hidden={compareOff}>{["values", "change"].map(d => <button key={d} aria-pressed={d === display} onClick={() => {setDisplay(d);setControls(c=>({...c,mode:d}));}}>{d === "values" ? "Values" : mode === "mom" ? "MoM Δ" : "YoY Δ"}</button>)}</div>
     </>}
     metricBar={<MetricTabs value={metric} onChange={setMetric} />}
     footer={<><span>{measure[1]} · expand a {groupLabel.toLowerCase()} to see {childLabel.toLowerCase()} details · totals reflect selected first-column values · date filters are ignored</span><DefinitionNote /></>}>
@@ -288,7 +291,7 @@ export function AcquisitionTableView({version,kind}: {version:number;kind:TableK
   useEffect(()=>{
     if(!["hosted","trainers","journeys"].includes(kind))return;
     let active=true;setLoading(true);setError("");
-    const facts=acquisitionFactsSQL(scope,today());
+    const facts=acquisitionFactsSQL(scope,today(),usable("bookings"));
     const sql=kind==="hosted"
       ? `SELECT format,month,GROUPING(format) AS is_total,${acquisitionAggregate} FROM facts WHERE ref_hosted GROUP BY GROUPING SETS ((format,month),()) ORDER BY month DESC,format`
       : kind==="trainers"

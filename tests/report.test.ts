@@ -137,7 +137,7 @@ test('all report grouping SQL compiles against the common engine schema', async 
   } finally { c.closeSync(); }
 });
 
-test('renewal report uses the dashboard deduplicated paid expiry cohort and grace states', async () => {
+test('renewal report uses the dashboard deduplicated paid expiry cohort and renewed, lapsed and frozen states', async () => {
   const {renewalFactsSQL, renewalCohortSQL, renewalMeasuresSQL} = await import('../src/data/renewals');
   const db=await DuckDBInstance.create(':memory:'); const c=await db.connect();
   try {
@@ -149,10 +149,11 @@ test('renewal report uses the dashboard deduplicated paid expiry cohort and grac
       ('grace','10 pack',1000,10,'2026-08-01','2026-09-25',4),
       ('lapsed','10 pack',1000,10,'2026-08-01','2026-09-01',5),
       ('free','complimentary',1000,10,'2026-08-01','2026-09-01',6)`);
+    await c.run(`UPDATE lapsed SET amount_paid=revenue, churned_date=CASE WHEN member_id='lapsed' THEN end_date END, status=CASE WHEN member_id='grace' THEN 'Frozen' END`);
     const scope=" WHERE SUBSTR(end_date,1,7)='2026-09'";
     const report=(await(await c.run(`SELECT ${renewalMeasuresSQL()} FROM (${renewalFactsSQL(scope,'2026-10-06')})`)).getRowObjects())[0];
     const dashboard=(await(await c.run(renewalCohortSQL(scope,'2026-10-06'))).getRowObjects())[0];
-    for(const id of ['due','renewed','lapsed','grace','upcoming','renewal_rate']) assert.equal(report[id],dashboard[id]);
-    assert.equal(Number(report.due),3); assert.equal(Number(report.renewed),1); assert.equal(Number(report.lapsed),1); assert.equal(Number(report.grace),1); assert.equal(Number(report.renewal_rate),1/3);
+    for(const id of ['due','renewed','lapsed','frozen','renewal_rate']) assert.equal(report[id],dashboard[id]);
+    assert.equal(Number(report.due),3); assert.equal(Number(report.renewed),1); assert.equal(Number(report.lapsed),1); assert.equal(Number(report.frozen),1); assert.equal(Number(report.renewal_rate),1/3);
   } finally { c.closeSync(); }
 });

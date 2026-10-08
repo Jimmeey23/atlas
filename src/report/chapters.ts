@@ -52,10 +52,10 @@ export const chapters: ChapterSpec[] = [
       group('associate', 'Lead ownership and follow-up', ['leads', 'converted_leads', 'lead_conversion_rate', 'untouched_leads'], { compare: 'lead_conversion_rate' }),
     ] },
   { id: 'renewals', nav: 'Renewals', title: 'Renewals completed & confirmed lapses', eyebrow: 'Membership continuity',
-    deck: 'The dashboard’s paid expiry cohorts, deduplicated per member and expiry month. A 30-day grace period separates pending renewals from confirmed lapses.',
+    deck: 'The dashboard’s paid expiry cohorts, deduplicated per member and expiry month. Every due membership is renewed, lapsed (most recent membership with a recorded Churned Date) or frozen.',
     source: 'lapsed', renewal: true,
-    metrics: ['due', 'renewed', 'renewal_rate', 'lapsed', 'grace', 'upcoming'], history: ['due', 'renewed', 'lapsed', 'renewal_rate'], groups: [
-      group('product', 'Renewals and lapses by membership', ['due', 'renewed', 'lapsed', 'grace', 'renewal_rate'], { compare: 'renewal_rate', limit: 15 }),
+    metrics: ['due', 'renewed', 'renewal_rate', 'lapsed', 'frozen'], history: ['due', 'renewed', 'lapsed', 'renewal_rate'], groups: [
+      group('product', 'Renewals and lapses by membership', ['due', 'renewed', 'lapsed', 'frozen', 'renewal_rate'], { compare: 'renewal_rate', limit: 15 }),
     ] },
   { id: 'lapsed', nav: 'Member health', title: 'Membership usage & engagement risk', eyebrow: 'Members who need attention',
     deck: 'Expiry-cohort usage alongside clearly labelled current membership snapshots. Remaining balances and outcomes can change as the source is updated.', source: 'lapsed',

@@ -27,10 +27,23 @@ export const acquisitionMeasures = [
   ['retained_same_month', 'First-month retained', 'integer'],
   ['conversion_same_month_rate', 'First-month conversion rate', 'percent'],
   ['retention_same_month_rate', 'First-month retained rate', 'percent'],
+  ['post_trial_spend', 'Total spend post trial', 'currency'],
+  ['post_trial_purchases_total', 'Purchases post trial', 'integer'],
+  ['total_purchases', 'Total purchases', 'integer'],
+  ['total_visits', 'Visits', 'integer'],
+  ['revenue_per_visit', 'Revenue / visit', 'currency'],
+  ['late_cancels', 'Late cancellations', 'integer'],
 ] as const;
 
-export function acquisitionFactsSQL(scope: string, today: string) {
-  return `WITH flags AS (SELECT *, COALESCE(entry_type,'Unspecified') AS entry,
+/**
+ * Pass `bookings` once the Bookings sheet is loaded: each row then carries the member's
+ * late-cancelled bookings from that sheet (matched on member ID); otherwise it is NULL.
+ */
+export function acquisitionFactsSQL(scope: string, today: string, bookings = false) {
+  const late = bookings
+    ? `(SELECT COUNT(*) FROM bookings b WHERE b.member_id=new.member_id AND b.late_cancelled>0)`
+    : `CAST(NULL AS BIGINT)`;
+  return `WITH flags AS (SELECT *, ${late} AS late_cancels, COALESCE(entry_type,'Unspecified') AS entry,
     (regexp_matches(lower(trim(COALESCE(entry_type,''))), '(^|[^a-z])new([^a-z]|$)') AND NOT regexp_matches(lower(trim(COALESCE(entry_type,''))), '^not([^a-z]|$)')) AS ref_new,
     (len(list_filter(regexp_split_to_array(COALESCE(purchase_journey,''), '[,;|/]+|\\s-\\s'), token -> trim(token)<>''))=0
       OR len(list_filter(regexp_split_to_array(COALESCE(purchase_journey,''), '[,;|/]+|\\s-\\s'), token -> trim(token)<>'' AND NOT regexp_matches(lower(regexp_replace(trim(token),'\\s+',' ','g')), '^money credits($| )')))>0) AS ref_membership_eligible,
@@ -70,7 +83,11 @@ export const acquisitionAggregate = `COUNT(*) AS cohort_rows,
   CASE WHEN COUNT(first_purchase_date)>0 THEN COUNT(*) FILTER (WHERE converted_same_month) END AS converted_same_month,
   CASE WHEN COUNT(first_purchase_date)>0 AND COUNT(retention)>0 THEN COUNT(*) FILTER (WHERE returned_same_month) END AS retained_same_month,
   CASE WHEN COUNT(first_purchase_date)>0 THEN COUNT(*) FILTER (WHERE converted_same_month)::DOUBLE/NULLIF(COUNT(*) FILTER (WHERE ref_new),0) END AS conversion_same_month_rate,
-  CASE WHEN COUNT(first_purchase_date)>0 AND COUNT(retention)>0 THEN COUNT(*) FILTER (WHERE returned_same_month)::DOUBLE/NULLIF(COUNT(*) FILTER (WHERE ref_new),0) END AS retention_same_month_rate`;
+  CASE WHEN COUNT(first_purchase_date)>0 AND COUNT(retention)>0 THEN COUNT(*) FILTER (WHERE returned_same_month)::DOUBLE/NULLIF(COUNT(*) FILTER (WHERE ref_new),0) END AS retention_same_month_rate,
+  SUM(post_trial_ltv) AS post_trial_spend, SUM(post_trial_purchases) AS post_trial_purchases_total,
+  SUM(purchases) AS total_purchases, SUM(visits) AS total_visits,
+  SUM(ltv)/NULLIF(SUM(visits) FILTER (WHERE ltv IS NOT NULL),0) AS revenue_per_visit,
+  SUM(late_cancels) AS late_cancels`;
 
 export function acquisitionMonths(today: string, count = 14) {
   const now = new Date(today + 'T00:00:00Z');

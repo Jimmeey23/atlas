@@ -80,6 +80,9 @@ export function validateNote(body) {
         label: c.target.label,
       },
     })),
+    // Who posted it and when; kept as sent so every reader sees the original author.
+    author: typeof body.author === "string" ? body.author.trim().slice(0, 60) : "",
+    createdAt: typeof body.createdAt === "string" && !Number.isNaN(Date.parse(body.createdAt)) ? body.createdAt : null,
     updatedAt: new Date().toISOString(),
   };
 }

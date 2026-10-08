@@ -19,6 +19,6 @@ export function diagnosticFacts(data: ChapterData): string[] {
   if(known(['new_clients','conversion_rate'])){
     facts.push(`Converted-cohort bridge (unrounded arithmetic): newcomer-volume component ${( (Number(t.new_clients)-Number(p.new_clients))*Number(p.conversion_rate)).toFixed(1)} outcomes; conversion-rate component ${(Number(t.new_clients)*(Number(t.conversion_rate)-Number(p.conversion_rate))).toFixed(1)} outcomes. Both cohorts are observed to the latest source date; recent outcomes may mature.`);
   }
-  if(t.renewal_rate!=null) facts.push('Renewal outcomes use the dashboard paid-expiry cohort and 30-day grace. Current and older expiry cohorts have different maturity; grace members are not confirmed lapses. Renewals completed are observed outcomes of the expiry cohort, not a count of payment transactions during the report month.');
+  if(t.renewal_rate!=null) facts.push('Renewal outcomes use the dashboard paid-expiry cohort: due = renewed + lapsed + frozen. Lapses are recorded Churned Dates on a member’s most recent membership; recent cohorts may still change as late renewals are recorded. Renewals completed are observed outcomes of the expiry cohort, not a count of payment transactions during the report month.');
   return facts;
 }

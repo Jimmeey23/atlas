@@ -7,7 +7,7 @@ import { LinePath, AreaClosed } from "@visx/shape";
 import { scaleLinear } from "@visx/scale";
 import { Download, Table2, ChartNoAxesCombined } from "lucide-react";
 import { query, quote, type Row } from "../data/duckdb";
-import { where, context, metricFacts, type Analysis } from "../data/analytics";
+import { where, context, metricFacts, today, type Analysis } from "../data/analytics";
 import { metricSQL } from "../semantics/metrics";
 import { fmt, formatField } from "../semantics/formats";
 import { useStore } from "../state/store";
@@ -232,6 +232,8 @@ function colors() {
       "text-3",
       "hairline",
       "surface-3",
+      "accent",
+      "accent-2",
     ].map((k) => [k, css.getPropertyValue("--" + k).trim()]),
   );
 }
@@ -293,10 +295,17 @@ export function Chart({
               `SELECT month,'Sessions' AS category,${metricSQL(["revenue", "attendance"], context())},COUNT(*) AS n FROM sessions${where(state.filters, "sessions")} GROUP BY month ORDER BY month`,
             );
         }
-        else if (tab === 5)
+        else if (tab === 5) {
+          // Twelve completed first-visit months, same non-date filters: volume and each outcome rate per cohort.
+          const months = where({ ...state.filters, from: "", to: "" }, "new");
           r = await query(
-            `SELECT 'Newcomers' AS stage,COUNT(*) FILTER (WHERE is_new) AS n FROM new${w} UNION ALL SELECT 'Returned',COUNT(*) FILTER (WHERE is_new AND visits_post>0) FROM new${w} UNION ALL SELECT 'Converted',COUNT(*) FILTER (WHERE is_new AND conversion='Converted') FROM new${w} UNION ALL SELECT 'Retained',COUNT(*) FILTER (WHERE is_new AND retention='Retained') FROM new${w}`,
-          );
+            `SELECT month, COUNT(*) FILTER (WHERE is_new) AS newcomers,
+              COUNT(*) FILTER (WHERE is_new AND visits_post>0)::DOUBLE/NULLIF(COUNT(*) FILTER (WHERE is_new),0) AS second_visit_rate,
+              COUNT(*) FILTER (WHERE is_new AND conversion='Converted')::DOUBLE/NULLIF(COUNT(*) FILTER (WHERE is_new),0) AS conversion_rate,
+              COUNT(*) FILTER (WHERE is_new AND retention='Retained')::DOUBLE/NULLIF(COUNT(*) FILTER (WHERE is_new),0) AS retention_rate
+             FROM new${months}${months ? " AND" : " WHERE"} month IS NOT NULL AND month < ${quote(today().slice(0, 7))} GROUP BY month ORDER BY month DESC LIMIT 12`,
+          ).then((rows) => [...rows].reverse());
+        }
         else if (tab === 8)
           r = await query(
             `SELECT COALESCE(source,'Unknown') AS source,COALESCE(stage,'Unspecified stage') AS stage,CASE WHEN lower(trim(stage))='membership sold' THEN 'Membership sold' WHEN lower(trim(stage))='trial completed' THEN 'Trial completed' ELSE COALESCE(status,'Open') END AS outcome,COUNT(*) AS n FROM leads${w} GROUP BY source,stage,status ORDER BY n DESC LIMIT 35`,
@@ -595,13 +604,44 @@ export function Chart({
         })),
       };
     } else if (tab === 5) {
+      const months = chartRows.map((r) => {
+        const [y, m] = String(r.month).split("-").map(Number);
+        return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-IN", { month: "short", year: "2-digit", timeZone: "UTC" });
+      });
+      const rate = (id: string, name: string, color: string, dashed = false) => ({
+        name, type: "line" as const, yAxisIndex: 1, smooth: 0.35, symbol: "circle", symbolSize: 7, showSymbol: true,
+        lineStyle: { width: 2.4, color, type: (dashed ? "dashed" : "solid") as "dashed" | "solid" }, itemStyle: { color, borderColor: c["surface-3"], borderWidth: 1.5 },
+        emphasis: { focus: "series" as const },
+        data: chartRows.map((r) => (r[id] == null ? null : Number(r[id]))),
+      });
       option = {
         ...option,
-        grid: { left: 95, right: 40, top: 15, bottom: 28 },
-        tooltip: { trigger: "axis", formatter: (params: unknown) => { const item = (params as {name:string;value:number}[])[0]; return `${item.name}: ${fmt("records", item.value)} newcomers`; } },
-        xAxis: { type: "value", ...axis },
-        yAxis: { type: "category", inverse: true, data: chartRows.map((r) => String(r.stage)), ...axis },
-        series: [{ type: "bar", barMaxWidth: 38, label: {show: true, position: "right", color: c["text-1"]}, data: chartRows.map((r,i) => ({ value: Number(r.n), itemStyle: { color: [c.attendance,c.growth,c.people,c.revenue][i], borderRadius: [0,4,4,0] } })) }],
+        grid: { left: 52, right: 56, top: 44, bottom: 30 },
+        legend: { top: 4, left: "center", itemWidth: 14, itemHeight: 8, icon: "roundRect", textStyle: { color: c["text-2"], fontSize: 11 } },
+        tooltip: {
+          trigger: "axis",
+          axisPointer: { type: "shadow", shadowStyle: { color: "rgba(127,127,127,.06)" } },
+          formatter: (params: unknown) => {
+            const items = params as { axisValue: string; seriesName: string; value: number | null; color: string }[];
+            return `<b>${items[0]?.axisValue} cohort</b><br/>` + items.map((p) => `<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${p.color};margin-right:6px"></span>${p.seriesName}: <b>${p.seriesName === "Newcomers" ? fmt("records", p.value) : fmt("conversion_rate", p.value)}</b>`).join("<br/>");
+          },
+        },
+        xAxis: { type: "category", data: months, ...axis, axisTick: { show: false } },
+        yAxis: [
+          { type: "value", name: "Newcomers", nameTextStyle: { color: c["text-3"], fontSize: 10 }, ...axis, splitLine: { lineStyle: { color: c.hairline, type: "dashed" } } },
+          { type: "value", name: "Rate", min: 0, max: (v: { max: number }) => Math.min(1, Math.ceil((v.max + 0.05) * 10) / 10), nameTextStyle: { color: c["text-3"], fontSize: 10 }, ...axis, splitLine: { show: false }, axisLabel: { color: c["text-3"], formatter: (v: number) => `${Math.round(v * 100)}%` } },
+        ],
+        series: [
+          {
+            name: "Newcomers", type: "bar", barMaxWidth: 30,
+            itemStyle: { borderRadius: [6, 6, 2, 2], color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: c.accent || c.growth }, { offset: 1, color: (c["accent-2"] || c.growth) + "55" }]) },
+            emphasis: { itemStyle: { opacity: 1 } },
+            data: chartRows.map((r) => Number(r.newcomers ?? 0)),
+          },
+          rate("second_visit_rate", "Second visit %", c.attendance, true),
+          rate("conversion_rate", "Conversion %", c.revenue),
+          rate("retention_rate", "Retention %", c.people),
+        ],
       };
     } else if (tab === 8) {
       const names = [
@@ -1000,7 +1040,7 @@ export function Chart({
         <span>
           {secondary
             ? "Each point represents an entity in scope"
-            : tab === 4 && salesActivity ? "Daily gross collections (left axis) and transactions (right axis); average order value in tooltips. Only dates with source records are shown." : tab === 5 ? "Reported newcomer outcomes overlap; these are not sequential funnel stages" : tab === 7 || tab === 12 ? "One outcome per booking; late cancellation takes precedence over other flags" : "Actual source observations, aggregated in SQL"}
+            : tab === 4 && salesActivity ? "Daily gross collections (left axis) and transactions (right axis); average order value in tooltips. Only dates with source records are shown." : tab === 5 ? "Bars: newcomers per first-visit month · lines: share of each cohort that returned, converted and is retained (latest recorded outcome)" : tab === 7 || tab === 12 ? "One outcome per booking; late cancellation takes precedence over other flags" : "Actual source observations, aggregated in SQL"}
         </span>
         <span>Hover for details / Click to filter</span>
       </div>

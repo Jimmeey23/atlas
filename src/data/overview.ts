@@ -14,7 +14,7 @@ const module = (tab: number, group: string, groupLabel: string, ids: string[], n
 });
 export const overviewModules: OverviewModule[] = [
   module(4, 'category', 'Product category', ['gross_revenue', 'transactions', 'discount_rate'], 'Successful, non-voided collections by payment date.'),
-  module(8, 'stage', 'Lead stage', ['leads', 'converted_leads', 'untouched_leads'], 'Lead creation-date cohort; latest recorded stage and outcomes.'),
+  module(8, 'source', 'Lead source', ['leads', 'converted_leads', 'untouched_leads'], 'Lead creation-date cohort by source; latest recorded stage and outcomes.'),
   {key:'website', title:'Performance marketing · Website',tab:8,view:'performance-marketing',source:'leads',group:'utm_campaign',groupLabel:'UTM campaign',ids:['leads','website_members','website_win_rate'],note:'Website CRM leads by creation date; untagged campaigns remain visible.'},
   {key:'meta', title:'Performance marketing · Meta',tab:8,view:'performance-marketing',source:'meta',group:'campaign_name',groupLabel:'Campaign',ids:['meta_spend','meta_leads','meta_cpl'],note:'Meta reporting dates; studio filters do not apply. Meta and CRM leads may overlap.'},
   module(5, 'source', 'Acquisition source', ['new_clients', 'conversion_rate', 'second_visit_rate'], 'Newcomer first-visit cohort and recorded conversion outcomes.'),

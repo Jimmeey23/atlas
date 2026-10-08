@@ -1,3 +1,4 @@
+import { usable } from "../data/loader";
 import { InstructorName } from "./InstructorAvatar";
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -44,7 +45,7 @@ export function AcquisitionDrillDown({request,version,imports,onClose}:{request:
   useEffect(()=>{const previous=document.activeElement as HTMLElement|null; const oldOverflow=document.body.style.overflow;dialog.current?.showModal();document.body.style.overflow='hidden';return()=>{document.body.style.overflow=oldOverflow;previous?.focus();};},[]);
   useEffect(()=>{
     let active=true;setLoading(true);setError('');setSalesError('');setSales([]);setSalesLoading(true);
-    const facts=acquisitionFactsSQL(request.scope,today());
+    const facts=acquisitionFactsSQL(request.scope,today(),usable("bookings"));
     const slice=`SELECT * FROM (${facts}) facts ${request.predicate?`WHERE ${request.predicate}`:''}`;
     query(`${slice} ORDER BY date DESC,source_row`).then(rows=>{if(active){setClients(rows);setLoading(false);}}).catch(e=>{if(active){setError(String(e));setLoading(false);}});
     if(health.sales?.fetchedAt && health.sales.status!=='error') {

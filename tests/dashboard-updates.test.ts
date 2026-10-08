@@ -39,11 +39,16 @@ test('renewal cell drills reconcile to deduplicated cohort counts and retain lat
     (3,'renew','Monthly Membership',1000,10,'2026-08-02','2026-09-02'),
     (4,'lost','Monthly Membership',1000,10,'2026-07-01','2026-08-01'),
     (5,'lost','Monthly Membership',1000,10,'2026-07-01','2026-08-01'),
-    (6,'free','Free Trial',0,1,'2026-07-01','2026-08-01')`);
+    (6,'free','Free Trial',0,1,'2026-07-01','2026-08-01'),
+    (7,'restricted','Copper + Cloves Single Class Package',1000,10,'2026-07-01','2026-08-01'),
+    (8,'no-churn','Monthly Membership',1000,10,'2026-07-01','2026-08-01')`);
+  // Only a recorded Churned Date makes a lapse; restricted names never enter the cohort.
+  await c.run(`UPDATE lapsed SET amount_paid=revenue, churned_date=CASE WHEN member_id IN ('lost','restricted') THEN end_date END`);
   const scope=" WHERE end_date<='2026-08-31'";
   const [r]=(await c.runAndReadAll(renewalCohortSQL(scope,'2026-10-06'))).getRowObjectsJS();
-  assert.equal(Number(r.due),2);assert.equal(Number(r.renewed),1);assert.equal(Number(r.lapsed),1);
-  for(const state of ['due','renewed','lapsed','grace','upcoming']) {
+  assert.equal(Number(r.due),3);assert.equal(Number(r.renewed),2);assert.equal(Number(r.lapsed),1);
+  assert.equal(Number(r.due),Number(r.renewed)+Number(r.lapsed)+Number(r.frozen));
+  for(const state of ['due','renewed','lapsed','frozen']) {
     const [drill]=(await c.runAndReadAll(`SELECT COUNT(*) AS n FROM lapsed WHERE ${renewalDrillPredicate(scope,'2026-10-06','2026-08',state)}`)).getRowObjectsJS();
     assert.equal(Number(drill.n),Number(r[state]));
   }

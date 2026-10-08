@@ -47,13 +47,37 @@ export function relativePeriod(name: string, now = today()) {
   };
 }
 
+/** Comparison choices offered in the toolbar. `custom:FROM:TO` carries its own dates. */
+export const comparisonOptions: [mode: string, label: string, short: string][] = [
+  ["none", "Off", ""],
+  ["prior", "Previous period", "vs previous period"],
+  ["month", "Previous month", "vs previous month"],
+  ["quarter", "Previous quarter", "vs previous quarter"],
+  ["year", "Same period last year", "vs last year"],
+  ["year2", "Same period 2 years ago", "vs 2 years ago"],
+  ["custom", "Custom range…", "vs custom range"],
+];
+export const comparisonLabel = (mode: string) =>
+  comparisonOptions.find(([key]) => key === (mode.startsWith("custom:") ? "custom" : mode))?.[2] || "vs previous period";
+
 export function comparisonDates(from: string, to: string, mode: string) {
   if (mode === "none" || !from || !to) return { from, to };
+  const custom = /^custom:(\d{4}-\d{2}-\d{2}):(\d{4}-\d{2}-\d{2})$/.exec(mode);
+  if (custom) return { from: custom[1], to: custom[2] };
   const start = new Date(from + "T00:00:00Z");
   const end = new Date(to + "T00:00:00Z");
-  if (mode === "year") {
-    const shift = (date: Date) => new Date(Date.UTC(date.getUTCFullYear() - 1, date.getUTCMonth(), Math.min(date.getUTCDate(), new Date(Date.UTC(date.getUTCFullYear() - 1, date.getUTCMonth() + 1, 0)).getUTCDate())));
-    return {from: shift(start).toISOString().slice(0,10), to: shift(end).toISOString().slice(0,10)};
+  // Same calendar position N months earlier, clamped to the end of shorter months.
+  const shiftMonths = (date: Date, months: number) => {
+    const last = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() - months + 1, 0)).getUTCDate();
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() - months, Math.min(date.getUTCDate(), last)));
+  };
+  const back = { month: 1, quarter: 3, year: 12, year2: 24 }[mode];
+  if (back) {
+    const lastOf = (d: Date) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+    // A selection ending on a month end keeps ending on a month end (Feb 28 → Jan 31).
+    const shiftedEnd = shiftMonths(end, back);
+    const endDate = end.getUTCDate() === lastOf(end) ? new Date(Date.UTC(shiftedEnd.getUTCFullYear(), shiftedEnd.getUTCMonth() + 1, 0)) : shiftedEnd;
+    return { from: shiftMonths(start, back).toISOString().slice(0, 10), to: endDate.toISOString().slice(0, 10) };
   }
   const lastDay = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() + 1, 0)).getUTCDate();
   if (start.getUTCDate() === 1 && end.getUTCDate() === lastDay) {

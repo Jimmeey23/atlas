@@ -74,8 +74,8 @@ export function PresentationTools() {
       <button className="button" disabled={!strokes.length} onClick={undoInk}>Undo</button><button className="button" disabled={!redo.length} onClick={()=>{setStrokes([...strokes,redo.at(-1)!]);setRedo(redo.slice(0,-1));}}>Redo</button><button className="button" disabled={!strokes.length} onClick={()=>{setStrokes([]);setRedo([]);}}>Clear</button>
     </div>}
 
-    <button className="button presentation-launch" aria-label="Sound clips" onClick={()=>setPanel(panel==='audio'?null:'audio')} aria-expanded={panel==='audio'}><Music2 size={14}/><span>Sound clips</span></button>
-    <button className="button presentation-launch" aria-label={room?"Live session":"Host a session"} onClick={()=>setPanel(panel==='session'?null:'session')} aria-expanded={panel==='session'}><Radio size={14}/><span>{room?'Live session':'Host a session'}</span>{room&&<i className="session-live-dot"/>}</button>
+    <button className="button presentation-launch" aria-label="Sound clips" title="Sound clips" onClick={()=>setPanel(panel==='audio'?null:'audio')} aria-expanded={panel==='audio'}><Music2 size={14}/><span>Sound clips</span></button>
+    <button className="button presentation-launch" aria-label={room?"Live session":"Host a session"} title={room?"Live session":"Host a session"} onClick={()=>setPanel(panel==='session'?null:'session')} aria-expanded={panel==='session'}><Radio size={14}/><span>{room?'Live session':'Host a session'}</span>{room&&<i className="session-live-dot"/>}</button>
     {panel&&<aside className="presentation-panel" aria-label={panel==='audio'?'Sound clips':'Live presentation'}>
       <div className="presentation-head"><div><small>PHYSIQUE 57 · PRESENTATION</small><h3>{panel==='audio'?'Sound clips':'Host a session'}</h3></div><button className="icon-button" aria-label="Close presentation tools" onClick={()=>setPanel(null)}><X size={16}/></button></div>
       {error&&<p className="presentation-error" role="alert">{error}</p>}

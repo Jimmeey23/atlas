@@ -1,3 +1,4 @@
+import { latestLapseSQL } from "../src/semantics/membership-eligibility.ts";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { DuckDBInstance } from "@duckdb/node-api";
@@ -51,6 +52,33 @@ import { bookingOutcomeCase } from "../src/semantics/booking-outcomes.ts";
 test("booking chart outcomes assign overlapping flags to one category", async () => {
  const db=await DuckDBInstance.create(":memory:");const c=await db.connect();
  try {const result=await c.runAndReadAll(`SELECT outcome, COUNT(*)::INTEGER AS n FROM (SELECT ${bookingOutcomeCase} AS outcome FROM (VALUES (true,true,1,true),(false,true,0,true),(false,false,0,true),(true,false,0,false),(NULL,NULL,NULL,NULL)) t(attended,cancelled,late_cancelled,no_show)) GROUP BY outcome`);const counts=Object.fromEntries(result.getRowObjectsJS().map(r=>[r.outcome,r.n]));assert.deepEqual(counts,{late:1,cancelled:1,no_show:1,attended:1,pending:1});}finally{c.closeSync();db.closeSync();}
+});
+
+test("active access counts running New and Renewed memberships but not Lapsed or Not Activated", async () => {
+ const db=await DuckDBInstance.create(":memory:");const c=await db.connect();
+ try {const result=await c.runAndReadAll(`SELECT ${metrics.active_memberships.sql({rate:1200,today:'2026-10-05'})}::INTEGER AS active, ${metrics.revenue_at_risk_30d.sql({rate:1200,today:'2026-10-05'})}::INTEGER AS risk FROM (VALUES ('New','2026-10-01','2026-10-20',100),('Renewed','2026-09-01','2026-10-20',200),('Lapsed','2026-09-01','2026-10-20',400),('Not Activated','2026-10-01','2026-10-20',800),('Active','2026-10-01','2026-10-20',1600)) t(status,start_date,end_date,amount_paid)`);const row=result.getRowObjectsJS()[0];assert.equal(row.active,3);assert.equal(row.risk,1700);}finally{c.closeSync();db.closeSync();}
+});
+
+test("lapsed members count only a member's most recent paid, unrestricted membership", async () => {
+ const db=await DuckDBInstance.create(":memory:");const c=await db.connect();
+ try {
+  await c.run(`CREATE TABLE lapsed AS SELECT * FROM (VALUES
+   (1,'renewed-later','Monthly Membership',5000,'Lapsed','2026-08-01','2026-09-01','2026-09-01'),
+   (2,'renewed-later','Monthly Membership',5000,'Active','2026-09-02','2026-10-02',NULL),
+   (3,'lost','Monthly Membership',5000,'Lapsed','2026-08-01','2026-09-10','2026-09-10'),
+   (4,'lost','Studio Intro Offer',1500,'Active','2026-09-20','2026-10-20',NULL),
+   (5,'lost-free','Monthly Membership',5000,'Lapsed','2026-08-01','2026-09-12','2026-09-12'),
+   (6,'lost-free','Complimentary Class',0,'Active','2026-09-25','2026-09-25',NULL),
+   (7,'frozen','Monthly Membership',5000,'Lapsed','2026-07-01','2026-08-01','2026-08-01'),
+   (8,'frozen','Monthly Membership',5000,'Frozen','2026-08-15','2026-09-15','2026-09-15'),
+   (9,'test-only','TEST',5000,'Lapsed','2026-08-01','2026-09-05','2026-09-05')
+  ) t(row_id,member_id,product,amount_paid,status,start_date,end_date,churned_date)`);
+  await c.run(`ALTER TABLE lapsed ADD COLUMN latest_lapse BOOLEAN`);
+  await c.run(latestLapseSQL());
+  const result=await c.runAndReadAll(`SELECT ${metrics.lapsed_members.sql({rate:1200,today:'2026-10-05'})}::INTEGER AS lapsed, string_agg(member_id,',' ORDER BY member_id) FILTER (WHERE latest_lapse) AS who FROM lapsed`);
+  const row=result.getRowObjectsJS()[0];
+  assert.equal(row.who,'lost,lost-free');assert.equal(row.lapsed,2);
+ } finally {c.closeSync();db.closeSync();}
 });
 
 test("active access excludes future starts, expired access and frozen memberships", async () => {

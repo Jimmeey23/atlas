@@ -78,7 +78,7 @@ export function InstructorEconomics({ version }: { version: string | number }) {
         <p role="alert">{error}</p>
       ) : (
         <>
-          <div className="metric-strip eight" style={{ ["--metric-cols" as string]: String(Math.ceil(bp.kpis.length / 2)) }}>
+          <div className="metric-strip eight">
             {bp.kpis.map((id) => (
               <MetricCard
                 key={id}

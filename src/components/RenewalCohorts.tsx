@@ -15,7 +15,7 @@ export function RenewalCohorts({ version, onDrill }: { version: number; onDrill:
     end.setUTCDate(0);
     const cohortFilters = { ...filters, from: "", to: end.toISOString().slice(0, 10) };
     const scope = where(cohortFilters, "lapsed", transient);
-    onDrill({ id: `renewal-${row.month}-${state}`, label: `${acquisitionPeriodLabel(row.month)} · ${state === 'due' ? 'Total due' : state === 'grace' ? 'Within grace' : state}`, source: "lapsed", filters: cohortFilters, metrics: ["memberships_count", "membership_revenue"], predicate: renewalDrillPredicate(scope, today(), String(row.month), state), path: [], values: row, children: [] });
+    onDrill({ id: `renewal-${row.month}-${state}`, label: `${acquisitionPeriodLabel(row.month)} · ${state === 'due' ? 'Total due' : state}`, source: "lapsed", filters: cohortFilters, metrics: ["memberships_count", "membership_revenue"], predicate: renewalDrillPredicate(scope, today(), String(row.month), state), path: [], values: row, children: [] });
   }
   useEffect(() => {
     let active = true;
@@ -43,11 +43,12 @@ export function RenewalCohorts({ version, onDrill }: { version: number; onDrill:
       <h2>Renewals by expiry month</h2>
       <p className="small">
         14 completed months, independent of date filters. Other filters apply.
-        One paid ongoing membership per community member per expiry month.
-        Renewed means a later paid entitlement extends access and starts by 30
-        days after expiry. Lapsed means no recorded renewal after that grace
-        period. Future expiries remain upcoming. Source coverage may omit
-        renewals.
+        One paid ongoing membership per member per expiry month; zero-value and
+        restricted memberships (intro, 2 for 1, single class, private, credit)
+        are excluded. Total due = Renewed + Lapsed + Frozen. Lapsed means it
+        was the member's most recent membership and the sheet records a
+        Churned Date. Renewed means a later paid membership exists, or no churn
+        is recorded. Frozen is the membership's own status.
       </p>
       {error ? (
         <p role="alert">{error}</p>
@@ -61,8 +62,7 @@ export function RenewalCohorts({ version, onDrill }: { version: number; onDrill:
                   "Total due",
                   "Renewed",
                   "Lapsed",
-                  "Within grace",
-                  "Upcoming",
+                  "Frozen",
                   "Renewal rate",
                 ].map((x) => (
                   <th key={x}>{x}</th>
@@ -73,7 +73,7 @@ export function RenewalCohorts({ version, onDrill }: { version: number; onDrill:
               {rows.map((r) => (
                 <tr key={String(r.month)}>
                   <td><button className="scorecard-cell" onClick={() => drill(r, 'due')}>{acquisitionPeriodLabel(r.month)}</button></td>
-                  {["due", "renewed", "lapsed", "grace", "upcoming"].map(
+                  {["due", "renewed", "lapsed", "frozen"].map(
                     (k) => (
                       <td key={k}><button className="scorecard-cell" aria-label={`Inspect ${k} memberships for ${r.month}`} onClick={() => drill(r, k)}>{r[k]}</button></td>
                     ),

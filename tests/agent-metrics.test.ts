@@ -24,3 +24,17 @@ test('current membership counts clear dates and do not mix historical and curren
  assert.equal(compiled.snapshot,true);assert.equal(compiled.filters.from,undefined);assert.deepEqual(compiled.filters.location,['A']);
  assert.throws(()=>compileMetricQuery({source:'sessions',metric_ids:['gross_revenue'],group_by:[],scope_json:null},{},['sessions']));
 });
+test('recurring classes group by class name, weekday and time, and can drop hosted sessions',async()=>{
+ const db=await DuckDBInstance.create(':memory:');const c=await db.connect();
+ try{
+  await c.run(`CREATE TABLE sessions AS SELECT * FROM (VALUES
+   ('Mat 57','Saturday','10:15','Regular',12,1,1),('Mat 57','Saturday','10:15','Regular',13,1,1),
+   ('Mat 57','Monday','08:30','Regular',8,1,1),
+   ('Hosted Class','Sunday','09:00','Hosted',20,1,1)) t(format,day,time,session_type,checked_in,sessions,non_empty)`);
+  const compiled=compileMetricQuery({source:'sessions',metric_ids:['avg_class_size_excl','sessions'],group_by:['class_slot'],exclude_hosted:true,scope_json:null},{},['sessions']);
+  const rows=(await c.runAndReadAll(compiled.sql)).getRowObjectsJS();
+  assert.deepEqual(rows.map(r=>r.class_slot),['Mat 57 · Monday 08:30','Mat 57 · Saturday 10:15']);
+  assert.equal(rows[1].avg_class_size_excl,12.5);
+  assert.throws(()=>compileMetricQuery({source:'sales',metric_ids:['gross_revenue'],group_by:['class_slot'],exclude_hosted:false,scope_json:null},{},['sales']));
+ }finally{c.closeSync();db.closeSync();}
+});

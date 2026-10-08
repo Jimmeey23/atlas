@@ -2,18 +2,23 @@ import { useEffect, useState, type CSSProperties } from 'react';
 import { ArrowUpRight, Globe2, Megaphone } from 'lucide-react';
 import { workspaceIcons } from '../data/workspaceCopy';
 import { blueprints } from '../data/blueprints';
-import { health, query, type Row } from '../data/duckdb';
+import { health, query, quote, type Row } from '../data/duckdb';
+import { context, where } from '../data/analytics';
+import { metaScope } from '../data/marketing-channels';
+import { websiteScope } from '../data/performance-marketing';
 import { ensureSource, usable, sourceStates } from '../data/loader';
 import { overviewModules, overviewSQL, type OverviewModule } from '../data/overview';
 import { fmt } from '../semantics/formats';
-import { metrics } from '../semantics/metrics';
-import { tabs, useStore } from '../state/store';
+import { contributorPredicate, metrics } from '../semantics/metrics';
+import { tabs, useStore, type Filters } from '../state/store';
+import { marketingDrill } from './MarketingAnalytics';
+import type { TreeRow } from './NestedTable';
 import { listReports, type SavedReport } from '../report/storage';
 import { Register } from './Register';
 import './OverviewModules.css';
 
 function moduleStyle(tab: number): CSSProperties {
-  return { '--module-accent': `var(--${blueprints[tab].domain})` } as CSSProperties;
+  return { '--module-accent': `var(--tab-${tab})` } as CSSProperties;
 }
 
 function ModuleHeading({tab, title, onOpen, kind}: {tab:number;title:string;onOpen:()=>void;kind?:string}) {
@@ -24,7 +29,30 @@ function ModuleHeading({tab, title, onOpen, kind}: {tab:number;title:string;onOp
   </header>;
 }
 
-function ModuleSnapshot({ module: m }: { module: OverviewModule }) {
+type Drill = (entry: TreeRow) => void;
+
+/** The records behind a module figure: the whole module scope, one breakdown row, and/or one metric's contributors. */
+function moduleDrill(m: OverviewModule, filters: Filters, transient: {field:string;value:string}[], label: string, ids: string[], group?: string): TreeRow {
+  const ctx = context(filters, transient);
+  const metric = ids.length === 1 ? contributorPredicate(ids[0], ctx) : '';
+  const groupPredicate = group === undefined ? '' : group === 'Unspecified' ? `"${m.group}" IS NULL` : `CAST("${m.group}" AS VARCHAR)=${quote(group)}`;
+  if (m.key === 'meta' || m.key === 'website') {
+    const scope = m.key === 'meta'
+      ? metaScope(filters.from, filters.to, {})
+      : websiteScope(where({...filters,source:[]},'leads',transient.filter(t=>t.field!=='source')));
+    return marketingDrill(m.source as 'leads' | 'meta', scope, label, ids, [groupPredicate, metric].filter(Boolean).join(' AND '), groupPredicate);
+  }
+  const base = m.tab === 12 ? 'late_cancelled>0' : '';
+  return {
+    id: `overview:${m.key}:${group ?? 'all'}:${ids.join()}`,
+    label, source: m.source, filters, transient, metrics: ids, values: {}, children: [],
+    path: group === undefined ? [] : [{ field: m.group, value: group }],
+    predicate: [base, metric].filter(Boolean).join(' AND ') || undefined,
+    summaryPredicate: base || undefined,
+  };
+}
+
+function ModuleSnapshot({ module: m, onDrill }: { module: OverviewModule; onDrill: Drill }) {
   const filters = useStore(s=>s.filters);
   const transient = useStore(s=>s.transient);
   const rate = useStore(s=>s.rate);
@@ -51,8 +79,8 @@ function ModuleSnapshot({ module: m }: { module: OverviewModule }) {
     <ModuleHeading tab={m.tab} title={m.title || tabs[m.tab]} kind={m.key} onOpen={()=>set({tab:m.tab===10?3:[2,7,9].includes(m.tab)?1:m.tab,view:m.view||''})}/>
     <p className="overview-module-note">{m.note}{m.tab === 10 ? ` Estimated cost = sessions × ₹${rate.toLocaleString("en-IN")} per session; not actual payroll paid.` : ""}</p>
     {result.loading ? <p className="overview-module-state" role="status">Loading summary…</p> : result.error ? <div className="overview-module-state" role="alert"><p>Summary unavailable: {result.error}</p><button className="button" onClick={()=>setAttempt(v=>v+1)}>Retry summary</button></div> : !Number(result.total?.n) ? <p className="overview-module-state" role="status">No source records match this scope.</p> : <>
-      <dl className="overview-module-metrics">{m.ids.map(id=><div key={id}><dt>{metrics[id].label}</dt><dd>{fmt(id,result.total?.[id])}</dd></div>)}</dl>
-      <div className="overview-table-label"><span>{m.groupLabel} breakdown</span><small>Top {result.rows.length} by {metrics[m.ids[0]].label.toLowerCase()}</small></div><div className="table-scroll monthly-table overview-module-scroll"><table className="overview-table" aria-label={`${m.title || tabs[m.tab]} · ${m.groupLabel} breakdown`}><thead><tr><th scope="col"><span>{m.groupLabel}</span></th>{m.ids.map(id=><th scope="col" key={id}><span title={metrics[id].label}>{metrics[id].label}</span></th>)}</tr></thead><tbody>{result.rows.map((r,index)=><tr key={String(r.label)}><th scope="row"><span className="overview-row-label"><span className="overview-row-rank" aria-hidden="true">{String(index+1).padStart(2,"0")}</span><span className="overview-row-name" title={String(r.label)}>{r.label}</span></span></th>{m.ids.map(id=><td key={id}>{fmt(id,r[id])}</td>)}</tr>)}</tbody></table></div>
+      <dl className="overview-module-metrics">{m.ids.map(id=><div key={id}><dt>{metrics[id].label}</dt><dd><button className="overview-drill" onClick={()=>onDrill(moduleDrill(m,filters,transient,`${m.title || tabs[m.tab]} · ${metrics[id].label}`,[id]))} aria-label={`Drill into ${metrics[id].label}: ${fmt(id,result.total?.[id])}`}>{fmt(id,result.total?.[id])}</button></dd></div>)}</dl>
+      <div className="overview-table-label"><span>{m.groupLabel} breakdown</span><small>Top {result.rows.length} by {metrics[m.ids[0]].label.toLowerCase()}</small></div><div className="table-scroll monthly-table overview-module-scroll"><table className="overview-table" aria-label={`${m.title || tabs[m.tab]} · ${m.groupLabel} breakdown`}><thead><tr><th scope="col"><span>{m.groupLabel}</span></th>{m.ids.map(id=><th scope="col" key={id}><span title={metrics[id].label}>{metrics[id].label}</span></th>)}</tr></thead><tbody>{result.rows.map((r,index)=><tr key={String(r.label)}><th scope="row"><span className="overview-row-label"><span className="overview-row-rank" aria-hidden="true">{String(index+1).padStart(2,"0")}</span><button className="overview-drill overview-row-name" title={`Drill into ${r.label}`} onClick={()=>onDrill(moduleDrill(m,filters,transient,`${m.groupLabel} · ${r.label}`,m.ids,String(r.label)))}>{r.label}</button></span></th>{m.ids.map(id=><td key={id}><button className="overview-drill" onClick={()=>onDrill(moduleDrill(m,filters,transient,`${r.label} · ${metrics[id].label}`,[id],String(r.label)))} aria-label={`Drill into ${r.label} ${metrics[id].label}: ${fmt(id,r[id])}`}>{fmt(id,r[id])}</button></td>)}</tr>)}</tbody></table></div>
     </>}
   </article>;
 }
@@ -77,10 +105,10 @@ function WorkspaceSummaries({version}:{version:number}) {
   </div>;
 }
 
-export function OverviewModules({version}:{version:number}) {
+export function OverviewModules({version, onDrill}:{version:number; onDrill: Drill}) {
   return <Register index="07" title="Across the business" subtitle="A summary and breakdown from every business module · selected filters apply where the source supports them">
     <nav className="overview-module-nav" aria-label="Overview module shortcuts">{overviewModules.map(m=><a style={moduleStyle(m.tab)} key={m.key} href={`#overview-module-${m.key}`}>{m.title||tabs[m.tab]}</a>)}<a href="#overview-workspaces">Reporting, AI & data quality</a></nav>
-    <div className="overview-module-grid">{overviewModules.map(m=><div id={`overview-module-${m.key}`} key={m.key}><ModuleSnapshot module={m}/></div>)}</div>
+    <div className="overview-module-grid">{overviewModules.map(m=><div id={`overview-module-${m.key}`} key={m.key}><ModuleSnapshot module={m} onDrill={onDrill}/></div>)}</div>
     <div id="overview-workspaces"><WorkspaceSummaries version={version}/></div>
   </Register>;
 }

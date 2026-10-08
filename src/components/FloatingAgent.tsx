@@ -1,10 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { MessageSquare, X, Maximize2 } from "lucide-react";
+import { BotMessageSquare, Bot, X, Maximize2, Minimize2, PanelsTopLeft } from "lucide-react";
 import { IntelligenceWorkspace } from "./IntelligenceWorkspace";
 import { usePreferences } from "../state/preferences";
-import { useStore } from "../state/store";
+import { useStore, tabs } from "../state/store";
+
+// Maximised by default; the choice is remembered on this device only.
+const MAX_KEY = "p57-chat-maximized";
+const readMax = () => { try { return localStorage.getItem(MAX_KEY) !== "false"; } catch { return true; } };
 export function FloatingAgent() {
   const [open, setOpen] = useState(false);
+  const [maximized, setMaximized] = useState(readMax);
+  const tab = useStore((s) => s.tab);
+  const toggleMax = () => setMaximized((m) => { try { localStorage.setItem(MAX_KEY, String(!m)); } catch { /* session only */ } return !m; });
   const prefs = usePreferences((s) => s.preferences);
   const button = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLElement>(null);
@@ -33,31 +40,39 @@ export function FloatingAgent() {
         ref={button}
         onClick={() => setOpen(!open)}
       >
-        <MessageSquare size={21} />
+        <span className="atlas-chat-avatar" aria-hidden="true"><BotMessageSquare size={18} strokeWidth={1.9} /></span>
         <span>Ask GPT</span>
-        <i />
+        <i aria-hidden="true" />
       </button>
       {open && (
         <section
           ref={panel}
-          className="atlas-floating-chat"
+          className={`atlas-floating-chat ${maximized ? "maximized" : ""}`}
           role="dialog"
           aria-label="Atlas GPT assistant"
           style={{ width: Math.min(prefs.chatWidth, window.innerWidth - 24) }}
         >
           <header>
-            <span>
-              <i className="dot positive" /> Atlas assistant
+            <span className="atlas-chat-title">
+              <span className="atlas-chat-avatar" aria-hidden="true"><Bot size={18} strokeWidth={1.9} /></span>
+              <span>
+                <strong>Atlas AI agent</strong>
+                <small><i className="dot positive" /> Ready · answering for {tabs[tab]}</small>
+              </span>
             </span>
             <div>
+              <button aria-label={maximized ? "Restore chat height" : "Full-height chat"} title={maximized ? "Restore height" : "Full height"} onClick={toggleMax}>
+                {maximized ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+              </button>
               <button
+                title="Open the full AI workspace tab"
                 aria-label="Open full AI workspace"
                 onClick={() => {
                   setOpen(false);
                   useStore.getState().set({ tab: 13 });
                 }}
               >
-                <Maximize2 size={16} />
+                <PanelsTopLeft size={16} />
               </button>
               <button
                 aria-label="Close GPT assistant"

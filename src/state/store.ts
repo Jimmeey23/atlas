@@ -118,7 +118,7 @@ export const useStore = create<Store>((set, get) => ({
   },
   filterOpen: false,
   signalOpen: false,
-  compare: params.get("compare") || "prior",
+  compare: params.get("compare") || "none",
   rate: Number(localStorage.getItem("floor-rate") || 1200),
   transient: initialTransient,
   set: (s) => set({ ...(s.tab != null && s.view == null ? {view: ""} : {}), ...s, ...(s.tab != null ? { tab: parentTab(s.tab) } : {}) }),

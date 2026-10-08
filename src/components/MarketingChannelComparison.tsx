@@ -39,9 +39,9 @@ export function MarketingChannelComparison({ version, metaFilters, onDrill }: {v
   }
   return <Register id="marketing-channels" index="04" title="CRM acquisition channels vs Meta" subtitle="Same selected dates · all CRM sources, including Google, Meta and unassigned attribution">
     <MarketingStatus loading={channels.loading||totals.loading} error={channels.error||totals.error}/>
-    {!totals.loading&&row&&<div className="metric-strip pm-metric-grid pm-comparison-cards" style={{ "--metric-cols": 4 } as React.CSSProperties}>
+    {!totals.loading&&row&&<div className="metric-strip pm-metric-grid pm-comparison-cards">
       {["leads","crm_google_leads","crm_meta_leads"].map(id=><MetricCard id={id} key={id} value={row[id]} n={Number(row.n)} compare={false} onDrill={()=>onDrill(marketingDrill("leads",scope,`CRM channel comparison · ${id}`,[id],marketingContributor(id),""))}/>)}
-      <MetricCard id="meta_leads" value={available?meta?.meta_leads:null} n={Number(meta?.n||0)} compare={false} onDrill={()=>inspect("Meta","meta_leads")}/>
+      {["meta_leads","meta_instant_leads","meta_spend"].map(id=><MetricCard id={id} key={id} value={available?meta?.[id]:null} n={Number(meta?.n||0)} compare={false} onDrill={()=>inspect("Meta",id)}/>)}
     </div>}
     <p className="pm-note">Google and Meta use explicit UTM Source or Source Name tags. Platform tags do not establish paid acquisition. Website-only and unassigned tags remain separate. CRM uses active studio/class filters and creation dates; Meta uses its campaign/account controls and reporting dates. Without shared lead IDs and attribution windows, these counts do not establish a lead-capture gap.</p>
     {!available&&<p className="pm-note">Meta comparison is unavailable until the Meta source loads.</p>}

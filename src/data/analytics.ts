@@ -1,3 +1,4 @@
+import { newSheetFields } from "./new-fields";
 import { query, quote, health, fieldPresence, type Row } from "./duckdb";
 import { metricSQL, type QueryContext } from "../semantics/metrics";
 import { currentSnapshotMetrics } from "../semantics/evidence";
@@ -32,6 +33,7 @@ const allowed = [
   "associate",
   "capacity",
   "payment_method",
+  ...newSheetFields.map(([, field]) => field),
 ];
 // Filters are global while each tab reads a different table. A field the table
 // does not carry is present but all-NULL, so filtering on it would silently
@@ -256,12 +258,43 @@ async function performAnalysis(
     Object.assign(total[0],now[0]);Object.assign(previous[0],prior[0]);
     trend.forEach(row=>Object.assign(row,monthly.find(m=>m.month===row.month)||{}));
   }
+  if (tab === 5 && ids.includes("new_late_cancels")) {
+    // Late cancellations come from the Bookings sheet: every late-cancelled booking
+    // made by the newcomers in scope (matched on member ID), whenever it happened.
+    const lateCancels = (f: Filters) => `SELECT COUNT(*) FILTER (WHERE late_cancelled>0) AS new_late_cancels FROM bookings WHERE member_id IN (SELECT member_id FROM new${where(f, "new")}${where(f, "new") ? " AND" : " WHERE"} is_new AND member_id IS NOT NULL)`;
+    const [now, prior, monthly] = await Promise.all([
+      query(lateCancels(filters)),
+      query(lateCancels(prev)),
+      query(`SELECT n.month, COUNT(*) FILTER (WHERE b.late_cancelled>0) AS new_late_cancels FROM (SELECT DISTINCT member_id, month FROM new${where(wide, "new")}${where(wide, "new") ? " AND" : " WHERE"} is_new AND member_id IS NOT NULL) n JOIN bookings b USING (member_id) GROUP BY n.month`),
+    ]);
+    Object.assign(total[0], now[0]);
+    Object.assign(previous[0], prior[0]);
+    trend.forEach((row) => { row.new_late_cancels = monthly.find((m) => m.month === row.month)?.new_late_cancels ?? null; });
+  }
   if (tab === 6) {
     const currentIds = b.kpis.filter((id) => currentSnapshotMetrics.has(id));
     const currentFilters = { ...filters, from: "", to: "" };
     const current = await query(`SELECT ${metricSQL(currentIds, context(currentFilters))},COUNT(*) AS current_records FROM lapsed${where(currentFilters, "lapsed")}`);
     Object.assign(total[0], current[0]);
     currentIds.forEach((id) => { previous[0][id] = null; trend.forEach((row) => delete row[id]); });
+    // Access dates let us rebuild running memberships and upcoming expiry value as of
+    // each month end. Status history is not recorded, so history uses dates alone; the
+    // latest point is the status-aware current value so the line ends on the card.
+    const months = trend.map((row) => String(row.month)).filter((m) => /^\d{4}-\d{2}$/.test(m));
+    if (months.length) {
+      const asOf = `LEAST(LAST_DAY(CAST(m.month || '-01' AS DATE)), DATE '${context().today}')`;
+      const history = await query(`SELECT m.month,
+        COUNT(*) FILTER (WHERE status NOT IN ('Not Activated','Frozen') AND TRY_CAST(start_date AS DATE)<=${asOf} AND (end_date IS NULL OR TRY_CAST(end_date AS DATE)>=${asOf})) AS active_memberships,
+        SUM(amount_paid) FILTER (WHERE status<>'Not Activated' AND TRY_CAST(end_date AS DATE) BETWEEN ${asOf} AND ${asOf}+INTERVAL 30 DAY) AS revenue_at_risk_30d
+        FROM (VALUES ${months.map((m) => `(${quote(m)})`).join(",")}) AS m(month) CROSS JOIN (SELECT * FROM lapsed${where(currentFilters, "lapsed")}) l
+        GROUP BY m.month`);
+      for (const row of trend) {
+        const h = history.find((x) => x.month === row.month);
+        if (h) for (const id of ["active_memberships", "revenue_at_risk_30d"]) if (currentIds.includes(id)) row[id] = h[id];
+      }
+      const last = trend.at(-1);
+      if (last) for (const id of ["active_memberships", "revenue_at_risk_30d"]) if (currentIds.includes(id)) last[id] = total[0][id];
+    }
   }
   return {
     total: total[0],

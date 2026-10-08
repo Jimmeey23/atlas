@@ -39,7 +39,22 @@ type Note = {
   fontSize?: number;
   priority?: string;
   connections?: NoteConnector[];
+  author?: string;
+  createdAt?: string;
 };
+// Who is posting, remembered on this device only. The key is deliberately outside the
+// cloud-synced preference keys, so one person's name never overwrites another's.
+const AUTHOR_KEY = "p57-note-author";
+const readAuthor = () => {
+  try { return localStorage.getItem(AUTHOR_KEY)?.trim() || ""; } catch { return ""; }
+};
+function askAuthor(): string {
+  const known = readAuthor();
+  if (known) return known;
+  const name = window.prompt("Your name — shown on every note you post")?.trim().slice(0, 60) || "";
+  if (name) try { localStorage.setItem(AUTHOR_KEY, name); } catch { /* private mode: name applies to this note only */ }
+  return name;
+}
 type SaveState = "saving" | "saved" | "error";
 const DRAFTS = "atlas-sticky-note-drafts";
 const colors = ["lemon", "rose", "mint", "sky"];
@@ -51,6 +66,7 @@ export function StickyNotes() {
     [notes, setNotes] = useState<Note[]>([]),
     [status, setStatus] = useState<Record<string, SaveState>>({}),
     [error, setError] = useState("");
+  const author = useRef(readAuthor());
   const [connecting, setConnecting] = useState<{
     id: string;
     type: "arrow" | "line";
@@ -204,6 +220,8 @@ export function StickyNotes() {
         text: "",
         color: "lemon",
         collapsed: false,
+        author: author.current || undefined,
+        createdAt: new Date().toISOString(),
       };
       replace([...current.current, note]);
       save(note);
@@ -387,6 +405,8 @@ export function StickyNotes() {
       y: note.y + 35,
       pinned: false,
       connections: [],
+      author: askAuthor() || undefined,
+      createdAt: new Date().toISOString(),
     };
     replace([...current.current, copy]);
     save(copy);
@@ -397,14 +417,16 @@ export function StickyNotes() {
       <button
         className={`button sticky-note-trigger${placing ? " active" : ""}`}
         aria-pressed={placing}
+        aria-label={placing ? "Click to place note" : "Add note"}
         title={error || "Add a movable note saved to Supabase"}
         onClick={() => {
           setConnecting(null);
+          if (!placing) author.current = askAuthor();
           setPlacing(!placing);
         }}
       >
         <StickyNote size={13} />
-        {placing ? "Click to place" : "Add note"}
+        <span>{placing ? "Click to place" : "Add note"}</span>
       </button>
       {canvas &&
         createPortal(
@@ -696,6 +718,10 @@ export function StickyNotes() {
                       <X size={13} />
                     </button>
                   </header>
+                  <p className="note-byline" title={note.createdAt ? new Date(note.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : undefined}>
+                    Posted by <strong>{note.author || "Unknown author"}</strong>
+                    {note.createdAt && <> · {new Date(note.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" })}</>}
+                  </p>
                   {!note.collapsed && (
                     <>
                       <textarea

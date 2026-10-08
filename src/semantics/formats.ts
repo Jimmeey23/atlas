@@ -10,11 +10,11 @@ export function fmt(id: string, v: unknown, full = false): string {
         ? `₹${(n / 1e7).toFixed(1)}Cr`
         : !full && Math.abs(n) >= 1e5
           ? `₹${(n / 1e5).toFixed(1)}L`
-          : new Intl.NumberFormat("en-IN", {
+          : // Whole rupees when written in full; decimals only accompany L / Cr.
+            new Intl.NumberFormat("en-IN", {
               style: "currency",
               currency: "INR",
-              maximumFractionDigits: 1,
-              minimumFractionDigits: 0,
+              maximumFractionDigits: 0,
             }).format(n);
     case "percent":
       return `${(n * 100).toFixed(1)}%`;

@@ -1,8 +1,8 @@
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
-import { WandSparkles, X, Sparkles, ChevronDown, ChevronRight, Pin, PinOff } from "lucide-react";
+import { WandSparkles, X, Sparkles, ChevronDown, ChevronRight, Pin, PinOff, SlidersHorizontal, PencilLine, Move, AlignLeft, AlignCenter, AlignRight, AlignJustify, RotateCcw } from "lucide-react";
 import { useStore, tabs } from "../state/store";
-import { usePreferences } from "../state/preferences";
+import { usePreferences, type InsightLayout } from "../state/preferences";
 import { ChatAnswer } from "./ChatAnswer";
 import { historicalFilters, historicalTransient } from "../data/periods";
 import { today } from "../data/analytics";
@@ -151,13 +151,71 @@ export function DataInsightAction({ subject, detail, buttonLabel = "Section insi
     }
   }
   const collapsed = !!saved?.collapsed;
+  const layout: InsightLayout = saved?.layout || {};
+  const [editingLayout, setEditingLayout] = useState(false);
+  const [draft, setDraft] = useState<string | null>(null);
+  const panel = useRef<HTMLElement>(null);
+  const setLayout = (next: Partial<InsightLayout> | null) => patch({ layout: next ? { ...layout, ...next } : undefined });
+
+  // Drag a floating panel by its header; the position is saved on release.
+  function startDrag(e: React.PointerEvent) {
+    if (!layout.floating || (e.target as HTMLElement).closest("button,input,select,textarea,label")) return;
+    const box = panel.current!.getBoundingClientRect();
+    const dx = e.clientX - box.left, dy = e.clientY - box.top;
+    const move = (ev: PointerEvent) => {
+      panel.current!.style.left = `${Math.max(0, Math.min(window.innerWidth - 120, ev.clientX - dx))}px`;
+      panel.current!.style.top = `${Math.max(0, Math.min(window.innerHeight - 60, ev.clientY - dy))}px`;
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      const b = panel.current?.getBoundingClientRect();
+      if (b) setLayout({ x: Math.round(b.left), y: Math.round(b.top) });
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  }
+  // The corner handle (CSS resize) writes inline px sizes; persist them once the pointer is released.
+  function saveSize() {
+    const el = panel.current;
+    if (!el) return;
+    const px = (v: string) => (v.endsWith("px") ? Math.round(parseFloat(v)) : undefined);
+    const width = px(el.style.width), height = px(el.style.height);
+    if ((width ?? layout.width) !== layout.width || (height ?? layout.height) !== layout.height)
+      setLayout({ width: width ?? layout.width, height: height ?? layout.height });
+  }
+  // The resize handle writes an inline height React does not track; clear it so a collapsed panel shrinks.
+  useEffect(() => {
+    if (collapsed && panel.current) panel.current.style.height = "";
+    if (collapsed) setEditingLayout(false);
+  }, [collapsed]);
+  const panelStyle = {
+    "--ai-font": layout.fontSize ? `${layout.fontSize}px` : undefined,
+    textAlign: layout.align,
+    width: layout.width ? `${layout.width}px` : undefined,
+    height: layout.height && !collapsed ? `${layout.height}px` : undefined,
+    ...(layout.floating ? { left: `${layout.x ?? Math.max(16, window.innerWidth - (layout.width ?? 520) - 40)}px`, top: `${layout.y ?? 120}px`, maxHeight: `calc(100vh - ${(layout.y ?? 120) + 16}px)` } : {}),
+  } as React.CSSProperties;
   return <>
     <button ref={anchor} className={`ai-insight-btn ai-summary-btn ${compact ? "" : "with-label"} ${busy ? "is-thinking" : ""}`} aria-label={`Generate insights for ${subject}`} title={`Generate an AI summary for ${subject}`} disabled={busy} onClick={() => void run()}>
       <span className="ai-summary-mark" aria-hidden="true"><WandSparkles size={16} strokeWidth={1.8} /><span className="ai-summary-twinkle" /></span>{!compact && buttonLabel}
     </button>
     {target && (saved || busy || error) && createPortal(
-      <article className="section-ai-summary" data-insight-key={key} data-pinned={saved?.pinned || undefined} aria-label={`AI content for ${subject}`}>
-        <header>
+      <article
+        ref={panel}
+        className="section-ai-summary"
+        data-insight-key={key}
+        data-pinned={saved?.pinned || undefined}
+        data-floating={layout.floating || undefined}
+        data-collapsed={collapsed || undefined}
+        data-nowrap={layout.wrap === false || undefined}
+        data-columns={layout.columns === 2 ? "2" : undefined}
+        data-sized={layout.width || layout.height ? "" : undefined}
+        style={panelStyle}
+        onPointerUp={saveSize}
+        aria-label={`AI content for ${subject}`}
+      >
+        <header onPointerDown={startDrag}>
           <button
             className="ai-summary-toggle"
             aria-expanded={!collapsed}
@@ -168,6 +226,17 @@ export function DataInsightAction({ subject, detail, buttonLabel = "Section insi
             <span className="icon"><Sparkles size={14} />AI section insights</span>
           </button>
           <div>
+            {layout.floating && <Move size={14} className="ai-summary-grip" aria-hidden="true" />}
+            {saved && (
+              <button className={`icon-button ${editingLayout ? "is-active" : ""}`} aria-pressed={editingLayout} aria-label="Adjust layout" title="Adjust size, position, wrapping and alignment" onClick={() => setEditingLayout(!editingLayout)}>
+                <SlidersHorizontal size={14} />
+              </button>
+            )}
+            {saved && (
+              <button className={`icon-button ${draft != null ? "is-active" : ""}`} aria-pressed={draft != null} aria-label="Edit text" title="Edit the text of this insight" onClick={() => setDraft(draft == null ? saved.text : null)}>
+                <PencilLine size={14} />
+              </button>
+            )}
             {saved && (
               <button
                 className={`icon-button ${saved.pinned ? "is-pinned" : ""}`}
@@ -183,10 +252,44 @@ export function DataInsightAction({ subject, detail, buttonLabel = "Section insi
             <button className="icon-button" aria-label={`Remove AI content for ${subject}`} disabled={busy} onClick={remove}><X size={14} /></button>
           </div>
         </header>
+        {saved && editingLayout && (
+          <div className="ai-layout-bar" role="group" aria-label="Insight layout">
+            <label>Width
+              <input type="range" min={280} max={1600} step={10} value={layout.width ?? panel.current?.offsetWidth ?? 800} onChange={(e) => setLayout({ width: +e.target.value })} />
+              <button className="link-button" onClick={() => setLayout({ width: undefined })}>Auto</button>
+            </label>
+            <label>Height
+              <input type="range" min={140} max={1000} step={10} value={layout.height ?? panel.current?.offsetHeight ?? 400} onChange={(e) => setLayout({ height: +e.target.value })} />
+              <button className="link-button" onClick={() => setLayout({ height: undefined })}>Auto</button>
+            </label>
+            <label>Text
+              <input type="range" min={11} max={20} step={1} value={layout.fontSize ?? 13} onChange={(e) => setLayout({ fontSize: +e.target.value })} />
+              <span className="small">{layout.fontSize ?? 13}px</span>
+            </label>
+            <div className="ai-layout-segment" role="radiogroup" aria-label="Alignment">
+              {([["left", AlignLeft], ["center", AlignCenter], ["right", AlignRight], ["justify", AlignJustify]] as const).map(([value, Icon]) => (
+                <button key={value} role="radio" aria-checked={(layout.align ?? "left") === value} aria-label={`Align ${value}`} onClick={() => setLayout({ align: value })}><Icon size={13} /></button>
+              ))}
+            </div>
+            <label className="ai-layout-check"><input type="checkbox" checked={layout.wrap !== false} onChange={(e) => setLayout({ wrap: e.target.checked })} /> Wrap text</label>
+            <label className="ai-layout-check"><input type="checkbox" checked={layout.columns === 2} onChange={(e) => setLayout({ columns: e.target.checked ? 2 : 1 })} /> Two columns</label>
+            <button className="button" onClick={() => setLayout({ floating: !layout.floating })}>{layout.floating ? "Dock in page" : "Float & drag"}</button>
+            <button className="button" onClick={() => setLayout(null)}><RotateCcw size={12} /> Reset</button>
+          </div>
+        )}
         {busy && <p role="status">Reading this element with your filters…</p>}
         {error && <p role="alert" className="warn">{error}</p>}
-        {saved && !collapsed && <><p className="small">Generated for {saved.scope} · {new Date(saved.generatedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</p><ChatAnswer text={saved.text} /></>}
+        {saved && !collapsed && draft != null && (
+          <div className="ai-summary-editor">
+            <textarea aria-label="Insight text (Markdown)" value={draft} onChange={(e) => setDraft(e.target.value)} />
+            <div>
+              <button className="button" onClick={() => { patch({ text: draft }); setDraft(null); }}>Save text</button>
+              <button className="button" onClick={() => setDraft(null)}>Cancel</button>
+            </div>
+          </div>
+        )}
+        {saved && !collapsed && draft == null && <><p className="small ai-summary-scope">Generated for {saved.scope} · {new Date(saved.generatedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</p><div className="ai-summary-body"><ChatAnswer text={saved.text} /></div></>}
         {saved && collapsed && <p className="small">Collapsed · generated {new Date(saved.generatedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</p>}
-      </article>, target)}
+      </article>, layout.floating ? document.body : target)}
   </>;
 }
