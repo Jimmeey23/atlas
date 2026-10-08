@@ -88,6 +88,7 @@ import { Heatmap } from "./components/Heatmap";
 import { AcquisitionMainTables, AcquisitionDeepDive, AcquisitionTableView } from "./components/AcquisitionTables";
 import { MoMTable } from "./components/MoMTable";
 import { InstructorEconomics } from "./components/InstructorEconomics";
+import { MonthlyMemberIntelligence } from "./components/MonthlyMemberIntelligence";
 import { FormatComparison } from "./components/FormatComparison";
 import { PerformanceScorecard } from "./components/PerformanceScorecard";
 import { FormatAllocationChart } from "./components/FormatAllocationChart";
@@ -899,6 +900,7 @@ export default function App() {
               <SavedElements page={1} version={version} />
               <StudioOperations version={version} onDrill={setDrill} />
               <StudioCommunityOperations version={version} onDrill={setDrill} />
+              <MonthlyMemberIntelligence kind="frequency" version={version} />
               <StudioOperationsDeepDive version={version} onDrill={setDrill} />
             </div>
           ) : (
@@ -1117,6 +1119,7 @@ export default function App() {
                   instructor's first-visit members became. */}
               {s.tab === 3 && <PerformanceScorecard dimension="trainer" index="08" version={version} onDrill={setDrill} />}
               {s.tab === 3 && <AcquisitionTableView kind="trainers" version={version} />}
+              {s.tab === 3 && <MonthlyMemberIntelligence kind="instructors" version={version} />}
               {s.tab === 3 && <InstructorEconomics version={version} />}
               {s.tab === 14 && <PerformanceScorecard dimension="format_group" index="08" version={version} onDrill={setDrill} />}
               {s.tab === 14 && <FormatComparison version={version} />}
