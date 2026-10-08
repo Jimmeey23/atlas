@@ -4,7 +4,7 @@ import {DuckDBInstance} from '@duckdb/node-api';
 // @ts-ignore
 import {compileMetricQuery} from '../server/agent-metrics.mjs';
 // @ts-ignore
-import {resolveQuestionScope} from '../server/agent-scope.mjs';
+import {rankEntities, resolveMentions, resolveQuestionScope} from '../server/agent-scope.mjs';
 test('follow-up month retains the studio and year of the preceding answer',()=>{
  const history=[{role:'user',content:'How much sales did Kwality House do in April 2026?'},{role:'assistant',content:'Answer',scope:{from:'2026-04-01',to:'2026-04-30',location:['Kwality House, Kemps Corner'],imports:false}}];
  const scope=resolveQuestionScope('What about May?',{from:'2026-09-01',to:'2026-09-30',location:['Kenkere House']},history).filters;
@@ -37,4 +37,28 @@ test('recurring classes group by class name, weekday and time, and can drop host
   assert.equal(rows[1].avg_class_size_excl,12.5);
   assert.throws(()=>compileMetricQuery({source:'sales',metric_ids:['gross_revenue'],group_by:['class_slot'],exclude_hosted:false,scope_json:null},{},['sales']));
  }finally{c.closeSync();db.closeSync();}
+});
+test('studio shortforms, quarters and to-date periods resolve to exact scope',()=>{
+ const scope=(q:string)=>resolveQuestionScope(q,{from:'2026-09-01',to:'2026-09-30'}).filters;
+ assert.deepEqual(scope('best class at KH in sept 2026').location,['Kwality House, Kemps Corner']);
+ assert.deepEqual(scope('KK vs SHQ').location,['Kenkere House','Supreme HQ, Bandra']);
+ assert.deepEqual(scope('revenue at C+C').location,['The Studio by Copper + Cloves']);
+ assert.deepEqual(scope('mumbai attendance').location,['Kwality House, Kemps Corner','Supreme HQ, Bandra']);
+ const q=scope('fill at kemps in Q2 2025');assert.equal(q.from,'2025-04-01');assert.equal(q.to,'2025-06-30');
+ const s=scope("attendance sep'25");assert.equal(s.from,'2025-09-01');assert.equal(s.to,'2025-09-30');
+ assert.equal(scope('rev YTD').from.slice(5),'01-01');
+});
+test('entity ranking resolves first names, misspellings and initials',()=>{
+ const trainers=['Rohan Dahima','Reshma Sharma','Pranjali Jain','Mrigakshi Jaiswal','Karanvir Bhatia'];
+ assert.equal(rankEntities(trainers,'rohan')[0].value,'Rohan Dahima');
+ assert.equal(rankEntities(trainers,'mrigaksi')[0].value,'Mrigakshi Jaiswal');
+ assert.equal(rankEntities(trainers,'karan')[0].value,'Karanvir Bhatia');
+});
+test('question pre-pass resolves fuzzy names without matching ordinary words',()=>{
+ const lists={instructor:['Rohan Dahima','Reshma Sharma','Pranjali Jain','Mrigakshi Jaiswal','Cauveri Vikrant'],associate:['Shifa Ali'],class:['Studio Cardio Barre','Studio Mat 57']};
+ const names=(q:string)=>resolveMentions(q,lists).map((m:any)=>m.value);
+ assert.deepEqual(names('compare mrigaksi and pranjal fill rate'),['Mrigakshi Jaiswal','Pranjali Jain']);
+ assert.deepEqual(names('how is cauvery doing'),['Cauveri Vikrant']);
+ assert.deepEqual(names('what did shifa sell in sept'),['Shifa Ali']);
+ assert.deepEqual(names('how many people came yesterday'),[]);
 });

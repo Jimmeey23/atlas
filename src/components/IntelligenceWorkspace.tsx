@@ -725,7 +725,10 @@ export function IntelligenceWorkspace({
       ) : (
         <>
         <div className="agent-heading">
-          <h2>Atlas Intelligence</h2>
+          <div className="agent-heading-title">
+            <span className="atlas-chat-avatar" aria-hidden="true"><Sparkles size={18} /></span>
+            <div><h2>Atlas Intelligence</h2><p>Ask in plain words or shorthand — studios, instructors, classes, periods.</p></div>
+          </div>
           <button className="button" onClick={() => setControls(!controls)}>
             Agent settings
           </button>

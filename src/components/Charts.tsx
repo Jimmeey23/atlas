@@ -271,7 +271,17 @@ export function Chart({
           r = data.groups
             .filter((g) => Number(g.level) === 2 ** (bp.groups.length - 1) - 1)
             .slice(0, 80);
-        else if (tab === 1 || tab === 7 || tab === 12)
+        else if (tab === 12) {
+          // Patterns need every booking as the denominator, so lift the tab's late-only restriction here.
+          const all = w.replace(/ AND late_cancelled>0/, "").replace(/ WHERE late_cancelled>0$/, "");
+          r = await query(
+            `SELECT day, time, COUNT(*) FILTER (WHERE late_cancelled>0) AS late, COUNT(*) AS bookings,
+              COUNT(DISTINCT member_id) FILTER (WHERE late_cancelled>0) AS members,
+              COUNT(DISTINCT COALESCE(session_id, date || time || COALESCE(location,''))) FILTER (WHERE late_cancelled>0) AS classes
+             FROM bookings${all}${all ? " AND" : " WHERE"} day IS NOT NULL AND time IS NOT NULL GROUP BY day, time`,
+          );
+        }
+        else if (tab === 1 || tab === 7)
           r = await query(
             tab === 1
               ? `SELECT strftime(date_trunc('week',TRY_CAST(date AS DATE)),'%Y-%m-%d') AS month,${metricSQL(["sessions", "fill_rate"], context())},COUNT(*) AS n FROM sessions${w} GROUP BY 1 ORDER BY 1`
@@ -797,7 +807,40 @@ export function Chart({
           },
         ],
       };
-    } else if (tab === 7 || tab === 12) {
+    } else if (tab === 12) {
+      const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+      const times = [...new Set(chartRows.map((r) => String(r.time)))].sort();
+      const slots = chartRows.filter((r) => days.includes(String(r.day)));
+      const cells = slots.map((r, i) => [times.indexOf(String(r.time)), days.indexOf(String(r.day)), Number(r.late), i]);
+      const peak = Math.max(1, ...cells.map((c) => Number(c[2])));
+      option = {
+        ...option,
+        legend: undefined,
+        grid: { left: 86, right: 24, top: 16, bottom: 78 },
+        tooltip: {
+          trigger: "item",
+          formatter: (p: unknown) => {
+            const [, , late, index] = (p as { value: [number, number, number, number] }).value;
+            const row = slots[index];
+            return `<b>${row.day} · ${row.time}</b><br/>Late cancellations: <b>${fmt("records", late)}</b><br/>Share of bookings: <b>${fmt("booking_late_rate", Number(late) / Math.max(1, Number(row.bookings)))}</b> of ${fmt("records", row.bookings)}<br/>Members: ${fmt("records", row.members)} · Classes affected: ${fmt("records", row.classes)}`;
+          },
+        },
+        xAxis: { type: "category", data: times, splitArea: { show: false }, axisTick: { show: false }, axisLine: { show: false }, axisLabel: { color: c["text-3"], fontSize: 10, rotate: times.length > 14 ? 45 : 0 } },
+        yAxis: { type: "category", data: days.map((d) => d.slice(0, 3)), inverse: true, axisTick: { show: false }, axisLine: { show: false }, axisLabel: { color: c["text-2"], fontSize: 11, fontWeight: 600 } },
+        visualMap: {
+          min: 0, max: peak, dimension: 2, calculable: true, orient: "horizontal", left: "center", bottom: 4, itemWidth: 10, itemHeight: 160,
+          text: ["More late cancels", "Fewer"], textStyle: { color: c["text-3"], fontSize: 10 },
+          inRange: { color: [c["surface-3"] || "#f4f4f6", (c["accent-2"] || c.risk) + "99", c.accent || c.risk] },
+        },
+        series: [{
+          type: "heatmap",
+          data: cells,
+          label: { show: times.length <= 16, color: c["text-1"], fontSize: 10, formatter: (p: { value?: unknown }) => { const v = (p.value as number[] | undefined)?.[2]; return v ? String(v) : ""; } },
+          itemStyle: { borderColor: c["surface-3"] || "#fff", borderWidth: 3, borderRadius: 6 },
+          emphasis: { itemStyle: { borderColor: c.accent || c.risk, borderWidth: 2 } },
+        }],
+      };
+    } else if (tab === 7) {
       option = {
         ...option,
         yAxis: [
@@ -1040,7 +1083,7 @@ export function Chart({
         <span>
           {secondary
             ? "Each point represents an entity in scope"
-            : tab === 4 && salesActivity ? "Daily gross collections (left axis) and transactions (right axis); average order value in tooltips. Only dates with source records are shown." : tab === 5 ? "Bars: newcomers per first-visit month · lines: share of each cohort that returned, converted and is retained (latest recorded outcome)" : tab === 7 || tab === 12 ? "One outcome per booking; late cancellation takes precedence over other flags" : "Actual source observations, aggregated in SQL"}
+            : tab === 4 && salesActivity ? "Daily gross collections (left axis) and transactions (right axis); average order value in tooltips. Only dates with source records are shown." : tab === 5 ? "Bars: newcomers per first-visit month · lines: share of each cohort that returned, converted and is retained (latest recorded outcome)" : tab === 7 || tab === 12 ? "Late cancellations by weekday and class time · hover a cell for its share of that slot's bookings, members and classes affected" : "Actual source observations, aggregated in SQL"}
         </span>
         <span>Hover for details / Click to filter</span>
       </div>
