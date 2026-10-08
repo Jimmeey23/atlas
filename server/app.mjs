@@ -78,13 +78,19 @@ export async function createApp({ serveStatic = false } = {}) {
     } catch {}
   }
   const metadata = new Map();
+  // key → {fetchedAt, revision, hash} of the copy this instance holds.
+  const known = new Map();
+  const remember = (data) => {
+    if (data?.fetchedAt) known.set(data.key, { fetchedAt: data.fetchedAt, revision: data.revision ?? null, hash: data.hash ?? null });
+    return data;
+  };
   const freshness = createFreshness();
   async function load(source, force) {
     const start = performance.now();
     const cacheKey = `.cache/${source.key}.json`;
     let cached;
     try {
-      cached = await store.read(cacheKey);
+      cached = remember(await store.read(cacheKey));
     } catch {}
     if (cached && !force && Date.now() - cached.fetchedAt < ttl) {
       // Inside the TTL the cache is only trustworthy while the workbook has not
@@ -133,7 +139,7 @@ export async function createApp({ serveStatic = false } = {}) {
       };
       await archiveSnapshot(result);
       await store.write(cacheKey, result);
-      return result;
+      return remember(result);
     } catch (error) {
       return {
         key: source.key,
@@ -155,29 +161,26 @@ export async function createApp({ serveStatic = false } = {}) {
   // date?" for every source at once. The client polls this, not the sheets.
   app.get("/api/sheets/freshness", async (_, res) => {
     const revisions = await freshness.revisions(config);
-    const sources = await Promise.all(
-      config.map(async (source) => {
-        let cached;
-        try {
-          cached = await store.read(`.cache/${source.key}.json`);
-        } catch {}
-        const probe = revisions.get(source.id) || {};
-        const current = probe.revision || null;
-        return {
-          key: source.key,
-          fetchedAt: cached?.fetchedAt ?? null,
-          revision: cached?.revision ?? null,
-          currentRevision: current,
-          // Unknown revisions fall back to the age rule rather than claiming
-          // freshness that has not been verified.
-          stale: current
-            ? !cached || cached.revision !== current
-            : !cached || Date.now() - cached.fetchedAt >= ttl,
-          verified: Boolean(current),
-          reason: probe.reason || null,
-        };
-      }),
-    );
+    const sources = config.map((source) => {
+      // From the in-memory index, not the cache files: parsing ~200MB of snapshots once a
+      // minute just to read timestamps is slow and memory-hungry.
+      const cached = known.get(source.key);
+      const probe = revisions.get(source.id) || {};
+      const current = probe.revision || null;
+      return {
+        key: source.key,
+        fetchedAt: cached?.fetchedAt ?? null,
+        revision: cached?.revision ?? null,
+        hash: cached?.hash ?? null,
+        currentRevision: current,
+        // Only a Drive revision proves staleness. Without one the browser judges age from its
+        // own copy: a serverless instance that has not cached a sheet says nothing about it,
+        // and reporting that as stale made every browser refetch every sheet every minute.
+        stale: current ? !!cached && cached.revision !== current : false,
+        verified: Boolean(current),
+        reason: probe.reason || null,
+      };
+    });
     res.set("Cache-Control", "no-store").json({ checkedAt: Date.now(), sources });
   });
   app.get("/api/sheets/:key", async (req, res) => {

@@ -164,7 +164,8 @@ export default function App() {
   const marketingView = s.view === PERFORMANCE_MARKETING_VIEW && s.tab === 8;
   const workspaceHeading = useWorkspaceCopy(s.tab, bp.subtitle);
   const workspaceVersion = dependencies(s.tab)
-    .map((k) => health[k]?.fetchedAt || "unavailable")
+    // Content, not fetch time: a re-check that finds identical rows must not recompute the page.
+    .map((k) => health[k]?.hash || health[k]?.fetchedAt || "unavailable")
     .join(",");
   const ready =
     s.tab === 11
@@ -194,6 +195,7 @@ export default function App() {
   const main = useRef<HTMLElement>(null);
   const lastTab = useRef(s.tab);
   const sequence = useRef(0);
+  const shownView = useRef("");
   const notify = (text: string) => {
     setToast(text);
     setTimeout(() => setToast(""), 3000);
@@ -318,7 +320,11 @@ export default function App() {
       return;
     }
     const id = ++sequence.current;
-    setBusy(true);
+    // A background data update keeps the current figures on screen while they recompute;
+    // the full loader is for a new view (tab, filters, grouping), not a quiet refresh.
+    const view = JSON.stringify([s.tab, marketingView, groups, columns, s.filters, s.transient, s.compare, s.rate]);
+    if (view !== shownView.current || analysis === blank) setBusy(true);
+    shownView.current = view;
     const timer = setTimeout(
       () => {
         analyse(s.tab, groups, columns)

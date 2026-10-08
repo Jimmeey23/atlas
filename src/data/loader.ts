@@ -138,7 +138,11 @@ export async function ensureSource(key: string, force = false, latest = false): 
       if (data.status === "error")
         throw new Error(data.error || "Source unavailable.");
       // A fresh snapshot may have been restored while other workspaces opened.
-      if (data.fetchedAt !== health[key]?.fetchedAt) await ingest(data);
+      if (data.hash && data.hash === health[key]?.hash) {
+        // Unchanged rows: record the newer check time without rebuilding the table, so the
+        // workspace does not recompute (and flash its loader) for identical data.
+        health[key] = { ...health[key], fetchedAt: data.fetchedAt, revision: data.revision ?? health[key].revision };
+      } else if (data.fetchedAt !== health[key]?.fetchedAt) await ingest(data);
       sourceStates[key] = { state: "ready" };
     } catch (e) {
       sourceStates[key] = { state: "error", error: String(e) };
@@ -160,6 +164,7 @@ export interface FreshnessReport {
     key: string;
     fetchedAt: number | null;
     revision: string | null;
+    hash: string | null;
     currentRevision: string | null;
     stale: boolean;
     verified: boolean;
@@ -207,19 +212,30 @@ export async function revalidate(tab: number, minInterval = 10000) {
   // A source we have never loaded is handled by the normal load path.
   const loaded = report.sources.filter((s) => watched.has(s.key) && usable(s.key));
   const stale = loaded
-    .filter((s) => s.stale)
-    // The probe compares against the server's cache; ours may differ.
-    .filter((s) => !s.currentRevision || s.currentRevision !== health[s.key]?.revision)
+    .filter((s) =>
+      s.currentRevision
+        ? // A Drive revision is proof: refetch only when it differs from the rows we hold.
+          s.currentRevision !== health[s.key]?.revision
+        : // Unverifiable: our own copy's age decides, never the server instance's cache.
+          Date.now() - (health[s.key]?.fetchedAt ?? 0) >= 15 * 60 * 1000,
+    )
     .map((s) => s.key);
-  // The gateway already holds a newer copy (another tab or user refreshed it): take it
-  // without asking Google again.
+  // The gateway already holds a different, newer copy (another tab or user refreshed it):
+  // take it without asking Google again. Same content under a new timestamp is not news.
   const newer = loaded
-    .filter((s) => !stale.includes(s.key) && (s.fetchedAt ?? 0) > (health[s.key]?.fetchedAt ?? 0))
+    .filter(
+      (s) =>
+        !stale.includes(s.key) &&
+        (s.fetchedAt ?? 0) > (health[s.key]?.fetchedAt ?? 0) &&
+        !(s.hash && s.hash === health[s.key]?.hash),
+    )
     .map((s) => s.key);
   if (!stale.length && !newer.length) return [];
+  const before = new Map([...stale, ...newer].map((key) => [key, health[key]?.hash ?? health[key]?.fetchedAt]));
   await Promise.all([
     ...stale.map((key) => ensureSource(key, true)),
     ...newer.map((key) => ensureSource(key, false, true)),
   ]);
-  return [...stale, ...newer];
+  // Report only sources whose rows actually changed.
+  return [...before].filter(([key, was]) => (health[key]?.hash ?? health[key]?.fetchedAt) !== was).map(([key]) => key);
 }

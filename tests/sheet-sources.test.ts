@@ -45,6 +45,9 @@ test("the freshness probe is routed before the per-source endpoint", async () =>
     assert.equal(response.status, 200);
     const body = await response.json();
     assert.ok(Array.isArray(body.sources) && body.sources.some((s: any) => s.key === "sessions"));
+    // Without a Drive revision nothing is provably stale; an uncached instance must not make
+    // every browser refetch every sheet (the cause of repeated full-page reloads on Vercel).
+    assert.ok(body.sources.every((s: any) => s.stale === false));
   } finally {
     server.close();
   }
