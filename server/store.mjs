@@ -7,7 +7,7 @@
 // always stay on local disk — pushing them through Supabase on every request is slow and buys
 // nothing. On serverless the cache root moves to /tmp, which is writable but per-instance:
 // a cold start simply refetches from Sheets.
-import { readFile, writeFile, rename, mkdir } from "node:fs/promises";
+import { readFile, rename, mkdir, open } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { gzip, gunzip } from "node:zlib";
@@ -21,6 +21,23 @@ const inflate = promisify(gunzip);
 const COMPRESS_OVER = 512 * 1024;
 
 const TABLE = "atlas_store";
+
+/**
+ * Serialises a sheet snapshot in pieces. JSON.stringify of Bookings builds one ~170MB string
+ * on top of the parsed rows, which is enough to push a 2GB serverless instance out of memory.
+ */
+export function* jsonChunks(value) {
+  if (!Array.isArray(value?.rows)) {
+    yield JSON.stringify(value);
+    return;
+  }
+  const { rows, ...head } = value;
+  const prefix = JSON.stringify(head);
+  yield prefix === "{}" ? '{"rows":[' : prefix.slice(0, -1) + ',"rows":[';
+  for (let i = 0; i < rows.length; i += 2000)
+    yield (i ? "," : "") + rows.slice(i, i + 2000).map((row) => JSON.stringify(row)).join(",");
+  yield "]}";
+}
 const DURABLE = ".floor/";
 
 export function createStore({ root, cloud = null, cacheRoot = root }) {
@@ -37,7 +54,12 @@ export function createStore({ root, cloud = null, cacheRoot = root }) {
     const target = path.join(base(key), key);
     await mkdir(path.dirname(target), { recursive: true });
     const temporary = `${target}.${randomUUID()}.tmp`;
-    await writeFile(temporary, JSON.stringify(value));
+    const file = await open(temporary, "w");
+    try {
+      for (const chunk of jsonChunks(value)) await file.write(chunk);
+    } finally {
+      await file.close();
+    }
     await rename(temporary, target);
     return value;
   }

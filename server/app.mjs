@@ -6,12 +6,13 @@ import { publicSheet, missingColumns, snapshotsToPrune } from "./sheets-public.m
 import { readFile, mkdir, copyFile, readdir, unlink } from "node:fs/promises";
 import path from "node:path";
 import { createHash } from "node:crypto";
+import v8 from "node:v8";
 import { createClient } from "@supabase/supabase-js";
 import WebSocket from "ws";
 import { kraRoutes } from "./kra.mjs";
 import { presentationRoutes } from "./presentation.mjs";
 import { reportRoutes } from "./reports.mjs";
-import { createStore } from "./store.mjs";
+import { createStore, jsonChunks } from "./store.mjs";
 import { createFreshness } from "./freshness.mjs";
 import { intelligenceRoutes } from "./intelligence.mjs";
 import { followupRoutes } from "./followups.mjs";
@@ -56,6 +57,11 @@ export async function createApp({ serveStatic = false } = {}) {
   intelligenceRoutes(app, root, config, load, { store });
   kraRoutes(app, root, config, load, store);
   const inflight = new Map();
+  function sendJSON(res, value) {
+    res.set({ "Cache-Control": "no-store", "Content-Type": "application/json; charset=utf-8" });
+    for (const chunk of jsonChunks(value)) res.write(chunk);
+    res.end();
+  }
   async function archiveSnapshot(data) {
     // Serverless /tmp is per-instance and capped at 512MB: an archive there is never seen by
     // the next request's instance, and bookings alone is ~80MB per copy.
@@ -182,7 +188,7 @@ export async function createApp({ serveStatic = false } = {}) {
         const cached = await store.read(`.cache/${source.key}.json`);
         if (!cached) throw new Error("No saved source snapshot.");
         await archiveSnapshot(cached);
-        return res.set("Cache-Control", "no-store").json({
+        return sendJSON(res, {
           ...cached,
           cached: true,
           stale: Date.now() - cached.fetchedAt >= ttl,
@@ -197,7 +203,7 @@ export async function createApp({ serveStatic = false } = {}) {
         source.key,
         load(source, force).finally(() => inflight.delete(source.key)),
       );
-    res.set("Cache-Control", "no-store").json(await inflight.get(source.key));
+    sendJSON(res, await inflight.get(source.key));
   });
   app.get("/api/field-health", async (_, res) => {
     const result = [];
@@ -277,6 +283,8 @@ export async function createApp({ serveStatic = false } = {}) {
       status: "ok",
       sources: config.length,
       ttlMinutes: 15,
+      // The instance's real JS heap ceiling, so serverless memory limits are measured, not guessed.
+      heapLimitMB: Math.round(v8.getHeapStatistics().heap_size_limit / 1048576),
       store: store.backend,
     }),
   );

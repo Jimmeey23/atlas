@@ -49,3 +49,14 @@ test("the freshness probe is routed before the per-source endpoint", async () =>
     server.close();
   }
 });
+
+test("streamed CSV chunks split mid-quote and mid-row parse identically", async () => {
+  const { csvParser } = await import("../server/sheets-public.mjs");
+  const text = 'a,b\r\n"x, ""y""",2\r\n"multi\nline",3\r\n';
+  for (let cut = 1; cut < text.length; cut++) {
+    const parser = csvParser();
+    parser.push(text.slice(0, cut));
+    parser.push(text.slice(cut));
+    assert.deepEqual(parser.end(), [["a", "b"], ['x, "y"', "2"], ["multi\nline", "3"]], `split at ${cut}`);
+  }
+});

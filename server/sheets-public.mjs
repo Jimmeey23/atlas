@@ -15,37 +15,112 @@ export const missingColumns = (source, columns) =>
     (c) => !columns.includes(c) && !(OPTIONAL_COLUMNS[source.key] || []).includes(c),
   );
 
-/** RFC 4180 CSV: quoted fields, doubled quotes, embedded commas and newlines, CRLF. */
-export function parseCSV(text) {
+/**
+ * Incremental RFC 4180 CSV: quoted fields, doubled quotes, embedded commas and newlines, CRLF.
+ * Chunks are parsed as they arrive so the whole export (72MB for Bookings) is never held as one
+ * string next to its parsed rows.
+ */
+export function csvParser() {
   const rows = [];
-  let row = [];
-  let field = "";
-  let quoted = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (quoted) {
-      if (c === '"') {
-        if (text[i + 1] === '"') {
-          field += '"';
-          i++;
-        } else quoted = false;
-      } else field += c;
-    } else if (c === '"') quoted = true;
-    else if (c === ",") {
-      row.push(field);
-      field = "";
-    } else if (c === "\n") {
-      row.push(field);
-      rows.push(row);
-      row = [];
-      field = "";
-    } else if (c !== "\r") field += c;
+  // Unparsed tail: always starts at the beginning of an incomplete row.
+  let buffer = "";
+  // Building a field character by character leaves V8 a chain of string fragments per cell
+  // (Bookings parsed to ~680MB of heap). Fields are sliced whole and repeated values shared.
+  const interned = new Map();
+  const intern = (value) => {
+    if (value.length > 48) return value;
+    const hit = interned.get(value);
+    if (hit !== undefined) return hit;
+    const flat = (" " + value).slice(1);
+    if (interned.size < 500000) interned.set(flat, flat);
+    return flat;
+  };
+  function parse(final) {
+    const text = buffer;
+    let i = 0;
+    let rowStart = 0;
+    let row = [];
+    while (i < text.length) {
+      let value;
+      if (text[i] === '"') {
+        let j = i + 1;
+        let parts = "";
+        for (;;) {
+          const q = text.indexOf('"', j);
+          if (q < 0) {
+            j = -1;
+            break;
+          }
+          if (text[q + 1] === '"') {
+            parts += text.slice(j, q + 1);
+            j = q + 2;
+            continue;
+          }
+          if (q + 1 >= text.length && !final) j = -1;
+          else {
+            parts += text.slice(j, q);
+            j = q + 1;
+          }
+          break;
+        }
+        if (j < 0) break;
+        value = parts;
+        i = j;
+      } else {
+        let j = i;
+        while (j < text.length && text[j] !== "," && text[j] !== "\n" && text[j] !== "\r") j++;
+        if (j >= text.length && !final) break;
+        value = text.slice(i, j);
+        i = j;
+      }
+      row.push(intern(value));
+      if (text[i] === "\r") i++;
+      if (i >= text.length) {
+        if (!final) {
+          row = null;
+          break;
+        }
+        rows.push(row);
+        row = [];
+        rowStart = i;
+        break;
+      }
+      if (text[i] === ",") {
+        i++;
+        if (i >= text.length && final) {
+          row.push("");
+          rows.push(row);
+          row = [];
+          rowStart = i;
+        }
+        continue;
+      }
+      if (text[i] === "\n") {
+        i++;
+        rows.push(row);
+        row = [];
+        rowStart = i;
+      }
+    }
+    buffer = final ? "" : text.slice(rowStart);
   }
-  if (field || row.length) {
-    row.push(field);
-    rows.push(row);
-  }
-  return rows;
+  return {
+    rows,
+    push(text) {
+      buffer += text;
+      parse(false);
+    },
+    end() {
+      if (buffer) parse(true);
+      return rows;
+    },
+  };
+}
+
+export function parseCSV(text) {
+  const parser = csvParser();
+  parser.push(text);
+  return parser.end();
 }
 
 const blankRow = (row) => row.every((v) => v === "");
@@ -80,11 +155,22 @@ export async function publicSheet(source, { force = false, request = fetch, titl
   // A private workbook redirects to a sign-in page rather than failing.
   if (/text\/html/i.test(response.headers?.get?.("content-type") || ""))
     throw new Error("Workbook is not publicly readable. Configure the service account.");
-  const parsed = parseCSV(await response.text());
+  const parser = csvParser();
+  if (response.body?.getReader) {
+    const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      parser.push(value);
+    }
+  } else parser.push(await response.text());
+  const parsed = parser.end();
   const columns = (parsed[0] || []).map((c) => c.trim());
   // Rows stay positional (row i is sheet row i + 2) so source links resolve; only the trailing
   // blank rows the export pads with are dropped.
-  const rows = parsed.slice(1).map((row) => row.map((v) => (v === "" ? null : v)));
+  const rows = parsed;
+  rows.shift();
+  for (const row of rows) for (let i = 0; i < row.length; i++) if (row[i] === "") row[i] = null;
   while (rows.length && blankRow(rows.at(-1).map((v) => v ?? ""))) rows.pop();
   const missing = missingColumns(source, columns);
   if (missing.length)

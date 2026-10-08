@@ -5,8 +5,7 @@
   "framework": "vite",
   "functions": {
     "api/index.mjs": {
-      "maxDuration": 300,
-      "memory": 2048
+      "maxDuration": 300
     }
   },
   "rewrites": [

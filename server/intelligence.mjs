@@ -73,8 +73,11 @@ export function intelligenceRoutes(
       await writeFile(cacheFile, JSON.stringify(saved));
       return { cacheFile, info: await stat(cacheFile) };
     }
-    if (loadSource) await loadSource(source, false);
-    return { cacheFile, info: await stat(cacheFile) };
+    // Hand the freshly loaded rows straight over instead of re-reading and re-parsing the
+    // file: two copies of Bookings at once is what exhausts a serverless instance.
+    const loaded = loadSource ? await loadSource(source, false) : null;
+    if (loaded?.status === "error") throw new Error(`${source.title || source.key}: ${loaded.error}`);
+    return { cacheFile, info: await stat(cacheFile), loaded };
   }
   const db =
     providers.db ??
@@ -129,8 +132,9 @@ export function intelligenceRoutes(
     if (!engine)
       engine = await DuckDBInstance.create(":memory:", {
         allow_unsigned_extensions: "false",
-        // Below this, tables spill into /tmp, which serverless caps at 512MB alongside the sheet cache.
-        memory_limit: "768MB",
+        // Tables beyond this spill into /tmp (capped at 512MB on serverless); the JS heap and
+        // this limit must together fit the 2GB instance.
+        memory_limit: "512MB",
         threads: "1",
         preserve_insertion_order: "false",
         temp_directory: path.join(scratch, ".cache", "agent", "spill"),
@@ -188,7 +192,7 @@ export function intelligenceRoutes(
           requested.includes(s.key) ||
           requested.includes("scoped_raw_" + s.key),
       )) {
-        const { cacheFile, info: fileInfo } = await ensureCached(source);
+        const { cacheFile, info: fileInfo, loaded } = await ensureCached(source);
         // Original-column tables are as large as the facts and only serve scoped_raw_* queries,
         // so they are built on first use rather than for every source an answer touches.
         const needRaw = requested.includes("scoped_raw_" + source.key);
@@ -197,7 +201,7 @@ export function intelligenceRoutes(
           !versions.has(source.key) ||
           metadata.get(source.key)?.mtime !== fileInfo.mtimeMs;
         if (changed || (needRaw && rawVersions.get(source.key) !== metadata.get(source.key)?.fetchedAt)) {
-          data = JSON.parse(await readFile(cacheFile, "utf8"));
+          data = loaded ?? JSON.parse(await readFile(cacheFile, "utf8"));
           metadata.set(source.key, {
             source: source.key,
             rows: data.rows.length,
