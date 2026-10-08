@@ -3,6 +3,7 @@ import { ArrowUp, ArrowUpRight, Sparkles, MessageSquare, ChartNoAxesCombined, Ch
 import { fmt, formatField } from "../semantics/formats";
 import { metrics } from "../semantics/metrics";
 import { ChatAnswer } from "./ChatAnswer";
+import { AgentReply } from "./AgentReply";
 import { ChartControls } from "./ChartControls";
 import { AgentSettings } from "./AgentSettings";
 import { usePreferences, hydratePreferences } from "../state/preferences";
@@ -22,6 +23,38 @@ async function api(url: string, options: RequestInit = {}) {
   if (!r.ok) throw new Error(data.error || `The assistant server answered ${r.status}. Please retry.`);
   if (!text) throw new Error("The assistant server returned an empty reply — it may be restarting. Please retry in a moment.");
   return data;
+}
+/** Agent request with live progress: the server streams NDJSON progress lines, then the result. */
+async function askAgent(path: string, body: object, signal: AbortSignal, onProgress: (text: string) => void) {
+  const r = await fetch("/api/intelligence/" + path, { method: "POST", signal, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...body, stream: true }) });
+  if (!(r.headers.get("content-type") || "").includes("ndjson")) {
+    const text = await r.text();
+    let data: any = {};
+    try { data = text ? JSON.parse(text) : {}; } catch { /* handled below */ }
+    if (!r.ok) throw new Error(data.error || `The assistant server answered ${r.status}. Please retry.`);
+    if (!text) throw new Error("The assistant server returned an empty reply — it may be restarting. Please retry in a moment.");
+    return data;
+  }
+  const reader = r.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let result: any;
+  for (;;) {
+    const { value, done } = await reader.read();
+    buffer += decoder.decode(value, { stream: !done });
+    const lines = buffer.split("\n");
+    buffer = done ? "" : lines.pop() || "";
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      const event = JSON.parse(line);
+      if (event.type === "progress") onProgress(event.text);
+      else if (event.type === "error") throw new Error(event.error);
+      else if (event.type === "result") result = event.result;
+    }
+    if (done) break;
+  }
+  if (!result) throw new Error("The assistant stopped before answering. Please retry.");
+  return result;
 }
 const changed = () => window.dispatchEvent(new Event("p57-documents"));
 export function useDocuments(kind: string) {
@@ -575,7 +608,8 @@ export function SavedElements({
 }
 export function IntelligenceWorkspace({
   compact = false,
-}: { compact?: boolean } = {}) {
+  autoAsk,
+}: { compact?: boolean; autoAsk?: { text: string; id: number } } = {}) {
   const s = useStore();
   const prefs = usePreferences((s) => s.preferences);
   const [controls, setControls] = useState(false);
@@ -589,6 +623,7 @@ export function IntelligenceWorkspace({
   const [question, setQuestion] = useState("");
   const [page, setPage] = useState(s.tab === 13 ? 0 : s.tab);
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<string[]>([]);
   const requestController = useRef<AbortController | null>(null);
   useEffect(()=>()=>requestController.current?.abort(),[]);
   const [error, setError] = useState("");
@@ -651,26 +686,27 @@ export function IntelligenceWorkspace({
     return () => window.removeEventListener("atlas-provider", reload);
   }, []);
   useEffect(() => { end.current?.scrollIntoView({block:"nearest"}); }, [messages, busy]);
-  const send = async () => {
-    const base = question.trim();
-    const message = [base, ...attachments.map((a) => a.note)]
+  // `override` sends a follow-up or action prompt directly, leaving the composer untouched.
+  const send = async (override?: string, forceMode?: "ask" | "build") => {
+    const base = (override ?? question).trim();
+    const message = override != null ? base : [base, ...attachments.map((a) => a.note)]
       .filter(Boolean)
       .join("\n\n");
     if (!message || busy) return;
     setBusy(true);
     setError("");
-    setQuestion("");
-    setAttachments([]);
+    setProgress([]);
+    if (override == null) {
+      setQuestion("");
+      setAttachments([]);
+    }
     setMessages((m) => [...m, { role: "user", content: message }]);
     try {
-      const requestedMode = /\b(create|build|generate|make|add|save|plot|draw)\b/i.test(base) && /\b(chart|table|graph|element|view|insight|summary|list|dashboard)\b/i.test(base) ? "build" : mode;
+      const requestedMode = forceMode ?? (/\b(create|build|generate|make|add|save|plot|draw)\b/i.test(base) && /\b(chart|table|graph|element|view|insight|summary|list|dashboard)\b/i.test(base) ? "build" : mode);
       if (requestedMode !== mode) setMode(requestedMode);
       const controller = new AbortController();
       requestController.current = controller;
-      const result = await api(requestedMode, {
-        signal:controller.signal,
-        method: "POST",
-        body: JSON.stringify({
+      const result = await askAgent(requestedMode, {
           message,
           conversationId,
           history: conversationId && prefs.chatSaveHistory && status?.supabase
@@ -681,12 +717,12 @@ export function IntelligenceWorkspace({
                 scope: m.scope,
               })),
           maxTokens: prefs.chatTokens,
+          reasoning: prefs.chatReasoning,
           saveHistory: prefs.chatSaveHistory && !!status?.supabase,
           page,
           rate: s.rate,
           filters: { ...s.filters, cross: s.transient },
-        }),
-      });
+        }, controller.signal, (text) => setProgress((p) => (p.at(-1) === text ? p : [...p, text].slice(-8))));
       setConversationId(result.conversationId);
       setMessages((m) => [
         ...m,
@@ -694,6 +730,7 @@ export function IntelligenceWorkspace({
           role: "assistant",
           content: result.answer,
           evidence: result.evidence,
+          presentation: result.presentation,
           saved: result.saved,
           scope: result.scope,
           model: result.model,
@@ -704,11 +741,19 @@ export function IntelligenceWorkspace({
     } catch (e) {
       setError((e as Error).name === "AbortError" ? "Request stopped. Your question is preserved." : String(e));
       setMessages(m=>m.slice(0,-1));
-      setQuestion(message);
+      if (override == null) setQuestion(message);
     } finally {
       setBusy(false);
     }
   };
+  const lastAsk = useRef<number>();
+  useEffect(() => {
+    if (!autoAsk || lastAsk.current === autoAsk.id) return;
+    lastAsk.current = autoAsk.id;
+    setMode("ask");
+    void send(autoAsk.text, "ask");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoAsk]);
   return (
     <section className={"intelligence-panel studio-chat " + (compact ? "compact" : "expanded")}>
       {compact ? (
@@ -745,7 +790,7 @@ export function IntelligenceWorkspace({
         </>
       )}
       {compact && controls && <AgentSettings />}
-      {!!messages.at(-1)?.activity?.length && <details className="agent-tool-log"><summary>Agent tool activity · {messages.at(-1).activity.length} actions</summary>{messages.at(-1).activity.map((a:any,i:number)=><p key={i}>{a.tool.replaceAll("_"," ")} · {a.status}{a.error ? ` · ${a.error}` : ""}</p>)}</details>}
+      {!!messages.at(-1)?.activity?.length && <details className="agent-tool-log"><summary>Agent tool activity · {messages.at(-1).activity.length} actions</summary>{messages.at(-1).activity.map((a:any,i:number)=><p key={i}>{a.label || a.tool.replaceAll("_"," ")} · {a.status}{a.error ? ` · ${a.error}` : ""}</p>)}</details>}
       <div className="agent-layout">
         <aside>
           <details open={!compact}>
@@ -827,7 +872,7 @@ export function IntelligenceWorkspace({
                 <h3>{mode === "ask" ? "Clarity, from your numbers." : "Turn a question into a view."}</h3>
                 <p>{mode === "ask" ? "Explore performance with answers grounded in your source sheets." : "Create a chart, table or insight and save it to your workspace."}</p>
                 <div className="chat-suggestions">
-                  {(mode === "ask" ? ["How much sales did Kwality House do in April 2026?", "Compare studio attendance this month"] : ["Build a table of monthly sales by studio for 2026", "Create a chart of late cancellations by instructor"]).map(text => <button key={text} onClick={() => setQuestion(text)}>{text}<span>↗</span></button>)}
+                  {(mode === "ask" ? ["Why did attendance change at Bandra last month?", "Anything unusual this week?", "Will Kemps hit ₹50L sales this month?", "Top 5 recurring classes by class average in Sept"] : ["Build a table of monthly sales by studio for 2026", "Create a chart of late cancellations by instructor"]).map(text => <button key={text} onClick={() => setQuestion(text)}>{text}<span>↗</span></button>)}
                 </div>
               </div>
             )}
@@ -836,7 +881,9 @@ export function IntelligenceWorkspace({
                 <strong>
                   {m.role === "user" ? "You" : "Atlas Intelligence"}
                 </strong>
-                <ChatAnswer text={m.content}/>
+                {m.role === "assistant"
+                  ? <AgentReply message={m} question={messages[i - 1]?.content || ""} latest={i === messages.length - 1 && !busy} onAsk={(text) => void send(text, "ask")} onBuild={(prompt) => void send(prompt, "build")} />
+                  : <ChatAnswer text={m.content}/>}
                 {m.scope && <p className="chat-answer-scope">{m.scope.location?.join(" · ") || "All studios"} · {m.scope.from || "All dates"}{m.scope.to ? " → " + m.scope.to : ""}</p>}
                 {m.saved?.filter((doc: any) => typeof doc === "object" && doc?.id).map((doc: Doc) => <button className="chat-saved" key={doc.id} onClick={() => useStore.getState().set({tab:doc.page})}><Check size={15}/><span>Saved: {doc.title}<small>{tabs[doc.page]}</small></span><span>↗</span></button>)}
                 {prefs.chatEvidence && m.evidence?.length > 0 && (
@@ -861,7 +908,7 @@ export function IntelligenceWorkspace({
                 )}
               </article>
             ))}
-            {busy && <div className="chat-thinking" role="status"><Sparkles size={15}/>{mode === "ask" ? "Checking source data…" : "Building and validating your element…"}<span className="chat-loading-dots">•••</span><button className="button" onClick={()=>requestController.current?.abort()}>Stop</button></div>}
+            {busy && <div className="chat-thinking" role="status"><div className="chat-thinking-head"><Sparkles size={15}/><span>{progress.at(-1) || (mode === "ask" ? "Checking source data…" : "Building and validating your element…")}</span><span className="chat-loading-dots">•••</span><button className="button" onClick={()=>requestController.current?.abort()}>Stop</button></div>{progress.length > 1 && <ol className="chat-progress">{progress.slice(0,-1).map((p,i)=><li key={i}><Check size={11}/>{p}</li>)}</ol>}</div>}
             <div ref={end}/>
           </div>
           <div className="chat-composer">

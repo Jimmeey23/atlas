@@ -232,3 +232,61 @@ test("GPT tool loop queries real fixtures and persists requested elements and co
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("ask streams progress, re-checks unmatched figures once and returns a structured presentation", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "p57-agent-present-"));
+  await mkdir(path.join(root, ".cache"));
+  const columns = ["Member ID", "Late Cancelled", "Session Date", "Location", "Attended"];
+  await writeFile(
+    path.join(root, ".cache/bookings.json"),
+    JSON.stringify({ key: "bookings", columns, rows: [["1", true, "2026-09-01", "Kemps Corner", false], ["2", false, "2026-09-02", "Kemps Corner", true], ["3", false, "2026-09-03", "Kemps Corner", true]], fetchedAt: 1791000000000 }),
+  );
+  const calls: any[] = [];
+  const present = (headline: string) => ({
+    type: "function_call", name: "present_answer", call_id: "p" + calls.length,
+    arguments: JSON.stringify({
+      headline, answer: "Late cancellations were **1** of 3 bookings.",
+      highlights: [{ label: "Bookings", value: "3", change: null, tone: "neutral" }],
+      chart: { type: "bar", title: "Bookings", evidence: 0, x: "location", series: ["total"] },
+      table_evidence: 7, caveats: ["Small sample."], follow_ups: ["Same for Bandra", "Show by instructor"],
+      actions: [{ type: "open_tab", label: "Open late cancellations", tab: 12, compare: null, prompt: null, evidence: null, scope_json: null }],
+    }),
+  });
+  const ai = { responses: { create: async (request: any) => {
+    calls.push(structuredClone(request));
+    if (calls.length === 1) return { output: [{ type: "function_call", name: "query_studio", call_id: "q1", arguments: JSON.stringify({ sql: "SELECT location, COUNT(*) AS total FROM bookings GROUP BY 1", scope_json: null }) }] };
+    if (calls.length === 2) return { output: [present("Kemps had 3 bookings, 48 of them late.")] };
+    return { output: [present("Kemps had 3 bookings in September.")] };
+  } } };
+  const app = express();
+  app.use(express.json());
+  intelligenceRoutes(app, root, [{ key: "bookings", columns }], undefined, { db: null, ai });
+  const server = app.listen(0, "127.0.0.1");
+  await new Promise((r) => server.once("listening", r));
+  const url = "http://127.0.0.1:" + (server.address() as any).port;
+  try {
+    const response = await fetch(url + "/api/intelligence/ask", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: "how many bookings at kemps in sept 2026", stream: true, filters: {} }),
+    });
+    const lines = (await response.text()).trim().split("\n").map((l) => JSON.parse(l));
+    const final = lines.at(-1);
+    assert.equal(final.type, "result", JSON.stringify(final));
+    assert.ok(lines.filter((l) => l.type === "progress").some((l) => /custom query/.test(l.text)));
+    assert.ok(lines.some((l) => l.type === "progress" && /Re-checking 1 figure/.test(l.text)));
+    // The first present_answer claimed "48", which no result supports, so it was sent back once.
+    assert.equal(calls.length, 3);
+    assert.match(JSON.parse(calls[2].input.at(-1).output).error, /48/);
+    assert.equal(calls[1].tool_choice, "required");
+    const p = final.result.presentation;
+    assert.equal(p.headline, "Kemps had 3 bookings in September.");
+    assert.equal(p.chart.type, "bar");
+    assert.equal(p.table_evidence, null); // out-of-range evidence index dropped
+    assert.deepEqual(p.follow_ups, ["Same for Bandra", "Show by instructor"]);
+    assert.match(final.result.answer, /^Kemps had 3 bookings in September\.\n\nLate cancellations/);
+    assert.equal(final.result.evidence[0].result[0].total, "3");
+  } finally {
+    await new Promise<void>((r, j) => server.close((e) => (e ? j(e) : r())));
+    await rm(root, { recursive: true, force: true });
+  }
+});

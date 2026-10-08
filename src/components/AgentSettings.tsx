@@ -83,6 +83,14 @@ export function AgentSettings() {
             />
           </label>
           <label>
+            Reasoning depth
+            <select value={p.chatReasoning} onChange={(e) => update({ chatReasoning: e.target.value as "low" | "medium" | "high" })} title="Applies to reasoning models (gpt-5, o-series). Deeper is slower but more careful.">
+              <option value="low">Fast</option>
+              <option value="medium">Balanced</option>
+              <option value="high">Thorough</option>
+            </select>
+          </label>
+          <label>
             <input
               type="checkbox"
               checked={p.chatEvidence}

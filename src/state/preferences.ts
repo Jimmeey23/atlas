@@ -46,6 +46,7 @@ export const defaultPreferences = {
   chatWidth: 580,
   chatModel: "gpt-4.1",
   chatTokens: 3500,
+  chatReasoning: "medium" as "low" | "medium" | "high",
   chatEvidence: true,
   chatSaveHistory: true,
   sectionInsights: {} as Record<

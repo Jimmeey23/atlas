@@ -27,7 +27,7 @@ test('Ask returns governed payment totals without GPT or cloud, and does not inv
  const rows=[['2026-04-01',100.15,5,'succeeded','Kemps Corner','s1',null,'pos'],['2026-04-30',50.15,2,'succeeded','Kwality House','s1',false,'pos'],['2026-04-20',1000,50,'failed','Kemps Corner','s2',false,'pos'],['2026-04-20',2000,100,'succeeded','Kemps Corner','s3',true,'pos'],['2026-09-01',9000,450,'succeeded','Kemps Corner','s4',false,'pos'],['2026-04-01',3000,150,'succeeded','Kenkere House','s5',false,'pos']];
  await writeFile(path.join(root,'.cache/sales.json'),JSON.stringify({key:'sales',columns,rows,fetchedAt:1791000000000}));
  let calls=0;const ai={responses:{create:async(request:any)=>{
-  calls++;assert.deepEqual(request.tools.map((t:any)=>t.name),['query_studio','inspect_source','query_sales','find_entity','query_metrics']);
+  calls++;assert.deepEqual(request.tools.map((t:any)=>t.name),['query_studio','inspect_source','query_sales','find_entity','query_metrics','compare_periods','explain_change','forecast','find_anomalies','rank_performance','member_journey','what_if','present_answer']);
   if(request.input.at(-1)?.role === 'user' && /Compare/.test(request.input.at(-1).content)) return {output:[{type:'function_call',name:'query_sales',call_id:'canonical-sales',arguments:JSON.stringify({group_by:'studio',scope_json:null})}]};
   return {output:[],output_text:'Read-only question answered.'};
  }}};

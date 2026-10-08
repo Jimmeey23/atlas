@@ -5,6 +5,39 @@ import { useStore, tabs } from "../state/store";
 import type { Insight } from "../insights/rules";
 import { InsightEditor, useDocuments } from "./IntelligenceWorkspace";
 import { fmt } from "../semantics/formats";
+import { askAgent } from "./FloatingAgent";
+
+type BriefingItem = { tone: "positive" | "negative"; title: string; detail: string; question: string };
+/** Weekly briefing: the most unusual studio-level moves in the last complete week, computed on the server without AI. */
+function Briefing() {
+  const imports = useStore((s) => s.filters.imports);
+  const [state, setState] = useState<{ items?: BriefingItem[]; at?: string; error?: string; loading?: boolean }>({ loading: true });
+  const load = (refresh = false) => {
+    setState((s) => ({ ...s, loading: true }));
+    fetch("/api/intelligence/briefing", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ imports, refresh }) })
+      .then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.error); setState({ items: d.items, at: d.generatedAt }); })
+      .catch((e) => setState({ error: String(e.message || e) }));
+  };
+  useEffect(() => load(), [imports]);
+  return (
+    <details className="briefing" open>
+      <summary>
+        <span className="signal-section-label">This week’s briefing</span>
+        <button className="briefing-refresh" onClick={(e) => { e.preventDefault(); load(true); }} disabled={state.loading} title="Recalculate">{state.loading ? "…" : "↻"}</button>
+      </summary>
+      {state.error ? <p className="muted small">Briefing unavailable: {state.error}</p>
+        : state.loading && !state.items ? <p className="muted small">Scanning last week against recent weeks…</p>
+        : !state.items?.length ? <p className="muted small">Nothing unusual last week — every studio stayed within its normal range.</p>
+        : state.items.map((item, i) => (
+          <article key={i} className={`briefing-item ${item.tone}`}>
+            <h4>{item.title}</h4>
+            <p>{item.detail}</p>
+            <button className="insight-action" onClick={() => askAgent(item.question)}>Ask the agent why <ArrowUpRight size={12} /></button>
+          </article>
+        ))}
+    </details>
+  );
+}
 
 /** Drawer arrangement, remembered per device (deliberately not in the cloud-synced preferences). */
 type DrawerLayout = { mode: "docked" | "floating" | "popout"; pinned: boolean; width: number; x: number; y: number; height: number };
@@ -34,6 +67,7 @@ function InsightsBody({ items, onDismiss }: { items: Insight[]; onDismiss: (i: I
       </p>
       <InsightEditor />
       {saveError && <p role="alert">{saveError}</p>}
+      <Briefing />
       <h3 className="signal-section-label">Scope signals</h3>
       {relevant.map((i) => (
         <article

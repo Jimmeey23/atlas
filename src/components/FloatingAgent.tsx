@@ -6,10 +6,23 @@ import { useStore, tabs } from "../state/store";
 
 // Maximised by default; the choice is remembered on this device only.
 const MAX_KEY = "p57-chat-maximized";
+/** Anything in the app can ask the agent a question: window.dispatchEvent(new CustomEvent("p57-ask-agent", {detail: "question"})). */
+export const askAgent = (question: string) => window.dispatchEvent(new CustomEvent("p57-ask-agent", { detail: question }));
 const readMax = () => { try { return localStorage.getItem(MAX_KEY) !== "false"; } catch { return true; } };
 export function FloatingAgent() {
   const [open, setOpen] = useState(false);
   const [maximized, setMaximized] = useState(readMax);
+  const [autoAsk, setAutoAsk] = useState<{ text: string; id: number }>();
+  useEffect(() => {
+    const onAsk = (e: Event) => {
+      const text = String((e as CustomEvent).detail || "").trim();
+      if (!text) return;
+      setOpen(true);
+      setAutoAsk({ text, id: Date.now() });
+    };
+    window.addEventListener("p57-ask-agent", onAsk);
+    return () => window.removeEventListener("p57-ask-agent", onAsk);
+  }, []);
   const tab = useStore((s) => s.tab);
   const toggleMax = () => setMaximized((m) => { try { localStorage.setItem(MAX_KEY, String(!m)); } catch { /* session only */ } return !m; });
   const prefs = usePreferences((s) => s.preferences);
@@ -85,7 +98,7 @@ export function FloatingAgent() {
               </button>
             </div>
           </header>
-          <IntelligenceWorkspace compact />
+          <IntelligenceWorkspace compact autoAsk={autoAsk} />
         </section>
       )}
     </>

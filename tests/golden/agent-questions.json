@@ -1,0 +1,8 @@
+[
+  { "question": "best recurring class at kemps in sept 2026 by class avg (min 3 classes)", "expect": ["Saturday\\s*10:15", "12\\.5"], "why": "class_slot grouping, hosted excluded, minimum sample" },
+  { "question": "KH attendance Sep'26 vs Aug", "expect": ["2,?090", "19(\\.\\d)?\\s?%"], "why": "studio shortform + month comparison" },
+  { "question": "why did attendance drop at bandra in sept 2026 compared to aug?", "expect": ["1,?404", "Barre", "per class|class size|attendees per class"], "why": "explain_change drivers and mix" },
+  { "question": "kemps sales sept 2026", "expect": ["32\\.1\\s?L|32,06,43\\d|3,206,43\\d"], "why": "canonical sales basis" },
+  { "question": "which instructor had the highest fill rate in sept 2026? at least 5 classes", "expect": ["Atulan"], "why": "rank_performance across instructors" },
+  { "question": "how did each studio do on attendance in sep 26 vs aug 26", "expect": ["Kenkere", "Supreme|Bandra", "Kwality|Kemps"], "why": "multi-studio comparison" }
+]
