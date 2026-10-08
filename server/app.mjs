@@ -2,7 +2,8 @@ import { stickyNoteRoutes } from "./sticky-notes.mjs";
 import "dotenv/config";
 import express from "express";
 import { authenticatedSheet } from "./sheets-auth.mjs";
-import { readFile, mkdir, copyFile } from "node:fs/promises";
+import { publicSheet, missingColumns, snapshotsToPrune } from "./sheets-public.mjs";
+import { readFile, mkdir, copyFile, readdir, unlink } from "node:fs/promises";
 import path from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import WebSocket from "ws";
@@ -58,6 +59,13 @@ export async function createApp({ serveStatic = false } = {}) {
     const key = `.cache/snapshots/${data.key}-${data.fetchedAt}.json`;
     if (await store.read(key)) return;
     await store.write(key, data);
+    // Every fetch archives a full copy (bookings alone is ~80MB), so unbounded archives fill
+    // the disk. Drill-downs only need the versions a browser can still be showing.
+    const dir = path.join(cacheRoot, ".cache", "snapshots");
+    try {
+      for (const file of snapshotsToPrune(await readdir(dir), data.key))
+        await unlink(path.join(dir, file)).catch(() => {});
+    } catch {}
   }
   const metadata = new Map();
   const freshness = createFreshness();
@@ -82,84 +90,18 @@ export async function createApp({ serveStatic = false } = {}) {
       // recording the older revision makes the next probe refetch. Recording
       // the newer one would make it skip and keep partially stale rows.
       const { revision } = await freshness.revision(source.id, { maxAge: 0 });
-      let rows,
-        columns,
-        mode,
-        foundTitles = [];
+      let rows, columns, mode, foundTitles;
       try {
         if (process.env.ALLOW_PUBLIC_SHEETS === "false") throw new Error("Public reads disabled.");
-        // GViz is an explicitly documented public-read alternative. Confirm title from workbook metadata first.
-        let meta = metadata.get(source.id);
-        if (!meta || force) {
-          const response = await fetch(
-            `https://docs.google.com/spreadsheets/d/${source.id}/edit`,
-            { signal: AbortSignal.timeout(30000) },
-          );
-          if (!response.ok)
-            throw new Error(`Workbook metadata HTTP ${response.status}`);
-          const html = await response.text();
-          const titles = [...html.matchAll(/"name":"([^"\n]+)","id":\d+/g)].map(
-            (m) => m[1],
-          );
-          const visible = [
-            ...html.matchAll(/docs-sheet-tab-name[^>]*>([^<]+)</g),
-          ].map((m) => m[1]);
-          meta = { titles: [...new Set([...titles, ...visible])], html };
-          metadata.set(source.id, meta);
-        }
-        foundTitles = meta.titles;
-        if (
-          foundTitles.length &&
-          !foundTitles.some((t) => t.toLowerCase() === source.title.toLowerCase())
-        )
-          throw new Error(
-            `Tab '${source.title}' missing. Found: ${foundTitles.join(", ")}`,
-          );
-        const res = await fetch(
-          // gviz silently serves the DEFAULT tab when a sheet name does not match, so a renamed
-          // or missing tab reads as valid data from the wrong place. A configured gid addresses
-          // the tab exactly and removes that failure mode.
-          // gviz silently serves the DEFAULT tab when a sheet name does not match, so a renamed
-          // or missing tab reads as valid data from the wrong place. A configured gid addresses
-          // the tab exactly. A forced refresh also busts Google's response cache, which has been
-          // observed returning a stale, partially-filtered payload for the same URL.
-          `https://docs.google.com/spreadsheets/d/${source.id}/gviz/tq?tqx=out:json&headers=1&${source.gid ? `gid=${encodeURIComponent(source.gid)}` : `sheet=${encodeURIComponent(source.title)}`}&range=A:ZZ${force ? `&_=${Date.now()}` : ""}`,
-          
-          { cache: "no-store", signal: AbortSignal.timeout(120000) },
-        );
-        if (!res.ok) throw new Error(`Public sheet HTTP ${res.status}`);
-        const text = await res.text();
-        const match = text.match(/setResponse\(([\s\S]*)\);?\s*$/);
-        if (!match)
-          throw new Error(
-            "Workbook is not publicly readable. Configure the service account.",
-          );
-        const data = JSON.parse(match[1]);
-        if (data.status !== "ok") throw new Error(JSON.stringify(data.errors));
-        columns = data.table.cols.map((c) => c.label.trim());
-        // Reject a wrong/default tab via its complete header fingerprint.
-        const aliases = {
-          sales: ["Paid In Money", "Credits"],
-          lapsed: ["Total Sessions", "Completed Sessions"],
-          checkins: ["Month Year"],
-        };
-        const missing = source.columns.filter(
-          (c) => !columns.includes(c) && !(aliases[source.key] || []).includes(c),
-        );
-        if (missing.length)
-          throw new Error(
-            `Schema mismatch for '${source.title}': ${missing.join(", ")}. Found columns: ${columns.join(", ")}`,
-          );
-        rows = data.table.rows.map((r) =>
-          r.c.map((c) => (c == null ? null : (c.f ?? c.v))),
-        );
-        mode = "Public Google Sheets (title + schema verified)";
+        // Tab titles are re-read on a forced refresh so a renamed tab is caught.
+        const titles = force ? undefined : metadata.get(source.id);
+        ({ rows, columns, mode, foundTitles } = await publicSheet(source, { force, titles }));
+        metadata.set(source.id, foundTitles);
       } catch (publicError) {
-        const authenticated = await authenticatedSheet(source, publicError);
-        ({ rows, columns, mode, foundTitles } = authenticated);
+        ({ rows, columns, mode, foundTitles } = await authenticatedSheet(source, publicError));
       }
 
-      const missing = source.columns.filter((c) => !columns.includes(c));
+      const missing = missingColumns(source, columns);
       const result = {
         key: source.key,
         title: source.title,
@@ -192,31 +134,8 @@ export async function createApp({ serveStatic = false } = {}) {
       };
     }
   }
-  app.get("/api/sheets/:key", async (req, res) => {
-    const source = config.find((s) => s.key === req.params.key);
-    if (!source) return res.status(404).json({ error: "Unknown source" });
-    if (req.query.snapshot === "true") {
-      try {
-        const cached = await store.read(`.cache/${source.key}.json`);
-        if (!cached) throw new Error("No saved source snapshot.");
-        await archiveSnapshot(cached);
-        return res.set("Cache-Control", "no-store").json({
-          ...cached,
-          cached: true,
-          stale: Date.now() - cached.fetchedAt >= ttl,
-        });
-      } catch {
-        return res.status(404).json({ error: "No saved source snapshot." });
-      }
-    }
-    const force = req.query.refresh === "true";
-    if (!inflight.has(source.key))
-      inflight.set(
-        source.key,
-        load(source, force).finally(() => inflight.delete(source.key)),
-      );
-    res.set("Cache-Control", "no-store").json(await inflight.get(source.key));
-  });
+  // Registered before /api/sheets/:key, which would otherwise capture "freshness" as a
+  // source key and answer 404, silently disabling every client freshness check.
   // One small metadata call per workbook answers "is anything on screen out of
   // date?" for every source at once. The client polls this, not the sheets.
   app.get("/api/sheets/freshness", async (_, res) => {
@@ -245,6 +164,31 @@ export async function createApp({ serveStatic = false } = {}) {
       }),
     );
     res.set("Cache-Control", "no-store").json({ checkedAt: Date.now(), sources });
+  });
+  app.get("/api/sheets/:key", async (req, res) => {
+    const source = config.find((s) => s.key === req.params.key);
+    if (!source) return res.status(404).json({ error: "Unknown source" });
+    if (req.query.snapshot === "true") {
+      try {
+        const cached = await store.read(`.cache/${source.key}.json`);
+        if (!cached) throw new Error("No saved source snapshot.");
+        await archiveSnapshot(cached);
+        return res.set("Cache-Control", "no-store").json({
+          ...cached,
+          cached: true,
+          stale: Date.now() - cached.fetchedAt >= ttl,
+        });
+      } catch {
+        return res.status(404).json({ error: "No saved source snapshot." });
+      }
+    }
+    const force = req.query.refresh === "true";
+    if (!inflight.has(source.key))
+      inflight.set(
+        source.key,
+        load(source, force).finally(() => inflight.delete(source.key)),
+      );
+    res.set("Cache-Control", "no-store").json(await inflight.get(source.key));
   });
   app.get("/api/field-health", async (_, res) => {
     const result = [];

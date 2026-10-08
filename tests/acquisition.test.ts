@@ -67,7 +67,9 @@ import { contributesToMetric, eligibleMembership, referenceConverted, referenceN
 import { instructorAcquisitionAggregate } from '../src/data/acquisition.ts';
 test('reference conversion eligibility and exact metric contributors preserve missing data', () => {
   const credits={entry_type:'New - Trial',conversion:'Converted',purchase_journey:'Money Credits 500; Money Credits 1000',ltv:null};
-  assert.equal(referenceConverted(credits),false);
+  // Conversion is the source Conversion Status alone; a money-credit-only journey still converts.
+  assert.equal(referenceConverted(credits),true);
+  assert.equal(eligibleMembership(credits),false);
   assert.equal(eligibleMembership({...credits,purchase_journey:'Money Credits 500 / Monthly Unlimited'}),true);
   assert.equal(referenceConverted({...credits,purchase_journey:null}),true);
   assert.equal(referenceNew({entry_type:'Newcomer'}),false);
@@ -91,7 +93,7 @@ test('reference row counts, unique instructor outcomes and calendar month flags 
     const records=(await c.runAndReadAll(facts)).getRowObjectsJS();
     const aggregate=(await c.runAndReadAll(`WITH facts AS (${facts}) SELECT ${acquisitionAggregate} FROM facts`)).getRowObjectsJS()[0];
     const instructor=(await c.runAndReadAll(`WITH facts AS (${facts}) SELECT ${instructorAcquisitionAggregate} FROM facts`)).getRowObjectsJS()[0];
-    assert.equal(Number(aggregate.converted_members),3);assert.equal(Number(instructor.converted_members),2);
+    assert.equal(Number(aggregate.converted_members),4);assert.equal(Number(instructor.converted_members),3);
     assert.equal(Number(aggregate.newcomers),3);assert.equal(Number(instructor.newcomers),2);
     const summary=referenceSummary(records);
     assert.equal(summary.converted_members,Number(aggregate.converted_members));

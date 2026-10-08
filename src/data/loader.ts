@@ -89,7 +89,11 @@ export async function ensureWorkspace(tab: number, force = false) {
     }),
   );
 }
-export async function ensureSource(key: string, force = false): Promise<void> {
+/**
+ * `force` makes the gateway refetch the workbook. `latest` only skips this browser's
+ * 15-minute window, taking whatever newer copy the gateway already holds.
+ */
+export async function ensureSource(key: string, force = false, latest = false): Promise<void> {
   engine ||= init()
     .then(() => query(views))
     .then(() => undefined)
@@ -99,7 +103,7 @@ export async function ensureSource(key: string, force = false): Promise<void> {
     });
   await engine;
   if (jobs.has(key)) return jobs.get(key)!;
-  if (usable(key) && !force && Date.now() - health[key].fetchedAt! < 900000)
+  if (usable(key) && !force && !latest && Date.now() - health[key].fetchedAt! < 900000)
     return;
   const job = (async () => {
     sourceStates[key] = { state: usable(key) ? "refreshing" : "loading" };
@@ -116,7 +120,7 @@ export async function ensureSource(key: string, force = false): Promise<void> {
       const stale =
         !health[key]?.fetchedAt ||
         Date.now() - health[key].fetchedAt! >= 15 * 60 * 1000;
-      if (!force && !stale && usable(key)) {
+      if (!force && !latest && !stale && usable(key)) {
         sourceStates[key] = { state: "ready" };
         publish();
         return;
@@ -200,14 +204,22 @@ export async function revalidate(tab: number, minInterval = 10000) {
   if (!report) return [];
   const watched = new Set(dependencies(tab));
   if (tab===8 && useStore.getState().view===PERFORMANCE_MARKETING_VIEW) watched.add("meta");
-  const changed = report.sources
-    .filter((s) => watched.has(s.key) && s.stale)
-    // A source we have never loaded is handled by the normal load path.
-    .filter((s) => usable(s.key))
+  // A source we have never loaded is handled by the normal load path.
+  const loaded = report.sources.filter((s) => watched.has(s.key) && usable(s.key));
+  const stale = loaded
+    .filter((s) => s.stale)
     // The probe compares against the server's cache; ours may differ.
     .filter((s) => !s.currentRevision || s.currentRevision !== health[s.key]?.revision)
     .map((s) => s.key);
-  if (!changed.length) return [];
-  await Promise.all(changed.map((key) => ensureSource(key, true)));
-  return changed;
+  // The gateway already holds a newer copy (another tab or user refreshed it): take it
+  // without asking Google again.
+  const newer = loaded
+    .filter((s) => !stale.includes(s.key) && (s.fetchedAt ?? 0) > (health[s.key]?.fetchedAt ?? 0))
+    .map((s) => s.key);
+  if (!stale.length && !newer.length) return [];
+  await Promise.all([
+    ...stale.map((key) => ensureSource(key, true)),
+    ...newer.map((key) => ensureSource(key, false, true)),
+  ]);
+  return [...stale, ...newer];
 }

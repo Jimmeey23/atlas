@@ -20,7 +20,7 @@ The production server serves `dist/` and the same API on localhost:8787. This is
 
 ## Google Sheets configuration
 
-The supplied workbooks were publicly readable during implementation. Public read mode is enabled for these configured source IDs only. It requests the named tab and verifies its schema; it rejects mismatches rather than quietly treating the first sheet as the requested source.
+The supplied workbooks were publicly readable during implementation. Public read mode is enabled for these configured source IDs only. It confirms the tab title from workbook metadata, reads that tab's CSV export by its configured gid and verifies the header schema; it rejects mismatches rather than quietly treating the first sheet as the requested source. The CSV export is used instead of the gviz query endpoint because gviz infers one type per column and blanks every cell of a minority type (it dropped nearly all Lapsed `Total Sessions Completed` values).
 
 Public reads run first. When fetching or parsing a public Sheet fails, the gateway retries through Sheets API v4 using server-only OAuth credentials. Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `GOOGLE_REFRESH_TOKEN` in `.env` and restart the gateway. The refresh token must grant Sheets read access. These values never enter the browser bundle.
 
@@ -39,9 +39,9 @@ Official API documentation: [workbook metadata](https://developers.google.com/wo
 
 ## Refresh and provenance
 
-Sources load on demand for the selected workspace. Overview needs Sessions and New; Retention needs Lapsed, New and Checkins. Data health loads all ten sources, with at most three concurrent reads. Existing disk snapshots or schema-versioned IndexedDB Parquet snapshots appear first, even after their 15-minute freshness window. Old snapshots carry timestamps and an explicit saved-snapshot label while a live refresh runs. The active workspace checks freshness each minute and refreshes sources after the 15-minute window. A failed refresh preserves the last successful snapshot and displays the source error and retry control; unavailable sources do not render fabricated metrics.
+Sources load on demand for the selected workspace. Overview needs Sessions and New; Retention needs Lapsed, New and Checkins. Data health loads all ten sources, with at most three concurrent reads. Existing disk snapshots or schema-versioned IndexedDB Parquet snapshots appear first, even after their 15-minute freshness window. Old snapshots carry timestamps and an explicit saved-snapshot label while a live refresh runs. The active workspace checks `/api/sheets/freshness` each minute and on focus. With Google credentials the check compares the workbook's Drive edit time, so edits load within a minute; without them it refreshes sources after the 15-minute window. A newer copy already held by the gateway is picked up on the next check without another Google read. A failed refresh preserves the last successful snapshot and displays the source error and retry control; unavailable sources do not render fabricated metrics.
 
-Manual refresh reloads the active workspace's dependencies. Data health's Refresh all reloads all ten. DuckDB reads and table replacements share a serial queue; replacements roll back on failure. Original source rows are read from the exact version used by the displayed records. Versioned original snapshots stay in `.cache/snapshots/`; no retention cleanup policy is configured yet.
+Manual refresh reloads the active workspace's dependencies. Data health's Refresh all reloads all ten. DuckDB reads and table replacements share a serial queue; replacements roll back on failure. Original source rows are read from the exact version used by the displayed records. Versioned original snapshots stay in `.cache/snapshots/`; the newest ten per source are kept and older versions are pruned on the next fetch.
 
 Original source rows stay in the gateway cache and load on demand for drill details and CSV exports. This avoids keeping hundreds of thousands of duplicate original JSON records in the browser. Workbook positions remain attached to each fact as `source_row`.
 
