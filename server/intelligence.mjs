@@ -7,7 +7,10 @@ import { createClient } from "@supabase/supabase-js";
 import WebSocket from "ws";
 import OpenAI from "openai";
 import { DuckDBInstance } from "@duckdb/node-api";
-import { readFile, writeFile, mkdir, stat, open } from "node:fs/promises";
+import { readFile, writeFile, mkdir, stat, rm } from "node:fs/promises";
+import { createWriteStream } from "node:fs";
+import { createGzip } from "node:zlib";
+import { pipeline } from "node:stream/promises";
 import path from "node:path";
 import { normalise, sqlTypes } from "../src/data/normalise.ts";
 import { latestLapseSQL } from "../src/semantics/membership-eligibility.ts";
@@ -19,6 +22,20 @@ const kinds = new Set([
   "memory",
   "followup",
 ]);
+/** Streams text into a gzip file; write() resolves once the chunk is accepted. */
+function gzipWriter(file) {
+  const gzip = createGzip({ level: 1 });
+  const done = pipeline(gzip, createWriteStream(file));
+  // Surfaced by close(); without this a disk error would crash the process as unhandled.
+  done.catch(() => {});
+  return {
+    write: (text) => new Promise((resolve, reject) => gzip.write(text, (error) => (error ? reject(error) : resolve()))),
+    close: async () => {
+      gzip.end();
+      await done;
+    },
+  };
+}
 export function validateSQL(sql) {
   if (
     typeof sql !== "string" ||
@@ -106,12 +123,14 @@ export function intelligenceRoutes(
   let engine;
   let queue = Promise.resolve();
   const versions = new Map();
+  const rawVersions = new Map();
   const metadata = new Map();
   async function connection() {
     if (!engine)
       engine = await DuckDBInstance.create(":memory:", {
         allow_unsigned_extensions: "false",
-        memory_limit: "384MB",
+        // Below this, tables spill into /tmp, which serverless caps at 512MB alongside the sheet cache.
+        memory_limit: "768MB",
         threads: "1",
         preserve_insertion_order: "false",
         temp_directory: path.join(scratch, ".cache", "agent", "spill"),
@@ -170,11 +189,14 @@ export function intelligenceRoutes(
           requested.includes("scoped_raw_" + s.key),
       )) {
         const { cacheFile, info: fileInfo } = await ensureCached(source);
+        // Original-column tables are as large as the facts and only serve scoped_raw_* queries,
+        // so they are built on first use rather than for every source an answer touches.
+        const needRaw = requested.includes("scoped_raw_" + source.key);
         let data;
-        if (
+        const changed =
           !versions.has(source.key) ||
-          metadata.get(source.key)?.mtime !== fileInfo.mtimeMs
-        ) {
+          metadata.get(source.key)?.mtime !== fileInfo.mtimeMs;
+        if (changed || (needRaw && rawVersions.get(source.key) !== metadata.get(source.key)?.fetchedAt)) {
           data = JSON.parse(await readFile(cacheFile, "utf8"));
           metadata.set(source.key, {
             source: source.key,
@@ -191,67 +213,80 @@ export function intelligenceRoutes(
           title: source.title || source.key,
           ...(source.id ? {url:`https://docs.google.com/spreadsheets/d/${source.id}/edit`} : {}),
         });
-        if (data && versions.get(source.key) !== data.fetchedAt) {
-          const file = path.join(
-            scratch,
-            ".cache",
-            "agent",
-            source.key + ".ndjson",
-          );
-          const rawFile = path.join(
-            scratch,
-            ".cache",
-            "agent",
-            "raw_" + source.key + ".ndjson",
-          );
-          const normalizedFile = await open(file, "w");
-          const originalFile = await open(rawFile, "w");
+        const buildFacts = data && versions.get(source.key) !== data.fetchedAt;
+        const buildRaw = data && needRaw && rawVersions.get(source.key) !== data.fetchedAt;
+        if (buildFacts || buildRaw) {
+          const file = path.join(scratch, ".cache", "agent", source.key + ".ndjson.gz");
+          const rawFile = path.join(scratch, ".cache", "agent", "raw_" + source.key + ".ndjson.gz");
+          // The tables live in memory; the extracts are staging only, gzipped and removed after
+          // loading. Serverless /tmp is capped at 512MB and bookings alone produced ~350MB of
+          // uncompressed extracts.
           try {
-            for (let offset = 0; offset < data.rows.length; offset += 2000) {
-              const batch = data.rows.slice(offset, offset + 2000);
-              const normalized = normalise(
-                { ...data, rows: batch },
-                false,
-              ).rows.map((r) => ({
-                ...r,
-                source_row: Number(r.source_row) + offset,
-                row_id: Number(r.row_id) + offset,
-              }));
-              await normalizedFile.write(
-                normalized.map((r) => JSON.stringify(r)).join("\n") + "\n",
+            if (buildFacts) {
+              const normalizedFile = gzipWriter(file);
+              try {
+                for (let offset = 0; offset < data.rows.length; offset += 2000) {
+                  const batch = data.rows.slice(offset, offset + 2000);
+                  const normalized = normalise(
+                    { ...data, rows: batch },
+                    false,
+                  ).rows.map((r) => ({
+                    ...r,
+                    source_row: Number(r.source_row) + offset,
+                    row_id: Number(r.row_id) + offset,
+                  }));
+                  await normalizedFile.write(
+                    normalized.map((r) => JSON.stringify(r)).join("\n") + "\n",
+                  );
+                }
+              } finally {
+                await normalizedFile.close();
+              }
+              await c.run(
+                `CREATE OR REPLACE TABLE ${ident("facts_" + source.key)} AS SELECT * FROM read_json(${lit(file)},format='newline_delimited',compression='gzip',maximum_object_size=1048576,columns={${Object.entries(
+                  sqlTypes,
+                )
+                  .map(([k, t]) => lit(k) + ":" + lit(t))
+                  .join(",")}})`,
               );
-              await originalFile.write(
-                batch
-                  .map((row, index) =>
-                    JSON.stringify(
-                      Object.fromEntries([
-                        ["source_row", offset + index + 2],
-                        ...data.columns.map((name, i) => [
-                          name,
-                          row[i] ?? null,
-                        ]),
-                      ]),
-                    ),
-                  )
-                  .join("\n") + "\n",
+              if (source.key === "lapsed") await c.run(latestLapseSQL("facts_lapsed"));
+              versions.set(source.key, data.fetchedAt);
+              // An original-column table from an older version would mismatch the new facts.
+              if (!buildRaw && rawVersions.has(source.key)) {
+                await c.run(`DROP TABLE IF EXISTS ${ident("raw_" + source.key)}`);
+                rawVersions.delete(source.key);
+              }
+            }
+            if (buildRaw) {
+              const originalFile = gzipWriter(rawFile);
+              try {
+                for (let offset = 0; offset < data.rows.length; offset += 2000) {
+                  const batch = data.rows.slice(offset, offset + 2000);
+                  await originalFile.write(
+                    batch
+                      .map((row, index) =>
+                        JSON.stringify(
+                          Object.fromEntries([
+                            ["source_row", offset + index + 2],
+                            ...data.columns.map((name, i) => [name, row[i] ?? null]),
+                          ]),
+                        ),
+                      )
+                      .join("\n") + "\n",
+                  );
+                }
+              } finally {
+                await originalFile.close();
+              }
+              await c.run(
+                `CREATE OR REPLACE TABLE ${ident("raw_" + source.key)} AS SELECT * FROM read_json_auto(${lit(rawFile)},format='newline_delimited',compression='gzip',maximum_object_size=1048576,union_by_name=true)`,
               );
+              rawVersions.set(source.key, data.fetchedAt);
             }
           } finally {
-            await normalizedFile.close();
-            await originalFile.close();
+            await rm(file, { force: true });
+            await rm(rawFile, { force: true });
           }
-          await c.run(
-            `CREATE OR REPLACE TABLE ${ident("facts_" + source.key)} AS SELECT * FROM read_json(${lit(file)},format='newline_delimited',maximum_object_size=1048576,columns={${Object.entries(
-              sqlTypes,
-            )
-              .map(([k, t]) => lit(k) + ":" + lit(t))
-              .join(",")}})`,
-          );
-          if (source.key === "lapsed") await c.run(latestLapseSQL("facts_lapsed"));
-          await c.run(
-            `CREATE OR REPLACE TABLE ${ident("raw_" + source.key)} AS SELECT * FROM read_json_auto(${lit(rawFile)},format='newline_delimited',maximum_object_size=1048576,union_by_name=true)`,
-          );
-          versions.set(source.key, data.fetchedAt);
         }
         const terms = [];
         for (const field of [
@@ -317,7 +352,7 @@ export function intelligenceRoutes(
         await c.run(
           `CREATE OR REPLACE VIEW ${ident(source.key)} AS SELECT * FROM ${ident("facts_" + source.key)}${terms.length ? " WHERE " + terms.join(" AND ") : ""}`,
         );
-        await c.run(
+        if (needRaw) await c.run(
           `CREATE OR REPLACE VIEW ${ident("scoped_raw_" + source.key)} AS SELECT r.* FROM ${ident("raw_" + source.key)} r JOIN ${ident(source.key)} n USING(source_row)`,
         );
       }

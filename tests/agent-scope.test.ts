@@ -42,3 +42,15 @@ test('Ask returns governed payment totals without GPT or cloud, and does not inv
   const comparison=await send('Compare April 2026 sales for Kwality House and Kenkere House');assert.equal(comparison.status,200);assert.equal(comparison.body.evidence[0].result.length,2);assert.equal(comparison.body.evidence[0].result.find((r:any)=>r.location==='Kwality House, Kemps Corner').gross_revenue,150.3);assert.deepEqual(comparison.body.saved,[]);
  } finally {await new Promise<void>(r=>server.close(()=>r()));await rm(root,{recursive:true,force:true});}
 });
+
+import { dayRange } from '../server/agent-scope.mjs';
+test('day-level dates resolve to exact ranges, not whole months', () => {
+  const scope = (q: string) => resolveQuestionScope(q, { from: '2026-09-01', to: '2026-09-30', location: ['Kenkere House'] }).filters;
+  assert.deepEqual(scope('howmany leads did we receive across all studios between july 27 to july 31st 2026'), { imports: false, from: '2026-07-27', to: '2026-07-31' });
+  assert.deepEqual(scope('leads 2026-07-27 to 2026-07-31'), { imports: false, from: '2026-07-27', to: '2026-07-31' }, 'ISO dates are explicit and drop the dashboard studio');
+  assert.equal(dayRange('between 27th and 31st july', 2026)?.from, '2026-07-27');
+  assert.deepEqual(dayRange('27/7/2026 to 31/7/2026', 2025), { from: '2026-07-27', to: '2026-07-31' });
+  assert.deepEqual(dayRange('leads on 15 aug', 2026), { from: '2026-08-15', to: '2026-08-15' });
+  assert.equal(dayRange('sales in july 2026', 2026), null, 'a month and year is not a day');
+  assert.equal(dayRange('fill rate on 31 feb 2026', 2026), null, 'impossible dates are ignored');
+});

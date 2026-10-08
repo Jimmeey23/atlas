@@ -12,6 +12,44 @@ export const studioAliases = [
 const studioPattern = /(?<![\w+])(kh|kc|kwality(?:\s+house)?|kemps(?:\s+corner)?|shq|supreme(?:\s+hq)?(?:,?\s+bandra)?|bandra|kk|kenkere(?:\s+house)?|blr|bangalore|bengaluru|c\+c|cnc|(?:the studio by )?copper(?:\s*(?:\+|and|&)\s*cloves)?|plash(?:\s+pilates)?|pop[ -]?up|mumbai)(?![\w+])/gi;
 const studioFor = (text) => studioAliases.find(([pattern]) => pattern.test(text.trim()))?.[1];
 const months = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+const monthWord = 'january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec';
+const monthIndex = (word) => months.findIndex(m => m.startsWith(word.toLowerCase().slice(0,3)));
+const iso = (y, m, d) => {
+  const date = new Date(Date.UTC(y, m, d));
+  return date.getUTCMonth() === m && date.getUTCDate() === d ? date.toISOString().slice(0,10) : null;
+};
+/**
+ * Day-level dates: "2026-07-27", "27/07/2026" (day first), "July 27th", "27 July 2026",
+ * "July 27-31", "27th and 31st July". A date without its own year takes the last year
+ * written in the question, then the fallback. Returns the spanned range, or null.
+ */
+export function dayRange(message, fallbackYear) {
+  const text = String(message);
+  const years = [...text.matchAll(/\b(20\d{2})\b/g)].map(m => Number(m[1]));
+  const defaultYear = years.at(-1) ?? fallbackYear;
+  const found = [];
+  const add = (y, m, d) => { const value = iso(y, m, d); if (value) found.push(value); };
+  for (const m of text.matchAll(/\b(20\d{2})-(\d{1,2})-(\d{1,2})\b/g)) add(+m[1], +m[2] - 1, +m[3]);
+  for (const m of text.matchAll(/\b(\d{1,2})[/.-](\d{1,2})[/.-](20\d{2}|\d{2})\b/g)) add(+(m[3].length === 2 ? '20' + m[3] : m[3]), +m[2] - 1, +m[1]);
+  const ord = '(\\d{1,2})(?:st|nd|rd|th)?(?!\\d)';
+  const year = '(?:\\s*,?\\s*(20\\d{2})\\b)?';
+  const join = '\\s*(?:-|–|to|and|till|until|through|thru)\\s*';
+  // "July 27-31 2026", "July 27 to 31"
+  for (const m of text.matchAll(new RegExp(`\\b(${monthWord})\\.?\\s+${ord}${join}${ord}(?!\\s*(?:${monthWord}))${year}`, 'gi'))) {
+    const y = +(m[4] || defaultYear); add(y, monthIndex(m[1]), +m[2]); add(y, monthIndex(m[1]), +m[3]);
+  }
+  // "27-31 July", "27th and 31st July 2026"
+  for (const m of text.matchAll(new RegExp(`\\b${ord}${join}${ord}\\s+(?:of\\s+)?(${monthWord})\\b${year}`, 'gi'))) {
+    const y = +(m[4] || defaultYear); add(y, monthIndex(m[3]), +m[1]); add(y, monthIndex(m[3]), +m[2]);
+  }
+  // "July 27th", "July 27, 2026"
+  for (const m of text.matchAll(new RegExp(`\\b(${monthWord})\\.?\\s+${ord}(?!\\s*:)${year}`, 'gi'))) add(+(m[3] || defaultYear), monthIndex(m[1]), +m[2]);
+  // "27 July", "27th of July 2026"
+  for (const m of text.matchAll(new RegExp(`\\b${ord}\\s+(?:of\\s+)?(${monthWord})\\b${year}`, 'gi'))) add(+(m[3] || defaultYear), monthIndex(m[2]), +m[1]);
+  if (!found.length) return null;
+  found.sort();
+  return { from: found[0], to: found.at(-1) };
+}
 export function resolveQuestionScope(message, dashboard = {}, history = []) {
   const previousUser = [...history].reverse().find(m => m.role === 'user' && typeof m.content === 'string');
   const previousAssistant = [...history].reverse().find(m => m.role === 'assistant' && m.scope);
@@ -24,14 +62,17 @@ export function resolveQuestionScope(message, dashboard = {}, history = []) {
   const toDate = message.match(/\b(ytd|mtd|qtd|year to date|month to date|quarter to date)\b/i);
   const lastDays = message.match(/\blast\s+(\d{1,3})\s+days\b/i);
   const studios = [...message.matchAll(studioPattern)];
+  const days = dayRange(message, Number(dashboard.from?.slice(0,4)) || Number(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric'}).format(new Date())));
   // Named periods/studios describe an independent question, unless the user explicitly retains the dashboard scope.
   const relative = message.match(/\b(this|last)\s+(month|week|quarter|year)\b/i);
   const yearOnly = !periods.length && message.match(/\b(?:in|for|during)\s+(20\d{2})\b/i);
-  const explicit = !!(periods.length || studios.length || relative || yearOnly || quarter || toDate || lastDays);
+  const explicit = !!(days || periods.length || studios.length || relative || yearOnly || quarter || toDate || lastDays);
   const retain = /\b(current|dashboard|selected|filtered)\s+(scope|filters|selection)\b/i.test(message);
   const filters = explicit && !retain && !followup ? { imports: !!dashboard.imports } : { ...dashboard };
   const todayISO = new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-  if (quarter) {
+  if (days) {
+    filters.from = days.from; filters.to = days.to;
+  } else if (quarter) {
     const year = Number(quarter[3] ? (quarter[3].length === 2 ? '20' + quarter[3] : quarter[3]) : todayISO.slice(0,4));
     const [first, count] = quarter[1] ? [(Number(quarter[1]) - 1) * 3, 3] : [(Number(quarter[2]) - 1) * 6, 6];
     filters.from = `${year}-${String(first + 1).padStart(2,'0')}-01`;

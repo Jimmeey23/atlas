@@ -19,6 +19,8 @@ export interface SourceData {
   fetchedAt: number | null;
   /** The workbook's Drive modifiedTime when these rows were read. */
   revision?: string | null;
+  /** Content digest; identical across serverless instances for an unchanged sheet. */
+  hash?: string;
   loadMs: number;
   mode?: string;
   stale?: boolean;

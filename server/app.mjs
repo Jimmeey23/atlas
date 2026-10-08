@@ -5,6 +5,7 @@ import { authenticatedSheet } from "./sheets-auth.mjs";
 import { publicSheet, missingColumns, snapshotsToPrune } from "./sheets-public.mjs";
 import { readFile, mkdir, copyFile, readdir, unlink } from "node:fs/promises";
 import path from "node:path";
+import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import WebSocket from "ws";
 import { kraRoutes } from "./kra.mjs";
@@ -56,6 +57,9 @@ export async function createApp({ serveStatic = false } = {}) {
   kraRoutes(app, root, config, load, store);
   const inflight = new Map();
   async function archiveSnapshot(data) {
+    // Serverless /tmp is per-instance and capped at 512MB: an archive there is never seen by
+    // the next request's instance, and bookings alone is ~80MB per copy.
+    if (process.env.VERCEL) return;
     const key = `.cache/snapshots/${data.key}-${data.fetchedAt}.json`;
     if (await store.read(key)) return;
     await store.write(key, data);
@@ -102,7 +106,12 @@ export async function createApp({ serveStatic = false } = {}) {
       }
 
       const missing = missingColumns(source, columns);
+      // Identifies the content, not the fetch: serverless instances fetch separately, so two
+      // copies of an unchanged sheet share a hash even though their fetchedAt differs.
+      const digest = createHash("sha1").update(JSON.stringify(columns));
+      for (const row of rows) digest.update(JSON.stringify(row));
       const result = {
+        hash: digest.digest("hex"),
         key: source.key,
         title: source.title,
         id: source.id,
@@ -235,12 +244,20 @@ export async function createApp({ serveStatic = false } = {}) {
       .map(Number)
       .filter((n) => Number.isInteger(n) && n >= 2)
       .slice(0, 500);
+    const snapshot = String(req.query.snapshot || "").replace(/[^0-9]/g, "");
     try {
-      const data = await store.read(
-        req.query.snapshot
-          ? `.cache/snapshots/${source.key}-${String(req.query.snapshot).replace(/[^0-9]/g, "")}.json`
-          : `.cache/${source.key}.json`,
-      );
+      // The exact version the browser displays, when this instance archived it.
+      let data = snapshot ? await store.read(`.cache/snapshots/${source.key}-${snapshot}.json`) : null;
+      if (!data) {
+        // Otherwise the current copy, but only when it is provably the same content: rows are
+        // positional, so a different version would show the wrong records.
+        let current = await store.read(`.cache/${source.key}.json`).catch(() => null);
+        if (!current) current = await load(source, false);
+        const same = !snapshot || String(current?.fetchedAt) === snapshot || (req.query.hash && current?.hash === req.query.hash);
+        if (current?.rows?.length && same) data = current;
+        else if (current?.rows?.length)
+          return res.status(409).json({ error: "The source changed since it was loaded.", fetchedAt: current.fetchedAt });
+      }
       if (!data) throw new Error("No saved source snapshot.");
       res
         .set("Cache-Control", "no-store")
