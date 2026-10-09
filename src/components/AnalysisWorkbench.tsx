@@ -885,7 +885,7 @@ export function AnalysisWorkbench({
       </div>
       {open && (
         <>
-          <div className="advanced-actions">
+          <div className="advanced-actions analysis-saved-grid">
             <DropdownField
               aria-label="Open saved analysis"
               value=""
@@ -1057,8 +1057,8 @@ export function AnalysisWorkbench({
           </div>
           <fieldset className="analysis-dates">
             <legend>Period & comparison</legend>
-            <div className="advanced-actions">
-              <label>
+            <div className="advanced-actions analysis-period-grid">
+              <label className="analysis-toggle analysis-date-mode">
                 <input
                   type="checkbox"
                   checked={localDates}
@@ -1086,48 +1086,53 @@ export function AnalysisWorkbench({
                   onChange={(e) => setTo(e.target.value)}
                 />
               </label>
-              <DropdownField
-                aria-label="Analysis date preset"
-                value=""
-                onChange={(e) => {
-                  setLocalDates(true);
-                  const range = relativePeriod(e.target.value);
-                  setFrom(range.from);
-                  setTo(range.to);
-                }}
-              >
-                <option value="">Date presets…</option>
-                {periods.map((p) => (
-                  <option key={p}>{p}</option>
-                ))}
-              </DropdownField>
               <label>
-                Rolling days
-                <input
-                  type="number"
-                  min={1}
-                  max={3650}
-                  value={rollingDays}
-                  onChange={(e) =>
-                    setRollingDays(
-                      Math.max(
-                        1,
-                        Math.min(3650, Math.round(Number(e.target.value))),
-                      ),
-                    )
-                  }
-                />
+                Date preset
+                <DropdownField
+                  aria-label="Analysis date preset"
+                  value=""
+                  onChange={(e) => {
+                    setLocalDates(true);
+                    const range = relativePeriod(e.target.value);
+                    setFrom(range.from);
+                    setTo(range.to);
+                  }}
+                >
+                  <option value="">Date presets…</option>
+                  {periods.map((p) => (
+                    <option key={p}>{p}</option>
+                  ))}
+                </DropdownField>
               </label>
-              <button
-                onClick={() => {
-                  setLocalDates(true);
-                  setFrom(shiftDays(today(), 1 - rollingDays));
-                  setTo(today());
-                }}
-              >
-                Apply rolling range
-              </button>
-              <label>
+              <div className="analysis-rolling-field">
+                <label>
+                  Rolling days
+                  <input
+                    type="number"
+                    min={1}
+                    max={3650}
+                    value={rollingDays}
+                    onChange={(e) =>
+                      setRollingDays(
+                        Math.max(
+                          1,
+                          Math.min(3650, Math.round(Number(e.target.value))),
+                        ),
+                      )
+                    }
+                  />
+                </label>
+                <button
+                  onClick={() => {
+                    setLocalDates(true);
+                    setFrom(shiftDays(today(), 1 - rollingDays));
+                    setTo(today());
+                  }}
+                >
+                  Apply range
+                </button>
+              </div>
+              <label className="analysis-toggle analysis-complete-mode">
                 <input
                   type="checkbox"
                   checked={completeOnly}
@@ -1136,7 +1141,7 @@ export function AnalysisWorkbench({
                 Complete periods only
               </label>
             </div>
-            <div className="advanced-actions">
+            <div className="advanced-actions analysis-comparison-grid">
               <label>
                 Compare with
                 <DropdownField
@@ -1206,7 +1211,7 @@ export function AnalysisWorkbench({
           {config.source === "new" &&
             config.aggregate === "metric" &&
             ["conversion_rate", "retention_rate"].includes(config.metric) && (
-              <div className="advanced-actions">
+              <div className="advanced-actions analysis-outcome-grid">
                 <label>
                   Outcome window
                   <DropdownField
@@ -1260,46 +1265,48 @@ export function AnalysisWorkbench({
             </p>
             <AdvancedFilterEditor value={localRules} onChange={setLocalRules} />
           </details>
-          <div className="advanced-actions">
-            {config.aggregate === "metric" && (
-              <>
-                <button
-                  onClick={() => {
-                    const candidate = choices.find(
-                      (m) => metrics[m.id].format === "integer",
-                    );
-                    if (candidate) {
-                      const c = { ...config, metric: candidate.id };
-                      setConfig(c);
-                      void run({ config: c });
-                    }
-                  }}
-                >
-                  Count metric
-                </button>
-                <button
-                  onClick={() => {
-                    const candidate = choices.find(
-                      (m) => metrics[m.id].format === "percent",
-                    );
-                    if (candidate) {
-                      const c = { ...config, metric: candidate.id };
-                      setConfig(c);
-                      void run({ config: c });
-                    }
-                  }}
-                >
-                  Rate metric
-                </button>
-              </>
-            )}
-            <button
-              className="button primary"
-              disabled={busy}
-              onClick={() => void run()}
-            >
-              {busy ? "Calculating…" : "Run analysis"}
-            </button>
+          <div className="advanced-actions analysis-run-grid">
+            <div className="analysis-run-buttons">
+              {config.aggregate === "metric" && (
+                <>
+                  <button
+                    onClick={() => {
+                      const candidate = choices.find(
+                        (m) => metrics[m.id].format === "integer",
+                      );
+                      if (candidate) {
+                        const c = { ...config, metric: candidate.id };
+                        setConfig(c);
+                        void run({ config: c });
+                      }
+                    }}
+                  >
+                    Count metric
+                  </button>
+                  <button
+                    onClick={() => {
+                      const candidate = choices.find(
+                        (m) => metrics[m.id].format === "percent",
+                      );
+                      if (candidate) {
+                        const c = { ...config, metric: candidate.id };
+                        setConfig(c);
+                        void run({ config: c });
+                      }
+                    }}
+                  >
+                    Rate metric
+                  </button>
+                </>
+              )}
+              <button
+                className="button primary"
+                disabled={busy}
+                onClick={() => void run()}
+              >
+                {busy ? "Calculating…" : "Run analysis"}
+              </button>
+            </div>
             <label>
               Show
               <DropdownField
@@ -1311,12 +1318,17 @@ export function AnalysisWorkbench({
                 <option value="chart">Chart</option>
               </DropdownField>
             </label>
-            <input
-              aria-label="Saved analysis name"
-              value={name}
-              placeholder="Name this analysis…"
-              onChange={(e) => setName(e.target.value)}
-            />
+          </div>
+          <div className="advanced-actions analysis-save-grid">
+            <label>
+              Analysis name
+              <input
+                aria-label="Saved analysis name"
+                value={name}
+                placeholder="Name this analysis…"
+                onChange={(e) => setName(e.target.value)}
+              />
+            </label>
             <button disabled={!result || !name.trim()} onClick={saveView}>
               Save analysis
             </button>
