@@ -1,12 +1,15 @@
 import { reportFmt as fmt, reportDelta as delta, definition } from "./definitions";
 import { metricNotes } from "../semantics/evidence";
 import { chapters, type ChapterSpec } from "./chapters";
-import { monthLabel, shiftMonth } from "./period";
+import { hashText, monthLabel, shiftMonth } from "./period";
+import { findingsFor, findingsPayload, ledger, seasonalScenario, type Finding } from "./findings";
 import type { ChapterData, ChapterNarrative, InsightCard, ReportModel } from "./model";
+import { addCall, type CallUsage, type ChapterUsage } from "./usage";
 
-const CACHE_PREFIX = "atlas-report-narrative:v6:";
-const cacheKey = (model: ReportModel, chapterId: string) =>
-  `${CACHE_PREFIX}${model.scope.studio}:${model.scope.month}:${model.figuresHash}:${JSON.stringify(model.customization ?? {})}:${chapterId}`;
+const CACHE_PREFIX = "atlas-report-narrative:v7:";
+/** Keyed on the exact prompt, so any change to figures, findings, targets or rules is a new analysis. */
+const cacheKey = (model: ReportModel, chapterId: string, message: string) =>
+  `${CACHE_PREFIX}${model.scope.studio}:${model.scope.month}:${chapterId}:${hashText(message)}`;
 
 function readCache(key: string): ChapterNarrative | null {
   try {
@@ -39,8 +42,9 @@ const line = (id: string, data: ChapterData) =>
  * What the model is shown for one chapter: exactly the figures the reader
  * sees, so a card can be checked against the page rather than taken on trust.
  */
-export function chapterPayload(spec: ChapterSpec, data: ChapterData, model: ReportModel) {
+export function chapterPayload(spec: ChapterSpec, data: ChapterData, model: ReportModel, findings: Finding[] = []) {
   const parts = [
+    findingsPayload(findings),
     `Chapter: ${spec.title}. Studio: ${model.scope.studio}. Month: ${monthLabel(model.scope.month)}.`,
     `Comparisons are against ${monthLabel(shiftMonth(model.scope.month, -1))} and ${monthLabel(shiftMonth(model.scope.month, -12))}.`,
     `Contributing records: ${data.n.toLocaleString("en-IN")}.`,
@@ -72,11 +76,21 @@ export function chapterPayload(spec: ChapterSpec, data: ChapterData, model: Repo
             .join("\n"),
       );
   }
-  return parts.join("\n\n");
+  return parts.filter(Boolean).join("\n\n");
 }
 
-/** Figures the derived chapters reason over: every chapter's headline movement. */
-export function portfolioPayload(model: ReportModel) {
+/** What the brief and the plan reason over: the ranked cross-report findings plus every chapter's headline movement. */
+export function portfolioPayload(model: ReportModel, findings: Record<string, Finding[]> = findingsFor(model)) {
+  const ranked = ledger(findings);
+  const valued = ranked.filter((f) => f.inr);
+  return [
+    findingsPayload(ranked, 30),
+    valued.length ? `Valued items (indicative; items can overlap, so never add them up): ${valued.slice(0, 12).map((f) => `${f.text.split(". ")[0]} ≈ ${fmt("gross_revenue", Math.round(f.inr!))}`).join(" | ")}` : "",
+    "Chapter headline figures:\n" + headlinePayload(model),
+  ].filter(Boolean).join("\n\n");
+}
+
+function headlinePayload(model: ReportModel) {
   return chapters
     .filter((spec) => !spec.derived)
     .map((spec) => {
@@ -103,34 +117,57 @@ export function forwardScenarios(model: ReportModel) {
       const projected = definition(id)!.format === "percent"
         ? Math.min(1, Math.max(0, base + (base - previous)))
         : Math.max(0, base * (base / previous));
-      return [`${definition(id)!.label}: flat scenario ${fmt(id, base)}; repeat-last-month-movement scenario ${fmt(id, projected)}. Arithmetic: ${definition(id)!.format === "percent" ? `${base} + (${base} - ${previous}), clipped to [0,1]` : `${base} × (${base} / ${previous}), floored at zero`}. These are conditional scenarios, not estimates of likelihood.`];
+      const season = seasonalScenario(id, data, model.scope.month);
+      const extra = [
+        season?.run != null ? `three-month run-rate scenario ${fmt(id, season.run)} (average of the last three months)` : "",
+        season?.seasonal != null ? `seasonal scenario ${fmt(id, season.seasonal)} (this month moved by last year's ${monthLabel(shiftMonth(model.scope.month, -12))} → ${monthLabel(shiftMonth(model.scope.month, -11))} change, ${fmt(id, season.thisLY)} → ${fmt(id, season.nextLY)})` : "",
+      ].filter(Boolean).join("; ");
+      return [`${definition(id)!.label}: flat scenario ${fmt(id, base)}; repeat-last-month-movement scenario ${fmt(id, projected)}${extra ? `; ${extra}` : ""}. Arithmetic: ${definition(id)!.format === "percent" ? `${base} + (${base} - ${previous}), clipped to [0,1]` : `${base} × (${base} / ${previous}), floored at zero`}. These are conditional scenarios, not estimates of likelihood.`];
     });
   }).join("\n");
 }
 
+const ANALYST_ROLE = [
+  'You are the head of strategy and analytics briefing the CEO, COO and studio leadership of a premium boutique fitness business (Physique 57 India).',
+  'Leaders have already seen every table and chart. They do not need figures read back to them. They need the so-what: why it happened, what it is worth, what it changes, what to do, who does it, and how they will know it worked.',
+].join(' ');
+
 const CARD_RULES = [
-  'Return JSON summary and cards with headline, meaning, evidence, action, focus, category, plainLanguage and confidence.',
-  'Write a decision brief, not a verbal copy of the tables. Summary: 35–50 words, explaining the central tension and management decision.',
-  'Write ONE passage for EACH requested evidence focus ID, plus exactly two distinct overall passages: one on kpis and one on trend when historical evidence exists. Use category red_flag, worked, didnt_work, meaning, next_step or plain_language according to actual evidence; never invent a failure or success to fill a category.',
-  'headline: a concise finding (at most 14 words). meaning: 25–40 words on drivers, trade-offs, concentration, sample strength or an operational choice; interpret relationships and the supplied arithmetic decomposition. Explain what evidence can and cannot distinguish. Do not repeat the same claim across panels.',
-  'plainLanguage: 10–18 words explaining the practical meaning without jargon. action: an assignable next step naming the role, proposed timing, the first concrete intervention and the metric that would show improvement; at most 25 words.',
-  'evidence: a short sentence with exact supporting figures and comparison/sample limits; at most 20 words. confidence describes the strength of the interpretation, not a statistical confidence interval.',
-  'Use only supplied figures and verified diagnostics. Separate additive contributions, changes within groups, and changes in mix. Never add overlapping distinct transaction or member counts from groups.',
-  'Higher AOV alone does not establish a price increase: distinguish recorded product-mix changes from unverified pricing hypotheses. Missing-ID warnings must use the supplied coverage counts and reflect their scale. Do not assert that a price change caused demand or conversion changes without evidence.',
-  'Cash sales and earned revenue are different populations. Membership revenue share is based on gross payments, never net payments. Payroll costs are estimates at the configured rate, not actual salaries.',
-  'Newcomer LTV is cumulative observed spend to the source date, not first-month spend or predicted lifetime spend. Recent cohorts have less follow-up time; equal-age outcomes are needed to attribute eventual differences.',
-  'Recorded lead stages are current cohort outcomes, not evidence of transitions during the selected month. Renewal lapses are recorded Churned Dates on a member’s most recent membership; recent cohorts can still change. Do not compare historical active snapshots or sum recurring and Sessions totals.',
-  'Do not invent causes, policy thresholds, uplift promises, record claims beyond supplied history, or certainty from small samples. Hypotheses must include the specific check that could confirm or reject them.',
-  'The kpis headline is the section statement: an impactful, specific decision-relevant finding, not a metric label or a generic claim. Keep all focus passages distinct. Use AI for trade-offs, diagnostic hypotheses, evidence limitations and action prioritisation; all figures and arithmetic are already derived by the app engine. Avoid simply converting rows into sentences.',
-  'Check every comparative statement. Use percentage points for rate changes. Do not say doubled or halved unless the ratio supports it. Proposed targets and timings must be identified as proposals.',
-  'Future figures may use only supplied conditional scenario arithmetic. Do not invent probabilities, confidence bands or forecast ranges, and never call those scenarios likely outcomes.',
+  'Return JSON with summary and cards. Each card has headline, meaning, evidence, impact, action, watch, plainLanguage, focus, category and confidence.',
+  'START FROM THE ANALYST FINDINGS (F1, F2 …). They are verified arithmetic computed by the app: anomalies against the studio\'s own history, streaks, what drove a change (within-group versus mix), concentration, valued gaps, cross-chapter tensions and rule-engine signals. Choose the findings that matter most for money, risk and decisions. Combine related findings into one insight. Ignore immaterial ones.',
+  'BANNED: cards that restate a figure the reader can already see without adding a driver, implication or decision. Do not walk through tables row by row. Do not write one card per table. Do not open with "X increased by Y%". Every card must answer "so what?" and "now what?".',
+  'headline: a verdict with the number that matters, 16 words at most. Good: "Three 7am Barre slots are full but earn 30% less per seat than the studio average." Bad: "Fill rate was 64.2%."',
+  'meaning: 60–100 words. Explain the driver (which groups or mechanism, within-group versus mix, concentration), what it implies for cash, retention, capacity or people risk, the trade-off involved, and what the evidence cannot yet distinguish together with the specific check that would settle it. Present hypotheses as hypotheses.',
+  'evidence: 35 words at most. Exact supporting figures with their comparison basis (prior month, same month last year, trailing average, median, target).',
+  'impact: 30 words at most. The rupees or volume at stake, using only the engine\'s valuations or simple arithmetic on supplied figures shown inline (for example "≈₹2.1L: 410 visits × ₹512"). If it cannot be valued honestly, write "Not valued:" and the reason.',
+  'action: 45 words at most. Owner role, the first concrete intervention, proposed timing (this week, within 30 days) and a proposed target. Be specific about which instructor, slot, product, source or segment, and say what stops as well as what starts.',
+  'watch: 25 words at most. The leading indicator and the threshold to review next month that would show the action is working or failing.',
+  'plainLanguage: 10–20 words, no jargon. focus: the breakdown ID the evidence comes from, "trend" for a history-led insight, "cross" for a cross-chapter insight, "kpis" for the chapter verdict. category: red_flag, worked, didnt_work, meaning, next_step or plain_language, according to the evidence; never invent a success or failure. confidence: the strength of the interpretation, not a statistical interval.',
+  'summary: 90–130 words. Give a verdict for this area this month (better, worse or mixed against last month, last year and the studio\'s own trailing average), name the two forces behind it, and name the one decision leadership needs to take. Do not list metrics.',
+  'Exactly one card has focus "kpis". It is the chapter verdict and its headline becomes the chapter title, so it must be the most decision-relevant statement in the chapter.',
 ].join('\n');
 
-const DERIVED_RULES: Record<string, string> = {
-  recommendations:
-    "Write the month's strategic recommendations. Use at most four cards and do not restate the chapter summaries. Each card is one recommendation: headline states the move and the figure it targets, meaning gives the reasoning, evidence gives the supporting figures, action names the owner role and the first step. Rank by money or risk at stake.",
-  predictions:
-    "Write a conditional forward view for next month. Use trailing monthly series rather than only the last observation. When fewer than three populated months exist, describe scenarios without numeric forecasts. Any projected number must state its arithmetic, baseline and assumption; never present it as a recorded result. Use at most three passages. Each passage is one projection: headline states the projected figure and direction, meaning states the assumption it rests on and what would break it, evidence gives the trailing figures behind the projection, action names what to do now to change the outcome. State assumptions rather than hiding them.",
+const ACCURACY_RULES = [
+  'Accuracy rules (these override style):',
+  'Use only supplied figures, findings and diagnostics. Use percentage points for rate changes. Do not say doubled or halved unless the ratio supports it. Proposed targets and timings must be labelled as proposals.',
+  'Separate additive contributions, changes within groups and changes in mix. Never add overlapping distinct transaction or member counts from groups, and never sum ledger items that can overlap.',
+  'Higher AOV alone does not establish a price increase. Do not claim a price change caused demand or conversion changes without evidence. Missing-ID warnings must use the supplied coverage counts.',
+  'Cash sales and earned (attendance-attributed) revenue are different populations. Membership revenue share is based on gross payments. Payroll costs are estimates at the configured rate, not actual salaries.',
+  'Newcomer LTV is cumulative observed spend to the source date; recent cohorts have had less time. Recorded lead stages are current cohort positions, not transitions in the month. Renewal lapses are recorded Churned Dates and recent cohorts can still change. Do not compare historical active snapshots or sum recurring and Sessions totals.',
+  'Do not invent causes, policy thresholds, uplift promises or certainty from small samples. Every causal idea is a hypothesis paired with the check that would confirm or reject it. Valuations are indicative and must say so where the basis is an average.',
+  'Future figures may use only the supplied conditional scenario arithmetic. Never call scenarios likely outcomes or add probabilities or ranges.',
+].join('\n');
+
+const cardCount = (model: ReportModel, derived = false) => model.customization?.detail === 'Concise'
+  ? derived ? '4–5' : '3–5' : derived ? '6–8' : '5–7';
+
+const DERIVED_RULES: Record<string, (model: ReportModel) => string> = {
+  'executive-summary': (model) =>
+    `This is the Executive decision brief: the first and possibly only page the CEO reads. Use the cross-report findings and ledger, not just this chapter's figures. summary: 110–150 words giving the overall verdict on the month, the single biggest risk and the single biggest opportunity with rupees at stake, and the decisions required this month. Cards: one "kpis" verdict card, then ${cardCount(model, true)} more covering the most material risks and opportunities across the whole business, ranked by money at stake. Include at least one cross-chapter insight (focus "cross") that no single chapter shows, for example demand versus cash, popularity versus conversion, or volume versus quality.`,
+  recommendations: (model) =>
+    `Write next month's operating plan. Do not restate chapter findings; turn them into decisions. Return ${cardCount(model, true)} cards ranked by rupees at stake, each one recommendation. headline: a verb-led move with its target (for example "Move two sub-40% PowerCycle slots to the 6pm peak to recover ≈₹1.2L a month"). meaning: why this beats the alternatives, why now, and the risk of acting and of not acting. evidence: the findings behind it. impact: the rupee estimate, with the arithmetic and an explicit, conservative assumption (for example "recovering a quarter of the gap"). action: owner role, the first step this week and a 30-day milestone. watch: the KPI and threshold for next month's review. The plan must include at least one quick win executable within 14 days and at least one "stop or reduce" decision where the evidence supports it; include a people/instructor or member-experience move if the evidence supports one. The first card has focus "kpis" and is the single most important move; the rest use focus "cross". Use category next_step, or red_flag for urgent risk mitigation.`,
+  predictions: () =>
+    'Write a conditional forward view for next month. Compare the flat, repeat-last-movement, three-month run-rate and seasonal scenarios and explain which assumptions separate them; never call any of them the likely outcome. Use at most four cards. headline: the scenario range for a key metric and what decides where it lands. meaning: the assumption each scenario rests on, what would break it, and which current finding pushes towards the better or worse end. evidence: the trailing figures. impact: the rupee difference between scenarios where it can be computed. action: what to do now to land at the better end. watch: the leading indicator to check in the first two weeks of next month, with its threshold. The first card has focus "kpis"; the rest use "trend".',
 };
 
 function parseJson(answer: string): { summary?: string; cards?: InsightCard[] } | null {
@@ -149,9 +186,22 @@ function parseJson(answer: string): { summary?: string; cards?: InsightCard[] } 
  * `generated: false` and the document labels them, so deterministic copy is
  * never mistaken for analysis.
  */
-export function fallbackNarrative(spec: ChapterSpec, data: ChapterData | undefined): ChapterNarrative {
+export function fallbackNarrative(spec: ChapterSpec, data: ChapterData | undefined, findings: Finding[] = []): ChapterNarrative {
   if (!data || spec.derived)
     return { summary: "", cards: [], generated: false };
+  // Engine findings already say something a table does not; lead with them.
+  const flagged: InsightCard[] = findings.slice(0, 4).map((f) => {
+    const [headline, ...rest] = f.text.split(/(?<=[.:])\s+/);
+    return {
+      headline: headline.replace(/[.:]$/, ""),
+      meaning: rest.join(" ") || f.text,
+      evidence: f.text,
+      impact: f.inr ? `≈${fmt("gross_revenue", Math.round(f.inr))} at stake (indicative).` : undefined,
+      action: f.tone === "risk" ? "Assign an owner to confirm the cause and agree a response before the next monthly review." : "Assign an owner to size and test this opportunity before the next monthly review.",
+      focus: f.focus,
+      category: f.tone === "risk" ? "red_flag" : f.tone === "opportunity" ? "next_step" : "meaning",
+    };
+  });
   const moves = spec.metrics
     .filter((id) => data.total[id] != null && data.prior[id] != null && Number(data.prior[id]) !== 0)
     .map((id) => {
@@ -160,17 +210,17 @@ export function fallbackNarrative(spec: ChapterSpec, data: ChapterData | undefin
       return { id, change, good };
     })
     .sort((a, b) => Math.abs(b.change) - Math.abs(a.change))
-    .slice(0, 4);
+    .slice(0, Math.max(0, 4 - flagged.length));
   return {
     summary: "",
-    cards: moves.map(({ id, change, good }) => ({
+    cards: [...flagged, ...moves.map(({ id, change, good }) => ({
       headline: `${definition(id)?.label ?? id} is ${fmt(id, data.total[id])}, ${delta(id, data.total[id], data.prior[id])} on the prior month.`,
       meaning: good
         ? "Moving in the intended direction for this measure."
         : "Moving against the intended direction for this measure.",
       evidence: `${fmt(id, data.total[id])} this month, ${fmt(id, data.prior[id])} prior month`,
       action: `Review ${definition(id)?.label ?? id} against the breakdowns in this chapter and decide whether the ${Math.abs(change * 100).toFixed(1)}% move needs a response.`,
-    })),
+    }))],
     generated: false,
   };
 }
@@ -195,7 +245,7 @@ const wait = (ms: number, signal?: AbortSignal) =>
  */
 const RETRY_DELAYS_MS = [5000, 15000, 30000];
 
-async function askModel(message: string, focusIds: string[], signal?: AbortSignal): Promise<string> {
+async function askModel(message: string, focusIds: string[], signal?: AbortSignal, onUsage?: (usage: CallUsage) => void): Promise<string> {
   for (let attempt = 0; ; attempt++) {
     const response = await fetch("/api/reports/narrative", {
       method: "POST",
@@ -204,6 +254,8 @@ async function askModel(message: string, focusIds: string[], signal?: AbortSigna
       body: JSON.stringify({ message, focusIds, editorial: true }),
     });
     const payload = await response.json();
+    // Billed calls report usage even when their answer is rejected.
+    if (payload?.usage) onUsage?.(payload.usage as CallUsage);
     if (response.ok) return String(payload.answer || "").trim();
     if (response.status !== 429 || attempt >= RETRY_DELAYS_MS.length)
       throw new Error(payload.error || "Unable to generate.");
@@ -212,7 +264,7 @@ async function askModel(message: string, focusIds: string[], signal?: AbortSigna
 }
 
 /**
- * One call per chapter. Cached on the figures, so re-running a month whose
+ * One call per chapter. Cached on the prompt, so re-running a month whose
  * numbers have not moved costs nothing; a chapter falls back to labelled
  * rule-based copy rather than being faked when a call fails.
  *
@@ -229,7 +281,8 @@ export async function generateNarratives(
   signal?: AbortSignal,
 ): Promise<Record<string, ChapterNarrative>> {
   const out: Record<string, ChapterNarrative> = {};
-  const portfolio = portfolioPayload(model);
+  const findings = findingsFor(model);
+  const portfolio = portfolioPayload(model, findings);
   let done = 0;
   const finish = (spec: ChapterSpec, narrative: ChapterNarrative) => {
     out[spec.id] = narrative;
@@ -244,49 +297,54 @@ export async function generateNarratives(
       while (pending.length) {
         if (signal?.aborted) return;
         const spec = pending.shift()!;
-        const key = cacheKey(model, spec.id);
-        const cached = readCache(key);
-        if (cached?.generated) {
-          finish(spec, cached);
-          continue;
-        }
         const data = model.chapters[spec.id];
-        const figures = spec.derived ? portfolio : data ? chapterPayload(spec, data, model) + (spec.id === "executive-summary" ? "\n\nCross-chapter context:\n" + portfolio : "") : "";
+        const own = findings[spec.id] ?? [];
+        const figures = spec.derived ? portfolio
+          : data ? chapterPayload(spec, data, model, own) + (spec.id === "executive-summary" ? "\n\nCross-report context:\n" + portfolio : "") : "";
         if (!figures) {
-          finish(spec, fallbackNarrative(spec, data));
+          finish(spec, fallbackNarrative(spec, data, own));
           continue;
         }
+        const focusIds = data?.groups.map(g => g.id ?? g.field) ?? [];
         const message = [
-          `You are a studio performance analyst writing the "${spec.title}" chapter of a board report for ${model.scope.studio}, ${monthLabel(model.scope.month)}.`,
-          DERIVED_RULES[spec.id] ?? "",
-          spec.id === "predictions" ? "Use only the following numeric what-if scenarios for future values. Do not invent forecast ranges, confidence bands, probabilities or additional numeric forecasts. Explain the arithmetic and assumptions in prose, and compare with the trailing history.\n" + forwardScenarios(model) : "",
+          ANALYST_ROLE,
+          `You are writing the "${spec.title}" chapter of the monthly management report for ${model.scope.studio}, ${monthLabel(model.scope.month)}.`,
+          DERIVED_RULES[spec.id]?.(model) ?? `Return ${cardCount(model)} cards: one "kpis" verdict card, ${data?.history.length ? "at most one \"trend\" card if the history shows something the findings do not, " : ""}and the rest as ranked insights built from the analyst findings. Breakdown IDs available for focus: ${focusIds.join(", ") || "none"}. Most breakdowns should not get their own card.`,
+          spec.id === "predictions" ? "Use only the following numeric what-if scenarios for future values. Do not invent forecast ranges, confidence bands, probabilities or additional numeric forecasts.\n" + forwardScenarios(model) : "",
           CARD_RULES,
-          model.customization ? `Editorial preferences (subject to the evidence and accuracy rules above): Audience: ${model.customization.audience}. Tone: ${model.customization.tone}. Detail: ${model.customization.detail}. Requested priorities: ${model.customization.instructions}. Do not invent figures or change metric definitions to satisfy preferences.` : "",
-          data?.groups.length ? `Required evidence focus IDs: ${data.groups.map(g => g.id ?? g.field).join(", ")}. Use focus kpis for headline reasoning and trend for historical interpretation. Write one passage with its matching focus ID for EACH breakdown table: ${data.groups.map(g => g.title).join("; ")}. Do not add closing passages that duplicate breakdowns. Return ${data.groups.length + 2} concise passages, covering each breakdown plus kpis and trend.` : "",
+          ACCURACY_RULES,
+          model.customization ? `Editorial preferences (subject to the evidence and accuracy rules above): Audience: ${model.customization.audience}. Tone: ${model.customization.tone}. Detail: ${model.customization.detail}. Requested priorities: ${model.customization.instructions || "none"}. Do not invent figures or change metric definitions to satisfy preferences.` : "",
           "Figures:",
-          figures.slice(0, 48000),
+          figures.slice(0, 52000),
         ]
           .filter(Boolean)
           .join("\n\n");
+        const key = cacheKey(model, spec.id, message);
+        const cached = readCache(key);
+        if (cached?.generated) {
+          finish(spec, { ...cached, usage: cached.usage ? { ...cached.usage, fromCache: true } : { model: "", calls: 0, inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, reasoningTokens: 0, durationMs: 0, costUsd: 0, fromCache: true } });
+          continue;
+        }
+        let usage: ChapterUsage | undefined;
         try {
-          const parsed = parseJson(await askModel(message, data?.groups.map(g => g.id ?? g.field) ?? [], signal));
+          const parsed = parseJson(await askModel(message, focusIds, signal, (call) => { usage = addCall(usage, call); }));
           const cards = Array.isArray(parsed?.cards)
             ? parsed!.cards.filter(
                 (c): c is InsightCard =>
                   !!c && typeof c.headline === "string" && !!c.headline.trim(),
               )
             : [];
-          const valid = cards.every(c => [c.meaning, c.evidence, c.action, c.plainLanguage].every(v => typeof v === "string") && !!c.focus && !!c.category && !!c.confidence) && (data?.groups ?? []).every(g => cards.some(c => c.focus === (g.id ?? g.field)));
+          const valid = cards.every(c => [c.meaning, c.evidence, c.action, c.plainLanguage].every(v => typeof v === "string") && !!c.focus && !!c.category && !!c.confidence);
           if (!valid || !cards.length || typeof parsed?.summary !== "string" || !parsed.summary.trim())
             throw new Error("The model returned no complete chapter analysis. Retry writing insights.");
-          const narrative: ChapterNarrative = cards.length
-            ? { summary: String(parsed?.summary ?? "").trim(), cards, generated: true }
-            : fallbackNarrative(spec, data);
-          if (narrative.generated) writeCache(key, narrative);
+          // The verdict leads; a model that forgot to mark one has its first card promoted.
+          if (!cards.some(c => c.focus === "kpis")) cards[0] = { ...cards[0], focus: "kpis" };
+          const narrative: ChapterNarrative = { summary: parsed.summary.trim(), cards, generated: true, usage };
+          writeCache(key, narrative);
           finish(spec, narrative);
         } catch (error) {
           if (signal?.aborted) throw error;
-          finish(spec, { ...fallbackNarrative(spec, data), error: error instanceof Error ? error.message : String(error) });
+          finish(spec, { ...fallbackNarrative(spec, data, own), error: error instanceof Error ? error.message : String(error), usage });
         }
       }
     }),

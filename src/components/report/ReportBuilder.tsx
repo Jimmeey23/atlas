@@ -1,3 +1,5 @@
+import { definition } from "../../report/definitions";
+import { GenerationStats } from "./GenerationStats";
 import { DropdownField } from "../ui/DropdownField";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Download, Printer, Sparkles, FileText, RefreshCw, TriangleAlert, ExternalLink } from "lucide-react";
@@ -20,16 +22,24 @@ type Stage = { label: string; done: number; total: number } | null;
  * months the data actually holds rather than a fixed list, so a studio that
  * opened last month appears without a code change.
  */
+/** Measures leadership most often sets a monthly target for. Rates are entered as percentages. */
+const TARGET_METRICS = ['gross_revenue', 'fill_rate', 'session_complimentary_rate', 'conversion_rate', 'retention_rate', 'lead_conversion_rate', 'renewal_rate', 'booking_late_rate'];
+const TARGETS_KEY = 'atlas-report-targets';
+function storedTargets(): Record<string, number> {
+  try { const parsed = JSON.parse(localStorage.getItem(TARGETS_KEY) || '{}'); return parsed && typeof parsed === 'object' ? parsed : {}; }
+  catch { return {}; }
+}
+
 export function ReportBuilder({ version }: { version: string | number }) {
   const theme = useStore((s) => s.theme);
   const filters = useStore((s) => s.filters);
   const reportTheme =
     themeOptions.find((option) => option.id === theme)?.type.startsWith("Dark") ? "dark" : "light";
-  const [customization, setCustomization] = useState<ReportCustomization>({ title: 'Monthly performance report', subtitle: '', preparedFor: '', preparedBy: '', audience: 'Studio leadership', tone: 'Professional', detail: 'Comprehensive', instructions: '', chapterIds: chapters.map(c => c.id), theme: reportTheme });
+  const [customization, setCustomization] = useState<ReportCustomization>({ title: 'Monthly performance report', subtitle: '', preparedFor: '', preparedBy: '', audience: 'Studio leadership', tone: 'Professional', detail: 'Comprehensive', instructions: '', chapterIds: chapters.map(c => c.id), theme: reportTheme, targets: storedTargets() });
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [estimatedSeconds, setEstimatedSeconds] = useState(0);
-  const estimate = 20 + customization.chapterIds.length * (customization.detail === 'Comprehensive' ? 35 : 25);
+  const estimate = 20 + customization.chapterIds.length * (customization.detail === 'Comprehensive' ? 60 : 45);
   useEffect(() => {
     if (startedAt === null) return;
     const tick = () => setElapsed(Math.floor((Date.now() - startedAt) / 1000));
@@ -38,6 +48,14 @@ export function ReportBuilder({ version }: { version: string | number }) {
   }, [startedAt]);
   const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
   const patch = (value: Partial<ReportCustomization>) => setCustomization(c => ({ ...c, ...value }));
+  const setTarget = (id: string, raw: string) => setCustomization(c => {
+    const targets = { ...(c.targets ?? {}) };
+    const value = Number(raw);
+    if (raw.trim() === '' || !Number.isFinite(value)) delete targets[id];
+    else targets[id] = definition(id)?.format === 'percent' ? value / 100 : value;
+    try { localStorage.setItem(TARGETS_KEY, JSON.stringify(targets)); } catch { /* targets still apply to this report */ }
+    return { ...c, targets };
+  });
   function moveChapter(id: string, direction: number) {
     const ids = [...customization.chapterIds]; const index = ids.indexOf(id); const next = index + direction;
     if (index < 0 || next < 0 || next >= ids.length) return;
@@ -184,13 +202,15 @@ export function ReportBuilder({ version }: { version: string | number }) {
       const computed = { ...snapshot, customization: { ...customization, chapterIds: [...customization.chapterIds] } };
       if (regenerate) clearNarrativeCache(computed);
       try {
+        const writingStarted = Date.now();
         const narratives = await generateNarratives(
           computed,
           (done, total, label) => setStage({ label: `Writing: ${label}`, done, total }),
           controller.signal,
         );
         if (controller.signal.aborted) return;
-        const completed = { ...computed, narratives };
+        const completedAt = Date.now();
+        const completed = { ...computed, narratives, generation: { startedAt: new Date(writingStarted).toISOString(), completedAt: new Date(completedAt).toISOString(), durationMs: completedAt - writingStarted } };
         setModel(completed);
         const failures = Object.entries(narratives).filter(([, n]) => n.error);
         if (failures.length) setNarrativeError(failures.map(([id, n]) => `${id}: ${n.error}`).join(" · "));
@@ -289,6 +309,9 @@ export function ReportBuilder({ version }: { version: string | number }) {
           {([{key:'audience',label:'Audience',options:['Studio leadership','Executive board','Operations team','Commercial team']},{key:'tone',label:'Writing style',options:['Professional','Direct and action-oriented','Plain language']},{key:'detail',label:'Narrative depth',options:['Comprehensive','Concise']},{key:'theme',label:'Report appearance',options:['light','dark']}] as const).map(field => <label key={field.key}><span>{field.label}</span><DropdownField value={customization[field.key]} onChange={e => patch({[field.key]:e.target.value})}>{field.options.map(option => <option key={option} value={option}>{option}</option>)}</DropdownField></label>)}
         </div>
         <label className="report-priorities"><span>Analysis priorities & editorial instructions</span><textarea rows={3} maxLength={3000} value={customization.instructions} onChange={e => patch({instructions:e.target.value})} placeholder="For example: focus on retention risks, compare format efficiency, and prioritise actions for studio managers."/></label>
+        <div className="report-targets"><span>Monthly targets (optional)</span><p className="small">Findings compare results with these and value any shortfall. Leave a target blank to use only the studio's own history as the benchmark.</p>
+          <div className="report-customization-grid">{TARGET_METRICS.filter(id => definition(id)).map(id => { const pct = definition(id)!.format === 'percent'; const value = customization.targets?.[id];
+            return <label key={id}><span>{definition(id)!.label}{pct ? ' (%)' : ' (₹)'}</span><input type="number" inputMode="decimal" step="any" min="0" aria-label={`${definition(id)!.label} target`} value={value == null ? '' : pct ? +(value * 100).toFixed(2) : value} onChange={e => setTarget(id, e.target.value)}/></label>; })}</div></div>
         <p className="small">Select chapters and set their reading order. Source figures and metric definitions stay governed.</p>
         <div className="report-chapter-options">{[...customization.chapterIds, ...chapters.map(c => c.id).filter(id => !customization.chapterIds.includes(id))].map(id => {
           const chapter = chapters.find(c => c.id === id)!; const index = customization.chapterIds.indexOf(id);
@@ -334,6 +357,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
         </div>
       )}
 
+      {model && <GenerationStats model={model}/>}
       {model && (!model.schemaVersion || model.schemaVersion < 3) && <div className="notice">This saved version uses the earlier report format. Rebuild to include leads, renewal cohorts, instructor scorecards, recurring slots and late-cancellation analysis.</div>}
       {model?.schemaVersion === 3 && <div className="notice">This saved snapshot predates the corrected complimentary-visit and recorded-duration calculations. Rebuild the report to use the current source definitions; the original snapshot is preserved.</div>}
       {model ? (

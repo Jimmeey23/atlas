@@ -8,6 +8,8 @@ import { definition } from "../../report/definitions";
 import { reportFmt as fmt, reportDelta as delta } from "../../report/definitions";
 import { currentSnapshotMetrics, metricNotes } from "../../semantics/evidence";
 import type { ChapterData, ChapterNarrative, GroupTable } from "../../report/model";
+import { chapters } from "../../report/chapters";
+import type { Finding } from "../../report/findings";
 
 const label = (id: string) => definition(id)?.label ?? id;
 
@@ -184,7 +186,9 @@ export function InsightPane({
           {passage.meaning && <p>{passage.meaning}</p>}
           {passage.evidence && <details className="r-passage-proof"><summary>Evidence & confidence</summary><p className="r-citation">{passage.evidence}</p>{passage.confidence && <small>Interpretation confidence: {passage.confidence}</small>}</details>}
           {passage.plainLanguage && <p className="r-plain"><strong>Simply put:</strong> {passage.plainLanguage}</p>}
+          {passage.impact && <p className="r-impact"><strong>At stake:</strong> {passage.impact}</p>}
           {passage.action && <p className="r-action"><strong>Next step:</strong> {passage.action}</p>}
+          {passage.watch && <p className="r-watch"><strong>Watch next month:</strong> {passage.watch}</p>}
 
         </div>
       ))}
@@ -228,4 +232,32 @@ export function RankingBoard({table,criterion}:{table:GroupTable;criterion:strin
   const sides=[{label:'Top performers',rows:top.length?top:sorted.slice(0,split),kind:'top'},{label:'Bottom performers',rows:bottom.length?bottom:sorted.slice(split).reverse(),kind:'bottom'}];
   const peak=Math.max(...sorted.map(row=>Math.abs(Number(row[criterion]))),.01);
   return <div className="r-rank-board"><div className="r-table-head"><span className="r-eyebrow">Criterion ranking · {label(criterion)}</span><h4>{table.title}</h4><p>{table.minimum}. {table.omitted ? `${table.omitted} eligible entries between these extremes are omitted.` : 'Eligible entries are shown once, ordered from both ends.'} Comparisons describe the same group.</p></div><div className="r-rank-grid">{sides.map(side=><section className={`r-rank-side r-rank-${side.kind}`} key={side.kind}><header><b>{side.label}</b><span>{label(criterion)}</span></header>{side.rows.map((row,i)=><div className="r-rank-item" key={String(row.g)}><span className="r-rank-index">{String(i+1).padStart(2,'0')}</span><div className="r-rank-content"><strong>{table.field === "trainer" ? <InstructorName name={String(row.g)}/> : String(row.g)}</strong><div className="r-rank-stats">{table.columns.filter(id=>id!==criterion).map(id=><span key={id}>{label(id)} <b>{fmt(id,row[id])}</b></span>)}</div><div className="r-rank-track"><span style={{width:`${Math.abs(Number(row[criterion]))/peak*100}%`}}/></div></div><div className="r-rank-value"><b>{fmt(criterion,row[criterion])}</b><small>MoM {delta(criterion,row[criterion],table.prior?.[String(row.g)]?.[criterion])}<br/>YoY {delta(criterion,row[criterion],table.priorYear?.[String(row.g)]?.[criterion])}</small></div></div>)}</section>)}</div></div>;
+}
+
+const rupees = (value: number) => fmt("gross_revenue", Math.round(value));
+const TONE_LABEL = { risk: "Risk", opportunity: "Opportunity", context: "Context" } as const;
+
+/** Engine-computed findings: deterministic, checkable, and present even when no model answers. */
+export function FindingList({ findings, title = "What the numbers flag" }: { findings: Finding[]; title?: string }) {
+  if (!findings.length) return null;
+  return <section className="r-flags" aria-label={title}>
+    <header><span className="r-eyebrow">{title}</span><small>Computed from this snapshot · ranked by value at stake, then risk</small></header>
+    <ol>{findings.map((f, i) => <li key={i} data-tone={f.tone}>
+      <span className="r-flag-tone">{TONE_LABEL[f.tone]}</span>
+      <p>{f.text}</p>
+      {f.inr ? <b className="r-flag-value">≈{rupees(f.inr)}</b> : <span/>}
+    </li>)}</ol>
+  </section>;
+}
+
+/** The action plan's evidence base: every valued finding in the report, largest first. */
+export function ValueLedger({ findings }: { findings: Finding[] }) {
+  const valued = findings.filter((f) => f.inr).slice(0, 10);
+  if (!valued.length) return null;
+  const nav = (id: string) => chapters.find((c) => c.id === id)?.nav ?? id;
+  return <div className="r-table-wrap r-ledger"><table className="r-table">
+    <caption>Value at stake · indicative monthly values from engine findings. Items can overlap, so they are not additive.</caption>
+    <thead><tr><th>Area</th><th>Finding</th><th>Type</th><th>≈ Monthly value</th></tr></thead>
+    <tbody>{valued.map((f, i) => <tr key={i} data-tone={f.tone}><td>{nav(f.chapter)}</td><td>{f.text}</td><td>{TONE_LABEL[f.tone]}</td><td>{rupees(f.inr!)}</td></tr>)}</tbody>
+  </table></div>;
 }

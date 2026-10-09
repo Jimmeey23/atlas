@@ -59,8 +59,9 @@ test('report narration bypasses chat tools and returns a structured chapter', as
     assert.equal(call.text.format.type, 'json_schema'); assert.equal(call.tools, undefined);
     await fetch(api.url + '/api/reports/narrative', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'Write the client type breakdown.',editorial:true,focusIds:['entry_type','format_group','slot-combinations']})});
     const schema=call.text.format.schema.properties.cards.items;
-    assert.deepEqual(schema.properties.focus.enum,['kpis','trend','entry_type','format_group','slot-combinations']);
+    assert.deepEqual(schema.properties.focus.enum,['kpis','trend','cross','entry_type','format_group','slot-combinations']);
     assert.ok(schema.required.includes('plainLanguage')); assert.ok(schema.required.includes('confidence'));
+    assert.ok(schema.required.includes('impact')); assert.ok(schema.required.includes('watch'));
     assert.match(call.instructions, /Session-attributed revenue is not cash collections/);
   } finally { await api.close(); await rm(root, { recursive: true, force: true }); }
 });

@@ -4,7 +4,8 @@ import { chapters, chapterNumber } from '../../report/chapters';
 import { monthLabel } from '../../report/compute';
 import { definition, reportFmt as fmt, reportDelta as delta } from '../../report/definitions';
 import type { ChapterNarrative, ReportModel } from '../../report/model';
-import { InsightPane, MetricCards, SectionHeader, MonthlyHistory } from './kit';
+import { FindingList, InsightPane, MetricCards, SectionHeader, MonthlyHistory, ValueLedger } from './kit';
+import { findingsFor, ledger } from '../../report/findings';
 import { ReferenceHero } from './ReportChrome';
 import { CriterionEvidence, EvidenceBlock, TrendEvidence } from './ReportEvidence';
 
@@ -15,6 +16,7 @@ export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; them
     const ordered = model.customization ? model.customization.chapterIds.flatMap(id => chapters.find(c => c.id === id) ?? []) : chapters;
     const available = ordered.filter(spec => model.chapters[spec.id] || model.narratives[spec.id]);
     const aiCount = Object.values(model.narratives).filter(n=>n.generated).length;
+    const findings = findingsFor(model), ranked = ledger(findings);
     const select = (narrative: ChapterNarrative | undefined, focus: string) => narrative ? {
       ...narrative, summary:'', cards:narrative.generated ? narrative.cards.filter(card=>card.focus===focus).slice(0,1) : [],
     } : undefined;
@@ -37,9 +39,9 @@ export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; them
           let openHalf = -1; const fullGroups = new Set<number>();
           shownGroups.forEach((g,i)=>{ if(g.columns.length>5) { if(openHalf>=0)fullGroups.add(openHalf); openHalf=-1; } else if(openHalf<0)openHalf=i; else openHalf=-1; });
           if(openHalf>=0)fullGroups.add(openHalf);
-          const focusedIds=new Set(['kpis','trend',...groups.map(g=>g.id ?? g.field)]);
-          const extra = narrative?.generated ? narrative.cards.filter(card=>!focusedIds.has(card.focus ?? '')).slice(0,2) : [];
-          const lead = spec.derived ? narrative?.cards.filter(card=>card !== statement).slice(0,4) ?? [] : narrative?.generated ? narrative.cards.filter(card=>card.focus==='kpis' && card !== statement).slice(0,1) : [];
+          // Findings lead the chapter, ranked as written; the evidence below supports them rather than repeating them.
+          const lead = narrative?.generated ? narrative.cards.filter(card=>card !== statement && (spec.derived || card.focus !== 'trend')).slice(0,8) : [];
+          const flags = spec.derived ? [] : (findings[spec.id] ?? []).slice(0,6);
           const priorities: Record<string,string[]> = {
             'revenue-performance':['gross_revenue','net_revenue','transactions','aov','membership_rev_share'],
             'conversion-funnel':['new_clients','conversion_rate','retention_rate','zero_return_rate','avg_ltv'],
@@ -57,12 +59,14 @@ export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; them
             {!spec.derived && (!data || !data.n) && <p className="r-empty">No selected-month source records. This is unavailable data, not a result of zero.</p>}
             {data && <MetricCards ids={metrics.slice(0,5)} total={data.total} prior={data.prior} priorYear={data.priorYear} history={data.history}/>}
             {spec.derived && statement && <InsightPane title="Priority decision" narrative={narrative ? {...narrative,summary:"",cards:[statement]} : undefined}/>}
-            {!spec.derived && statement?.action && <p className="r-management-move"><span>Management move</span>{statement.action}</p>}
-            {!!lead.length && <InsightPane title="Management reading" narrative={narrative ? {...narrative,summary:'',cards:lead} : undefined}/>}
+            {!spec.derived && statement && <InsightPane title="Chapter verdict" narrative={narrative ? {...narrative,summary:'',cards:[statement]} : undefined}/>}
+            {!!lead.length && <InsightPane title={spec.id==='recommendations' ? 'Operating plan' : 'Key findings'} narrative={narrative ? {...narrative,summary:'',cards:lead} : undefined}/>}
+            {spec.id==='recommendations' && <ValueLedger findings={ranked}/>}
+            {spec.id==='executive-summary' && <FindingList title="Biggest signals across the report" findings={ranked.slice(0,6)}/>}
+            {spec.id!=='executive-summary' && <FindingList findings={flags}/>}
             {data && <TrendEvidence history={data.history} ids={spec.history} title={`${spec.nav} · monthly trajectory`} narrative={select(narrative,'trend')}/>}
-            <div className="r-evidence-grid">{shownGroups.map((table,i)=><EvidenceBlock full={fullGroups.has(i)} key={table.id ?? table.field} table={table} narrative={select(narrative,table.id ?? table.field)}/>)}
-              {!!rankingGroups.length && <CriterionEvidence tables={rankingGroups} narrative={narrative}/>}</div>
-            {!!extra.length && <InsightPane title="Operating implications" narrative={narrative ? {...narrative,summary:'',cards:extra} : undefined}/>}
+            <div className="r-evidence-grid">{shownGroups.map((table,i)=><EvidenceBlock full={fullGroups.has(i)} key={table.id ?? table.field} table={table}/>)}
+              {!!rankingGroups.length && <CriterionEvidence tables={rankingGroups}/>}</div>
             {data && (metrics.length>5 || spec.history.length>0) && <details className="r-supporting-detail"><summary>Supporting measures & monthly history <span>Explore the source detail</span></summary>
               {metrics.length>5 && <div className="r-table-wrap"><table className="r-table"><thead><tr><th>Supporting measure</th><th>This month</th><th>MoM</th><th>YoY</th></tr></thead><tbody>{metrics.slice(5).map(id=><tr key={id}><td>{definition(id)?.label ?? id}</td><td>{fmt(id,data.total[id])}</td><td>{delta(id,data.total[id],data.prior[id])}</td><td>{delta(id,data.total[id],data.priorYear[id])}</td></tr>)}</tbody></table></div>}
               {!!spec.history.length && <MonthlyHistory data={data} ids={spec.history} title={spec.nav}/>}</details>}

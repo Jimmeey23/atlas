@@ -38,7 +38,11 @@ export function figuresHash(chapterData: Record<string, ChapterData>) {
       data.history,
       data.groups.map((g) => [g.id, g.field, g.rows, g.total, g.prior, g.priorYear, g.diagnostics]),
     ]);
-  const text = JSON.stringify(material);
+  return hashText(JSON.stringify(material));
+}
+
+/** FNV-1a over a string, base 36. */
+export function hashText(text: string) {
   let hash = 2166136261;
   for (let i = 0; i < text.length; i++) {
     hash ^= text.charCodeAt(i);

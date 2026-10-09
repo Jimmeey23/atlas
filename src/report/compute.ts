@@ -8,6 +8,8 @@ import type { ChapterData, GroupTable, ReportModel, ReportScope } from "./model"
 import { renewalFactsSQL, renewalMeasuresSQL } from '../data/renewals';
 import { definition, reportFmt } from './definitions';
 import { diagnosticFacts } from "./diagnostics";
+import { analyseGroup } from "./findings";
+import { evaluateRules } from "../insights/engine";
 import { groupQuery, rankedRows } from './group-query';
 import { HISTORY_MONTHS, figuresHash, monthBounds, shiftMonth } from "./period";
 export { HISTORY_MONTHS, figuresHash, monthBounds, monthLabel, shiftMonth } from "./period";
@@ -63,8 +65,9 @@ async function groupTable(spec: ChapterSpec, group: GroupSpec, filters: Filters)
     const drivers = [...keys].map(g=>({g,change:Number(now[g]?.gross_revenue??0)-Number(prior[g]?.gross_revenue??0)})).sort((a,b)=>b.change-a.change);
     if (priorRows.some(r=>Number(r.n)>0)) diagnostics.push(`Largest category/product movement against prior month: ${drivers[0]?.g} ${reportFmt('gross_revenue',drivers[0]?.change)}; lowest movement ${drivers.at(-1)?.g} ${reportFmt('gross_revenue',drivers.at(-1)?.change)}. Missing groups are treated as zero contribution only for this additive sales bridge, not for rates.`);
   }
+  const analysis = analyseGroup(group, columns, current.filter(r => Number(r.is_total)!==1), prior, eligible, total);
   return { id: group.id ?? group.field, field: group.field, fields: group.fields, title: group.title, deck: group.deck,
-    columns, rows, total, prior, priorYear, compare: group.compare, omitted, diagnostics,
+    columns, rows, total, prior, priorYear, compare: group.compare, omitted, diagnostics, analysis,
     minimum: group.minMetric ? `Minimum ${group.minValue ?? 3} ${definition(group.minMetric)?.label.toLowerCase()}` : 'Minimum 3 source records' };
 }
 
@@ -140,15 +143,18 @@ export async function computeReport(
     data[spec.id].diagnostics = diagnosticFacts(data[spec.id]);
     done++;
   }
+  // Rule-engine signals for the same studio-month. A failing rule costs that signal, never the report.
+  const signals = await evaluateRules(scopeFilters(scope)).catch(() => []);
   onProgress?.(done, queryable.length, "Figures complete");
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
     sources: Object.values(health).filter(s => queryable.some(spec => spec.source === s.key)).map(s => ({ key: s.key, title: s.title, fetchedAt: s.fetchedAt, stale: !!s.stale, status: s.status })),
     rate: context(scopeFilters(scope), []).rate,
     scope,
     builtAt: new Date().toISOString(),
     chapters: data,
     narratives: {},
+    signals: [...signals].sort((a, b) => ({critical:0,attention:1,opportunity:2,context:3}[a.severity] - {critical:0,attention:1,opportunity:2,context:3}[b.severity]) || b.impactINR - a.impactINR).slice(0, 12).map(({ rule, severity, entity, title, template, impactINR, n }) => ({ rule, severity, entity, title, text: template, impactINR: Number(impactINR) || 0, n: Number(n) || 0 })),
     figuresHash: figuresHash(data),
   };
 }
