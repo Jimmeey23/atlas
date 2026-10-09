@@ -1,3 +1,4 @@
+import { DropdownField } from "./ui/DropdownField";
 import { usable } from "../data/loader";
 import { exportCSV } from "./exports";
 import { MonthlyTableControls, type MonthlyTableState } from "./MonthlyTableControls";
@@ -159,9 +160,9 @@ function CohortComparison({ mode, version, onDrill }: { mode: "mom" | "yoy"; ver
   return <AcquisitionTableShell title={mode === "mom" ? "Acquisition cohorts · MoM" : "Acquisition cohorts · YoY"} icon={mode === "mom" ? CalendarDays : TrendingUp} count={visible.length}
     description={mode === "mom" ? "14 completed first-visit months, newest first. Other global filters apply." : "Same months across years together, newest year first in each month group. Other global filters apply."} onSearch={setSearch} searchLabel={`Search ${mode.toUpperCase()} first-column values`}
     actions={<>
-      <label className="acq-control">First column<select aria-label={`${mode.toUpperCase()} first column`} value={group} onChange={e => { setGroup(e.target.value as AcquisitionDimension); setSelectedValues(null); setExpanded([]); }}>{acquisitionDimensions.map(d => <option value={d.key} key={d.key}>{d.label}</option>)}</select></label>
+      <label className="acq-control">First column<DropdownField aria-label={`${mode.toUpperCase()} first column`} value={group} onChange={e => { setGroup(e.target.value as AcquisitionDimension); setSelectedValues(null); setExpanded([]); }}>{acquisitionDimensions.map(d => <option value={d.key} key={d.key}>{d.label}</option>)}</DropdownField></label>
       <ValueSelection options={values} selected={selectedValues} onChange={setSelectedValues} label={`${mode.toUpperCase()} first-column values`} />
-      <label className="acq-control">Child rows<select aria-label={`${mode.toUpperCase()} child rows`} value={child} onChange={e => setChildGroup(e.target.value as AcquisitionDimension)}>{acquisitionDimensions.filter(d => d.key !== group).map(d => <option value={d.key} key={d.key}>{d.label}</option>)}</select></label>
+      <label className="acq-control">Child rows<DropdownField aria-label={`${mode.toUpperCase()} child rows`} value={child} onChange={e => setChildGroup(e.target.value as AcquisitionDimension)}>{acquisitionDimensions.filter(d => d.key !== group).map(d => <option value={d.key} key={d.key}>{d.label}</option>)}</DropdownField></label>
       <div className="acq-segmented" aria-label="Comparison display" hidden={compareOff}>{["values", "change"].map(d => <button key={d} aria-pressed={d === display} onClick={() => {setDisplay(d);setControls(c=>({...c,mode:d}));}}>{d === "values" ? "Values" : mode === "mom" ? "MoM Δ" : "YoY Δ"}</button>)}</div>
     </>}
     metricBar={<MetricTabs value={metric} onChange={setMetric} />}

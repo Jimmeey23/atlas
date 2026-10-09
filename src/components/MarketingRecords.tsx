@@ -1,3 +1,4 @@
+import { DropdownField } from "./ui/DropdownField";
 import { useState } from "react";
 import { query, quote } from "../data/duckdb";
 import { leadDimensions, metaDimensions, websiteColumns, metaColumns } from "../data/performance-marketing";
@@ -53,7 +54,7 @@ export function MarketingRecords({ source, scope, version, onDrill }: {
   return <div data-marketing-records={source}>
     <div className="pm-controls">
       <label>Search <input aria-label={`Search ${source} records`} value={search} onChange={e=>setSearch(e.target.value)} placeholder={source==="meta"?"Campaign, ID, platform…":"Name, email, campaign, stage…"}/></label>
-      <label>Group records <select aria-label={`Group ${source} records`} value={group} onChange={e=>setGroup(e.target.value)}><option value="">Individual source records</option>{Object.entries(dimensions).map(([key,d])=><option key={key} value={key}>{d.label}</option>)}</select></label>
+      <label>Group records <DropdownField aria-label={`Group ${source} records`} value={group} onChange={e=>setGroup(e.target.value)}><option value="">Individual source records</option>{Object.entries(dimensions).map(([key,d])=><option key={key} value={key}>{d.label}</option>)}</DropdownField></label>
       {!group && <button className="button" disabled={exporting||data.loading||!total} onClick={()=>void exportRecords()}>{exporting ? "Exporting…" : `Export all ${total.toLocaleString("en-IN")} matching records`}</button>}
     </div>
     {exportError && <p role="alert">{exportError}</p>}

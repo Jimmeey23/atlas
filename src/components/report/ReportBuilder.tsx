@@ -1,3 +1,4 @@
+import { DropdownField } from "../ui/DropdownField";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Download, Printer, Sparkles, FileText, RefreshCw, TriangleAlert } from "lucide-react";
 import { query } from "../../data/duckdb";
@@ -200,7 +201,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
       <div className="report-controls" data-export="omit">
         <label>
           <span className="small">Studio</span>
-          <select
+          <DropdownField
             aria-label="Studio"
             value={studio}
             onChange={(e) => setStudio(e.target.value)}
@@ -211,11 +212,11 @@ export function ReportBuilder({ version }: { version: string | number }) {
                 {name}
               </option>
             ))}
-          </select>
+          </DropdownField>
         </label>
         <label>
           <span className="small">Period</span>
-          <select
+          <DropdownField
             aria-label="Period"
             value={month}
             onChange={(e) => setMonth(e.target.value)}
@@ -226,7 +227,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
                 {monthLabel(key)}
               </option>
             ))}
-          </select>
+          </DropdownField>
         </label>
         <button className="button primary" disabled={!ready || busy} onClick={() => void build()}>
           <Sparkles size={14} />
@@ -261,13 +262,13 @@ export function ReportBuilder({ version }: { version: string | number }) {
       <div className="report-history" data-export="omit">
         <label>
           <span className="small">Saved reports · latest 50 versions</span>
-          <select aria-label="Saved reports" disabled={busy || !savedReports.length} value={model?.id || ""}
+          <DropdownField aria-label="Saved reports" disabled={busy || !savedReports.length} value={model?.id || ""}
             onChange={e => e.target.value && void openSaved(e.target.value)}>
             <option value="">{loadingSaved ? "Loading saved reports…" : "Select a saved report"}</option>
             {savedReports.map(saved => <option key={saved.id} value={saved.id}>
               {saved.scope.studio} · {monthLabel(saved.scope.month)} · {new Date(saved.savedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} · {saved.aiChapters}/{saved.chapterCount ?? 7} AI chapters
             </option>)}
-          </select>
+          </DropdownField>
         </label>
         <span className="small" role="status">{model?.savedAt ? "Saved to database · available next session" : model ? "Unsaved report" : "Reports are saved automatically after generation"}</span>
         {model && !model.id && <button className="button" disabled={busy} onClick={() => void persistReport(model)}>Retry saving</button>}

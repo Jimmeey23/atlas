@@ -1,0 +1,177 @@
+/* Sales workspace: blue accents and neutral financial data rows, shared by every sales table. */
+.app[data-workspace="sales"] {
+  --sales-edge: color-mix(in srgb, var(--accent) 24%, var(--hairline));
+  --sales-header: color-mix(in srgb, var(--accent) 11%, var(--surface-1));
+  --sales-stripe: color-mix(in srgb, var(--text-1) 2.5%, var(--surface-1));
+  --sales-row-hover: color-mix(in srgb, var(--text-1) 6%, var(--surface-1));
+  --sales-row-selected: color-mix(in srgb, var(--text-1) 10%, var(--surface-1));
+  --sales-hover: color-mix(in srgb, var(--accent) 9%, var(--surface-1));
+  --sales-total: color-mix(in srgb, var(--accent) 14%, var(--surface-1));
+}
+
+.app[data-workspace="sales"] .register {
+  border: 1px solid var(--sales-edge);
+  border-radius: 16px;
+  box-shadow: 0 2px 4px #00000004, 0 12px 32px #00000006;
+  background: var(--surface-1);
+}
+.app[data-workspace="sales"] .register-head {
+  padding-bottom: 17px;
+  border-bottom: 1px solid var(--sales-edge);
+  margin-bottom: 18px;
+}
+.app[data-workspace="sales"] .register-title .index {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-1));
+  border: 1px solid var(--sales-edge);
+  border-radius: 7px;
+  padding: 4px 7px;
+}
+.app[data-workspace="sales"] .register-title h2 { font-weight: 650; letter-spacing: -.35px; }
+.app[data-workspace="sales"] :is(.table-scroll, .intelligence-table) {
+  border: 1px solid var(--sales-edge);
+  border-radius: 11px;
+  isolation: isolate;
+  background: var(--surface-1);
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--accent) 40%, var(--hairline)) transparent;
+}
+.app[data-workspace="sales"] .intelligence-table { position: relative; overflow: auto; max-height: 560px; }
+.app[data-workspace="sales"] :is(.table-scroll, .intelligence-table) table {
+  font-variant-numeric: tabular-nums;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.app[data-workspace="sales"] :is(.table-scroll, .intelligence-table) thead th {
+  position: sticky;
+  top: 0;
+  background: var(--sales-header);
+  color: var(--text-1);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .025em;
+  height: 40px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--sales-edge);
+  box-shadow: 0 1px 0 var(--sales-edge);
+  z-index: 4;
+}
+.app[data-workspace="sales"] :is(.table-scroll, .intelligence-table) thead th:first-child { z-index: 6; }
+.app[data-workspace="sales"] :is(.table-scroll, .intelligence-table) tbody td {
+  padding-inline: 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--hairline) 70%, transparent);
+  color: var(--text-1);
+}
+.app[data-workspace="sales"] :is(.table-scroll, .intelligence-table) tbody th {
+  top: auto;
+  color: var(--text-1);
+  border-bottom: 1px solid color-mix(in srgb, var(--hairline) 70%, transparent);
+}
+.app[data-workspace="sales"] :is(.table-scroll, .intelligence-table) tbody tr:nth-child(even) > * { background: var(--sales-stripe); }
+.app[data-workspace="sales"] .table-scroll tbody tr.level-0 > * {
+  background: color-mix(in srgb, var(--text-1) 4%, var(--surface-1));
+  font-weight: 600;
+}
+.app[data-workspace="sales"] :is(.table-scroll, .intelligence-table) tbody tr:hover > *,
+.app[data-workspace="sales"] :is(.table-scroll, .intelligence-table) tbody tr:focus-within > * { background: var(--sales-row-hover); }
+.app[data-workspace="sales"] .table-scroll tbody tr.selected > * { background: var(--sales-row-selected); }
+.app[data-workspace="sales"] :is(.table-scroll, .intelligence-table) tr > :first-child { box-shadow: 1px 0 0 var(--sales-edge); }
+.app[data-workspace="sales"] :is(.table-scroll, .intelligence-table) tfoot tr > * {
+  position: sticky;
+  bottom: 0;
+  top: auto;
+  z-index: 4;
+  height: 40px;
+  padding: 0 14px;
+  background: color-mix(in srgb, var(--text-1) 5%, var(--surface-1));
+  color: var(--text-1);
+  font-size: 12px;
+  font-weight: 700;
+  border-top: 1px solid var(--hairline-strong);
+  border-bottom: 0;
+}
+.app[data-workspace="sales"] :is(.table-scroll, .intelligence-table) tfoot tr > :first-child { z-index: 6; }
+.app[data-workspace="sales"] .monthly-table tbody th:first-child { background: var(--surface-1); }
+.app[data-workspace="sales"] .monthly-table tbody tr:nth-child(even) th:first-child { background: var(--sales-stripe); }
+.app[data-workspace="sales"] .monthly-table tbody tr:hover th:first-child { background: var(--sales-row-hover); }
+.app[data-workspace="sales"] .monthly-table .latest-month { border-inline-color: var(--sales-edge); }
+.app[data-workspace="sales"] .monthly-table thead .latest-month { color: var(--accent); background: var(--sales-total); }
+
+/* A clear control shelf above the data; existing grouping and comparison controls remain interactive. */
+.app[data-workspace="sales"] :is(.nested-toolbar, .monthly-table-controls, .sales-ranking-controls, .sales-table-toolbar) {
+  padding: 12px;
+  border: 1px solid var(--sales-edge);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 4%, var(--surface-1));
+  box-shadow: none;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.app[data-workspace="sales"] .group-chip { border-color: var(--sales-edge); background: var(--surface-1); border-radius: 7px; }
+.app[data-workspace="sales"] :is(.button, .acq-pagination button) { border-color: var(--sales-edge); border-radius: 7px; }
+.app[data-workspace="sales"] :is(.button, .acq-pagination button):hover:not(:disabled) { color: var(--accent); background: var(--sales-hover); }
+.app[data-workspace="sales"] :is(button, input, select, [tabindex="0"]):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.app[data-workspace="sales"] .scorecard-cell {
+  text-decoration: none;
+  padding: 5px 0;
+  font-weight: inherit;
+  line-height: 1.35;
+  border-radius: 3px;
+}
+.app[data-workspace="sales"] .scorecard-cell:hover { text-decoration: underline; text-underline-offset: 4px; }
+.app[data-workspace="sales"] .sales-scorecard-table :is(th, td) { height: 40px; white-space: nowrap; }
+.app[data-workspace="sales"] .sales-scorecard-table .sales-dimension { text-align: left; }
+.app[data-workspace="sales"] .sales-scorecard-table .sales-dimension:not(:first-child) { min-width: 150px; }
+.app[data-workspace="sales"] .sales-scorecard-table .sales-dimension .scorecard-cell { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+.app[data-workspace="sales"] .sales-scorecard-table [data-metric="gross_revenue"] { border-left: 1px solid var(--hairline); font-weight: 700; }
+.app[data-workspace="sales"] .sales-scorecard-table [data-metric="net_revenue"] { font-weight: 600; }
+.app[data-workspace="sales"] .sales-scorecard-table .sales-code { padding: 3px 9px; border: 1px solid var(--hairline-strong); border-radius: 5px; background: var(--surface-1); font-size: 10px; font-weight: 650; letter-spacing: .03em; }
+.app[data-workspace="sales"] .sales-table-toolbar .acq-search { display: flex; align-items: center; gap: 8px; color: var(--accent); margin: 0; }
+.app[data-workspace="sales"] .sales-table-toolbar .acq-search input { background: var(--surface-1); }
+.app[data-workspace="sales"] .sales-group-count { margin-left: auto; flex-shrink: 0; padding: 5px 10px; font-size: 10px; font-weight: 600; color: var(--accent); border: 1px solid var(--sales-edge); border-radius: 999px; background: var(--surface-1); }
+.app[data-workspace="sales"] .acq-pagination { padding: 12px 2px 0; color: var(--text-2); }
+
+/* Full-scope summary values provide context before a user searches or drills into a row. */
+.sales-summary-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; margin: 0 0 16px; border: 1px solid var(--sales-edge); border-radius: 10px; overflow: hidden; background: var(--sales-edge); }
+.sales-summary-stat { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; padding: 14px 16px; border: 0; text-align: left; background: var(--surface-1); color: var(--text-1); cursor: pointer; }
+.sales-summary-stat:first-child { background: color-mix(in srgb, var(--accent) 7%, var(--surface-1)); }
+.sales-summary-stat > span { display: flex; justify-content: space-between; align-items: center; width: 100%; font-size: 10px; font-weight: 600; color: var(--text-2); }
+.sales-summary-stat > span svg { color: var(--accent); }
+.sales-summary-stat strong { font-size: 23px; line-height: 1.2; font-weight: 650; letter-spacing: -.6px; font-variant-numeric: tabular-nums; }
+.sales-summary-stat:first-child strong { color: var(--accent); }
+.sales-summary-stat small { font-size: 9px; color: var(--text-3); }
+.sales-summary-stat:hover { background: var(--sales-hover); }
+.sales-summary-stat:focus-visible { outline-offset: -4px !important; }
+.app[data-workspace="sales"] .sales-ranking-lane { border-color: var(--sales-edge); border-radius: 12px; }
+.app[data-workspace="sales"] .sales-ranking-lane > header { background: var(--sales-header); border-color: var(--sales-edge); }
+.app[data-workspace="sales"] .sales-ranking-lane.top > header { color: var(--accent); }
+.app[data-workspace="sales"] .sales-rank-number { display: grid; place-items: center; width: 28px; height: 28px; flex-shrink: 0; border-radius: 7px; background: var(--sales-header); color: var(--accent); font-weight: 700; }
+.app[data-workspace="sales"] .sales-ranking-row:hover { background: var(--sales-hover); }
+.app[data-workspace="sales"] .sales-ranking-lane.top .sales-rank-detail i b { background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+.app[data-workspace="sales"] .sales-rank-value strong { letter-spacing: -.3px; }
+
+@media (max-width: 760px) {
+  .app[data-workspace="sales"] .register { border-radius: 12px; }
+  .app[data-workspace="sales"] .register-head { gap: 12px; }
+  .app[data-workspace="sales"] .nested-toolbar { flex-wrap: wrap; }
+  .app[data-workspace="sales"] .sales-table-toolbar { flex-wrap: wrap; }
+  .app[data-workspace="sales"] .sales-table-toolbar .acq-search { flex: 1; min-width: 150px; }
+  .app[data-workspace="sales"] .sales-table-toolbar .acq-search input { width: 100%; min-width: 0; }
+  .sales-summary-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sales-summary-stat { padding: 12px; }
+  .sales-summary-stat strong { font-size: 20px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .app[data-workspace="sales"] :is(.scorecard-cell, .sales-ranking-row, .sales-summary-stat) { transition: background-color 150ms ease, color 150ms ease; }
+}
+@media print {
+  .app[data-workspace="sales"] .register { box-shadow: none; }
+  .app[data-workspace="sales"] .sales-scorecard-table { max-height: none; overflow: visible; }
+}
+
+/* Keep financial data neutral in every row state, including clickable cells and totals. */
+.app[data-workspace="sales"] :is(.table-scroll, .intelligence-table) :is(tbody, tfoot) tr > :first-child { box-shadow: 1px 0 0 var(--hairline); }
+.app[data-workspace="sales"] .sales-scorecard-table thead [data-metric="gross_revenue"] { color: var(--accent); }
+.app[data-workspace="sales"] :is(.table-scroll, .intelligence-table) :is(tbody, tfoot) :is(.scorecard-cell, .cell-value, .row-name, .row-chevron, .row-action, .monthly-value) { color: var(--text-1); }
+.app[data-workspace="sales"] :is(.table-scroll, .intelligence-table) :is(tbody, tfoot) .scorecard-cell:hover { color: var(--text-1); }
+.app[data-workspace="sales"] .monthly-table tbody .latest-month { border-inline-color: var(--hairline-strong); }

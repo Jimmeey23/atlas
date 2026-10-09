@@ -1,3 +1,4 @@
+import { DropdownField } from "./ui/DropdownField";
 import { noteRequest } from "../data/noteApi";
 import { elementSelector, type NoteConnector } from "../data/noteConnectors";
 import { useEffect, useRef, useState } from "react";
@@ -602,7 +603,7 @@ export function StickyNotes() {
                         </label>
                         <label>
                           Priority
-                          <select
+                          <DropdownField
                             aria-label="Note priority"
                             value={note.priority ?? "normal"}
                             onChange={(e) =>
@@ -612,11 +613,11 @@ export function StickyNotes() {
                             <option value="normal">Normal</option>
                             <option value="important">Important</option>
                             <option value="urgent">Urgent</option>
-                          </select>
+                          </DropdownField>
                         </label>
                         <label>
                           Text size
-                          <select
+                          <DropdownField
                             aria-label="Note text size"
                             value={note.fontSize ?? 12}
                             onChange={(e) =>
@@ -630,7 +631,7 @@ export function StickyNotes() {
                                 {size}px
                               </option>
                             ))}
-                          </select>
+                          </DropdownField>
                         </label>
                         <button onClick={() => duplicate(note)}>
                           <Copy size={12} />

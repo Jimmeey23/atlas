@@ -1,3 +1,4 @@
+import { DropdownField } from "./ui/DropdownField";
 import { MonthlyTableControls, type MonthlyTableState } from "./MonthlyTableControls";
 import { Bike, Dumbbell, Activity, Trophy } from "lucide-react";
 import { InstructorName } from "./InstructorAvatar";
@@ -287,11 +288,11 @@ function TrendTable({ rows, formats, metric, onMetric }: { rows: Row[]; formats:
       title="How each format trends"
       subtitle="14 completed months · ignores the page date filter, every other filter applies"
       actions={
-        <select aria-label="Trend metric" value={metric} onChange={(e) => onMetric(e.target.value)}>
+        <DropdownField aria-label="Trend metric" value={metric} onChange={(e) => onMetric(e.target.value)}>
           {TREND_IDS.map((id) => (
             <option key={id} value={id}>{metrics[id]?.label || id}</option>
           ))}
-        </select>
+        </DropdownField>
       }
     >
       <MonthlyTableControls state={controls} onChange={patch=>setControls(c=>({...c,...patch}))} onExport={()=>exportCSV('format-monthly-'+controls.mode,formats.map(format=>({Format:format,...Object.fromEntries(months.map(month=>[month,controls.mode==='absolute'?fmt(metric,cell(month,format)):delta(metric,cell(month,format),cell(priorKey(month),format))]))})))}/>

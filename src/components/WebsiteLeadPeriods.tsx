@@ -1,3 +1,4 @@
+import { DropdownField } from "./ui/DropdownField";
 import { useEffect, useMemo, useState } from "react";
 import { query, quote, type Row } from "../data/duckdb";
 import { metrics, contributorPredicate } from "../semantics/metrics";
@@ -138,7 +139,7 @@ export function WebsiteLeadPeriods({ version, onDrill }: { version: string | num
         <span className="small">Source exactly “{WEBSITE}”</span>
       </summary>
       <div className="secondary-content">
-        <div className="pm-controls"><label>Group comparisons <select aria-label="Group Website period comparisons" value={group} onChange={event=>setGroup(event.target.value)}><option value="">All Website leads</option>{Object.entries(leadDimensions).filter(([key])=>!["date","month"].includes(key)).map(([key,dimension])=><option key={key} value={key}>{dimension.label}</option>)}</select></label></div>
+        <div className="pm-controls"><label>Group comparisons <DropdownField aria-label="Group Website period comparisons" value={group} onChange={event=>setGroup(event.target.value)}><option value="">All Website leads</option>{Object.entries(leadDimensions).filter(([key])=>!["date","month"].includes(key)).map(([key,dimension])=><option key={key} value={key}>{dimension.label}</option>)}</DropdownField></label></div>
         {error && <p role="alert">{error}</p>}
         {loading && <p role="status">Loading website enquiry periods…</p>}
         <div className="table-scroll">

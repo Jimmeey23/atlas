@@ -1,3 +1,4 @@
+import { DropdownField } from "./ui/DropdownField";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { where } from "../data/analytics";
 import { query, quote, health, type Row } from "../data/duckdb";
@@ -292,35 +293,35 @@ export function RetentionWorklists({ version }: { version: number }) {
         />
         <label>
           Renewal window
-          <select value={horizon} onChange={(e) => setHorizon(+e.target.value)}>
+          <DropdownField value={horizon} onChange={(e) => setHorizon(+e.target.value)}>
             {[7, 14, 30, 60].map((n) => (
               <option key={n} value={n}>
                 {n} days
               </option>
             ))}
-          </select>
+          </DropdownField>
         </label>
         <label>
           Minimum absence
-          <select value={gap} onChange={(e) => setGap(+e.target.value)}>
+          <DropdownField value={gap} onChange={(e) => setGap(+e.target.value)}>
             {[7, 14, 21, 30].map((n) => (
               <option key={n} value={n}>
                 {n} days
               </option>
             ))}
-          </select>
+          </DropdownField>
         </label>
         <label>
           Follow-up status
-          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+          <DropdownField value={status} onChange={(e) => setStatus(e.target.value)}>
             {["Open", "All", ...statuses].map((v) => (
               <option key={v}>{v}</option>
             ))}
-          </select>
+          </DropdownField>
         </label>
         <label>
           Owner
-          <select value={owner} onChange={(e) => setOwner(e.target.value)}>
+          <DropdownField value={owner} onChange={(e) => setOwner(e.target.value)}>
             <option value="">All owners</option>
             {[
               ...new Set(
@@ -333,7 +334,7 @@ export function RetentionWorklists({ version }: { version: number }) {
               .map((v) => (
                 <option key={v}>{v}</option>
               ))}
-          </select>
+          </DropdownField>
         </label>
       </div>
       {error ? (
@@ -610,7 +611,7 @@ export function RetentionWorklists({ version }: { version: number }) {
               </label>
               <div className="followup-field">
                 <label htmlFor="floor-followup-status">Status</label>
-                <select
+                <DropdownField
                   id="floor-followup-status"
                   value={draft.status}
                   onChange={(e) => field("status", e.target.value)}
@@ -618,7 +619,7 @@ export function RetentionWorklists({ version }: { version: number }) {
                   {statuses.map((v) => (
                     <option key={v}>{v}</option>
                   ))}
-                </select>
+                </DropdownField>
               </div>
               <label>
                 Next follow-up date
@@ -630,7 +631,7 @@ export function RetentionWorklists({ version }: { version: number }) {
               </label>
               <label>
                 Member’s stated contact preference
-                <select
+                <DropdownField
                   value={draft.preference}
                   onChange={(e) => field("preference", e.target.value)}
                 >
@@ -646,7 +647,7 @@ export function RetentionWorklists({ version }: { version: number }) {
                       {v || "Not recorded"}
                     </option>
                   ))}
-                </select>
+                </DropdownField>
               </label>
               <label>
                 Member’s verbatim concern or barrier

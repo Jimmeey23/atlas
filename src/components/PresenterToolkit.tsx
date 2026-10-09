@@ -1,3 +1,4 @@
+import { DropdownField } from "./ui/DropdownField";
 import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Maximize, Minimize, X, Play, Pause, RotateCcw, Monitor, EyeOff, Lightbulb } from 'lucide-react';
 export type PresenterState = { active:boolean; blackout:boolean; spotlight:boolean; zoom:number; chapter:string };
@@ -22,9 +23,9 @@ export function PresenterToolkit({state,onChange,viewer=false}:{state:PresenterS
     {!viewer&&<div className="presenter-toolbar" role="toolbar" aria-label="Presenter toolkit">
       <strong>Presenter</strong>
       <button className="icon-button" aria-label="Previous chapter" disabled={!sections.length} onClick={()=>move(-1)}><ChevronLeft size={18}/></button>
-      <select aria-label="Presentation chapter" value={state.chapter} onChange={e=>onChange({...state,chapter:e.target.value})}><option value="">Report cover</option>{sections.map((s,i)=><option key={s.id} value={s.id}>{i+1}. {s.title}</option>)}</select>
+      <DropdownField aria-label="Presentation chapter" value={state.chapter} onChange={e=>onChange({...state,chapter:e.target.value})}><option value="">Report cover</option>{sections.map((s,i)=><option key={s.id} value={s.id}>{i+1}. {s.title}</option>)}</DropdownField>
       <button className="icon-button" aria-label="Next chapter" disabled={!sections.length} onClick={()=>move(1)}><ChevronRight size={18}/></button>
-      <label>Zoom <select aria-label="Presentation zoom" value={state.zoom} onChange={e=>onChange({...state,zoom:Number(e.target.value)})}>{[.75,1,1.25,1.5,2].map(n=><option key={n} value={n}>{n*100}%</option>)}</select></label>
+      <label>Zoom <DropdownField aria-label="Presentation zoom" value={state.zoom} onChange={e=>onChange({...state,zoom:Number(e.target.value)})}>{[.75,1,1.25,1.5,2].map(n=><option key={n} value={n}>{n*100}%</option>)}</DropdownField></label>
       <button className="button" aria-pressed={state.blackout} onClick={()=>onChange({...state,blackout:!state.blackout})}><EyeOff size={14}/>Blank</button>
       <button className="button" aria-pressed={state.spotlight} onClick={()=>onChange({...state,spotlight:!state.spotlight})}><Lightbulb size={14}/>Spotlight</button>
       <button className="button" aria-pressed={showNotes} onClick={()=>setShowNotes(!showNotes)}>Notes & timer</button>

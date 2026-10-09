@@ -1,3 +1,5 @@
+import { TABLE_ROW_HEIGHT } from "./ui/layout";
+import { DropdownField } from "./ui/DropdownField";
 import { newFieldLabel, newSheetFields } from "../data/new-fields";
 import { tree } from "../data/hierarchy";
 import { InstructorAvatar } from "./InstructorAvatar";
@@ -283,12 +285,7 @@ export function NestedTable({
   const virtual = useVirtualizer({
     count: visible.length,
     getScrollElement: () => parent.current,
-    estimateSize: () =>
-      store.density === "dense"
-        ? 26
-        : store.density === "comfortable"
-          ? 44
-          : 34,
+    estimateSize: () => TABLE_ROW_HEIGHT,
     overscan: 12,
   });
   const rendered =
@@ -323,7 +320,7 @@ export function NestedTable({
               }}
             >
               <GripVertical size={10} />
-              <select
+              <DropdownField
                 aria-label={`Grouping level ${i + 1}`}
                 value={g}
                 onChange={(e) => {
@@ -364,7 +361,7 @@ export function NestedTable({
                           : v[0].toUpperCase() + v.slice(1)}
                   </option>
                 ))}
-              </select>
+              </DropdownField>
             </div>
           ))}
         </div>
@@ -479,7 +476,7 @@ export function NestedTable({
           </thead>
           <tbody>
             {top > 0 && (
-              <tr>
+              <tr className="table-virtual-spacer">
                 <td
                   colSpan={columns.length + 1}
                   style={{ height: top, padding: 0 }}
@@ -529,7 +526,7 @@ export function NestedTable({
               </tr>
             ))}
             {bottom > 0 && (
-              <tr>
+              <tr className="table-virtual-spacer">
                 <td
                   colSpan={columns.length + 1}
                   style={{ height: bottom, padding: 0 }}

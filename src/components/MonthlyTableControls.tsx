@@ -1,3 +1,4 @@
+import { DropdownField } from "./ui/DropdownField";
 import {
   Download,
   ArrowDownWideNarrow,
@@ -55,7 +56,7 @@ export function MonthlyTableControls({
       <label>
         <ListFilter size={12} />
         Periods
-        <select
+        <DropdownField
           aria-label="Monthly periods shown"
           value={state.periods}
           onChange={(e) => onChange({ periods: Number(e.target.value) })}
@@ -65,7 +66,7 @@ export function MonthlyTableControls({
               Last {n} months
             </option>
           ))}
-        </select>
+        </DropdownField>
       </label>
       <button
         className="button"
@@ -79,13 +80,7 @@ export function MonthlyTableControls({
         )}{" "}
         {state.newest ? "Newest first" : "Oldest first"}
       </button>
-      <button
-        className="button"
-        aria-pressed={state.dense}
-        onClick={() => onChange({ dense: !state.dense })}
-      >
-        {state.dense ? "Compact rows" : "Comfortable rows"}
-      </button>
+      <span className="table-row-standard">32px rows</span>
       {onExport && (
         <button className="button" onClick={onExport}>
           <Download size={12} />

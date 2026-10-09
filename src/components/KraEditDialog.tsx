@@ -1,3 +1,4 @@
+import { DropdownField } from "./ui/DropdownField";
 import {useEffect,useRef,useState} from 'react';
 import {acquisitionPeriodLabel} from '../data/acquisition';
 export type KraEdit={current:string|null;lastYear:string|null;preceding:string|null;yoy:number|null;previousGrowth:number|null;status:string|null;explanation:string|null;note:string;annotation:string;updatedAt:string;basis:string};
@@ -23,7 +24,7 @@ export function KraEditDialog({period,definition,saved,source,onSaved,onClose}:{
    <label className="kra-wide">Target / KRA information<textarea aria-label="KRA target" rows={2} maxLength={2000} value={info.target} onChange={event=>setInfo({...info,target:event.target.value})}/></label>
    {field('current','Current achievement',source.current)}{field('lastYear','Last-year achievement',source.lastYear)}{field('preceding','Preceding achievement',source.preceding)}
    {field('yoy','Growth vs last year (%)','Source comparison','number')}{field('previousGrowth','Growth vs preceding (%)','Source comparison','number')}
-   <label>Status<select aria-label="Edited KRA status" value={form.status} onChange={event=>setForm({...form,status:event.target.value})}><option value="">Use source status · {source.status}</option>{['On track','Lagging','In progress','Completed','Not started','Not recorded','Baseline needed','Review needed','Upcoming'].map(status=><option key={status}>{status}</option>)}</select></label>
+   <label>Status<DropdownField aria-label="Edited KRA status" value={form.status} onChange={event=>setForm({...form,status:event.target.value})}><option value="">Use source status · {source.status}</option>{['On track','Lagging','In progress','Completed','Not started','Not recorded','Baseline needed','Review needed','Upcoming'].map(status=><option key={status}>{status}</option>)}</DropdownField></label>
    <label className="kra-wide">Explanation<textarea aria-label="Edited KRA explanation" rows={2} maxLength={6000} value={form.explanation} placeholder={source.explanation} onChange={event=>setForm({...form,explanation:event.target.value})}/></label>
    <label className="kra-wide">Notes<textarea aria-label="KRA notes" rows={3} maxLength={10000} value={form.note} placeholder="Add context, decisions, owners or follow-up actions…" onChange={event=>setForm({...form,note:event.target.value})}/></label>
    <label className="kra-wide">Annotations<textarea aria-label="KRA annotations" rows={2} maxLength={10000} value={form.annotation} placeholder="Annotate a figure, comparison or source record…" onChange={event=>setForm({...form,annotation:event.target.value})}/></label>

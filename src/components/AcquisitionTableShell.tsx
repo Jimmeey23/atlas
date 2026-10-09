@@ -1,5 +1,5 @@
-import { useRef, useState, type ReactNode } from "react";
-import { Download, Rows3, Search, type LucideIcon } from "lucide-react";
+import { useRef, type ReactNode } from "react";
+import { Download, Search, type LucideIcon } from "lucide-react";
 import { exportCSV } from "./exports";
 
 export function AcquisitionTableShell({ title, description, icon: Icon, count, actions, metricBar, onSearch, searchLabel, footer, children }: {
@@ -7,7 +7,6 @@ export function AcquisitionTableShell({ title, description, icon: Icon, count, a
   actions?: ReactNode; metricBar?: ReactNode; onSearch?: (value: string) => void; searchLabel?: string;
   footer?: ReactNode; children: ReactNode;
 }) {
-  const [compact, setCompact] = useState(true);
   const tableRef = useRef<HTMLDivElement>(null);
   function exportTable() {
     const table = tableRef.current?.querySelector("table");
@@ -18,12 +17,12 @@ export function AcquisitionTableShell({ title, description, icon: Icon, count, a
       .map(tr => Object.fromEntries([...tr.children].map((td, i) => [headers[i], td.textContent?.trim() || ""])));
     exportCSV(title.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-"), rows);
   }
-  return <section className="acq-shell" aria-label={title} data-density={compact ? "compact" : "comfortable"}>
+  return <section className="acq-shell" aria-label={title} data-density="compact">
     <header className="acq-shell-head">
       <span className="acq-icon"><Icon size={19} aria-hidden="true" /></span>
       <div className="acq-heading"><h2><span className="acq-title-text">{title}</span><span className="acq-count">{count.toLocaleString("en-IN")} rows</span></h2><p>{description}</p></div>
       <div className="acq-shell-actions">
-        <button onClick={() => setCompact(!compact)} aria-pressed={compact} title="Toggle row density"><Rows3 size={15} />{compact ? "Compact" : "Comfortable"}</button>
+        <span className="table-row-standard">32px rows</span>
         <button onClick={exportTable}><Download size={15} />Export visible CSV</button>
       </div>
     </header>

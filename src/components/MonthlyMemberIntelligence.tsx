@@ -1,3 +1,4 @@
+import { DropdownField } from "./ui/DropdownField";
 import { useEffect, useState } from 'react';
 import { query, type Row } from '../data/duckdb';
 import { ensureSource, usable } from '../data/loader';
@@ -60,7 +61,7 @@ export function MonthlyMemberIntelligence({ kind, version }: { kind: 'frequency'
   return <Register index={frequency ? 'OF' : '03c'} title={frequency ? 'Monthly member practice frequency' : 'Monthly instructor retention & conversion'}
     subtitle="Last 26 completed months · studio and other non-date filters apply"
     actions={<button className="button" disabled={busy || !visible.length} onClick={() => exportCSV(`${kind}-monthly`, visible)}>Export CSV</button>}>
-    <div className="member-month-controls"><label>Month <select value={selectedMonth} onChange={e => setMonth(e.target.value)}><option value="all">All months</option>{months.map(value => <option key={value} value={value}>{acquisitionPeriodLabel(value)}</option>)}</select></label>
+    <div className="member-month-controls"><label>Month <DropdownField value={selectedMonth} onChange={e => setMonth(e.target.value)}><option value="all">All months</option>{months.map(value => <option key={value} value={value}>{acquisitionPeriodLabel(value)}</option>)}</DropdownField></label>
       {frequency ? <label><input type="checkbox" checked={showShare} onChange={e => setShowShare(e.target.checked)} />Show frequency as % of members</label> : <label>Instructor <input type="search" value={search} placeholder="Find an instructor…" onChange={e => setSearch(e.target.value)} /></label>}
     </div>
     {busy ? <p role="status">Loading monthly member intelligence…</p> : error ? <p role="alert">{error}</p> : !visible.length ? <p>No identified member records match this scope.</p> : frequency ? <>

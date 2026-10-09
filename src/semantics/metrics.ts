@@ -51,3 +51,13 @@ export function contributorPredicate(id: string, ctx: QueryContext) {
   }
   return depth === 0 ? expression.slice(from, i - 1).trim() : undefined;
 }
+
+/** The protected rate denominator, when the registry explicitly supplies one. */
+export function metricDenominatorSQL(id:string,ctx:QueryContext):string|null {
+  const expression=metrics[id]?.sql(ctx);if(!expression)return null;
+  if(metrics[id].aggregation==='avg'||metrics[id].aggregation==='median') {const match=/^(?:AVG|MEDIAN)\(([^()]+)\)/i.exec(expression.trim());return match?expression.trim().replace(/^(AVG|MEDIAN)/i,'COUNT'):null;}
+  if(metrics[id].aggregation!=='weighted')return null;
+  const start=expression.indexOf('NULLIF(');if(start<0)return null;
+  let depth=0;for(let i=start+7;i<expression.length;i++){if(expression[i]==='(')depth++;else if(expression[i]===')')depth--;else if(expression[i]===','&&depth===0)return expression.slice(start+7,i).trim();}
+  return null;
+}

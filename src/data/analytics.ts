@@ -1,3 +1,5 @@
+import { compileFilters } from "./advanced-controls";
+import { sqlTypes } from "./normalise";
 import { newSheetFields } from "./new-fields";
 import { query, quote, health, fieldPresence, type Row } from "./duckdb";
 import { metricSQL, type QueryContext } from "../semantics/metrics";
@@ -88,6 +90,8 @@ export function where(
   for (const t of transient)
     if (allowed.includes(t.field) && carries(source, t.field))
       terms.push(`"${t.field}"=${quote(t.value)}`);
+  const advanced = compileFilters(filters.advanced, sqlTypes);
+  if (advanced) terms.push(advanced);
   return terms.length ? " WHERE " + terms.join(" AND ") : "";
 }
 export function comparison(f: Filters, mode: string): Filters {

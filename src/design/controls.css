@@ -1,0 +1,117 @@
+/* Shared field and table geometry. This stylesheet settles local tab overrides. */
+:root,
+:root[data-density] { --row-height: 32px !important; --table-row-height: 32px; }
+:root:is([data-theme="gloss"], [data-theme="ivory"], [data-theme="porcelain"], [data-theme="light-glass"]) { color-scheme: light; }
+
+:root select.atlas-dropdown {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  box-sizing: border-box;
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  min-width: 0;
+  padding: 0 30px 0 10px !important;
+  border: 1px solid var(--hairline-strong) !important;
+  border-radius: 7px !important;
+  background-color: var(--surface-1) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2377869b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 9px center !important;
+  background-size: 14px !important;
+  color: var(--text-1) !important;
+  font-family: var(--font-ui) !important;
+  font-size: 11px !important;
+  font-weight: 500;
+  line-height: normal !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 1px 2px #00000004;
+}
+:root select.atlas-dropdown:hover:not(:disabled) { border-color: var(--accent) !important; }
+:root select.atlas-dropdown:focus-visible {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 2px;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+:root select.atlas-dropdown:disabled { opacity: .5; cursor: not-allowed; }
+:root select.atlas-dropdown :is(option, optgroup) { color: var(--text-1); background: var(--surface-1); font-family: var(--font-ui); font-size: 12px; }
+:root select.atlas-dropdown[multiple] { height: auto !important; min-height: 80px !important; max-height: none !important; background-image: none !important; padding: 8px 10px !important; }
+.grouping .group-chip { align-items: center; padding-block: 3px; }
+.grouping .group-chip select.atlas-dropdown { width: 112px; }
+.multi summary {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 7px;
+  background: var(--surface-1);
+  color: var(--text-1);
+  font: 500 11px var(--font-ui);
+  box-shadow: 0 1px 2px #00000004;
+}
+.multi summary::-webkit-details-marker { display: none; }
+.multi summary svg { flex-shrink: 0; color: var(--text-3); }
+.multi summary:hover, .multi[open] summary { border-color: var(--accent); }
+.multi summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.multi[open] summary svg { transform: rotate(180deg); }
+.multi[open] .multi-menu {
+  margin-top: 5px;
+  background: var(--surface-1);
+  border-radius: 9px;
+  padding: 10px;
+  max-width: calc(100vw - 32px);
+}
+.multi-menu label { min-height: 32px; border-radius: 5px; }
+.multi-menu label:hover, .multi-menu label:focus-within { background: var(--surface-2); }
+.multi-menu input[type="checkbox"] { accent-color: var(--accent); }
+.table-row-standard { display: inline-flex; align-items: center; white-space: nowrap; height: 28px; padding: 0 8px; color: var(--text-3); font-size: 10px; }
+
+/* Ordinary headers, data rows and totals all match the compact MoM table.
+   Virtual scroll spacers and expanded detail panels retain their content geometry. */
+:root table tr:not(.table-virtual-spacer):not(.ref-spacer):not(.acq-expanded-purchase) > :is(th, td) {
+  box-sizing: border-box !important;
+  height: var(--table-row-height) !important;
+  min-height: var(--table-row-height) !important;
+  max-height: var(--table-row-height) !important;
+  padding-block: 0 !important;
+  line-height: 16px !important;
+  vertical-align: middle !important;
+  white-space: nowrap !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+:root table tr:not(.table-virtual-spacer):not(.ref-spacer):not(.acq-expanded-purchase) > :is(th, td) > :is(div, p, span, button, a) {
+  min-height: 0 !important;
+  max-height: 28px !important;
+  margin-block: 0 !important;
+  white-space: nowrap !important;
+}
+:root table tr:not(.table-virtual-spacer):not(.ref-spacer):not(.acq-expanded-purchase) > :is(th, td) :is(button, .acq-expand, .acq-detail-label, .row-name) {
+  min-height: 0 !important;
+  max-height: 28px !important;
+  padding-block: 0 !important;
+  line-height: 16px !important;
+  white-space: nowrap !important;
+}
+:root table .acq-sticky :is(.acq-expand > span, .acq-detail-label),
+:root table .kra-wrap,
+:root table .ops-cell-label { white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis; }
+:root table .acq-sticky .acq-expand > span { max-height: 24px; }
+:root table :is(.trainer-avatar, .instructor-avatar) { max-height: 24px; max-width: 24px; }
+:root table .monthly-value { line-height: 16px !important; padding-block: 0 !important; }
+:root .monthly-table th small { line-height: 10px; }
+
+@media (max-width: 760px) {
+  :root select.atlas-dropdown { max-width: 100%; }
+  .table-controls { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  select.atlas-dropdown { transition: border-color 140ms ease, box-shadow 140ms ease; }
+}

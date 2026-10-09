@@ -1,3 +1,4 @@
+import { DropdownField } from "./ui/DropdownField";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as echarts from "echarts";
 import { ChevronDown, ChevronRight } from "lucide-react";
@@ -79,9 +80,9 @@ export function MarketingChart({ rows, ids, onInspect, title, chronological = fa
   return <div className="pm-chart-block chart-surface">
     <ChartControls title={title} rows={plotted.map(row=>Object.fromEntries([["Group",row.label],...ids.map(id=>[metrics[id].label,row[id]])]))}/>
     <div className="pm-controls">
-      <label>Chart measure <select aria-label={`${title} chart measure`} value={a} onChange={e=>setFirst(e.target.value)}>{ids.map(id=><option key={id} value={id}>{metrics[id].label}</option>)}</select></label>
-      <label>Compare measure <select aria-label={`${title} compare measure`} value={b} onChange={e=>setSecond(e.target.value)}><option value="">None</option>{ids.filter(id=>id!==a).map(id=><option key={id} value={id}>{metrics[id].label}</option>)}</select></label>
-      <label>Chart <select value={kind} onChange={e=>setKind(e.target.value)}><option value="bar">Bars</option><option value="line">Lines</option></select></label>
+      <label>Chart measure <DropdownField aria-label={`${title} chart measure`} value={a} onChange={e=>setFirst(e.target.value)}>{ids.map(id=><option key={id} value={id}>{metrics[id].label}</option>)}</DropdownField></label>
+      <label>Compare measure <DropdownField aria-label={`${title} compare measure`} value={b} onChange={e=>setSecond(e.target.value)}><option value="">None</option>{ids.filter(id=>id!==a).map(id=><option key={id} value={id}>{metrics[id].label}</option>)}</DropdownField></label>
+      <label>Chart <DropdownField value={kind} onChange={e=>setKind(e.target.value)}><option value="bar">Bars</option><option value="line">Lines</option></DropdownField></label>
       {!chronological && rows.length>20 && <span className="small">Top 20 by {metrics[a].label}; the table includes every group.</span>}
     </div>
     <div ref={ref} className="pm-chart chart" role="img" aria-label={`${title}: ${metrics[a].label}${b ? ` and ${metrics[b].label}${separateAxis ? ', separate axes' : ', shared scale'}` : ""}. Inspect records using chart marks or table cells.`} />
@@ -126,9 +127,9 @@ export function MarketingTable({ source, scope, initialGroups, ids, version, onD
   const chartRows = useMemo(()=>nodes.map(n=>({...n.values,label:n.label,nodeId:n.id})),[nodes]);
   return <div className="pm-analytics-table" data-marketing-table={title}>
     <div className="pm-table-toolbar nested-toolbar">
-      <div className="grouping">{[0,1,2].filter(i=>i<=groups.length).map(i=><label className="group-chip" key={i}>{i ? `Then group ${i+1}` : "Group by"} <select aria-label={`${title} group ${i+1}`} value={groups[i] || ""} onChange={e=>changeGroup(i,e.target.value)}>
+      <div className="grouping">{[0,1,2].filter(i=>i<=groups.length).map(i=><label className="group-chip" key={i}>{i ? `Then group ${i+1}` : "Group by"} <DropdownField aria-label={`${title} group ${i+1}`} value={groups[i] || ""} onChange={e=>changeGroup(i,e.target.value)}>
         {i>0 && <option value="">None</option>}{Object.entries(dimensions).filter(([key])=>!groups.includes(key)||groups[i]===key).map(([key,d])=><option key={key} value={key}>{d.label}</option>)}
-      </select></label>)}</div>
+      </DropdownField></label>)}</div>
       <div className="table-controls"><button className="button" onClick={()=>setExpanded(expanded.size ? new Set() : new Set(data.rows.map(r=>JSON.stringify(groups.slice(0,groups.length-Math.round(Math.log2(Number(r.level)+1))).map((field,i)=>({field,value:String(r[`g${i}`]??'Unspecified')}))))))}>{expanded.size ? "Collapse groups" : "Expand groups"}</button>
       <button className="button" aria-pressed={chart} onClick={()=>setChart(!chart)}>{chart ? "Hide chart" : "Show chart"}</button>
       <details className="pm-column-menu"><summary>Columns</summary><div>{ids.map(id=><label key={id}><input type="checkbox" checked={visible.includes(id)} onChange={()=>setVisible(v=>v.includes(id) ? v.length>1 ? v.filter(x=>x!==id) : v : ids.filter(x=>v.includes(x)||x===id))}/>{metrics[id].label}</label>)}</div></details>

@@ -1,3 +1,4 @@
+import { DropdownField } from "./ui/DropdownField";
 import { useEffect, useMemo, useState } from "react";
 import { query, type Row } from "../data/duckdb";
 import { metrics } from "../semantics/metrics";
@@ -126,7 +127,7 @@ export function MoMTable({ ids, version }: { ids: string[]; version: string }) {
       >
         <label>
           Measure
-          <select
+          <DropdownField
             aria-label="Monthly metric"
             value={ids.includes(selected) ? selected : "all"}
             onChange={(e) => setSelected(e.target.value)}
@@ -137,7 +138,7 @@ export function MoMTable({ ids, version }: { ids: string[]; version: string }) {
                 {metrics[id].label}
               </option>
             ))}
-          </select>
+          </DropdownField>
         </label>
         <input
           type="search"

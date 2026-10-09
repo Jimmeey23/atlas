@@ -1,3 +1,4 @@
+import { DropdownField } from "./ui/DropdownField";
 import { useEffect, useRef, useState } from 'react';
 import { Music2, Radio, X, Play, Pause, Square, Copy, Hand, PenLine, MousePointer2 } from 'lucide-react';
 import { useStore } from '../state/store';
@@ -69,7 +70,7 @@ export function PresentationTools() {
       <button className="button" aria-pressed={!draw} onClick={()=>setDraw(false)}><MousePointer2 size={14}/>Navigate</button>
       {(['pen','highlight','rectangle','arrow','text','eraser'] as const).map(tool=><button className="button" key={tool} aria-pressed={draw&&inkTool===tool} onClick={()=>{setInkTool(tool);setDraw(true);}}>{tool}</button>)}
       <label>Ink <input aria-label="Annotation color" type="color" value={inkColor} onChange={e=>setInkColor(e.target.value)}/></label>
-      <label>Width <select aria-label="Annotation width" value={inkWidth} onChange={e=>setInkWidth(Number(e.target.value))}>{[2,4,8,16].map(w=><option key={w}>{w}</option>)}</select></label>
+      <label>Width <DropdownField aria-label="Annotation width" value={inkWidth} onChange={e=>setInkWidth(Number(e.target.value))}>{[2,4,8,16].map(w=><option key={w}>{w}</option>)}</DropdownField></label>
       {inkTool==='text'&&<input aria-label="Annotation text" placeholder="Label then click report" maxLength={180} value={inkText} onChange={e=>setInkText(e.target.value)}/>}
       <button className="button" disabled={!strokes.length} onClick={undoInk}>Undo</button><button className="button" disabled={!redo.length} onClick={()=>{setStrokes([...strokes,redo.at(-1)!]);setRedo(redo.slice(0,-1));}}>Redo</button><button className="button" disabled={!strokes.length} onClick={()=>{setStrokes([]);setRedo([]);}}>Clear</button>
     </div>}

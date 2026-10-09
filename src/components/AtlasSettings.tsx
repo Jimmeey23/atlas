@@ -1,3 +1,4 @@
+import { DropdownField } from "./ui/DropdownField";
 import { useState } from "react";
 import {
   usePreferences,
@@ -82,7 +83,7 @@ export function AtlasSettings() {
         <summary>Customize pages & sections</summary>
         <label>
           Page
-          <select
+          <DropdownField
             aria-label="Customize page"
             value={tab}
             onChange={(e) => setTab(Number(e.target.value))}
@@ -92,7 +93,7 @@ export function AtlasSettings() {
                 {p.page[i]?.name || t}
               </option>
             ))}
-          </select>
+          </DropdownField>
         </label>
         <div className="settings-grid">
           <label>

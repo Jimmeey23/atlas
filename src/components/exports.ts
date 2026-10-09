@@ -1,3 +1,6 @@
+import { buildCSV } from "../data/export-format";
+import { health } from "../data/duckdb";
+import { metrics } from "../semantics/metrics";
 import { useStore, tabs } from "../state/store";
 export function download(name: string, data: Blob) {
   const url = URL.createObjectURL(data);
@@ -12,22 +15,15 @@ export function exportCSV(
   rows: Record<string, unknown>[],
   scope?: string,
 ) {
-  const quote = (v: unknown) =>
-    '"' +
-    String(v ?? "")
-      .replaceAll('"', '""')
-      .replace(/^[=+@-]/, "'") +
-    '"';
   const state = useStore.getState();
-  const keys = [...new Set(rows.flatMap((r) => Object.keys(r)))];
-  const header = scope
-    ? `Atlas / ${tabs[state.tab]} / ${scope}`
-    : `Atlas / ${tabs[state.tab]} / Filters: ${JSON.stringify(state.filters)} / Cross-filters: ${JSON.stringify(state.transient)} / Rate assumption: INR ${state.rate}`;
-  const csv = [
-    quote(header),
-    keys.map(quote).join(","),
-    ...rows.map((r) => keys.map((k) => quote(r[k])).join(",")),
-  ].join("\r\n");
+  const keys = [...new Set(rows.flatMap(row => Object.keys(row)))];
+  const receipt = {
+    scope: scope || `${tabs[state.tab]} / current export population`, generatedAt: new Date().toISOString(),
+    filters: state.filters, crossFilters: state.transient, comparison: state.compare, rowCount: rows.length,
+    sources: Object.entries(health).map(([name, info])=>({name,fetchedAt:info.fetchedAt})),
+    definitions: Object.fromEntries(keys.filter(key=>metrics[key]).map(key=>[key,metrics[key].description])),
+  };
+  const csv = buildCSV(rows, receipt);
   download(
     `${name}.csv`,
     new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }),

@@ -1,3 +1,4 @@
+import { DropdownField } from "./ui/DropdownField";
 import {salesRankingCriteria,splitSalesRankings} from "../data/sales-rankings";
 import { useEffect, useState } from "react";
 import {
@@ -97,7 +98,7 @@ export function SalesRankings({ version }: { version: number }) {
       <div className="sales-ranking-controls">
         <label>
           Compare
-          <select
+          <DropdownField
             aria-label="Sales ranking group"
             value={group}
             onChange={(e) => setGroup(e.target.value)}
@@ -107,11 +108,11 @@ export function SalesRankings({ version }: { version: number }) {
                 {label}
               </option>
             ))}
-          </select>
+          </DropdownField>
         </label>
         <label>
           Criterion
-          <select
+          <DropdownField
             aria-label="Sales ranking criterion"
             value={criterion}
             onChange={(e) => setCriterion(e.target.value)}
@@ -121,11 +122,11 @@ export function SalesRankings({ version }: { version: number }) {
                 {metrics[id].label}
               </option>
             ))}
-          </select>
+          </DropdownField>
         </label>
         <label>
           Show
-          <select
+          <DropdownField
             aria-label="Sales ranking count"
             value={limit}
             onChange={(e) => setLimit(Number(e.target.value))}
@@ -135,11 +136,11 @@ export function SalesRankings({ version }: { version: number }) {
                 Top / bottom {n}
               </option>
             ))}
-          </select>
+          </DropdownField>
         </label>
         <label>
           Minimum transactions
-          <select
+          <DropdownField
             aria-label="Sales ranking minimum transactions"
             value={minimum}
             onChange={(e) => setMinimum(Number(e.target.value))}
@@ -147,7 +148,7 @@ export function SalesRankings({ version }: { version: number }) {
             {[1, 3, 5, 10].map((n) => (
               <option key={n}>{n}</option>
             ))}
-          </select>
+          </DropdownField>
         </label>
         <label className="sales-ranking-search">
           <Search size={13} />

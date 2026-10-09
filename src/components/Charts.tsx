@@ -366,6 +366,10 @@ export function Chart({
   useEffect(() => {
     if (!ref.current || table) return;
     const c = colors();
+    if (tab === 4) {
+      c.revenue = c.accent;
+      c.growth = c["accent-2"];
+    }
     const chart = echarts.init(ref.current, null, { renderer: "canvas" });
     instance.current = chart;
     const axis = {

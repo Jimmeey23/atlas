@@ -1,3 +1,5 @@
+import { AdvancedScopeControls } from "./AdvancedScopeControls";
+import { DropdownField } from "./ui/DropdownField";
 import { comparisonDates, comparisonOptions } from "../data/periods";
 import { InstructorName } from "./InstructorAvatar";
 import { useState } from "react";
@@ -112,7 +114,7 @@ export function Filters({
         <div className="drawer">
           <label>
             Period
-            <select
+            <DropdownField
               aria-label="Period preset"
               value="custom"
               onChange={(e) => {
@@ -126,7 +128,7 @@ export function Filters({
               <option value="quarter">Last quarter</option>
               <option value="year">Year to date</option>
               <option value="all">All history</option>
-            </select>
+            </DropdownField>
           </label>
           <div className="dates">
             <label>
@@ -148,7 +150,7 @@ export function Filters({
           </div>
           <label>
             Compare to
-            <select
+            <DropdownField
               value={s.compare.startsWith("custom:") ? "custom" : s.compare}
               onChange={(e) => {
                 if (e.target.value !== "custom") return s.set({ compare: e.target.value });
@@ -157,7 +159,7 @@ export function Filters({
               }}
             >
               {comparisonOptions.map(([mode, label]) => <option key={mode} value={mode}>{label}</option>)}
-            </select>
+            </DropdownField>
           </label>
           {(
             [
@@ -180,29 +182,29 @@ export function Filters({
           ))}
           <label>
             Community members
-            <select
+            <DropdownField
               value={s.filters.memberType}
               onChange={(e) => s.filter({ memberType: e.target.value })}
             >
               <option value="all">New and returning</option>
               <option value="new">Newcomers</option>
               <option value="returning">Returning</option>
-            </select>
+            </DropdownField>
           </label>
           <label>
             Session type
-            <select
+            <DropdownField
               value={s.filters.sessionType}
               onChange={(e) => s.filter({ sessionType: e.target.value })}
             >
               <option value="all">All sessions</option>
               <option value="Regular">Regular</option>
               <option value="Hosted">Hosted partnerships</option>
-            </select>
+            </DropdownField>
           </label>
           <label>
             Capacity band
-            <select
+            <DropdownField
               value={s.filters.capacityBand}
               onChange={(e) => s.filter({ capacityBand: e.target.value })}
             >
@@ -210,7 +212,7 @@ export function Filters({
               <option value="small">Up to 10 seats</option>
               <option value="medium">11–20 seats</option>
               <option value="large">Over 20 seats</option>
-            </select>
+            </DropdownField>
           </label>
           <label style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <input
@@ -229,6 +231,7 @@ export function Filters({
           </button>
         </div>
       )}
+      {s.filterOpen && <AdvancedScopeControls />}
     </>
   );
 }
@@ -273,11 +276,11 @@ function Multi({
     <div className="field-label">
       {label}
       <details className="multi">
-        <summary>
+        <summary aria-label={label}>
           {values.length
             ? `${values.length} selected`
             : `All ${label.toLowerCase()}s`}{" "}
-          <ChevronDown size={11} style={{ float: "right", marginTop: 3 }} />
+          <ChevronDown size={14} aria-hidden="true" />
         </summary>
         <div className="multi-menu">
           <input

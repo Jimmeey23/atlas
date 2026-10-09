@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import * as echarts from "echarts";
 import { formatField } from "../semantics/formats";
-import { useStore } from "../state/store";
 import { exportCSV } from "./exports";
 import { DataInsightAction } from "./DataInsightAction";
 export function ChartControls({
@@ -66,7 +65,7 @@ export function ChartControls({
         </button>
         <button
           aria-label={"Reset " + title}
-          title="Reset view and chart filters"
+          title="Reset this chart view"
           onClick={() => {
             setZoom(100);
             chart()?.dispatchAction({ type: "restore" });
@@ -74,7 +73,6 @@ export function ChartControls({
               ?.closest(".chart-surface,.register,.pulse-wrapper")
               ?.querySelector("svg,.heatmap,.ranking-list") as HTMLElement;
             if (target) target.style.zoom = "1";
-            useStore.getState().set({ transient: [] });
           }}
         >
           <RotateCcw size={14} />

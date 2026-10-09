@@ -1,3 +1,4 @@
+import { DropdownField } from "./ui/DropdownField";
 import { useEffect, useMemo, type Dispatch, type SetStateAction } from "react";
 import { health } from "../data/duckdb";
 import { metaScope } from "../data/marketing-channels";
@@ -40,7 +41,7 @@ export function MetaMarketing({ version, onDrill, selected, setSelected }: { ver
   return <div className="pm-meta" aria-label="Meta campaign analytics">
     <Register id="marketing-meta" index="20" title="Meta campaign performance" subtitle="Meta-reported outcomes · reporting dates follow the selected page period">
       <div className="pm-controls">
-        {Object.entries({account_id:"Account",campaign_id:"Campaign",publisher_platform:"Platform",objective:"Objective"}).map(([field,label])=><label key={field}>{label} <select aria-label={`Meta ${label.toLowerCase()} filter`} value={selected[field]} onChange={e=>setSelected(v=>({...v,[field]:e.target.value}))}><option value="">All {label.toLowerCase()}s</option>{(options[field]||[]).map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select></label>)}
+        {Object.entries({account_id:"Account",campaign_id:"Campaign",publisher_platform:"Platform",objective:"Objective"}).map(([field,label])=><label key={field}>{label} <DropdownField aria-label={`Meta ${label.toLowerCase()} filter`} value={selected[field]} onChange={e=>setSelected(v=>({...v,[field]:e.target.value}))}><option value="">All {label.toLowerCase()}s</option>{(options[field]||[]).map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</DropdownField></label>)}
         <button className="button" onClick={()=>setSelected({account_id:"",campaign_id:"",publisher_platform:"",objective:""})}>Reset Meta filters</button>
         <button className="button" disabled={sourceState?.state==="loading"||sourceState?.state==="refreshing"} onClick={()=>void ensureSource("meta",true)}>Refresh Meta</button>
         <a className="button" href="https://docs.google.com/spreadsheets/d/1mfZQlccKdAVHzkP2eo_HpHK6lZe6Y0oQbtaVS9o6aeI/edit?gid=1995330774" target="_blank" rel="noreferrer">Open Meta sheet</a>

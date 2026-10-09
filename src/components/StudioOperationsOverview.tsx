@@ -1,3 +1,4 @@
+import { DropdownField } from "./ui/DropdownField";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as echarts from "echarts";
 import { Download, RotateCcw, Table2, ChartNoAxesCombined } from "lucide-react";
@@ -322,13 +323,13 @@ export function StudioOperationsOverview({
           </div>
           <label>
             Measure
-            <select value={metric} onChange={(e) => setMetric(e.target.value)}>
+            <DropdownField value={metric} onChange={(e) => setMetric(e.target.value)}>
               {chartMetrics.map((id) => (
                 <option key={id} value={id}>
                   {metrics[id].label}
                 </option>
               ))}
-            </select>
+            </DropdownField>
           </label>
           <label>
             Minimum sessions

@@ -1,3 +1,7 @@
+import { missingPrivateScope } from "./state/store";
+import { AnalysisWorkbench } from "./components/AnalysisWorkbench";
+import { AnalysisNavigation } from "./components/AnalysisNavigation";
+import { DropdownField } from "./components/ui/DropdownField";
 import { comparisonDates, comparisonLabel, comparisonOptions } from "./data/periods";
 import { StudioOperationsOverview } from "./components/StudioOperationsOverview";
 import { StudioOperationsDeepDive } from "./components/StudioOperationsDeepDive";
@@ -118,6 +122,9 @@ import "./design/refinement.css";
 import "./design/acquisition.css";
 import "./design/report.css";
 import "./design/chrome.css";
+import "./design/sales.css";
+import "./design/controls.css";
+import "./design/advanced-controls.css";
 import { sourceRows } from "./data/raw";
 const blank: Analysis = {
   total: {},
@@ -501,6 +508,9 @@ export default function App() {
     for (const [key, value] of Object.entries(domainStyle)) root.setProperty(key, String(value));
   }, [accentKey, pagePrefs.accent]);
   const commands = [
+    {name:"Advanced analysis builder",kind:"Analysis",run:()=>window.dispatchEvent(new Event("atlas-open-analysis"))},
+    {name:"Back / undo scope",kind:"Navigation",run:s.undo},
+    {name:"Forward / redo scope",kind:"Navigation",run:s.redo},
     ...tabs.map((name, i) => ({
       name,
       kind: "Workspace",
@@ -550,7 +560,7 @@ export default function App() {
   return (
     <div
       className="app"
-      data-workspace={s.tab === 5 ? "acquisition" : undefined}
+      data-workspace={s.tab === 5 ? "acquisition" : s.tab === 4 ? "sales" : undefined}
       style={{
         ...domainStyle,
         ...(prefs.contentWidth
@@ -625,7 +635,7 @@ export default function App() {
           <label className={`toolbar-compare ${s.compare !== "none" ? "is-on" : ""}`} title="Compare every tab against another period">
             <GitCompareArrows size={14} aria-hidden="true" />
             <span className="hide-mobile">Compare</span>
-            <select
+            <DropdownField
               aria-label="Comparison period"
               value={s.compare.startsWith("custom:") ? "custom" : s.compare}
               onChange={(e) => {
@@ -635,7 +645,7 @@ export default function App() {
               }}
             >
               {comparisonOptions.map(([mode, label]) => <option key={mode} value={mode}>{label}</option>)}
-            </select>
+            </DropdownField>
             {s.compare.startsWith("custom:") && (() => {
               const [, from, to] = s.compare.split(":");
               return <span className="toolbar-compare-range">
@@ -647,7 +657,7 @@ export default function App() {
           </label>
           <span className="toolbar-divider hide-mobile" />
           <div className="toolbar-group" aria-label="Display">
-            <select
+            <DropdownField
               aria-label="Theme"
               className="theme-select"
               value={s.theme}
@@ -658,7 +668,7 @@ export default function App() {
                   {theme.name}
                 </option>
               ))}
-            </select>
+            </DropdownField>
             <button
               className="icon-button"
               aria-label={`Switch to ${s.theme === "matte" ? "gloss" : "matte"} theme`}
@@ -669,7 +679,7 @@ export default function App() {
             >
               {s.theme === "matte" ? <Sun size={16} /> : <Moon size={16} />}
             </button>
-            <select
+            <DropdownField
               aria-label="Display density"
               value={s.density}
               onChange={(e) => s.set({ density: e.target.value })}
@@ -677,7 +687,7 @@ export default function App() {
               <option value="compact">Compact</option>
               <option value="comfortable">Comfortable</option>
               <option value="dense">Dense</option>
-            </select>
+            </DropdownField>
           </div>
           <span className="toolbar-divider" />
           <div className="toolbar-group">
@@ -824,6 +834,9 @@ export default function App() {
             version={version}
             onRetry={(key) => void ensureSource(key, true)}
           />}
+          {missingPrivateScope && <p className="notice">This link contains a member-specific scope saved in another browser. Open the saved analysis in its original browser to restore that scope.</p>}
+          <AnalysisNavigation />
+          <AnalysisWorkbench key={s.tab + s.view} version={version} onDrill={setDrill} />
           {error && (
             <div className="notice">
               <TriangleAlert size={14} />
@@ -1088,7 +1101,7 @@ export default function App() {
                         </button>
                       ))}
                       {heatOptions.length > 6 && (
-                        <select
+                        <DropdownField
                           aria-label="More heatmap metrics"
                           value={heatMetric}
                           onChange={(e) => setHeatMetric(e.target.value)}
@@ -1098,7 +1111,7 @@ export default function App() {
                               {metrics[id].label}
                             </option>
                           ))}
-                        </select>
+                        </DropdownField>
                       )}
                     </div>
                   ) : undefined

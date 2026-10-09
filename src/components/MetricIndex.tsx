@@ -1,3 +1,4 @@
+import { DropdownField } from "./ui/DropdownField";
 import { useEffect, useMemo, useState } from "react";
 import { query, type Row } from "../data/duckdb";
 import { comparison, context, metricFacts } from "../data/analytics";
@@ -144,7 +145,7 @@ export function MetricIndex({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <select
+            <DropdownField
               aria-label="Filter by domain"
               value={domain}
               onChange={(e) => setDomain(e.target.value)}
@@ -155,7 +156,7 @@ export function MetricIndex({
                   {domainLabels[d]}
                 </option>
               ))}
-            </select>
+            </DropdownField>
             <span className="small">
               {visible.length} shown{loading ? " · still measuring…" : ""}
             </span>

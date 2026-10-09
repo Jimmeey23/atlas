@@ -1,3 +1,4 @@
+import { DropdownField } from "./ui/DropdownField";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as echarts from "echarts";
 import { query, type Row } from "../data/duckdb";
@@ -147,7 +148,7 @@ export function FormatAllocationChart({
       <div className="format-allocation-controls">
         <label>
           Compare timetable with{" "}
-          <select
+          <DropdownField
             value={measure}
             onChange={(e) =>
               setMeasure(e.target.value as "attendance" | "revenue")
@@ -155,7 +156,7 @@ export function FormatAllocationChart({
           >
             <option value="attendance">Attendance share</option>
             <option value="revenue">Revenue share</option>
-          </select>
+          </DropdownField>
         </label>
         <label>
           Minimum sessions{" "}

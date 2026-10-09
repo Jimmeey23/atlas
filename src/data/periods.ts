@@ -51,6 +51,8 @@ export function relativePeriod(name: string, now = today()) {
 export const comparisonOptions: [mode: string, label: string, short: string][] = [
   ["none", "Off", ""],
   ["prior", "Previous period", "vs previous period"],
+  ["elapsed", "Equal elapsed days", "vs equal elapsed days"],
+  ["weekdays", "Matching weekdays", "vs matching weekdays"],
   ["month", "Previous month", "vs previous month"],
   ["quarter", "Previous quarter", "vs previous quarter"],
   ["year", "Same period last year", "vs last year"],
@@ -66,6 +68,11 @@ export function comparisonDates(from: string, to: string, mode: string) {
   if (custom) return { from: custom[1], to: custom[2] };
   const start = new Date(from + "T00:00:00Z");
   const end = new Date(to + "T00:00:00Z");
+  if (mode === "elapsed" || mode === "weekdays") {
+    const days = Math.round((end.getTime()-start.getTime())/86400000)+1;
+    const shift = (mode === "weekdays" ? Math.ceil(days/7)*7 : days)*86400000;
+    return {from:new Date(start.getTime()-shift).toISOString().slice(0,10),to:new Date(end.getTime()-shift).toISOString().slice(0,10)};
+  }
   // Same calendar position N months earlier, clamped to the end of shorter months.
   const shiftMonths = (date: Date, months: number) => {
     const last = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() - months + 1, 0)).getUTCDate();
@@ -100,4 +107,17 @@ export function historicalFilters<T extends { from: string; to: string }>(filter
 
 export function historicalTransient<T extends { field: string }>(filters: T[]): T[] {
   return filters.filter(item => !["date", "month", "from", "to"].includes(item.field));
+}
+
+/** Match time buckets by their actual calendar position, preserving missing buckets. */
+export function alignedComparisonPeriod(period:string|null,from:string,to:string,mode:string,grain:'day'|'week'|'month'|'quarter'):string|null {
+  if(!period||!from||!to||mode==='none')return null;
+  const bucket=(value:string)=>{const d=new Date(value+'T00:00:00Z');if(grain==='week')d.setUTCDate(d.getUTCDate()-(d.getUTCDay()+6)%7);if(grain==='month')d.setUTCDate(1);if(grain==='quarter')d.setUTCMonth(Math.floor(d.getUTCMonth()/3)*3,1);return d.toISOString().slice(0,10);};
+  if(['month','quarter','year','year2'].includes(mode))return bucket(comparisonDates(period,period,mode).from);
+  const prior=comparisonDates(from,to,mode);
+  if(grain==='month'||grain==='quarter') {
+    const currentStart=new Date(bucket(from)+'T00:00:00Z'),currentPeriod=new Date(period+'T00:00:00Z'),previousStart=new Date(bucket(prior.from)+'T00:00:00Z');
+    const offset=(currentPeriod.getUTCFullYear()-currentStart.getUTCFullYear())*12+currentPeriod.getUTCMonth()-currentStart.getUTCMonth();previousStart.setUTCMonth(previousStart.getUTCMonth()+offset);return bucket(previousStart.toISOString().slice(0,10));
+  }
+  const offset=Date.parse(period+'T00:00:00Z')-Date.parse(bucket(from)+'T00:00:00Z');return bucket(new Date(Date.parse(bucket(prior.from)+'T00:00:00Z')+offset).toISOString().slice(0,10));
 }

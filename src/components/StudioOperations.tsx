@@ -1,3 +1,5 @@
+import { TABLE_ROW_HEIGHT } from "./ui/layout";
+import { DropdownField } from "./ui/DropdownField";
 import {
   referenceGroupings,
   referencePresets,
@@ -623,11 +625,11 @@ export function StudioOperations({
         ]
       : [parent];
   });
-  const headerOffset = 42;
+  const headerOffset = TABLE_ROW_HEIGHT;
   const rowVirtualizer = useVirtualizer({
     count: displayRows.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => (density ? 53 : 65),
+    estimateSize: () => TABLE_ROW_HEIGHT,
     getItemKey: (index) => displayRows[index].key,
     overscan: 12,
     scrollMargin: headerOffset,
@@ -737,7 +739,7 @@ export function StudioOperations({
           {!isFlat && (
             <label>
               Group by
-              <select
+              <DropdownField
                 aria-label="Grouping combination"
                 value={view}
                 onChange={(e) => setView(e.target.value as OperationView)}
@@ -761,7 +763,7 @@ export function StudioOperations({
                       </option>
                     ))}
                 </optgroup>
-              </select>
+              </DropdownField>
             </label>
           )}
           {view === "custom" && !isFlat && (
@@ -800,7 +802,7 @@ export function StudioOperations({
           </label>
           <label>
             Table view
-            <select
+            <DropdownField
               value={preset}
               onChange={(e) => {
                 setPreset(e.target.value);
@@ -810,11 +812,11 @@ export function StudioOperations({
               {Object.keys(presets).map((p) => (
                 <option key={p}>{p}</option>
               ))}
-            </select>
+            </DropdownField>
           </label>
           <label>
             Ranking criterion
-            <select
+            <DropdownField
               value={criterion}
               onChange={(e) => {
                 setCriterion(e.target.value);
@@ -833,7 +835,7 @@ export function StudioOperations({
                   {labelFor(id)}
                 </option>
               ))}
-            </select>
+            </DropdownField>
           </label>
           <details className="ops-advanced">
             <summary>
@@ -1055,9 +1057,7 @@ export function StudioOperations({
                   ))}
                 </div>
               </details>
-              <button onClick={() => setDensity(!density)}>
-                {density ? "Compact" : "Comfortable"}
-              </button>
+              <span className="table-row-standard">32px rows</span>
               <button
                 onClick={() =>
                   setExpanded(
@@ -1305,14 +1305,14 @@ export function StudioOperations({
               <div className="ops-pagination">
                 <label>
                   Rows per page
-                  <select
+                  <DropdownField
                     value={table.getState().pagination.pageSize}
                     onChange={(e) => table.setPageSize(Number(e.target.value))}
                   >
                     {[10, 25, 50, 100].map((n) => (
                       <option key={n}>{n}</option>
                     ))}
-                  </select>
+                  </DropdownField>
                 </label>
                 <span>
                   Page {table.getState().pagination.pageIndex + 1} of{" "}
@@ -1375,7 +1375,7 @@ export function StudioOperations({
               </div>
               <label>
                 List size
-                <select
+                <DropdownField
                   aria-label="Ranking list size"
                   value={limit}
                   onChange={(e) => setLimit(Number(e.target.value))}
@@ -1383,7 +1383,7 @@ export function StudioOperations({
                   {[3, 5, 10, 20].map((n) => (
                     <option key={n}>{n}</option>
                   ))}
-                </select>
+                </DropdownField>
               </label>
               <button
                 onClick={() =>
@@ -1570,7 +1570,7 @@ export function StudioOperations({
         title="Schedule changes & performance"
         subtitle="Observed instructor, capacity and recurring-slot changes across adjacent months."
         actions={
-          <select
+          <DropdownField
             aria-label="Schedule change type"
             value={changeKind}
             onChange={(e) => setChangeKind(e.target.value)}
@@ -1581,7 +1581,7 @@ export function StudioOperations({
                 <option key={kind}>{kind}</option>
               ),
             )}
-          </select>
+          </DropdownField>
         }
       >
         {loading ? (

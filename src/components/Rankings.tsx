@@ -1,3 +1,4 @@
+import { DropdownField } from "./ui/DropdownField";
 import { InstructorAvatar } from "./InstructorAvatar";
 import { ChartControls } from "./ChartControls";
 import { useMemo, useState } from "react";
@@ -52,7 +53,7 @@ export function Rankings({
       actions={
         <>
           <ChartControls rows={eligible} title="Rankings" />
-          <select
+          <DropdownField
             aria-label="Ranking measure"
             value={id}
             style={{ fontSize: 11, minHeight: 28, padding: "3px 7px" }}
@@ -63,7 +64,7 @@ export function Rankings({
                 {metrics[x].label}
               </option>
             ))}
-          </select>
+          </DropdownField>
         </>
       }
     >

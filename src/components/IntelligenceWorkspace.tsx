@@ -1,3 +1,4 @@
+import { DropdownField } from "./ui/DropdownField";
 import { InstructorName } from "./InstructorAvatar";
 import { ArrowUp, ArrowUpRight, Sparkles, MessageSquare, ChartNoAxesCombined, Check, Database, Pencil, Trash2, Paperclip, Mic, Square, Settings2 } from "lucide-react";
 import { fmt, formatField } from "../semantics/formats";
@@ -513,7 +514,7 @@ function Element({ doc, version }: { doc: Doc; version: number }) {
             value={draft.title}
             onChange={(e) => setDraft({ ...draft, title: e.target.value })}
           />
-          <select
+          <DropdownField
             aria-label="Destination page"
             value={draft.page}
             onChange={(e) =>
@@ -525,7 +526,7 @@ function Element({ doc, version }: { doc: Doc; version: number }) {
                 {t}
               </option>
             ))}
-          </select>
+          </DropdownField>
           <textarea
             aria-label="Data query"
             value={draft.body.sql}
@@ -914,7 +915,7 @@ export function IntelligenceWorkspace({
           <div className="chat-composer">
           {mode === "build" && <label className="chat-destination">
             Save to
-            <select
+            <DropdownField
               value={page}
               onChange={(e) => setPage(Number(e.target.value))}
             >
@@ -923,7 +924,7 @@ export function IntelligenceWorkspace({
                   {name}
                 </option>
               ))}
-            </select>
+            </DropdownField>
           </label>}
           {!!attachments.length && (
             <div className="chat-attachments">

@@ -1,3 +1,4 @@
+import { compileFilters } from "../src/data/advanced-controls.ts";
 import { compileMetricQuery, metricCatalog } from "./agent-metrics.mjs";
 import { analysisTools, analysisToolDefs, briefing, describeCall, presentAnswerDef, unverifiedFigures } from "./agent-analytics.mjs";
 import { fmt, formatField } from "../src/semantics/formats.ts";
@@ -293,6 +294,8 @@ export function intelligenceRoutes(
           }
         }
         const terms = [];
+        const advanced = compileFilters(filters.advanced, sqlTypes);
+        if (advanced) terms.push(advanced);
         for (const field of [
           "location",
           "trainer",

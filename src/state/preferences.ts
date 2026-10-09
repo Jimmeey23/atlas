@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { migrateSalesAccent } from "./workspaceAppearance";
 export const themeOptions = [
   { id: "matte", name: "Matte", type: "Dark" },
   { id: "gloss", name: "Gloss", type: "Light" },
@@ -36,6 +37,7 @@ export type PagePreference = {
   sectionTitles?: Record<string, string>;
 };
 export const defaultPreferences = {
+  salesAccentVersion: 3,
   fontSize: 13,
   radius: 12,
   chartHeight: 320,
@@ -81,7 +83,7 @@ function load() {
   try {
     return {
       ...defaultPreferences,
-      ...JSON.parse(localStorage.getItem("atlas-preferences") || "{}"),
+      ...migrateSalesAccent(JSON.parse(localStorage.getItem("atlas-preferences") || "{}")),
     };
   } catch {
     return { ...defaultPreferences };
