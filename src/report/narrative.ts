@@ -6,7 +6,7 @@ import { findingsFor, findingsPayload, ledger, seasonalScenario, type Finding } 
 import type { ChapterData, ChapterNarrative, InsightCard, ReportModel } from "./model";
 import { addCall, type CallUsage, type ChapterUsage } from "./usage";
 
-const CACHE_PREFIX = "atlas-report-narrative:v7:";
+const CACHE_PREFIX = "atlas-report-narrative:v8:";
 /** Keyed on the exact prompt, so any change to figures, findings, targets or rules is a new analysis. */
 const cacheKey = (model: ReportModel, chapterId: string, message: string) =>
   `${CACHE_PREFIX}${model.scope.studio}:${model.scope.month}:${chapterId}:${hashText(message)}`;
@@ -144,6 +144,8 @@ const CARD_RULES = [
   'watch: 25 words at most. The leading indicator and the threshold to review next month that would show the action is working or failing.',
   'plainLanguage: 10–20 words, no jargon. focus: the breakdown ID the evidence comes from, "trend" for a history-led insight, "cross" for a cross-chapter insight, "kpis" for the chapter verdict. category: red_flag, worked, didnt_work, meaning, next_step or plain_language, according to the evidence; never invent a success or failure. confidence: the strength of the interpretation, not a statistical interval.',
   'summary: 90–130 words. Give a verdict for this area this month (better, worse or mixed against last month, last year and the studio\'s own trailing average), name the two forces behind it, and name the one decision leadership needs to take. Do not list metrics.',
+  'DEPTH: distinguish scale from efficiency and mix from within-segment performance. Use the supplied two-factor bridges to explain revenue and attendance movements. For each proposed intervention, state the alternative considered, the downside or guardrail, and the source check needed before committing. Never assert that a low-use slot should close without checking displaced demand and instructor economics.',
+  'SUMMARY STRUCTURE: a clear verdict, the largest quantified driver, an offsetting strength or risk if supported, then the decision and its evidence limit. Do not fill gaps with generic commentary. Where no comparative baseline exists, say so.',
   'Exactly one card has focus "kpis". It is the chapter verdict and its headline becomes the chapter title, so it must be the most decision-relevant statement in the chapter.',
 ].join('\n');
 
@@ -151,6 +153,7 @@ const ACCURACY_RULES = [
   'Accuracy rules (these override style):',
   'Use only supplied figures, findings and diagnostics. Use percentage points for rate changes. Do not say doubled or halved unless the ratio supports it. Proposed targets and timings must be labelled as proposals.',
   'Separate additive contributions, changes within groups and changes in mix. Never add overlapping distinct transaction or member counts from groups, and never sum ledger items that can overlap.',
+  'Gross collections per transaction is an observed average, not a price index. Volume/yield bridges decompose totals arithmetically; they cannot establish causal effects.',
   'Higher AOV alone does not establish a price increase. Do not claim a price change caused demand or conversion changes without evidence. Missing-ID warnings must use the supplied coverage counts.',
   'Cash sales and earned (attendance-attributed) revenue are different populations. Membership revenue share is based on gross payments. Payroll costs are estimates at the configured rate, not actual salaries.',
   'Newcomer LTV is cumulative observed spend to the source date; recent cohorts have had less time. Recorded lead stages are current cohort positions, not transitions in the month. Renewal lapses are recorded Churned Dates and recent cohorts can still change. Do not compare historical active snapshots or sum recurring and Sessions totals.',
@@ -181,27 +184,39 @@ function parseJson(answer: string): { summary?: string; cards?: InsightCard[] } 
   }
 }
 
+const proposedResponses: Record<string, [string, string]> = {
+  'revenue-performance': ['Finance and Studio Management: within 14 days reconcile the volume/yield bridge with product mix and discounting before changing prices.', 'Track gross collections, transaction volume, order value and discount rate against the frozen baseline.'],
+  sessions: ['Studio Operations: within 14 days audit the named low-use slots and test one schedule adjustment; preserve access for affected community members.', 'Compare fill, attendance per session and total attendance; stop the test if lost access outweighs recovered demand.'],
+  'executive-summary': ['Studio Management: within 14 days validate the largest demand and financial drivers with the responsible teams and approve one measured intervention.', 'Review attendance, fill and cash collections separately against this snapshot.'],
+  'conversion-funnel': ['Client Success: within 14 days review the indicated newcomer cohort and test a targeted follow-up; check cohort maturity before judging outcomes.', 'Track first return and conversion for the affected cohort with equal observation windows.'],
+  renewals: ['Client Success: within 14 days reconcile due, renewed and recorded lapsed memberships, then prioritise eligible follow-ups.', 'Review recorded renewal and lapse counts; exclude frozen memberships and allow recent cohorts to mature.'],
+  leads: ['Sales: within 7 days review untouched leads and source quality; test a documented follow-up cadence for eligible prospects.', 'Compare contact coverage and source-level conversion, with cohort size and observation window.'],
+};
+function findingCard(f: Finding): InsightCard {
+  const [headline, ...rest] = f.text.split(/(?<=[.:])\s+/);
+  const response = proposedResponses[f.chapter] ?? ['Operations: within 14 days validate the named segment and test one intervention before scaling it.', 'Review the cited measure against the recorded baseline, sample size and member-experience guardrails.'];
+  return { headline: headline.replace(/[.:]$/, ''), meaning: rest.join(' ') || f.text, evidence: f.text,
+    impact: f.inr ? `≈${fmt('gross_revenue', Math.round(f.inr))} at stake (indicative); not a promised recovery.` : 'Not valued: no defensible incremental cash estimate.',
+    action: `Proposed: ${response[0]}`, watch: response[1], focus: f.focus,
+    category: f.tone === 'risk' ? 'red_flag' : f.tone === 'opportunity' ? 'next_step' : 'meaning' };
+}
+
 /**
  * Rule-based cards, used when no provider answers. They are returned with
  * `generated: false` and the document labels them, so deterministic copy is
  * never mistaken for analysis.
  */
-export function fallbackNarrative(spec: ChapterSpec, data: ChapterData | undefined, findings: Finding[] = []): ChapterNarrative {
-  if (!data || spec.derived)
-    return { summary: "", cards: [], generated: false };
+export function fallbackNarrative(spec: ChapterSpec, data: ChapterData | undefined, findings: Finding[] = [], model?: ReportModel): ChapterNarrative {
+  if (spec.derived) {
+    const ranked = model ? ledger(findingsFor(model)).slice(0, 5) : findings.slice(0, 5);
+    if (!ranked.length) return { summary: '', cards: [], generated: false };
+    if (spec.id === 'predictions') return { summary: 'Conditional scenarios use recorded baselines; they are not forecasts or probabilities.', cards: [], generated: false };
+    return { summary: ranked.length ? 'Proposed priorities from calculated signals. Confirm causes and feasibility before committing; indicative values may overlap and must not be added.' : 'Available evidence does not support a ranked operating plan.',
+      cards: ranked.map((f, i) => ({ ...findingCard(f), focus: i === 0 ? 'kpis' : 'cross', category: 'next_step' })), generated: false };
+  }
+  if (!data) return { summary: '', cards: [], generated: false };
   // Engine findings already say something a table does not; lead with them.
-  const flagged: InsightCard[] = findings.slice(0, 4).map((f) => {
-    const [headline, ...rest] = f.text.split(/(?<=[.:])\s+/);
-    return {
-      headline: headline.replace(/[.:]$/, ""),
-      meaning: rest.join(" ") || f.text,
-      evidence: f.text,
-      impact: f.inr ? `≈${fmt("gross_revenue", Math.round(f.inr))} at stake (indicative).` : undefined,
-      action: f.tone === "risk" ? "Assign an owner to confirm the cause and agree a response before the next monthly review." : "Assign an owner to size and test this opportunity before the next monthly review.",
-      focus: f.focus,
-      category: f.tone === "risk" ? "red_flag" : f.tone === "opportunity" ? "next_step" : "meaning",
-    };
-  });
+  const flagged = findings.slice(0, 4).map(findingCard);
   const moves = spec.metrics
     .filter((id) => data.total[id] != null && data.prior[id] != null && Number(data.prior[id]) !== 0)
     .map((id) => {
@@ -212,7 +227,7 @@ export function fallbackNarrative(spec: ChapterSpec, data: ChapterData | undefin
     .sort((a, b) => Math.abs(b.change) - Math.abs(a.change))
     .slice(0, Math.max(0, 4 - flagged.length));
   return {
-    summary: "",
+    summary: findings.length ? findings.slice(0, 2).map(f=>f.text).join(" ") : "Available comparisons describe movement; the evidence does not yet establish a cause.",
     cards: [...flagged, ...moves.map(({ id, change, good }) => ({
       headline: `${definition(id)?.label ?? id} is ${fmt(id, data.total[id])}, ${delta(id, data.total[id], data.prior[id])} on the prior month.`,
       meaning: good
@@ -302,7 +317,7 @@ export async function generateNarratives(
         const figures = spec.derived ? portfolio
           : data ? chapterPayload(spec, data, model, own) + (spec.id === "executive-summary" ? "\n\nCross-report context:\n" + portfolio : "") : "";
         if (!figures) {
-          finish(spec, fallbackNarrative(spec, data, own));
+          finish(spec, fallbackNarrative(spec, data, own, model));
           continue;
         }
         const focusIds = data?.groups.map(g => g.id ?? g.field) ?? [];
@@ -344,7 +359,7 @@ export async function generateNarratives(
           finish(spec, narrative);
         } catch (error) {
           if (signal?.aborted) throw error;
-          finish(spec, { ...fallbackNarrative(spec, data, own), error: error instanceof Error ? error.message : String(error), usage });
+          finish(spec, { ...fallbackNarrative(spec, data, own, model), error: error instanceof Error ? error.message : String(error), usage });
         }
       }
     }),

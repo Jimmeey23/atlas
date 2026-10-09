@@ -259,6 +259,24 @@ function groupFindings(spec: ChapterSpec, table: GroupTable, ctx: ValueContext):
   return out;
 }
 
+/** Exact two-factor decomposition: volume at prior yield, then yield at current volume. */
+export function movementBridge(spec: ChapterSpec, data: ChapterData): Finding[] {
+  const cash = spec.id === 'revenue-performance';
+  if (!cash && !['sessions', 'executive-summary'].includes(spec.id)) return [];
+  const valueId = cash ? 'gross_revenue' : 'attendance';
+  const volumeId = cash ? 'transactions' : 'sessions';
+  const value = num(data.total[valueId]), previousValue = num(data.prior[valueId]);
+  const volume = num(data.total[volumeId]), previousVolume = num(data.prior[volumeId]);
+  if (value == null || previousValue == null || volume == null || previousVolume == null || volume <= 0 || previousVolume <= 0) return [];
+  const priorYield = previousValue / previousVolume, currentYield = value / volume;
+  const volumeEffect = (volume - previousVolume) * priorYield;
+  const yieldEffect = volume * (currentYield - priorYield);
+  const format = (v: number) => cash ? inr(v) : `${v.toFixed(1)} visits`;
+  const signed = (v: number) => `${v >= 0 ? '+' : '−'}${format(Math.abs(v))}`;
+  return [{ chapter: spec.id, focus: 'kpis', kind: 'driver', tone: value < previousValue ? 'risk' : 'context',
+    text: `${cash ? 'Cash collections' : 'Attendance'} changed ${signed(value - previousValue)}: ${signed(volumeEffect)} from ${cash ? 'transaction' : 'session'} volume at the prior month's average, and ${signed(yieldEffect)} from ${cash ? 'gross collections per transaction' : 'attendance per session'} at current volume. The effects reconcile exactly before rounding. This is an arithmetic decomposition, not proof of ${cash ? 'pricing changes or buyer behaviour' : 'schedule quality or member motivation'}.` }];
+}
+
 /** Leakage and idle value the month's totals already imply. */
 function chapterGaps(spec: ChapterSpec, data: ChapterData, ctx: ValueContext): Finding[] {
   const t = data.total, out: Finding[] = [];
@@ -375,6 +393,7 @@ export function findingsFor(model: ReportModel): Record<string, Finding[]> {
     if (!data) continue;
     out[spec.id] = [
       ...targetFindings(spec, data, targets, ctx, targeted),
+      ...movementBridge(spec, data),
       ...chapterGaps(spec, data, ctx),
       ...historyFindings(spec, data, ctx),
       ...(data.groups ?? []).flatMap((table) => groupFindings(spec, table, ctx)),

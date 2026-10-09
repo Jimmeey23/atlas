@@ -138,3 +138,36 @@ test('the chapter prompt is built on findings and no longer asks for one passage
     assert.equal(out['executive-summary'].cards[0].focus, 'kpis', 'a missing verdict is promoted from the first card');
   } finally { globalThis.fetch = originalFetch; (globalThis as any).localStorage = originalStorage; }
 });
+
+test('cash bridge isolates transaction volume and average collections without implying prices', async () => {
+  const { movementBridge } = await import('../src/report/findings.ts');
+  const spec = chapters.find(c=>c.id==='revenue-performance')!;
+  const cash = chapter(spec.id, { total:{gross_revenue:1200,transactions:8},prior:{gross_revenue:1000,transactions:10} });
+  const [bridge] = movementBridge(spec,cash);
+  assert.match(bridge.text,/−₹200/);
+  assert.match(bridge.text,/\+₹400/);
+  assert.match(bridge.text,/changed \+₹200/);
+  assert.match(bridge.text,/not proof of pricing/);
+  assert.equal(bridge.inr,undefined,'decomposition is not incremental cash at stake');
+  assert.deepEqual(movementBridge(spec,{...cash,prior:{gross_revenue:1000}}),[]);
+  assert.deepEqual(movementBridge(spec,{...cash,prior:{gross_revenue:1000,transactions:0}}),[]);
+});
+
+test('attendance bridge distinguishes fewer sessions from lower attendance per session', async () => {
+  const { movementBridge } = await import('../src/report/findings.ts');
+  const spec = chapters.find(c=>c.id==='sessions')!;
+  const [bridge] = movementBridge(spec,chapter(spec.id,{total:{attendance:800,sessions:80},prior:{attendance:1200,sessions:100}}));
+  assert.match(bridge.text,/−240.0 visits from session volume/);
+  assert.match(bridge.text,/−160.0 visits from attendance per session/);
+  assert.match(bridge.text,/changed −400.0 visits/);
+});
+
+test('failed recommendation generation retains calculated proposals and labels their limits', () => {
+  const report = model({'revenue-performance':chapter('revenue-performance',{total:{gross_revenue:1200,transactions:8},prior:{gross_revenue:1000,transactions:10}})});
+  const fallback = fallbackNarrative(chapters.find(c=>c.id==='recommendations')!,undefined,[],report);
+  assert.equal(fallback.generated,false);
+  assert.ok(fallback.cards.length);
+  assert.match(fallback.summary,/must not be added/);
+  assert.match(fallback.cards[0].action,/Proposed: Finance/);
+  assert.equal(fallback.cards[0].focus,'kpis');
+});

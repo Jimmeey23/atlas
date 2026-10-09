@@ -46,12 +46,12 @@ function ComparisonBars({ table, metric }: { table: GroupTable; metric: string }
   </div>;
 }
 
-export function EvidenceBlock({ table, narrative, metric, full = false }: { table: GroupTable; narrative?: ChapterNarrative; metric?: string; full?: boolean }) {
+export function EvidenceBlock({ table, narrative, metric, full = false, initialView }: { table: GroupTable; narrative?: ChapterNarrative; metric?: string; full?: boolean; initialView?: 'chart' | 'table' }) {
   const primary = metric ?? table.compare ?? table.columns[0];
   const dense = table.columns.length > 5;
   return <article className={`r-evidence-block${dense || full ? ' r-span-full' : ''}`}>
     <header className="r-block-head"><span className="r-eyebrow">Evidence / {table.fields?.length ? 'Combination' : 'Breakdown'}</span><h3>{table.title}</h3></header>
-    <ReportSwitch label="View" initial={dense ? 'table' : 'chart'} views={[
+    <ReportSwitch label="View" initial={initialView ?? (dense ? 'table' : 'chart')} views={[
       {id:'chart',label:'Chart',content:<ReportSwitch label="Measure" initial={primary} views={table.columns.map(id => ({id,label:label(id),content:<ComparisonBars table={table} metric={id}/>}))}/>},
       {id:'table',label:'Detail',content:<GroupTableView table={table}/>},
     ]}/>

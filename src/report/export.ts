@@ -1,4 +1,6 @@
-import reportCSS from "../design/report.css?raw";
+import baseCSS from "../design/report.css?raw";
+import reviewCSS from "../design/report-review.css?raw";
+const reportCSS = baseCSS + "\n" + reviewCSS;
 import { monthLabel } from "./compute";
 import type { ReportModel } from "./model";
 
@@ -109,14 +111,7 @@ export async function serialiseReport(element: HTMLElement, model: ReportModel) 
           root.querySelectorAll('[data-carousel-choice]').forEach(function(dot) {dot.setAttribute('aria-pressed',String(Number(dot.dataset.carouselChoice) === choice));});
         }
       }
-      if (button.hasAttribute('data-marquee-control')) {
-        const strip = button.closest('.r-signal-strip');
-        const paused = button.getAttribute('aria-pressed') !== 'true';
-        button.setAttribute('aria-pressed',String(paused));
-        button.textContent = paused ? 'Resume' : 'Pause';
-        button.setAttribute('aria-label', paused ? 'Resume signals' : 'Pause signals');
-        strip.querySelector('.r-marquee').setAttribute('data-paused',String(paused));
-      }
+
     });
     document.addEventListener('change',function(event){
       const control=event.target.closest('[data-history-control]');if(!control)return;

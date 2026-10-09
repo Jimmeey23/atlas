@@ -2,7 +2,6 @@ import { DropdownField } from "../ui/DropdownField";
 import { useState } from "react";
 import { exportCSV } from "../exports";
 import { InstructorName } from "../InstructorAvatar";
-import { ReportMarquee } from "./ReportChrome";
 import type { Row } from "../../data/duckdb";
 import { definition } from "../../report/definitions";
 import { reportFmt as fmt, reportDelta as delta } from "../../report/definitions";
@@ -26,7 +25,7 @@ export function SectionHeader({
   eyebrow,
   title,
   deck,
-  id, topic, total, highlights,
+  id, topic, total,
 }: {
   number: string;
   eyebrow: string;
@@ -35,14 +34,12 @@ export function SectionHeader({
   id: string;
   topic?: string;
   total?: number;
-  highlights?: {label: string; value: string}[];
 }) {
   return (<>
-    <header className={`r-section-head${highlights?.length ? " r-has-marquee" : ""}`} data-number={number}>
+    <header className="r-section-head" data-number={number}>
       <div className="r-section-topline"><span className="r-eyebrow">{number} · {topic || eyebrow}</span><span className="r-section-counter">{number === "A" ? "Supporting detail" : `Section ${number} / ${String(total ?? 14).padStart(2,'0')}`}</span></div>
       <div className="r-section-title"><h2 id={id}>{title}</h2><p>{deck}</p></div>
     </header>
-    {!!highlights?.length && <ReportMarquee label={`${topic || eyebrow} highlights`} items={highlights}/>}
   </>);
 }
 
@@ -85,11 +82,6 @@ export function MetricCards({
 }
 
 export function GroupTableView({ table }: { table: GroupTable }) {
-  const lead = table.columns[0];
-  const peak = Math.max(
-    ...table.rows.map((row) => Math.abs(Number(row[lead] ?? 0))),
-    0,
-  );
   return (
     <div className="r-table-wrap">
       <div className="r-table-head">
@@ -111,15 +103,10 @@ export function GroupTableView({ table }: { table: GroupTable }) {
           {table.rows.map((row, index) => (
             <tr key={String(row.g) + index}>
               <td>{row.rank_lane && <small className="r-rank">{String(row.rank_lane)}</small>}{table.field === "trainer" ? <InstructorName name={String(row.g ?? "Unspecified")}/> : String(row.g ?? "Unspecified")}</td>
-              {table.columns.map((id, column) => (
+              {table.columns.map((id) => (
                 <td
-                  className={`r-num${column === 0 ? " r-bar-cell" : ""}`}
+                  className="r-num"
                   key={id}
-                  style={
-                    column === 0 && peak
-                      ? ({ "--share": Math.abs(Number(row[id] ?? 0)) / peak } as React.CSSProperties)
-                      : undefined
-                  }
                 >
                   {fmt(id, row[id])}
                   {id === table.compare && <small className="r-comparison">MoM {delta(id, row[id], table.prior?.[String(row.g)]?.[id])}<br />YoY {delta(id, row[id], table.priorYear?.[String(row.g)]?.[id])}</small>}
@@ -168,29 +155,32 @@ export function TrendChart({ history, ids, title, note }: { history: Row[]; ids:
 
 export function InsightPane({
   title,
-  narrative,
+  narrative, variant = "findings", hideHeadline = false,
 }: {
   title: string;
   narrative: ChapterNarrative | undefined;
+  variant?: "findings" | "verdict" | "plan";
+  hideHeadline?: boolean;
 }) {
   if (!narrative || (!narrative.summary && !narrative.cards.length)) return null;
   const unique = narrative.cards.filter((card,index,cards)=>cards.findIndex(c=>c.headline===card.headline)===index);
   return (
-    <div className="r-editorial" aria-label={title}>
+    <div className={`r-editorial r-editorial-${variant}`} data-count={Math.min(unique.length, 3)} aria-label={title}>
       {narrative.summary && <p className="r-summary">{narrative.summary}</p>}
       {!narrative.generated && <p className="r-analysis-note">Data commentary · AI analysis unavailable{narrative.error ? `: ${narrative.error}` : ""}</p>}
       {unique.map((passage, index) => (
-        <div className="r-passage" key={index}>
-          <header className="r-passage-lead">{passage.category && <span className="r-analysis-label">{{red_flag:"Red flag",worked:"What worked",didnt_work:"What didn’t work",meaning:"What this means",next_step:"What to do next",plain_language:"Simply put"}[passage.category]}</span>}
-          <h3>{passage.headline}</h3></header>
+        <article className="r-passage" key={index}>
+          <header className="r-passage-lead">{variant === "plan" && <span className="r-plan-number">{String(index + 1).padStart(2, "0")}</span>}{passage.category && <span className="r-analysis-label">{{red_flag:"Red flag",worked:"What worked",didnt_work:"What didn’t work",meaning:"What this means",next_step:"What to do next",plain_language:"Simply put"}[passage.category]}</span>}
+          {!hideHeadline && <h3>{passage.headline}</h3>}</header>
           {passage.meaning && <p>{passage.meaning}</p>}
-          {passage.evidence && <details className="r-passage-proof"><summary>Evidence & confidence</summary><p className="r-citation">{passage.evidence}</p>{passage.confidence && <small>Interpretation confidence: {passage.confidence}</small>}</details>}
-          {passage.plainLanguage && <p className="r-plain"><strong>Simply put:</strong> {passage.plainLanguage}</p>}
+          {passage.evidence && <p className="r-citation"><strong>Evidence:</strong> {passage.evidence}</p>}
+          {passage.confidence && <small className="r-confidence">Interpretation confidence: {passage.confidence}</small>}
+
           {passage.impact && <p className="r-impact"><strong>At stake:</strong> {passage.impact}</p>}
           {passage.action && <p className="r-action"><strong>Next step:</strong> {passage.action}</p>}
           {passage.watch && <p className="r-watch"><strong>Watch next month:</strong> {passage.watch}</p>}
 
-        </div>
+        </article>
       ))}
     </div>
   );
