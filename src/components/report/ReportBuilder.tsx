@@ -1,15 +1,17 @@
 import { DropdownField } from "../ui/DropdownField";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, Printer, Sparkles, FileText, RefreshCw, TriangleAlert } from "lucide-react";
+import { Download, Printer, Sparkles, FileText, RefreshCw, TriangleAlert, ExternalLink } from "lucide-react";
 import { query } from "../../data/duckdb";
 import { useStore } from "../../state/store";
 import { themeOptions } from "../../state/preferences";
 import { computeReport, monthLabel } from "../../report/compute";
 import { clearNarrativeCache, generateNarratives } from "../../report/narrative";
-import { downloadReport, printReport } from "../../report/export";
-import type { ReportModel } from "../../report/model";
+import { downloadReport, printReport, openReportPage } from "../../report/export";
+import type { ReportModel, ReportCustomization } from "../../report/model";
 import { listReports, loadReport, saveReport, type SavedReport } from "../../report/storage";
 import { ReportDocument } from "./ReportDocument";
+
+import { chapters } from "../../report/chapters";
 
 type Stage = { label: string; done: number; total: number } | null;
 
@@ -23,6 +25,24 @@ export function ReportBuilder({ version }: { version: string | number }) {
   const filters = useStore((s) => s.filters);
   const reportTheme =
     themeOptions.find((option) => option.id === theme)?.type.startsWith("Dark") ? "dark" : "light";
+  const [customization, setCustomization] = useState<ReportCustomization>({ title: 'Monthly performance report', subtitle: '', preparedFor: '', preparedBy: '', audience: 'Studio leadership', tone: 'Professional', detail: 'Comprehensive', instructions: '', chapterIds: chapters.map(c => c.id), theme: reportTheme });
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [elapsed, setElapsed] = useState(0);
+  const [estimatedSeconds, setEstimatedSeconds] = useState(0);
+  const estimate = 20 + customization.chapterIds.length * (customization.detail === 'Comprehensive' ? 35 : 25);
+  useEffect(() => {
+    if (startedAt === null) return;
+    const tick = () => setElapsed(Math.floor((Date.now() - startedAt) / 1000));
+    tick(); const timer = window.setInterval(tick, 1000);
+    return () => window.clearInterval(timer);
+  }, [startedAt]);
+  const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+  const patch = (value: Partial<ReportCustomization>) => setCustomization(c => ({ ...c, ...value }));
+  function moveChapter(id: string, direction: number) {
+    const ids = [...customization.chapterIds]; const index = ids.indexOf(id); const next = index + direction;
+    if (index < 0 || next < 0 || next >= ids.length) return;
+    [ids[index], ids[next]] = [ids[next], ids[index]]; patch({ chapterIds: ids });
+  }
   const [studios, setStudios] = useState<string[]>([]);
   const [months, setMonths] = useState<string[]>([]);
   const [studio, setStudio] = useState("");
@@ -34,6 +54,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
   const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
   const [storageError, setStorageError] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [loadingSaved, setLoadingSaved] = useState(false);
   const document_ = useRef<HTMLElement>(null);
   const run = useRef<AbortController>();
@@ -92,23 +113,16 @@ export function ReportBuilder({ version }: { version: string | number }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    setLoadingSaved(true);
+    setLoadingHistory(true);
     void (async () => {
       try {
         const history = await listReports(controller.signal);
-        setSavedReports(history);
-        if (history[0]) {
-          const saved = await loadReport(history[0].id, controller.signal);
-          if (!controller.signal.aborted) {
-            setModel(saved);
-            setStudio(saved.scope.studio);
-            setMonth(saved.scope.month);
-          }
-        }
+        if (!controller.signal.aborted) setSavedReports(current => [...current, ...history.filter(item => !current.some(saved => saved.id === item.id))].slice(0,50));
+
       } catch (e) {
         if (!controller.signal.aborted) setStorageError(String(e));
       } finally {
-        if (!controller.signal.aborted) setLoadingSaved(false);
+        if (!controller.signal.aborted) setLoadingHistory(false);
       }
     })();
     return () => controller.abort();
@@ -133,6 +147,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
     try {
       const saved = await loadReport(id);
       setModel(saved);
+      if (saved.customization) setCustomization(saved.customization);
       setStudio(saved.scope.studio);
       setMonth(saved.scope.month);
       setNarrativeError("");
@@ -140,7 +155,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
     finally { setLoadingSaved(false); }
   }
 
-  const ready = !!studio && !!month;
+  const ready = !!studio && !!month && customization.chapterIds.length > 0;
   const busy = stage !== null || loadingSaved || exporting;
 
   async function exportReport(kind: 'html' | 'pdf') {
@@ -158,14 +173,16 @@ export function ReportBuilder({ version }: { version: string | number }) {
     run.current = controller;
     setError("");
     setNarrativeError("");
+    setModel(null);
+    setStartedAt(Date.now()); setElapsed(0); setEstimatedSeconds(estimate);
     setStage({ label: "Reading the month", done: 0, total: 1 });
     try {
-      const computed = await computeReport({ studio, month }, (done, total, label) =>
+      const snapshot = await computeReport({ studio, month }, (done, total, label) =>
         setStage({ label, done, total: total + 1 }),
       );
       if (controller.signal.aborted) return;
+      const computed = { ...snapshot, customization: { ...customization, chapterIds: [...customization.chapterIds] } };
       if (regenerate) clearNarrativeCache(computed);
-      setModel(computed);
       try {
         const narratives = await generateNarratives(
           computed,
@@ -185,7 +202,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
     } catch (e) {
       if (!controller.signal.aborted) setError(String(e));
     } finally {
-      if (!controller.signal.aborted) setStage(null);
+      if (!controller.signal.aborted) { setStage(null); setStartedAt(null); }
     }
   }
 
@@ -198,6 +215,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
 
   return (
     <div className="report-workspace" data-report-id={model?.id || ""}>
+      <header className="report-generator-heading" data-export="omit"><span className="eyebrow">Monthly reports</span><h2>Create your report</h2><p>Choose the scope, shape the report and set the questions your analysis should answer.</p></header>
       <div className="report-controls" data-export="omit">
         <label>
           <span className="small">Studio</span>
@@ -239,6 +257,12 @@ export function ReportBuilder({ version }: { version: string | number }) {
               <RefreshCw size={14} />
               Rewrite insights
             </button>
+            <button className="button" disabled={busy} onClick={() => {
+              if (!document_.current) return;
+              setExporting(true);
+              void openReportPage(document_.current, model).catch(e => setError(String(e))).finally(() => setExporting(false));
+            }}><ExternalLink size={14}/>Open in new page</button>
+            <button className="button" disabled={busy} onClick={() => setModel(null)}>New report</button>
             <button
               className="button"
               disabled={busy}
@@ -259,12 +283,25 @@ export function ReportBuilder({ version }: { version: string | number }) {
         )}
       </div>
 
+      <fieldset className="report-customization" disabled={busy} data-export="omit"><legend>Personalise your report</legend>
+        <div className="report-customization-grid">
+          {(['title', 'subtitle', 'preparedFor', 'preparedBy'] as const).map(key => <label key={key}><span>{({title:'Report title',subtitle:'Subtitle',preparedFor:'Prepared for',preparedBy:'Prepared by'})[key]}</span><input value={customization[key]} maxLength={160} onChange={e => patch({[key]:e.target.value})}/></label>)}
+          {([{key:'audience',label:'Audience',options:['Studio leadership','Executive board','Operations team','Commercial team']},{key:'tone',label:'Writing style',options:['Professional','Direct and action-oriented','Plain language']},{key:'detail',label:'Narrative depth',options:['Comprehensive','Concise']},{key:'theme',label:'Report appearance',options:['light','dark']}] as const).map(field => <label key={field.key}><span>{field.label}</span><DropdownField value={customization[field.key]} onChange={e => patch({[field.key]:e.target.value})}>{field.options.map(option => <option key={option} value={option}>{option}</option>)}</DropdownField></label>)}
+        </div>
+        <label className="report-priorities"><span>Analysis priorities & editorial instructions</span><textarea rows={3} maxLength={3000} value={customization.instructions} onChange={e => patch({instructions:e.target.value})} placeholder="For example: focus on retention risks, compare format efficiency, and prioritise actions for studio managers."/></label>
+        <p className="small">Select chapters and set their reading order. Source figures and metric definitions stay governed.</p>
+        <div className="report-chapter-options">{[...customization.chapterIds, ...chapters.map(c => c.id).filter(id => !customization.chapterIds.includes(id))].map(id => {
+          const chapter = chapters.find(c => c.id === id)!; const index = customization.chapterIds.indexOf(id);
+          return <div key={id}><label><input type="checkbox" checked={index >= 0} onChange={e => patch({chapterIds:e.target.checked ? [...customization.chapterIds,id] : customization.chapterIds.filter(c => c !== id)})}/>{chapter.title}</label>{index >= 0 && <span><button type="button" className="button" aria-label={`Move ${chapter.title} up`} disabled={busy || index === 0} onClick={() => moveChapter(id,-1)}>↑</button><button type="button" className="button" aria-label={`Move ${chapter.title} down`} disabled={busy || index === customization.chapterIds.length - 1} onClick={() => moveChapter(id,1)}>↓</button></span>}</div>;
+        })}</div>
+        <p className="small">Approximate wait: {clock(estimate)} for {customization.chapterIds.length} chapters. Cached insights may be faster; provider retries may take longer.</p>
+      </fieldset>
       <div className="report-history" data-export="omit">
         <label>
           <span className="small">Saved reports · latest 50 versions</span>
-          <DropdownField aria-label="Saved reports" disabled={busy || !savedReports.length} value={model?.id || ""}
+          <DropdownField aria-label="Saved reports" disabled={busy || loadingHistory || !savedReports.length} value={model?.id || ""}
             onChange={e => e.target.value && void openSaved(e.target.value)}>
-            <option value="">{loadingSaved ? "Loading saved reports…" : "Select a saved report"}</option>
+            <option value="">{loadingHistory ? "Loading saved reports…" : "Select a saved report"}</option>
             {savedReports.map(saved => <option key={saved.id} value={saved.id}>
               {saved.scope.studio} · {monthLabel(saved.scope.month)} · {new Date(saved.savedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} · {saved.aiChapters}/{saved.chapterCount ?? 7} AI chapters
             </option>)}
@@ -280,7 +317,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
             <span style={{ width: `${progress}%` }} />
           </div>
           <span className="small">
-            {stage.label} · {progress}%
+            {stage.label} · {progress}% · {elapsed < estimatedSeconds ? `Approximately ${clock(estimatedSeconds - elapsed)} remaining` : `Taking longer than estimated · ${clock(elapsed)} elapsed`}
           </span>
         </div>
       )}
@@ -300,7 +337,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
       {model && (!model.schemaVersion || model.schemaVersion < 3) && <div className="notice">This saved version uses the earlier report format. Rebuild to include leads, renewal cohorts, instructor scorecards, recurring slots and late-cancellation analysis.</div>}
       {model?.schemaVersion === 3 && <div className="notice">This saved snapshot predates the corrected complimentary-visit and recorded-duration calculations. Rebuild the report to use the current source definitions; the original snapshot is preserved.</div>}
       {model ? (
-        <ReportDocument key={model.id ?? model.figuresHash} model={model} theme={reportTheme} ref={document_} />
+        <ReportDocument key={model.id ?? model.figuresHash} model={model} theme={model.customization?.theme ?? reportTheme} ref={document_} />
       ) : (
         !busy && (
           <div className="empty-state" data-export="omit">

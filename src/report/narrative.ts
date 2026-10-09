@@ -6,7 +6,7 @@ import type { ChapterData, ChapterNarrative, InsightCard, ReportModel } from "./
 
 const CACHE_PREFIX = "atlas-report-narrative:v6:";
 const cacheKey = (model: ReportModel, chapterId: string) =>
-  `${CACHE_PREFIX}${model.scope.studio}:${model.scope.month}:${model.figuresHash}:${chapterId}`;
+  `${CACHE_PREFIX}${model.scope.studio}:${model.scope.month}:${model.figuresHash}:${JSON.stringify(model.customization ?? {})}:${chapterId}`;
 
 function readCache(key: string): ChapterNarrative | null {
   try {
@@ -234,10 +234,11 @@ export async function generateNarratives(
   const finish = (spec: ChapterSpec, narrative: ChapterNarrative) => {
     out[spec.id] = narrative;
     done++;
-    onProgress?.(done, chapters.length, spec.title);
+    onProgress?.(done, model.customization?.chapterIds.length ?? chapters.length, spec.title);
   };
-  const pending = [...chapters];
-  onProgress?.(0, chapters.length, chapters[0].title);
+  const selected = model.customization ? model.customization.chapterIds.map(id => chapters.find(c => c.id === id)).filter((c): c is ChapterSpec => !!c) : chapters;
+  const pending = [...selected];
+  onProgress?.(0, selected.length, selected[0]?.title ?? "Report");
   await Promise.all(
     Array.from({ length: Math.min(CONCURRENCY, pending.length) }, async () => {
       while (pending.length) {
@@ -260,6 +261,7 @@ export async function generateNarratives(
           DERIVED_RULES[spec.id] ?? "",
           spec.id === "predictions" ? "Use only the following numeric what-if scenarios for future values. Do not invent forecast ranges, confidence bands, probabilities or additional numeric forecasts. Explain the arithmetic and assumptions in prose, and compare with the trailing history.\n" + forwardScenarios(model) : "",
           CARD_RULES,
+          model.customization ? `Editorial preferences (subject to the evidence and accuracy rules above): Audience: ${model.customization.audience}. Tone: ${model.customization.tone}. Detail: ${model.customization.detail}. Requested priorities: ${model.customization.instructions}. Do not invent figures or change metric definitions to satisfy preferences.` : "",
           data?.groups.length ? `Required evidence focus IDs: ${data.groups.map(g => g.id ?? g.field).join(", ")}. Use focus kpis for headline reasoning and trend for historical interpretation. Write one passage with its matching focus ID for EACH breakdown table: ${data.groups.map(g => g.title).join("; ")}. Do not add closing passages that duplicate breakdowns. Return ${data.groups.length + 2} concise passages, covering each breakdown plus kpis and trend.` : "",
           "Figures:",
           figures.slice(0, 48000),
@@ -289,6 +291,6 @@ export async function generateNarratives(
       }
     }),
   );
-  onProgress?.(chapters.length, chapters.length, "Narratives complete");
+  onProgress?.(selected.length, selected.length, "Narratives complete");
   return out;
 }

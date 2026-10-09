@@ -16,16 +16,16 @@ import { exportCSV } from "./exports";
 // normalise.ts. Formats come from the data rather than a fixed list so a
 // renamed or retired format does not leave an empty column behind.
 const SCORECARD = [
-  { heading: "Supply", ids: ["sessions", "capacity", "trainers"] },
-  { heading: "Demand", ids: ["booked", "attendance", "paid_attendance", "avg_class_size_incl", "avg_class_size_excl"] },
-  { heading: "Efficiency", ids: ["fill_rate", "booking_fill_rate", "show_up_rate", "empty_sessions", "empty_session_rate", "unsold_seats", "attendance_cv"] },
-  { heading: "Leakage", ids: ["late_cancel_rate", "no_show_rate", "non_paid_rate"] },
+  { heading: "Supply", ids: ["sessions", "capacity", "trainers", "active_slots", "overbooked_sessions"] },
+  { heading: "Demand", ids: ["booked", "attendance", "paid_attendance", "avg_class_size_incl", "avg_class_size_excl", "intro_penetration", "complimentary_visits", "session_complimentary_rate"] },
+  { heading: "Efficiency", ids: ["fill_rate", "booking_fill_rate", "show_up_rate", "empty_sessions", "empty_session_rate", "unsold_seats", "attendance_cv", "nonempty_reliability"] },
+  { heading: "Leakage", ids: ["late_cancel_rate", "no_shows", "no_show_rate", "non_paid_rate", "complimentary_rate"] },
   { heading: "Yield", ids: ["revenue", "revenue_per_session", "rev_pac", "rev_pas", "lost_revenue", "membership_att_share"] },
 ];
 const SCORECARD_IDS = SCORECARD.flatMap((s) => s.ids);
 const SHARE_IDS = ["sessions", "capacity", "attendance", "revenue"];
-const TREND_IDS = ["attendance", "fill_rate", "revenue", "revenue_per_session", "avg_class_size_incl", "sessions"];
-const SLOT_IDS = ["sessions", "attendance", "fill_rate", "avg_class_size_incl", "revenue_per_session"];
+const TREND_IDS = SCORECARD_IDS.filter(id => id !== "trainers");
+const SLOT_IDS = ["sessions", "attendance", "fill_rate", "avg_class_size_incl", "revenue_per_session", "show_up_rate", "late_cancel_rate", "no_show_rate", "empty_session_rate", "rev_pas"];
 const MIN_SESSIONS = 5;
 
 type Section = { rows: Row[]; trend: Row[]; slots: Row[]; trainers: Row[]; studios: Row[] };
@@ -149,7 +149,7 @@ export function FormatComparison({ version }: { version: string | number }) {
         </div>
         {!loading && !formats.length && <p className="empty-state">No format sessions match this scope.</p>}
         <p className="small">Rings show attended seats / capacity. Bars compare the same measure across formats; leadership follows each metric’s direction. Revenue is session-attributed.</p>
-        <details className="format-full-scorecard"><summary>Explore the complete scorecard</summary>
+        <details open className="format-full-scorecard"><summary>Explore the complete scorecard</summary>
         <div className="table-scroll">
           <table className="worklist-table format-scorecard">
             <thead>
@@ -319,16 +319,17 @@ function TrendTable({ rows, formats, metric, onMetric }: { rows: Row[]; formats:
               <th scope="row">Leader</th>
               {months.map((m) => {
                 const scored = formats
+                  .filter(f => cell(m,f) != null)
                   .map((f) => ({ f, v: Number(cell(m, f)) }))
                   .filter((x) => Number.isFinite(x.v));
-                const top = scored.length ? scored.reduce((a, b) => (b.v > a.v ? b : a)) : null;
+                const top = scored.length ? scored.reduce((a, b) => ((metrics[metric]?.higherIsBetter === false ? b.v < a.v : b.v > a.v) ? b : a)) : null;
                 return <td key={m}>{top ? top.f : "—"}</td>;
               })}
             </tr>
             <tr>
               <th scope="row">Gap</th>
               {months.map((m) => {
-                const values = formats.map((f) => Number(cell(m, f))).filter(Number.isFinite);
+                const values = formats.filter(f => cell(m,f) != null).map((f) => Number(cell(m, f))).filter(Number.isFinite);
                 if (values.length < 2) return <td key={m}>—</td>;
                 const high = Math.max(...values);
                 const low = Math.min(...values);
@@ -349,7 +350,7 @@ function TrendTable({ rows, formats, metric, onMetric }: { rows: Row[]; formats:
         </table>
       </div>
       <p className="small">
-        Leader is the highest format that month; Gap is the distance to the
+        Leader follows the metric’s preferred direction that month; Gap is the distance to the
         weakest — percentage points for rates, a multiple for everything else.
         A widening gap is a format pulling away, not a seasonal swing.
       </p>
@@ -391,20 +392,14 @@ function SliceTable({ index, title, subtitle, rows, formats, label, caption }: {
                   <thead>
                     <tr>
                       <th>{title.includes("studio") ? "Studio" : title.includes("teaches") ? "Instructor" : "Slot"}</th>
-                      <th>Sessions</th>
-                      <th>Fill</th>
-                      <th>Avg size</th>
-                      <th>Rev / session</th>
+                      {SLOT_IDS.map(id => <th key={id}>{metrics[id].label}</th>)}
                     </tr>
                   </thead>
                   <tbody>
                     {ranked.map((r) => (
                       <tr key={label(r)}>
                         <th scope="row">{r.trainer != null ? <InstructorName name={String(r.trainer)}/> : label(r)}</th>
-                        <td>{fmt("sessions", r.sessions)}</td>
-                        <td>{fmt("fill_rate", r.fill_rate)}</td>
-                        <td>{fmt("avg_class_size_incl", r.avg_class_size_incl)}</td>
-                        <td>{fmt("revenue_per_session", r.revenue_per_session)}</td>
+                        {SLOT_IDS.map(id => <td key={id}>{fmt(id,r[id])}</td>)}
                       </tr>
                     ))}
                   </tbody>

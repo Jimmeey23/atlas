@@ -5,7 +5,7 @@ export const tabs = [
   "Business overview",
   "Studio operations",
   "Schedule & capacity",
-  "Instructor performance",
+  "Instructor Performance",
   "Revenue & sales",
   "Conversion & Acquisition",
   "Renewals & retention",
@@ -19,12 +19,13 @@ export const tabs = [
   "Format comparison",
   "Monthly report",
 ];
-// Instructor economics (10) now renders inside Instructor performance (3), so
+// Instructor economics (10) is consolidated with instructor performance (3), so
 // it keeps its index for saved views and insight links but leaves the nav.
 // Legacy studio workspace indices resolve to one operations page.
-export const consolidated: Record<number, number[]> = { 1: [1, 2, 9, 7] };
+export const consolidated: Record<number, number[]> = { 1: [1, 2, 9, 7], 3: [3, 10] };
 export const consolidatedLabels: Record<number, string> = {
   1: "Studio operations",
+  3: "Instructor Performance",
 };
 export const parentTab = (tab: number) => {
   for (const [parent, members] of Object.entries(consolidated))

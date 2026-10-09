@@ -12,7 +12,8 @@ import { CriterionEvidence, EvidenceBlock, TrendEvidence } from './ReportEvidenc
 export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; theme: 'light' | 'dark' }>(
   function ReportDocument({ model, theme }, ref) {
     const built = new Date(model.builtAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
-    const available = chapters.filter(spec => model.chapters[spec.id] || model.narratives[spec.id]);
+    const ordered = model.customization ? model.customization.chapterIds.flatMap(id => chapters.find(c => c.id === id) ?? []) : chapters;
+    const available = ordered.filter(spec => model.chapters[spec.id] || model.narratives[spec.id]);
     const aiCount = Object.values(model.narratives).filter(n=>n.generated).length;
     const select = (narrative: ChapterNarrative | undefined, focus: string) => narrative ? {
       ...narrative, summary:'', cards:narrative.generated ? narrative.cards.filter(card=>card.focus===focus).slice(0,1) : [],
@@ -20,6 +21,7 @@ export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; them
     return <article className="report-doc" data-report-theme={theme} ref={ref}>
       <div className="r-page-frame" aria-hidden="true"/>
       <div className="r-topbar"><a className="r-brand" href="#report-cover"><img src={logo} alt="Physique 57"/><span>Studio intelligence<small>{model.scope.studio} · {monthLabel(model.scope.month)}</small></span></a><nav aria-label="Chapter navigation">{available.map(spec=><a key={spec.id} href={`#${spec.id}`}>{spec.nav}</a>)}</nav></div>
+      {model.customization && <header className="r-container r-personal-cover"><h1>{model.customization.title || 'Monthly performance report'}</h1>{model.customization.subtitle && <p>{model.customization.subtitle}</p>}<p>{[model.customization.preparedFor && `Prepared for ${model.customization.preparedFor}`, model.customization.preparedBy && `Prepared by ${model.customization.preparedBy}`].filter(Boolean).join(' · ')}</p></header>}
       <ReferenceHero studio={model.scope.studio} period={monthLabel(model.scope.month)} built={built} aiCount={aiCount} total={available.length} highlights={[
         ['revenue-performance','gross_revenue'],['conversion-funnel','new_clients'],['executive-summary','fill_rate'],['renewals','renewal_rate']
       ].flatMap(([chapter,id])=>model.chapters[chapter]?.total[id]!=null ? [{label:definition(id)?.label ?? id,value:fmt(id,model.chapters[chapter].total[id])}] : [])}/>

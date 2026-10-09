@@ -91,7 +91,7 @@ import { Rankings } from "./components/Rankings";
 import { Heatmap } from "./components/Heatmap";
 import { AcquisitionMainTables, AcquisitionDeepDive, AcquisitionTableView } from "./components/AcquisitionTables";
 import { MoMTable } from "./components/MoMTable";
-import { InstructorEconomics } from "./components/InstructorEconomics";
+import { InstructorIntelligence } from "./components/InstructorIntelligence";
 import { MonthlyMemberIntelligence } from "./components/MonthlyMemberIntelligence";
 import { FormatComparison } from "./components/FormatComparison";
 import { PerformanceScorecard } from "./components/PerformanceScorecard";
@@ -320,7 +320,7 @@ export default function App() {
   }, [prefs, pagePrefs]);
   useEffect(() => {
     if (configuredTab !== s.tab) return;
-    if (!ready || s.tab === 11 || s.tab === 13 || s.tab === 15 || marketingView) {
+    if (!ready || s.tab === 3 || s.tab === 11 || s.tab === 13 || s.tab === 15 || marketingView) {
       setBusy(
         !ready &&
           !dependencies(s.tab).some((k) => sourceStates[k].state === "error"),
@@ -975,6 +975,14 @@ export default function App() {
               </div>
               <PinnedInsights page={s.tab} />
               <SavedElements page={s.tab} version={version} />
+              {s.tab === 3 && (
+                <>
+                  <InstructorIntelligence version={version}/>
+                  <PerformanceScorecard dimension="trainer" index="I2" version={version} onDrill={setDrill}/>
+                  <AcquisitionTableView kind="trainers" version={version}/>
+                  <MonthlyMemberIntelligence kind="instructors" version={version}/>
+                </>
+              )}
               {s.tab === 0 && <Pulse data={analysis} />}
               {s.tab === 0 && <OverviewModules version={version} onDrill={setDrill} />}
               {s.tab === 6 && (
@@ -1128,12 +1136,6 @@ export default function App() {
                   <Chart tab={s.tab} data={analysis} />
                 )}
               </Register> : null}
-              {/* Session metrics describe the class; these describe who the
-                  instructor's first-visit members became. */}
-              {s.tab === 3 && <PerformanceScorecard dimension="trainer" index="08" version={version} onDrill={setDrill} />}
-              {s.tab === 3 && <AcquisitionTableView kind="trainers" version={version} />}
-              {s.tab === 3 && <MonthlyMemberIntelligence kind="instructors" version={version} />}
-              {s.tab === 3 && <InstructorEconomics version={version} />}
               {s.tab === 14 && <PerformanceScorecard dimension="format_group" index="08" version={version} onDrill={setDrill} />}
               {s.tab === 14 && <FormatComparison version={version} />}
               <MoMTable version={workspaceVersion} ids={bp.columns.slice(0, 9)} />

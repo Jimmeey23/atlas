@@ -1,5 +1,6 @@
 import { DropdownField } from "./ui/DropdownField";
 import { useEffect, useState } from 'react';
+import { Search } from 'lucide-react';
 import { query, type Row } from '../data/duckdb';
 import { ensureSource, usable } from '../data/loader';
 import { today, where } from '../data/analytics';
@@ -62,7 +63,7 @@ export function MonthlyMemberIntelligence({ kind, version }: { kind: 'frequency'
     subtitle="Last 26 completed months · studio and other non-date filters apply"
     actions={<button className="button" disabled={busy || !visible.length} onClick={() => exportCSV(`${kind}-monthly`, visible)}>Export CSV</button>}>
     <div className="member-month-controls"><label>Month <DropdownField value={selectedMonth} onChange={e => setMonth(e.target.value)}><option value="all">All months</option>{months.map(value => <option key={value} value={value}>{acquisitionPeriodLabel(value)}</option>)}</DropdownField></label>
-      {frequency ? <label><input type="checkbox" checked={showShare} onChange={e => setShowShare(e.target.checked)} />Show frequency as % of members</label> : <label>Instructor <input type="search" value={search} placeholder="Find an instructor…" onChange={e => setSearch(e.target.value)} /></label>}
+      {frequency ? <label><input type="checkbox" checked={showShare} onChange={e => setShowShare(e.target.checked)} />Show frequency as % of members</label> : <label className="instructor-search"><Search size={13} aria-hidden="true" /><input type="search" value={search} placeholder="Find an instructor…" aria-label="Find an instructor" onChange={e => setSearch(e.target.value)} />{search && <button type="button" className="instructor-search-clear" aria-label="Clear instructor search" onClick={() => setSearch('')}>×</button>}</label>}
     </div>
     {busy ? <p role="status">Loading monthly member intelligence…</p> : error ? <p role="alert">{error}</p> : !visible.length ? <p>No identified member records match this scope.</p> : frequency ? <>
       {table(totals, false)}<h3 className="member-month-subtitle">Frequency by membership & access type</h3>{table(splits, true)}

@@ -141,6 +141,12 @@ export const blueprints: Blueprint[] = [
       "revenue_per_session",
       "draw_premium_pp",
       "revenue",
+      "sessions",
+      "attendance",
+      "show_up_rate",
+      "empty_session_rate",
+      "rev_pas",
+      "teaching_hours",
     ],
     columns: [
       "sessions",

@@ -32,7 +32,7 @@ export const reportFileName = (model: ReportModel) =>
 export async function serialiseReport(element: HTMLElement, model: ReportModel) {
   const clone = element.cloneNode(true) as HTMLElement;
   // The in-app chrome has no meaning in a file; the sticky contents rail does.
-  clone.setAttribute("data-report-theme", "light");
+  clone.setAttribute("data-report-theme", model.customization?.theme ?? "light");
   clone.querySelectorAll("[data-export='omit']").forEach((node) => node.remove());
   const embedded = new Map<string, Promise<string>>();
   await Promise.all(Array.from(clone.querySelectorAll('img')).map(async img => {
@@ -47,7 +47,7 @@ export async function serialiseReport(element: HTMLElement, model: ReportModel) 
     img.src = await embedded.get(source)!;
     img.removeAttribute('loading');
   }));
-  const title = `${model.scope.studio} — ${monthLabel(model.scope.month)} performance report`;
+  const title = `${model.customization?.title || "Performance report"} — ${model.scope.studio} — ${monthLabel(model.scope.month)} performance report`;
   return [
     "<!doctype html>",
     '<html lang="en">',
@@ -184,4 +184,15 @@ export async function printReport(element: HTMLElement, model: ReportModel) {
     target.addEventListener('afterprint',()=>frame.remove(),{once:true});
     target.focus(); target.print();
   } catch(error) { frame.remove(); throw error; }
+}
+
+/** Open synchronously to preserve browser user activation, then populate the standalone report. */
+export async function openReportPage(element: HTMLElement, model: ReportModel) {
+  const page = window.open('about:blank', '_blank');
+  if (!page) throw new Error('The browser blocked the new page. Allow pop-ups and retry.');
+  page.opener = null;
+  try {
+    const html = await serialiseReport(element, model);
+    page.document.open(); page.document.write(html); page.document.close();
+  } catch (error) { page.close(); throw error; }
 }

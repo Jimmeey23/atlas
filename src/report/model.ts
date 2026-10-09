@@ -57,7 +57,13 @@ export interface ChapterNarrative {
   generated: boolean;
   error?: string;
 }
+export interface ReportCustomization {
+  title: string; subtitle: string; preparedFor: string; preparedBy: string;
+  audience: string; tone: string; detail: string; instructions: string;
+  chapterIds: string[]; theme: "light" | "dark";
+}
 export interface ReportModel {
+  customization?: ReportCustomization;
   id?: string;
   savedAt?: string;
   schemaVersion?: number;
