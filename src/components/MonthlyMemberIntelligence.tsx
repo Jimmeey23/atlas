@@ -23,6 +23,24 @@ const outcomeColumns = [
   ['conversion_known', 'Conversion status known'], ['retention_known', 'Retention status known'], ['undated_conversions', 'Undated conversions (eligible)'],
 ] as const;
 const number = (value: unknown) => value == null ? '—' : Number(value).toLocaleString('en-IN');
+/** Totals recomputed from counts so rates stay weighted by the rows' real denominators. */
+function outcomeTotals(rows: Row[]): Row {
+  const sum = (key: string, only?: string) => rows.reduce((total, row) => total + (only && row[only] == null ? 0 : Number(row[key] ?? 0)), 0);
+  const known = (key: string) => rows.some(row => row[key] != null) ? sum(key) : null;
+  const ratio = (num: number | null, den: number) => num == null || !den ? null : num / den;
+  const converted = known('converted'), retained = known('retained'), converted30 = known('converted_30'), retained30 = known('retained_30'), secondVisitors = known('second_visitors');
+  return {
+    newcomers: sum('newcomers'), conversion_known: sum('conversion_known'), retention_known: sum('retention_known'),
+    mature_30: sum('mature_30'), undated_conversions: sum('undated_conversions'),
+    converted, retained, converted_30: converted30, retained_30: retained30,
+    conversion_rate: ratio(converted, sum('newcomers', 'converted')),
+    retention_rate: ratio(retained, sum('newcomers', 'retained')),
+    conversion_30_rate: ratio(converted30, sum('mature_30', 'converted_30')),
+    retention_30_rate: ratio(retained30, sum('mature_30', 'retained_30')),
+    second_visit_rate: ratio(secondVisitors, sum('second_visit_base')),
+    avg_conversion_days: ratio(sum('conversion_days_total'), sum('conversion_days_n')),
+  };
+}
 const outcomeValue = (key: string, value: unknown) => value == null ? '—' : key.endsWith('rate') ? `${(Number(value) * 100).toFixed(1)}%` : key === 'avg_conversion_days' ? Number(value).toFixed(1) : number(value);
 
 export function MonthlyMemberIntelligence({ kind, version }: { kind: 'frequency' | 'instructors'; version: string | number }) {
@@ -70,6 +88,7 @@ export function MonthlyMemberIntelligence({ kind, version }: { kind: 'frequency'
     </> : <div className="table-scroll" tabIndex={0} aria-label="Instructor outcomes by first-visit month"><table className="worklist-table">
       <thead><tr><th scope="col">Instructor</th><th scope="col">First-visit month</th>{outcomeColumns.map(([key, label]) => <th scope="col" key={key}>{label}</th>)}</tr></thead>
       <tbody>{visible.map(row => <tr key={`${row.month}-${row.trainer}`}><th scope="row"><InstructorName name={String(row.trainer)} /></th><td>{acquisitionPeriodLabel(row.month)}</td>{outcomeColumns.map(([key]) => <td key={key}>{outcomeValue(key, row[key])}</td>)}</tr>)}</tbody>
+      <tfoot><tr><th scope="row">All instructors</th><td>{selectedMonth === 'all' ? 'All months' : acquisitionPeriodLabel(selectedMonth)}</td>{(t => outcomeColumns.map(([key]) => <td key={key}>{outcomeValue(key, t[key])}</td>))(outcomeTotals(visible))}</tr></tfoot>
     </table></div>}
     <details className="member-month-definitions"><summary>Definitions & source coverage</summary>{frequency ? <>
       <p>Only attended check-ins with a member ID count. Each member belongs to exactly one frequency band per calendar month in the filtered scope. Repeated check-ins for the same member and session count once; when session ID is missing, date, studio, experience, time and instructor identify the session. Members can appear in multiple months.</p>

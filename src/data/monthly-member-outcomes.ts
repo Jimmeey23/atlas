@@ -71,6 +71,10 @@ export function instructorMonthlyOutcomesSQL(scope: string, asOf: string) {
     COUNT(*) FILTER (WHERE mature AND returned_30)::DOUBLE/NULLIF(COUNT(*) FILTER (WHERE mature),0) AS retention_30_rate,
     CASE WHEN COUNT(visits_post)>0 THEN COUNT(*) FILTER (WHERE visits_post>0)::DOUBLE/COUNT(*) END AS second_visit_rate,
     AVG(conversion_days) FILTER (WHERE conversion_days>=0 AND outcome_converted) AS avg_conversion_days,
+    CASE WHEN COUNT(visits_post)>0 THEN COUNT(*) FILTER (WHERE visits_post>0) END AS second_visitors,
+    CASE WHEN COUNT(visits_post)>0 THEN COUNT(*) END AS second_visit_base,
+    SUM(conversion_days) FILTER (WHERE conversion_days>=0 AND outcome_converted) AS conversion_days_total,
+    COUNT(conversion_days) FILTER (WHERE conversion_days>=0 AND outcome_converted) AS conversion_days_n,
     MAX(observed_through)::VARCHAR AS observed_through
   FROM flags GROUP BY substr(date,1,7),trainer_key ORDER BY month DESC,trainer`;
 }

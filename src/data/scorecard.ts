@@ -89,6 +89,27 @@ export function scorecardSQL(dimension: ScorecardDimension, filters: Filters, tr
   FROM joined ORDER BY attendance DESC NULLS LAST`;
 }
 
+/** Full-scope totals over the same population as the scorecard rows; rates recomputed, not averaged. */
+export function scorecardTotalSQL(dimension: ScorecardDimension, filters: Filters, transient: Transient) {
+  const key = scorecardKey(dimension);
+  const inScope = `${display(dimension)} IS NOT NULL AND ${key} IN (SELECT k FROM keys)`;
+  return `WITH f AS (SELECT * FROM ${metricFacts(filters, "sessions", transient)} WHERE ${display(dimension)} IS NOT NULL),
+  keys AS (SELECT DISTINCT ${key} AS k FROM f),
+  s AS (SELECT ${metricSQL(scorecardSessionIds, context(filters, transient))},
+    SUM(sessions)-COALESCE(SUM(empty),0) AS non_empty_sessions, COUNT(*) AS n FROM f),
+  nw AS (SELECT COUNT(*) FILTER (WHERE is_new) AS new_visitors,
+    COUNT(*) FILTER (WHERE is_new AND conversion='Converted') AS converted,
+    COUNT(*) FILTER (WHERE is_new AND retention='Retained') AS retained
+    FROM ${scoped(filters, "new", transient, inScope)}),
+  bk AS (SELECT COUNT(*) AS bookings, COUNT(*) FILTER (WHERE late_cancelled>0) AS late_cancelled
+    FROM ${scoped(filters, "bookings", transient, inScope)})
+  SELECT s.*, nw.new_visitors, nw.converted, nw.retained,
+    nw.converted::DOUBLE/NULLIF(nw.new_visitors,0) AS conversion_rate,
+    nw.retained::DOUBLE/NULLIF(nw.new_visitors,0) AS retention_rate,
+    bk.bookings, bk.late_cancelled, bk.late_cancelled::DOUBLE/NULLIF(bk.bookings,0) AS late_cancel_rate
+  FROM s CROSS JOIN nw CROSS JOIN bk`;
+}
+
 /** Records behind one scorecard cell, matched on the same folded key the join uses. */
 export function scorecardPredicate(dimension: ScorecardDimension, key: string, extra?: string) {
   return [`${scorecardKey(dimension)}=${quote(key)}`, extra].filter(Boolean).join(" AND ");

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { query, type Row } from "../data/duckdb";
 import { usable } from "../data/loader";
-import { scorecardPredicate, scorecardSQL, scorecardTops, type ScorecardDimension } from "../data/scorecard";
+import { scorecardPredicate, scorecardSQL, scorecardTotalSQL, scorecardTops, type ScorecardDimension } from "../data/scorecard";
 import { fmt } from "../semantics/formats";
 import { useStore } from "../state/store";
 import { exportCSV } from "./exports";
@@ -47,6 +47,7 @@ export function PerformanceScorecard({
   const filters = useStore((s) => s.filters);
   const transient = useStore((s) => s.transient);
   const [rows, setRows] = useState<Row[]>([]);
+  const [total, setTotal] = useState<Row | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState<{ id: string; desc: boolean }>({ id: "attendance", desc: true });
@@ -59,8 +60,12 @@ export function PerformanceScorecard({
     let active = true;
     setLoading(true);
     setError("");
-    query(scorecardSQL(dimension, filters, transient))
-      .then((r) => active && setRows(r))
+    Promise.all([query(scorecardSQL(dimension, filters, transient)), query(scorecardTotalSQL(dimension, filters, transient))])
+      .then(([r, t]) => {
+        if (!active) return;
+        setRows(r);
+        setTotal(t[0] ?? null);
+      })
       .catch((e) => active && setError(String(e)))
       .finally(() => active && setLoading(false));
     return () => {
@@ -110,7 +115,7 @@ export function PerformanceScorecard({
     <Register
       index={index}
       title={`${noun} scorecard`}
-      subtitle={`Classes and demand from Sessions · new members by first-visit ${noun.toLowerCase()} from New · late cancellations from Bookings`}
+      subtitle={`Classes and demand · new members by first-visit ${noun.toLowerCase()} · late cancellations`}
       actions={
         <button
           className="button"
@@ -131,7 +136,7 @@ export function PerformanceScorecard({
       }
     >
       {!ready ? (
-        <p role="status">Loading Sessions, New and Bookings…</p>
+        <p role="status">Loading scorecard sources…</p>
       ) : error ? (
         <p role="alert">Scorecard unavailable: {error}</p>
       ) : loading && !rows.length ? (
@@ -175,6 +180,21 @@ export function PerformanceScorecard({
                 </tr>
               ))}
             </tbody>
+            {total && (
+              <tfoot>
+                <tr>
+                  <th scope="row">All {noun.toLowerCase()}s</th>
+                  {measures.map((m) => (
+                    <td key={m.id} className="number">
+                      {m.id === "composite_score" ? "—" : fmt(m.format ?? m.id, total[m.id])}
+                    </td>
+                  ))}
+                  {tops.map(([id]) => (
+                    <td key={id}>—</td>
+                  ))}
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       )}
@@ -182,7 +202,7 @@ export function PerformanceScorecard({
         Composite score (0–100) averages each {noun.toLowerCase()}'s rank against the others on fill rate, class average
         excluding empty classes, revenue per class, conversion %, retention % and, inversely, late-cancel % and empty-class
         share. New members are first visits whose “Is New” label contains “new”; converted and retained follow the
-        Conversion and Retention Status columns. Late cancellations count late-cancelled bookings on the Bookings sheet.
+        Conversion and Retention Status columns. Late cancellations count late-cancelled bookings.
         Top values are the busiest by checked-in attendance.
       </p>
     </Register>

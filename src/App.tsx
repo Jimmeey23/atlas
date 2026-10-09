@@ -91,7 +91,7 @@ import { Rankings } from "./components/Rankings";
 import { Heatmap } from "./components/Heatmap";
 import { AcquisitionMainTables, AcquisitionDeepDive, AcquisitionTableView } from "./components/AcquisitionTables";
 import { MoMTable } from "./components/MoMTable";
-import { InstructorIntelligence } from "./components/InstructorIntelligence";
+import { InstructorIntelligence, instructorPayrollKpis, useInstructorPayroll } from "./components/InstructorIntelligence";
 import { MonthlyMemberIntelligence } from "./components/MonthlyMemberIntelligence";
 import { FormatComparison } from "./components/FormatComparison";
 import { PerformanceScorecard } from "./components/PerformanceScorecard";
@@ -198,6 +198,7 @@ export default function App() {
   const [command, setCommand] = useState("");
   const [toast, setToast] = useState("");
   const [version, setVersion] = useState(0);
+  const instructorPayroll = useInstructorPayroll(version, s.tab === 3);
   const [thresholdValues, setThresholdValues] =
     useState<Thresholds>(thresholds());
   const main = useRef<HTMLElement>(null);
@@ -320,7 +321,7 @@ export default function App() {
   }, [prefs, pagePrefs]);
   useEffect(() => {
     if (configuredTab !== s.tab) return;
-    if (!ready || s.tab === 3 || s.tab === 11 || s.tab === 13 || s.tab === 15 || marketingView) {
+    if (!ready || s.tab === 11 || s.tab === 13 || s.tab === 15 || marketingView) {
       setBusy(
         !ready &&
           !dependencies(s.tab).some((k) => sourceStates[k].state === "error"),
@@ -971,6 +972,9 @@ export default function App() {
                         });
                     }}
                   />
+                ))}
+                {s.tab === 3 && instructorPayrollKpis.map((id) => (
+                  <MetricCard key={id} id={id} value={instructorPayroll?.total[id]} previous={instructorPayroll?.previous[id]} trend={instructorPayroll?.trend ?? []} n={instructorPayroll?.count ?? 0} evidence={instructorPayroll?.total ?? {}} compare={s.compare !== "none"} />
                 ))}
               </div>
               <PinnedInsights page={s.tab} />
