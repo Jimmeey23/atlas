@@ -72,12 +72,3 @@ export function TrendEvidence({ history, ids, title, narrative }: {history:Row[]
   if (!usable.length) return null;
   return <div className="r-trend-module"><ReportSwitch label="Trend measure" views={usable.map(id=>({id,label:label(id),content:<TrendChart history={history} ids={[id]} title={title} note="Fourteen monthly observations · actual units · gaps indicate unavailable data."/>}))}/><InsightPane title="Trend interpretation" narrative={narrative}/></div>;
 }
-
-export function SignalMarquee({ narrative }: { narrative?: ChapterNarrative }) {
-  const [paused,setPaused] = useState(false);
-  const signals = [...new Set(narrative?.generated ? narrative.cards.filter(card=>['red_flag','worked','didnt_work'].includes(card.category ?? '')).map(card=>card.headline).slice(0,3) : [])];
-  if (!signals.length) return null;
-  return <div className="r-signal-strip"><span className="r-signal-label">Signals</span><div className="r-marquee" data-paused={paused} aria-label="Key report signals"><div className="r-marquee-track">
-    <div className="r-marquee-copy">{signals.map(signal=><span key={signal}>{signal}</span>)}</div><div className="r-marquee-copy" aria-hidden="true">{signals.map(signal=><span key={signal}>{signal}</span>)}</div>
-  </div></div><button type="button" data-marquee-control="" aria-pressed={paused} onClick={()=>setPaused(current=>!current)} aria-label={paused ? 'Resume signals' : 'Pause signals'}>{paused ? 'Resume' : 'Pause'}</button></div>;
-}
