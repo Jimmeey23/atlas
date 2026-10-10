@@ -9,6 +9,8 @@ export interface CallUsage {
   /** Included in outputTokens; reported separately because it is invisible in the prose. */
   reasoningTokens: number;
   durationMs: number;
+  /** The server reused a completed chapter; there was no provider call. */
+  fromCache?: boolean;
 }
 /** Everything one chapter cost in this run, including retries and rejected answers. */
 export interface ChapterUsage extends Omit<CallUsage, "model"> {
@@ -70,6 +72,7 @@ export function costUsd(usage: Pick<CallUsage, "model" | "inputTokens" | "cached
 
 /** Fold one call into a chapter's running usage. */
 export function addCall(total: ChapterUsage | undefined, call: CallUsage): ChapterUsage {
+  if (call.fromCache) return total ?? { ...call, calls: 0, costUsd: 0, fromCache: true };
   const cost = costUsd(call);
   return {
     model: call.model,

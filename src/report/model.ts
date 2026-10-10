@@ -114,6 +114,8 @@ export interface ChapterNarrative {
   /** Rule-based copy is labelled so nobody reads it as analysis. */
   generated: boolean;
   error?: string;
+  /** Exact analytical request identity; appearance changes do not invalidate it. */
+  analysisKey?: string;
   /** Provider tokens and cost for this chapter in the run that produced it. */
   usage?: ChapterUsage;
 }

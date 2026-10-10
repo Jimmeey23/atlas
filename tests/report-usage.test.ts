@@ -71,7 +71,8 @@ test('chapters carry usage, rejected calls count, and cache hits bill nothing', 
   const used = { model: 'gpt-4.1', inputTokens: 1000, cachedInputTokens: 0, outputTokens: 500, reasoningTokens: 0, durationMs: 2000 };
   const card = { headline: 'H', meaning: 'M', evidence: 'E', action: 'A', plainLanguage: 'P', impact: 'I', watch: 'W', focus: 'kpis', category: 'meaning', confidence: 'high' };
   let calls = 0;
-  globalThis.fetch = async () => {
+  globalThis.fetch = async (_url, init) => {
+    if (!init?.body) return new Response(JSON.stringify({openai:true,model:'gpt-4.1',reportNarrativeVersion:'1'}));
     calls++;
     // The first answer is malformed and rejected client-side; it was still billed.
     return new Response(JSON.stringify({ answer: JSON.stringify({ summary: calls === 1 ? '' : 'Verdict.', cards: [card] }), usage: used }));

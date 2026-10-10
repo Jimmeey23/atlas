@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { computeReport } from "./compute";
 import { chapters } from "./chapters";
-import { clearNarrativeCache, fallbackNarrative, generateNarratives } from "./narrative";
+import { fallbackNarrative, generateNarratives } from "./narrative";
 import { findingsFor } from "./findings";
 import { saveReport, type SavedReport } from "./storage";
 import type { ChapterNarrative, ReportCustomization, ReportModel } from "./model";
@@ -104,8 +104,9 @@ export async function startReport({ regenerate = false }: { regenerate?: boolean
       if (live()) useReportJob.getState().set({ stage: { label, done, total: total + 1 } });
     });
     if (!live()) return;
-    computed = { ...snapshot, narratives: {}, id: undefined, savedAt: undefined, customization: { ...customization, chapterIds: [...customization.chapterIds] } };
-    if (regenerate) clearNarrativeCache(computed);
+    computed = { ...snapshot, narratives: regenerate ? snapshot.narratives : {}, id: undefined, savedAt: undefined, customization: { ...customization, chapterIds: [...customization.chapterIds] } };
+    // Successful chapters remain available as reuse candidates. The generator
+    // verifies their complete request identity before keeping them in this run.
     // Figures render at once; chapters fill in as each one is written.
     useReportJob.getState().set({ model: computed });
     const writingStarted = Date.now();

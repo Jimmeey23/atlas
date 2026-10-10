@@ -1,16 +1,19 @@
 import { reportFmt as fmt, reportDelta as delta, definition } from "./definitions";
 import { metricNotes } from "../semantics/evidence";
 import { chapters, type ChapterSpec } from "./chapters";
-import { hashText, monthLabel, shiftMonth } from "./period";
+import { monthLabel, shiftMonth } from "./period";
 import { findingsFor, findingsPayload, ledger, seasonalScenario, type Finding } from "./findings";
 import { INSIGHT_LENSES, type ChapterData, type ChapterNarrative, type InsightCard, type ReportModel } from "./model";
 import { reportOptions } from "./options";
 import { addCall, type CallUsage, type ChapterUsage } from "./usage";
 
-const CACHE_PREFIX = "atlas-report-narrative:v11:";
-/** Keyed on the exact prompt, so any change to figures, findings, targets or rules is a new analysis. */
-const cacheKey = (model: ReportModel, chapterId: string, message: string) =>
-  `${CACHE_PREFIX}${model.scope.studio}:${model.scope.month}:${chapterId}:${hashText(message)}`;
+const CACHE_PREFIX = "atlas-report-narrative:v12:";
+/** Exact evidence and request identity, independent of presentation settings. */
+async function analysisKey(value: unknown) {
+  const bytes = new TextEncoder().encode(JSON.stringify(value));
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
+}
 
 function readCache(key: string): ChapterNarrative | null {
   try {
@@ -27,18 +30,6 @@ function writeCache(key: string, value: ChapterNarrative) {
     /* a full or blocked store costs a cache hit, not the report */
   }
 }
-/** Drop every cached narrative for one studio-month, so Regenerate really regenerates. */
-export function clearNarrativeCache(model: ReportModel) {
-  const prefix = `${CACHE_PREFIX}${model.scope.studio}:${model.scope.month}:`;
-  for (const key of Object.keys(localStorage))
-    if (key.startsWith(prefix)) localStorage.removeItem(key);
-}
-
-const line = (id: string, data: ChapterData) =>
-  `${definition(id)?.label ?? id}: ${fmt(id, data.total[id])}` +
-  ` (prior month ${fmt(id, data.prior[id])}, ${delta(id, data.total[id], data.prior[id])};` +
-  ` same month last year ${fmt(id, data.priorYear[id])}, ${delta(id, data.total[id], data.priorYear[id])})`;
-
 /**
  * What the model is shown for one chapter: exactly the figures the reader
  * sees, so a card can be checked against the page rather than taken on trust.
@@ -46,26 +37,27 @@ const line = (id: string, data: ChapterData) =>
 export function chapterPayload(spec: ChapterSpec, data: ChapterData, model: ReportModel, findings: Finding[] = []) {
   const parts = [
     findingsPayload(findings),
-    `Chapter: ${spec.title}. Studio: ${model.scope.studio}. Month: ${monthLabel(model.scope.month)}.`,
+    `Chapter: ${spec.title}. Scope: ${spec.network ? "account / network; not studio-attributed" : model.scope.studio}. Month: ${monthLabel(model.scope.month)}.`,
     `Comparisons are against ${monthLabel(shiftMonth(model.scope.month, -1))} and ${monthLabel(shiftMonth(model.scope.month, -12))}.`,
     `Contributing records: ${data.n.toLocaleString("en-IN")}.`,
     ...data.diagnostics ?? [],
     ...data.notes ?? [],
-    "Definitions: " + spec.metrics.map(id => `${id}: ${definition(id)?.label ?? id}. ${metricNotes[id]?.definition ?? ""} Governed calculation: ${definition(id)?.description ?? "unavailable"}. ${metricNotes[id]?.caveat ?? ""}`).join("; "),
+    "Definitions: " + [...new Set([...spec.metrics, ...spec.history, ...data.groups.flatMap(g => g.columns)])].map(id => `${id}: ${definition(id)?.label ?? id}. Format: ${definition(id)?.format ?? "unavailable"}. ${metricNotes[id]?.definition ?? ""} Governed calculation: ${definition(id)?.description ?? "unavailable"}. ${metricNotes[id]?.caveat ?? ""}`).join("; "),
     "Membership revenue share is a share of gross collected payments, not net revenue. Newcomer lifetime value and return counts are observed to the source snapshot date: recent cohorts have less time to mature, so lower observed values do not prove weaker eventual outcomes. Churn outcomes can mature as renewals are recorded. Current-snapshot metrics cannot reconstruct historical member counts. Ranked tables omit groups below three contributing records and may be truncated; totals include all groups. Earned revenue is attendance attribution, not cash sales.",
   ];
-  const headline = spec.metrics.filter((id) => data.total[id] != null);
-  if (headline.length)
-    parts.push("Headline figures:\n" + headline.map((id) => line(id, data)).join("\n") + "\nCalendar-year context:\n" + yearContextPayload(spec,data,model.scope.month));
+  parts.push("Headline figures (raw values; percent format uses a 0–1 ratio):\n" + JSON.stringify({
+    columns: ['metric', 'selectedMonth', 'priorMonth', 'sameMonthLastYear', 'YTD', 'priorYTD', 'MoM', 'YoY'],
+    figures: spec.metrics.map(id => [id, ...[data.total, data.prior, data.priorYear, data.yearToDate, data.priorYearToDate].map(row => row?.[id] ?? null), delta(id, data.total[id], data.prior[id]), delta(id, data.total[id], data.priorYear[id])]),
+  }) + "\nCalendar-year context:\n" + yearContextPayload(spec,data,model.scope.month));
   for (const group of data.groups) {
     const head = ["Group", ...group.columns.map((id) => definition(id)?.label ?? id)].join(" | ");
     const body = group.rows
       .map((row) =>
-        [row.g, ...group.columns.map((id) => fmt(id, row[id])), group.compare ? `MoM ${delta(group.compare,row[group.compare],group.prior?.[String(row.g)]?.[group.compare])}; YoY ${delta(group.compare,row[group.compare],group.priorYear?.[String(row.g)]?.[group.compare])}` : ''].join(" | "),
+        JSON.stringify([row.g, ...group.columns.map((id) => row[id] ?? null), group.compare ? `MoM ${delta(group.compare,row[group.compare],group.prior?.[String(row.g)]?.[group.compare])}; YoY ${delta(group.compare,row[group.compare],group.priorYear?.[String(row.g)]?.[group.compare])}` : '']),
       );
     parts.push(`Focus ID: ${group.id ?? group.field}. ${group.title} (${group.minimum}; ${group.omitted ?? 0} eligible rows omitted). Diagnostics: ${group.diagnostics?.join(" ") ?? ""}. By ${group.fields?.join(" + ") ?? group.field}:\n${head}\n${body.join("\n")}`);
   }
-  if (data.history.length > 1) {
+  if (data.history.length) {
     const ids = spec.history.filter((id) => data.history.some((row) => row[id] != null));
     if (ids.length)
       parts.push(
@@ -73,7 +65,7 @@ export function chapterPayload(spec: ChapterSpec, data: ChapterData, model: Repo
           ["Month", ...ids.map((id) => definition(id)?.label ?? id)].join(" | ") +
           "\n" +
           data.history
-            .map((row) => [row.month, ...ids.map((id) => fmt(id, row[id]))].join(" | "))
+            .map((row) => JSON.stringify([row.month, ...ids.map((id) => row[id] ?? null)]))
             .join("\n"),
       );
   }
@@ -93,20 +85,24 @@ export function yearContextPayload(spec: ChapterSpec, data: ChapterData, month: 
 }
 
 /** What the brief and the plan reason over: the ranked cross-report findings plus every chapter's headline movement. */
-export function portfolioPayload(model: ReportModel, findings: Record<string, Finding[]> = findingsFor(model)) {
+export function portfolioPayload(model: ReportModel, findings: Record<string, Finding[]> = findingsFor(model), chapter?: ChapterSpec) {
   const ranked = ledger(findings);
   const valued = ranked.filter((f) => f.inr);
+  const own = chapter && !chapter.derived ? (findings[chapter.id] ?? []).slice(0, 14) : [];
+  // Keep the original top-30 selection; remove only findings supplied in full above.
+  const contextFindings = ranked.slice(0, 30).filter(f => !own.includes(f));
   return [
-    findingsPayload(ranked, 30),
-    valued.length ? `Valued items (indicative; items can overlap, so never add them up): ${valued.slice(0, 12).map((f) => `${f.text.split(". ")[0]} ≈ ${fmt("gross_revenue", Math.round(f.inr!))}`).join(" | ")}` : "",
-    "Chapter headline figures (all tabs, including chapters omitted from display):\n" + headlinePayload(model),
+    findingsPayload(contextFindings, 30),
+    valued.length ? "Valued items above are indicative and can overlap; never add them up." : "",
+    chapter && !chapter.derived ? `The ${chapter.id} headline figures, definitions, full history and breakdowns are supplied in Figures; use those for this chapter.` : "",
+    "Chapter headline figures (all tabs, including chapters omitted from display):\n" + headlinePayload(model, chapter && !chapter.derived ? chapter.id : undefined),
     "Additional connected context:\n" + JSON.stringify(model.additionalContext ?? []),
     "Different source populations must not be added or joined without verified keys; Meta and KRA are network/account context. n=0 indicates no contributing records, not demonstrated zero performance.\nSource freshness and coverage:\n" + JSON.stringify(model.sources ?? []),
   ].filter(Boolean).join("\n\n");
 }
 
-function headlinePayload(model: ReportModel) {
-  return chapters.filter(spec=>!spec.derived).map(spec=>{
+function headlinePayload(model: ReportModel, exclude?: string) {
+  return chapters.filter(spec=>!spec.derived && spec.id !== exclude).map(spec=>{
     const data=model.chapters[spec.id];
     if(!data) return `${spec.title}: source snapshot unavailable.`;
     const ids=spec.metrics.filter(id=>definition(id));
@@ -349,6 +345,37 @@ async function askModel(message: string, focusIds: string[], signal?: AbortSigna
  */
 const CONCURRENCY = 1;
 
+/** Match the API's limit for the entire message, including rules and separators. */
+const MAX_CHAPTER_PROMPT = 90000;
+
+/** Keep complete evidence lines; never send a cut-off figure or JSON record. */
+function boundedEvidence(text: string, budget: number) {
+  if (text.length <= budget) return text;
+  const notice = "[Evidence omitted to fit the chapter prompt limit. Use only complete supplied records; omitted evidence is unavailable, not zero.]";
+  const kept: string[] = [];
+  let remaining = Math.max(0, budget - notice.length - 1);
+  for (const line of text.split("\n")) {
+    if (line.length + 1 > remaining) continue;
+    kept.push(line);
+    remaining -= line.length + 1;
+  }
+  return [...kept, notice].join("\n");
+}
+
+function chapterPrompt(rules: string[], sections: { label: string; text: string }[]) {
+  const active = sections.filter(section => section.text);
+  const fixed = rules.filter(Boolean).join("\n\n");
+  // Reserve every heading and separator before allocating evidence space.
+  let remaining = MAX_CHAPTER_PROMPT - fixed.length
+    - active.reduce((sum, section) => sum + section.label.length + 4, 0);
+  return [fixed, ...active.map((section, index) => {
+    const budget = Math.floor(remaining / (active.length - index));
+    const text = boundedEvidence(section.text, budget);
+    remaining -= text.length;
+    return `${section.label}\n\n${text}`;
+  })].join("\n\n");
+}
+
 export async function generateNarratives(
   model: ReportModel,
   onProgress?: (done: number, total: number, label: string) => void,
@@ -358,7 +385,18 @@ export async function generateNarratives(
 ): Promise<Record<string, ChapterNarrative>> {
   const out: Record<string, ChapterNarrative> = {};
   const findings = findingsFor(model);
-  const portfolio = portfolioPayload(model, findings);
+  // Verify the configured model before reusing browser or saved-report prose.
+  // If status is unavailable, the server can still safely reuse its exact-request cache.
+  let providerModel = "";
+  let providerPolicy = "";
+  try {
+    const response = await fetch("/api/intelligence/status", { signal });
+    const status = await response.json();
+    if (response.ok && status.openai && typeof status.model === "string" && typeof status.reportNarrativeVersion === "string") {
+      providerModel = status.model;
+      providerPolicy = status.reportNarrativeVersion;
+    }
+  } catch (error) { if (signal?.aborted) throw error; }
   let done = 0;
   const finish = (spec: ChapterSpec, narrative: ChapterNarrative) => {
     out[spec.id] = narrative;
@@ -376,6 +414,7 @@ export async function generateNarratives(
         const spec = pending.shift()!;
         const data = model.chapters[spec.id];
         const own = findings[spec.id] ?? [];
+        const portfolio = portfolioPayload(model, findings, spec);
         const figures = spec.derived ? portfolio : data ? chapterPayload(spec,data,model,own) : "";
         if (!figures) {
           finish(spec, fallbackNarrative(spec, data, own, model));
@@ -384,32 +423,38 @@ export async function generateNarratives(
         const focusIds = data?.groups.map(g => g.id ?? g.field) ?? [];
         const metricIds = citableMetrics(model, spec);
         const o = reportOptions(model.customization);
-        const message = [
+        const preferences = model.customization
+          ? `Audience: ${model.customization.audience}. Tone: ${model.customization.tone}. Focus areas: ${(model.customization.focusAreas ?? []).join(", ") || "balanced"}. Detail: ${model.customization.detail}. Requested priorities: ${model.customization.instructions || "none"}.`
+          : "";
+        const message = chapterPrompt([
           ANALYST_ROLE,
+          ACCURACY_RULES,
+          insightRules(model, spec),
           `You are writing the "${spec.title}" chapter of the monthly management report for ${model.scope.studio}, ${monthLabel(model.scope.month)}.`,
           DERIVED_RULES[spec.id]?.(model) ?? `Return ${cardCount(model)} cards: one "kpis" verdict card, ${data?.history.length ? "at most one \"trend\" card if the history shows something the findings do not, " : ""}and the rest as ranked insights built from the analyst findings. Breakdown IDs available for focus: ${focusIds.join(", ") || "none"}. Most breakdowns should not get their own card.`,
-          spec.id === "predictions" ? "Use only the following numeric what-if scenarios for future values. Do not invent forecast ranges, confidence bands, probabilities or additional numeric forecasts.\n" + forwardScenarios(model) : "",
-          insightRules(model, spec),
           "AVAILABLE METRIC IDS (id: label): " + metricIds.map(id => `${id}: ${definition(id)?.label ?? id}`).join("; "),
-          ACCURACY_RULES,
-          model.customization ? `Editorial preferences (subject to the evidence and accuracy rules above): Audience: ${model.customization.audience}. Tone: ${model.customization.tone}. Focus areas: ${(model.customization.focusAreas ?? []).join(", ") || "balanced"}. Detail: ${model.customization.detail}. Requested priorities: ${model.customization.instructions || "none"}. Do not invent figures or change metric definitions to satisfy preferences.` : "",
-          "Figures:",
-          figures.slice(0, Math.max(1000,80000 - portfolio.length - 8000)),
-          "All-tab performance context (independent of visible chapter selection):",
-          portfolio,
-        ]
-          .filter(Boolean)
-          .join("\n\n");
-        const key = cacheKey(model, spec.id, message);
-        const cached = readCache(key);
-        if (cached?.generated) {
+          preferences ? `Editorial preferences (subject to the evidence and accuracy rules above): ${preferences.slice(0, 8000)}${preferences.length > 8000 ? " [Long editorial preferences shortened.]" : ""} Do not invent figures or change metric definitions to satisfy preferences.` : "",
+        ], [
+          ...(spec.id === "predictions" ? [{ label: "Use only the following numeric what-if scenarios for future values. Do not invent forecast ranges, confidence bands, probabilities or additional numeric forecasts.", text: forwardScenarios(model) }] : []),
+          // Derived chapters already reason over the portfolio; send it once.
+          ...(!spec.derived ? [{ label: "Figures:", text: figures }] : []),
+          { label: "All-tab performance context (independent of visible chapter selection):", text: portfolio },
+        ]);
+        const extra = { insightVersion: 2, metricIds, lenses: spec.id === "recommendations" ? ["next_step"] : o.lenses.filter(l => l !== "next_step") };
+        // Include complete pre-budget evidence: changes to omitted records must invalidate reuse too.
+        const fingerprint = await analysisKey({ version: 12, providerModel, providerPolicy, message, focusIds, extra,
+          figures, portfolio, preferences, scenarios: spec.id === "predictions" ? forwardScenarios(model) : "" });
+        const key = `${CACHE_PREFIX}${model.scope.studio}:${model.scope.month}:${spec.id}:${fingerprint}`;
+        const previous = model.narratives[spec.id];
+        const cached = providerModel ? (previous?.analysisKey === fingerprint ? previous : readCache(key)) : null;
+        if (cached?.generated && !cached.error && cached.analysisKey === fingerprint) {
           finish(spec, { ...cached, usage: cached.usage ? { ...cached.usage, fromCache: true } : { model: "", calls: 0, inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, reasoningTokens: 0, durationMs: 0, costUsd: 0, fromCache: true } });
           continue;
         }
         let usage: ChapterUsage | undefined;
         try {
           const parsed = parseJson(await askModel(message, focusIds, signal, (call) => { usage = addCall(usage, call); },
-            { insightVersion: 2, metricIds, lenses: spec.id === "recommendations" ? ["next_step"] : o.lenses.filter(l => l !== "next_step") }));
+            { ...extra, analysisKey: fingerprint }));
           const cards = Array.isArray(parsed?.cards)
             ? parsed!.cards.filter(
                 (c): c is InsightCard =>
@@ -423,8 +468,8 @@ export async function generateNarratives(
             throw new Error("The model returned no complete chapter analysis. Retry writing insights.");
           // The verdict leads; a model that forgot to mark one has its first card promoted.
           if (!cards.some(c => c.focus === "kpis")) cards[0] = { ...cards[0], focus: "kpis" };
-          const narrative: ChapterNarrative = { summary: parsed.summary.trim(), cards, generated: true, usage };
-          writeCache(key, narrative);
+          const narrative: ChapterNarrative = { summary: parsed.summary.trim(), cards, generated: true, usage, analysisKey: fingerprint };
+          if (providerModel) writeCache(key, narrative);
           finish(spec, narrative);
         } catch (error) {
           if (signal?.aborted) throw error;

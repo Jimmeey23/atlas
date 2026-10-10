@@ -101,6 +101,7 @@ test('custom report chapters, editorial preferences and narrative cache remain i
   (globalThis as any).localStorage = { getItem: (k:string) => cache.get(k) ?? null, setItem: (k:string,v:string) => cache.set(k,v) };
   const messages: string[] = [];
   globalThis.fetch = async (_url,init) => {
+    if (!init?.body) return new Response(JSON.stringify({openai:true,model:'gpt-4.1',reportNarrativeVersion:'1'}));
     messages.push(JSON.parse(String(init?.body)).message);
     return new Response(JSON.stringify({answer:JSON.stringify({summary:'A grounded decision brief.',cards:[{headline:'Review studio demand',meaning:'Check the mix.',evidence:'Recorded figures.',action:'Manager to review.',plainLanguage:'Review demand.',focus:'kpis',category:'meaning',confidence:'medium'}]})}));
   };

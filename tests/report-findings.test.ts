@@ -127,6 +127,7 @@ test('the chapter prompt is built on findings and no longer asks for one passage
   (globalThis as any).localStorage = { getItem: () => null, setItem: () => {} };
   const messages: string[] = [];
   globalThis.fetch = async (_url, init) => {
+    if (!init?.body) return new Response(JSON.stringify({openai:true,model:'gpt-4.1',reportNarrativeVersion:'1'}));
     messages.push(JSON.parse(String(init?.body)).message);
     return new Response(JSON.stringify({ answer: JSON.stringify({ summary: 'Verdict.', cards: [{ headline: 'H', meaning: 'M', evidence: 'E', action: 'A', plainLanguage: 'P', impact: 'I', watch: 'W', focus: 'cross', category: 'meaning', confidence: 'medium' }] }) }));
   };
@@ -182,6 +183,7 @@ test('v2 insights request lenses and metric ids, and drop cited metrics the chap
   (globalThis as any).localStorage = { getItem: () => null, setItem: () => {} };
   const bodies: any[] = [];
   globalThis.fetch = async (_url, init) => {
+    if (!init?.body) return new Response(JSON.stringify({openai:true,model:'gpt-4.1',reportNarrativeVersion:'1'}));
     bodies.push(JSON.parse(String(init?.body)));
     return new Response(JSON.stringify({ answer: JSON.stringify({ summary: 'Verdict.', cards: [{ headline: 'H', meaning: 'M', evidence: 'E', action: 'A', driver: 'D', trend: 'T', impact: '', watch: 'W', recommendation: '', lens: 'risk', focus: 'kpis', metrics: ['gross_revenue', 'not_a_metric', 'fill_rate'], highlight: [], priority: 'high', ownerArea: 'Finance', horizon: 'Monitor', confidence: 'medium' }] }) }));
   };

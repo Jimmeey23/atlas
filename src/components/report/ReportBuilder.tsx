@@ -202,7 +202,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
           : <button className="button primary" disabled={!ready || busy} onClick={() => void startReport()}><Sparkles size={14} />{model ? "Rebuild report" : "Generate report"}</button>}
         {model && !running && (
           <>
-            <button className="button" disabled={busy} onClick={() => void startReport({ regenerate: true })}><RefreshCw size={14} />Rewrite insights</button>
+            <button className="button" disabled={busy} title="Writes failed, missing or changed chapters and reuses unchanged analysis" onClick={() => void startReport({ regenerate: true })}><RefreshCw size={14} />Rewrite insights</button>
             <button className="button" disabled={busy} onClick={() => {
               if (!document_.current) return;
               setExporting(true);
@@ -217,7 +217,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
 
       <ReportSettings value={customization} patch={patch} busy={busy} onTarget={setTarget} moveChapter={moveChapter}/>
       {needsRewrite && <p className="rb-help" data-export="omit"><Sparkles size={14}/>Analysis preferences changed or chapters were added. Rewrite insights to apply them to the saved figures.</p>}
-      {!running && <div className="rb-generation-note" data-export="omit"><Clock3 size={15}/><span>Estimated generation <b>{clock(estimate)}</b></span><span>{customization.chapterIds.length} chapters · runs in the background — you can switch tabs and come back</span></div>}
+      {!running && <div className="rb-generation-note" data-export="omit"><Clock3 size={15}/><span>Estimated new generation <b>{clock(estimate)}</b></span><span>{customization.chapterIds.length} chapters · unchanged analysis is reused · you can switch tabs and come back</span></div>}
       <div className="report-history" data-export="omit">
         <label>
           <span className="small">Saved reports · latest 50 versions</span>
@@ -254,7 +254,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
       {job.narrativeError && !running && (
         <div className="notice" role="status" data-export="omit">
           <TriangleAlert size={13} />
-          {status === "stopped" ? job.narrativeError : <>Some chapters could not be written. Available figures and generated chapters are preserved; use Rewrite insights to retry. {job.narrativeError}</>}
+          {status === "stopped" ? job.narrativeError : <>Some chapters could not be written. Use Rewrite insights to retry; unchanged completed chapters will be reused. {job.narrativeError}</>}
         </div>
       )}
 
