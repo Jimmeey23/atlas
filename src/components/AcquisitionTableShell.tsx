@@ -1,6 +1,25 @@
-import { useRef, type ReactNode } from "react";
+import { useMemo, useRef, type ReactNode } from "react";
 import { Download, Search, type LucideIcon } from "lucide-react";
 import { exportCSV } from "./exports";
+import { useGroupFields } from "../data/group-registry";
+import { acquisitionDimension, acquisitionDimensionColumns, acquisitionDimensions, type AcquisitionDimensionDef } from "../data/acquisition";
+
+const staticKeys = new Set<string>(acquisitionDimensions.map(d => d.key));
+/** Static acquisition dimensions, then every populated New-sheet column they do not already cover. */
+export function useAcquisitionDimensions(chosen: readonly string[] = [], enabled = true) {
+  const fields = useGroupFields(enabled ? "new" : undefined, chosen.filter(key => !staticKeys.has(key)));
+  return useMemo(() => {
+    const columns = fields.filter(f => !staticKeys.has(f.field) && !acquisitionDimensionColumns.includes(f.field))
+      .map(f => acquisitionDimension(f.field)).filter((d): d is AcquisitionDimensionDef => !!d);
+    return { all: [...acquisitionDimensions, ...columns] as AcquisitionDimensionDef[], columns };
+  }, [fields]);
+}
+/** Valid key, else the fallback; a saved column that left the schema cannot break the table. */
+export const dimensionOr = (key: string | undefined, fallback: string) => key && acquisitionDimension(key) ? key : fallback;
+export function DimensionOptions({ columns, exclude }: { columns: AcquisitionDimensionDef[]; exclude?: string }) {
+  return <>{acquisitionDimensions.filter(d => d.key !== exclude).map(d => <option value={d.key} key={d.key}>{d.label}</option>)}
+    {columns.length > 0 && <optgroup label="Sheet columns">{columns.filter(d => d.key !== exclude).map(d => <option value={d.key} key={d.key}>{d.label}</option>)}</optgroup>}</>;
+}
 
 export function AcquisitionTableShell({ title, description, icon: Icon, count, actions, metricBar, onSearch, searchLabel, footer, children }: {
   title: string; description: string; icon: LucideIcon; count: number;

@@ -1,6 +1,6 @@
 import { TABLE_ROW_HEIGHT } from "./ui/layout";
-import { DropdownField } from "./ui/DropdownField";
-import { newFieldLabel, newSheetFields } from "../data/new-fields";
+import { GroupByPicker } from "./ui/GroupByPicker";
+import { useGroupFields } from "../data/group-registry";
 import { tree } from "../data/hierarchy";
 import { InstructorAvatar } from "./InstructorAvatar";
 import { usePreferences } from "../state/preferences";
@@ -11,7 +11,6 @@ import {
   ArrowUpRight,
   Download,
   Columns3,
-  GripVertical,
   Search,
 } from "lucide-react";
 import {
@@ -80,13 +79,14 @@ export function NestedTable({
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [picker, setPicker] = useState(false);
-  const [drag, setDrag] = useState(-1);
   const [selectionTotal, setSelectionTotal] = useState<Row | null>(null);
   const [compressed, setCompressed] = useState(false);
   const parent = useRef<HTMLDivElement>(null);
   const store = useStore();
   const { preferences, page: updatePage } = usePreferences();
   const sizing = preferences.page[store.tab]?.columnSizing || {};
+  // Any populated column of this table's sheet can be a grouping level.
+  const groupFields = useGroupFields(sourceOverride || blueprints[store.tab].source, groups);
   const data = useMemo(
     () =>
       tree(rows, groups).filter(
@@ -303,68 +303,15 @@ export function NestedTable({
   return (
     <>
       <div className="nested-toolbar">
-        <div className="grouping">
-          <span>Group by</span>
-          {groups.map((g, i) => (
-            <div
-              className="group-chip"
-              key={i}
-              draggable
-              onDragStart={() => setDrag(i)}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={() => {
-                const next = [...groups];
-                next.splice(i, 0, next.splice(drag, 1)[0]);
-                onGroups(next);
-                setExpanded({});
-              }}
-            >
-              <GripVertical size={10} />
-              <DropdownField
-                aria-label={`Grouping level ${i + 1}`}
-                value={g}
-                onChange={(e) => {
-                  const next = [...groups];
-                  const other = next.indexOf(e.target.value);
-                  if (other >= 0) next[other] = g;
-                  next[i] = e.target.value;
-                  onGroups(next);
-                  setExpanded({});
-                }}
-              >
-                {[
-                  "location",
-                  "format_group",
-                  "format",
-                  "day",
-                  "time",
-                  "trainer",
-                  "source",
-                  "category",
-                  "product",
-                  "associate",
-                  "status",
-                  "member",
-                  "month",
-                  ...(groups.includes("capacity") ? ["capacity"] : []),
-                  ...(groups.includes("payment_method") ? ["payment_method"] : []),
-                  // The Conversion register can group by any column of the New sheet.
-                  ...((sourceOverride || blueprints[store.tab].source) === "new" ? newSheetFields.map(([, field]) => field) : []),
-                ].map((v) => (
-                  <option key={v} value={v}>
-                    {newFieldLabel[v] ? `New sheet · ${newFieldLabel[v]}` : v === "trainer"
-                      ? "Instructor"
-                      : v === "format_group"
-                        ? "Format (PowerCycle / Strength Lab / Barre)"
-                        : v === "format"
-                          ? "Class name"
-                          : v[0].toUpperCase() + v.slice(1)}
-                  </option>
-                ))}
-              </DropdownField>
-            </div>
-          ))}
-        </div>
+        <GroupByPicker
+          name="Register"
+          value={groups}
+          fields={groupFields}
+          onChange={(next) => {
+            onGroups(next);
+            setExpanded({});
+          }}
+        />
         <div className="table-controls">
           <Search size={12} className="muted" />
           <input

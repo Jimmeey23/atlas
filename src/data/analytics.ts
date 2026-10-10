@@ -1,6 +1,7 @@
 import { compileFilters } from "./advanced-controls";
 import { sqlTypes } from "./normalise";
 import { newSheetFields } from "./new-fields";
+import { groupable, groupColumn } from "./group-fields";
 import { query, quote, health, fieldPresence, type Row } from "./duckdb";
 import { metricSQL, type QueryContext } from "../semantics/metrics";
 import { currentSnapshotMetrics } from "../semantics/evidence";
@@ -88,7 +89,7 @@ export function where(
       "NOT COALESCE(voided,FALSE) AND (status='succeeded' OR status IS NULL)",
     );
   for (const t of transient)
-    if (allowed.includes(t.field) && carries(source, t.field))
+    if ((allowed.includes(t.field) || groupable(t.field)) && carries(source, t.field))
       terms.push(`"${t.field}"=${quote(t.value)}`);
   const advanced = compileFilters(filters.advanced, sqlTypes);
   if (advanced) terms.push(advanced);
@@ -180,8 +181,9 @@ async function performAnalysis(
   const w = where(filters, b.source);
   const prev = comparison(filters, compare === "none" ? "prior" : compare);
   const aggregate = metricSQL(ids, context(filters));
-  const parts = groups.filter((g) => allowed.includes(g));
-  const groupExpressions = parts.map((g) => `COALESCE("${g}",'Unspecified')`);
+  // Any real, non-sensitive column of the table may be grouped; identifiers are validated, never trusted.
+  const parts = [...new Set(groups)].filter((g) => groupable(g) || allowed.includes(g));
+  const groupExpressions = parts.map((g) => `COALESCE(${groupable(g) ? groupColumn(g) : `"${g}"`},'Unspecified')`);
   const facts = (f: Filters) => metricFacts(f, b.source);
   const sample = b.source === "payroll" ? "SUM(sessions)" : "COUNT(*)";
   const end = new Date(today() + "T00:00:00Z");

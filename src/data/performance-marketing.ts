@@ -1,4 +1,5 @@
 import { metricSQL, metrics, type QueryContext } from "../semantics/metrics";
+import { groupable, groupLabel, groupValueSQL, type GroupField } from "./group-fields";
 
 export const WEBSITE = "Website";
 // Exact source equality: Website Form and other Website-prefixed sources are
@@ -72,12 +73,33 @@ export const websiteColumns = ["leads", "website_contacted", "website_trials", "
 export const metaKPIs = ["meta_spend", "meta_leads", "meta_cpl", "meta_purchases", "meta_cpa", "meta_roas", "meta_impressions", "meta_clicks", "meta_ctr", "meta_reach", "meta_cpc", "meta_cpm"];
 export const metaColumns = ["meta_spend", "meta_impressions", "meta_reach", "meta_clicks", "meta_link_clicks", "meta_ctr", "meta_cpc", "meta_cpm", "meta_leads", "meta_instant_leads", "meta_cpl", "meta_purchases", "meta_purchase_value", "meta_cpa", "meta_roas", "meta_add_to_cart", "meta_checkout"];
 
-export function marketingGroupSQL(source: "leads" | "meta", scope: string, groups: string[], ids: string[], ctx: QueryContext) {
-  const dimensions = source === "meta" ? metaDimensions : leadDimensions;
-  if (!groups.length || groups.length > 3 || groups.some(g => !dimensions[g]) || new Set(groups).size !== groups.length)
+export type MarketingSource = "leads" | "meta";
+const dimensionsOf = (source: MarketingSource) => source === "meta" ? metaDimensions : leadDimensions;
+// Raw sheet columns a computed dimension already represents (with IDs, tags or buckets).
+const represented: Record<MarketingSource, Set<string>> = {
+  leads: new Set(["touches", "response_hours"]),
+  meta: new Set(["campaign_name", "account_name", "adset_name", "ad_name"]),
+};
+/** A computed marketing dimension, else any groupable sheet column of the table. */
+export function marketingDimension(source: MarketingSource, key: string): MarketingDimension | undefined {
+  const dimensions = dimensionsOf(source);
+  if (Object.hasOwn(dimensions, key)) return dimensions[key];
+  return groupable(key) && !represented[source].has(key) ? { label: groupLabel(key), sql: groupValueSQL(key) } : undefined;
+}
+/** Computed dimensions first, then registry columns they do not already cover. */
+export function marketingDimensionOptions(source: MarketingSource, registry: readonly GroupField[] = [], exclude: readonly string[] = []): GroupField[] {
+  const dimensions = dimensionsOf(source);
+  const computed = Object.entries(dimensions).map(([field, d]) => ({ field, label: d.label }));
+  const extra = registry.filter(f => !Object.hasOwn(dimensions, f.field) && marketingDimension(source, f.field));
+  return [...computed, ...extra].filter(f => !exclude.includes(f.field));
+}
+
+export function marketingGroupSQL(source: MarketingSource, scope: string, groups: string[], ids: string[], ctx: QueryContext) {
+  const resolved = groups.map(g => marketingDimension(source, g));
+  if (!groups.length || groups.length > 3 || resolved.some(d => !d) || new Set(groups).size !== groups.length)
     throw new Error("Choose one to three distinct grouping dimensions.");
   const aliases = groups.map((_,i) => `g${i}`).join(",");
-  return `SELECT ${groups.map((g,i) => `${dimensions[g].sql} AS g${i}`).join(",")},${metricSQL(ids,ctx)},COUNT(*) AS n,GROUPING(${aliases}) AS level FROM "${source}"${scope} GROUP BY ROLLUP(${aliases}) HAVING GROUPING(${aliases})<${2**groups.length-1} ORDER BY ${aliases}`;
+  return `SELECT ${resolved.map((d,i) => `${d!.sql} AS g${i}`).join(",")},${metricSQL(ids,ctx)},COUNT(*) AS n,GROUPING(${aliases}) AS level FROM "${source}"${scope} GROUP BY ROLLUP(${aliases}) HAVING GROUPING(${aliases})<${2**groups.length-1} ORDER BY ${aliases}`;
 }
 
 export function marketingContributor(id: string) {

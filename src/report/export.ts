@@ -1,6 +1,8 @@
 import baseCSS from "../design/report.css?raw";
 import reviewCSS from "../design/report-review.css?raw";
-const reportCSS = baseCSS + "\n" + reviewCSS;
+import v2CSS from "../design/report-v2.css?raw";
+// The builder rules in v2 are app chrome and are removed with it; the document rules travel.
+const reportCSS = baseCSS + "\n" + reviewCSS + "\n" + v2CSS.split("/* ---------- Builder")[0];
 import { monthLabel } from "./compute";
 import type { ReportModel } from "./model";
 

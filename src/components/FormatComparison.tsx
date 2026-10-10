@@ -11,6 +11,9 @@ import { context, metricFacts, today } from "../data/analytics";
 import { historicalFilters, historicalTransient } from "../data/periods";
 import { Register } from "./Register";
 import { exportCSV } from "./exports";
+import { GroupByPicker, usePersistentGroups } from "./ui/GroupByPicker";
+import { useGroupFields } from "../data/group-registry";
+import { groupable, groupValueSQL } from "../data/group-fields";
 
 // Every section groups by format_group, derived from the class name in
 // normalise.ts. Formats come from the data rather than a fixed list so a
@@ -27,6 +30,7 @@ const SHARE_IDS = ["sessions", "capacity", "attendance", "revenue"];
 const TREND_IDS = SCORECARD_IDS.filter(id => id !== "trainers");
 const SLOT_IDS = ["sessions", "attendance", "fill_rate", "avg_class_size_incl", "revenue_per_session", "show_up_rate", "late_cancel_rate", "no_show_rate", "empty_session_rate", "rev_pas"];
 const MIN_SESSIONS = 5;
+const SLICE_DEFAULTS = { slots: ["day", "time"], trainers: ["trainer"], studios: ["location"] };
 
 type Section = { rows: Row[]; trend: Row[]; slots: Row[]; trainers: Row[]; studios: Row[] };
 const empty: Section = { rows: [], trend: [], slots: [], trainers: [], studios: [] };
@@ -52,6 +56,11 @@ export function FormatComparison({ version }: { version: string | number }) {
       slots: `${labelled} SELECT fg,day,time,${metricSQL(SLOT_IDS, context(s.filters, s.transient))} FROM f WHERE day IS NOT NULL AND time IS NOT NULL GROUP BY fg,day,time HAVING SUM(sessions)>=${MIN_SESSIONS}`,
       trainers: `${labelled} SELECT fg,COALESCE(trainer,'Unspecified') AS trainer,${metricSQL(SLOT_IDS, context(s.filters, s.transient))} FROM f GROUP BY fg,trainer HAVING SUM(sessions)>=${MIN_SESSIONS}`,
       studios: `${labelled} SELECT fg,COALESCE(location,'Unspecified') AS location,${metricSQL(SLOT_IDS, context(s.filters, s.transient))} FROM f GROUP BY fg,location`,
+      // A user-chosen regrouping of one slice table; fields are validated by groupable().
+      slice: (groups: string[], minimum: boolean) => {
+        const keys = groups.map((f) => groupValueSQL(f));
+        return `${labelled} SELECT fg,${keys.map((k, i) => `${k} AS "${groups[i]}"`).join(",")},${metricSQL(SLOT_IDS, context(s.filters, s.transient))} FROM f GROUP BY fg,${keys.join(",")}${minimum ? ` HAVING SUM(sessions)>=${MIN_SESSIONS}` : ""}`;
+      },
     };
   }, [s.filters, s.transient, s.rate]);
 
@@ -244,6 +253,9 @@ export function FormatComparison({ version }: { version: string | number }) {
         subtitle="Day and time slots, ranked by fill within each format"
         rows={data.slots}
         formats={formats}
+        defaults={SLICE_DEFAULTS.slots}
+        build={(g) => sql.slice(g, true)}
+        version={version}
         label={(r) => `${r.day} · ${r.time}`}
         caption={`Slots with at least ${MIN_SESSIONS} sessions in scope.`}
       />
@@ -253,6 +265,9 @@ export function FormatComparison({ version }: { version: string | number }) {
         subtitle="Instructors ranked by fill within each format"
         rows={data.trainers}
         formats={formats}
+        defaults={SLICE_DEFAULTS.trainers}
+        build={(g) => sql.slice(g, true)}
+        version={version}
         label={(r) => String(r.trainer)}
         caption={`Instructors with at least ${MIN_SESSIONS} sessions of that format in scope.`}
       />
@@ -262,6 +277,9 @@ export function FormatComparison({ version }: { version: string | number }) {
         subtitle="How each studio's timetable splits, and how each format performs there"
         rows={data.studios}
         formats={formats}
+        defaults={SLICE_DEFAULTS.studios}
+        build={(g) => sql.slice(g, false)}
+        version={version}
         label={(r) => String(r.location)}
         caption="Every studio with recorded sessions for that format."
       />
@@ -358,11 +376,29 @@ function TrendTable({ rows, formats, metric, onMetric }: { rows: Row[]; formats:
   );
 }
 
-function SliceTable({ index, title, subtitle, rows, formats, label, caption }: {
+function SliceTable({ index, title, subtitle, rows: base, formats, label: baseLabel, caption, defaults, build, version }: {
   index: string; title: string; subtitle: string; rows: Row[]; formats: string[];
-  label: (row: Row) => string; caption: string;
+  label: (row: Row) => string; caption: string; defaults: string[]; build: (groups: string[]) => string; version: string | number;
 }) {
   const [limit, setLimit] = useState(5);
+  const [groups, setGroups] = usePersistentGroups(`format-slice:${index}`, defaults);
+  const registry = useGroupFields("sessions", groups);
+  const fields = useMemo(() => registry.filter((f) => f.field !== "format_group"), [registry]);
+  const key = groups.join();
+  const chosen = useMemo(() => { const v = [...new Set(groups)].filter((f) => groupable(f) && f !== "format_group"); return v.length ? v : defaults; }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  const custom = chosen.join() !== defaults.join();
+  const sliceSQL = custom ? build(chosen) : "";
+  const [own, setOwn] = useState<{ rows: Row[]; error: string } | null>(null);
+  useEffect(() => {
+    let live = true;
+    setOwn(null);
+    if (sliceSQL) query(sliceSQL).then((rows) => live && setOwn({ rows, error: "" })).catch((e) => live && setOwn({ rows: [], error: String(e) }));
+    return () => { live = false; };
+  }, [sliceSQL, version]);
+  const rows = custom ? own?.rows ?? [] : base;
+  const label = custom ? (r: Row) => chosen.map((f) => String(r[f] ?? "Unspecified")).join(" · ") : baseLabel;
+  const heading = custom ? chosen.map((f) => fields.find((x) => x.field === f)?.label ?? f).join(" · ")
+    : title.includes("studio") ? "Studio" : title.includes("teaches") ? "Instructor" : "Slot";
   return (
     <Register
       index={index}
@@ -378,6 +414,9 @@ function SliceTable({ index, title, subtitle, rows, formats, label, caption }: {
         </div>
       }
     >
+      <GroupByPicker name={title} value={groups} onChange={setGroups} fields={fields} min={1} max={3} defaults={defaults} />
+      {custom && !own && <p role="status">Regrouping…</p>}
+      {own?.error && <p role="alert">{own.error}</p>}
       <div className="format-slice-grid">
         {formats.map((f) => {
           const ranked = rows
@@ -391,14 +430,14 @@ function SliceTable({ index, title, subtitle, rows, formats, label, caption }: {
                 <table className="worklist-table">
                   <thead>
                     <tr>
-                      <th>{title.includes("studio") ? "Studio" : title.includes("teaches") ? "Instructor" : "Slot"}</th>
+                      <th>{heading}</th>
                       {SLOT_IDS.map(id => <th key={id}>{metrics[id].label}</th>)}
                     </tr>
                   </thead>
                   <tbody>
                     {ranked.map((r) => (
                       <tr key={label(r)}>
-                        <th scope="row">{r.trainer != null ? <InstructorName name={String(r.trainer)}/> : label(r)}</th>
+                        <th scope="row">{!custom && r.trainer != null ? <InstructorName name={String(r.trainer)}/> : label(r)}</th>
                         {SLOT_IDS.map(id => <td key={id}>{fmt(id,r[id])}</td>)}
                       </tr>
                     ))}

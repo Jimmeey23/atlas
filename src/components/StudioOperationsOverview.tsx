@@ -16,6 +16,9 @@ import { MetricCard } from "./MetricCard";
 import { Register } from "./Register";
 import { exportCSV } from "./exports";
 import type { TreeRow } from "./NestedTable";
+import { GroupByPicker, usePersistentGroups } from "./ui/GroupByPicker";
+import { useGroupFields } from "../data/group-registry";
+import { groupable, groupColumn } from "../data/group-fields";
 const kpis = [
   "sessions",
   "attendance",
@@ -36,6 +39,7 @@ const chartMetrics = [
   "attendance",
   "revenue_per_session",
 ];
+const slotDefaults = ["location", "format", "day", "time"];
 const days = [
   "Monday",
   "Tuesday",
@@ -68,6 +72,15 @@ export function StudioOperationsOverview({
   const [table, setTable] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const chart = useRef<echarts.ECharts | null>(null);
+  const [groups, setGroups] = usePersistentGroups("ops-overview-classes", slotDefaults);
+  const groupFields = useGroupFields("sessions", groups);
+  const slotGroups = useMemo(() => {
+    const valid = [...new Set(groups)].filter(groupable);
+    return valid.length ? valid : slotDefaults;
+  }, [groups]);
+  const custom = slotGroups.join() !== slotDefaults.join();
+  const drillFields = mode === "weekly" ? ["day", "time"] : slotGroups;
+  const slotLabel = (r: Row) => slotGroups.map((f) => r[f] ?? "Unspecified").join(" · ");
   useEffect(() => {
     let active = true;
     setLoading(true);
@@ -88,7 +101,9 @@ export function StudioOperationsOverview({
         `SELECT day,time,${metricSQL([...chartMetrics, "sessions"], ctx)} FROM ${facts} GROUP BY day,time ORDER BY time,day`,
       ),
       query(
-        `SELECT location,format,day,time,${metricSQL([...chartMetrics, "sessions"], ctx)} FROM ${facts} GROUP BY location,format,day,time`,
+        custom
+          ? `SELECT ${slotGroups.map((f) => `${groupColumn(f)} AS "${f}"`).join(",")},${metricSQL([...chartMetrics, "sessions"], ctx)} FROM ${facts} GROUP BY ${slotGroups.map(groupColumn).join(",")}`
+          : `SELECT location,format,day,time,${metricSQL([...chartMetrics, "sessions"], ctx)} FROM ${facts} GROUP BY location,format,day,time`,
       ),
     ])
       .then(([total, previous, trend, heat, slots]) => {
@@ -106,7 +121,7 @@ export function StudioOperationsOverview({
     return () => {
       active = false;
     };
-  }, [version, s.filters, s.transient, s.compare, s.rate]);
+  }, [version, s.filters, s.transient, s.compare, s.rate, slotGroups.join()]); // eslint-disable-line react-hooks/exhaustive-deps
   const rows = useMemo(
     () =>
       (mode === "weekly" ? data.heat : data.slots).filter(
@@ -151,8 +166,8 @@ export function StudioOperationsOverview({
       const r = rows[p.data?.[3] ?? p.data?.[4] ?? 0];
       return r
         ? [
-            `${r.format || r.day} · ${r.time || ""}`,
-            r.location || "",
+            mode === "classes" && custom ? slotLabel(r) : `${r.format || r.day} · ${r.time || ""}`,
+            mode === "classes" && custom ? "" : r.location || "",
             `${metrics[metric].label}: ${fmt(metric, r[metric])}`,
             `${fmt("sessions", r.sessions)} sessions`,
           ]
@@ -266,13 +281,7 @@ export function StudioOperationsOverview({
     );
     instance.on("click", (p: any) => {
       const row = rows[p.data?.[3]];
-      if (row)
-        drill(
-          row,
-          mode === "weekly"
-            ? ["day", "time"]
-            : ["location", "format", "day", "time"],
-        );
+      if (row) drill(row, drillFields);
     });
     const observer = new ResizeObserver(() => instance.resize());
     observer.observe(ref.current);
@@ -281,7 +290,7 @@ export function StudioOperationsOverview({
       instance.dispose();
       chart.current = null;
     };
-  }, [rows, metric, mode, table, loading, error, s.filters, s.transient, s.theme]);
+  }, [rows, metric, mode, table, loading, error, s.filters, s.transient, s.theme, slotGroups]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <>
       <div
@@ -331,6 +340,8 @@ export function StudioOperationsOverview({
               ))}
             </DropdownField>
           </label>
+          {mode === "classes" && <GroupByPicker name="Class performance" value={groups} onChange={setGroups}
+            fields={groupFields} min={1} max={4} defaults={slotDefaults} />}
           <label>
             Minimum sessions
             <input
@@ -381,9 +392,9 @@ export function StudioOperationsOverview({
               <thead>
                 <tr>
                   {[
-                    "Class / studio",
-                    "Day",
-                    "Time",
+                    ...(mode === "classes" && custom
+                      ? slotGroups.map((f) => groupFields.find((x) => x.field === f)?.label ?? f)
+                      : ["Class / studio", "Day", "Time"]),
                     "Sessions",
                     metrics[metric].label,
                     "",
@@ -395,25 +406,17 @@ export function StudioOperationsOverview({
               <tbody>
                 {rows.map((r, i) => (
                   <tr key={i}>
+                    {mode === "classes" && custom ? slotGroups.map((f) => <td key={f}>{String(r[f] ?? "Unspecified")}</td>) : <>
                     <td>
                       {r.format || "All classes"}
                       {r.location ? " · " + r.location : ""}
                     </td>
                     <td>{String(r.day || "—")}</td>
-                    <td>{String(r.time || "—")}</td>
+                    <td>{String(r.time || "—")}</td></>}
                     <td>{fmt("sessions", r.sessions)}</td>
                     <td>{fmt(metric, r[metric])}</td>
                     <td>
-                      <button
-                        onClick={() =>
-                          drill(
-                            r,
-                            mode === "weekly"
-                              ? ["day", "time"]
-                              : ["location", "format", "day", "time"],
-                          )
-                        }
-                      >
+                      <button onClick={() => drill(r, drillFields)}>
                         Inspect
                       </button>
                     </td>

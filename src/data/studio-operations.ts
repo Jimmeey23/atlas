@@ -4,6 +4,7 @@ import {
   referenceMetricsSQL,
 } from "./class-intelligence-reference";
 import type { Row } from "./duckdb";
+import { assertGroupable, groupable, groupLabel, type GroupField } from "./group-fields";
 import { metrics, metricSQL, type QueryContext } from "../semantics/metrics";
 
 export const operationMetrics = [
@@ -323,10 +324,23 @@ export const operationDimensions = {
   date: "Date",
 };
 
+/** Computed dimensions, or any groupable column whose name does not collide with a metric alias. */
+export const isOperationGroup = (f: string) =>
+  Object.hasOwn(operationDimensions, f) || (groupable(f) && !operationMetrics.includes(f));
+export function operationGroupFields(registry: GroupField[] = []): GroupField[] {
+  const own = Object.entries(operationDimensions).map(([field, label]) => ({ field, label }));
+  const labels = new Set(own.map((f) => f.label));
+  return [
+    ...own.map((f) => own.filter((x) => x.label === f.label).length > 1 ? { ...f, label: `${f.label} (${groupLabel(f.field)})` } : f),
+    ...registry.filter((f) => !Object.hasOwn(operationDimensions, f.field) && isOperationGroup(f.field))
+      .map((f) => labels.has(f.label) ? { ...f, label: `${f.label} (${f.field})` } : f),
+  ];
+}
+
 export function resolveOperationGroups(view: OperationView, custom: string[]) {
   if (view !== "custom") return operationViews[view].fields;
   const valid = [...new Set(custom)]
-    .filter((f) => f in operationDimensions)
+    .filter(isOperationGroup)
     .slice(0, 5);
   return valid.length ? valid : ["location", "format"];
 }
@@ -337,7 +351,8 @@ export function communityOperationsSQL(
   ids: string[],
   ctx: QueryContext,
 ) {
-  const group = fields.map((f) => `"${f}"`).join(",");
+  if (!fields.length) throw new Error("Choose at least one grouping level.");
+  const group = fields.map((f) => `"${assertGroupable(f)}"`).join(",");
   const aggregate = ids.length ? metricSQL(ids, ctx) + "," : "";
   return {
     rows: `SELECT ${fields.map((f, i) => `"${f}" AS g${i}`).join(",")},GROUPING_ID(${group}) AS level,${aggregate}COUNT(*) AS n FROM ${facts} GROUP BY ROLLUP(${group}) HAVING GROUPING_ID(${group}) <> ${2 ** fields.length - 1}`,

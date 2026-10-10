@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { ArrowUpRight, Globe2, Megaphone } from 'lucide-react';
 import { workspaceIcons } from '../data/workspaceCopy';
 import { blueprints } from '../data/blueprints';
@@ -7,7 +7,9 @@ import { context, where } from '../data/analytics';
 import { metaScope } from '../data/marketing-channels';
 import { websiteScope } from '../data/performance-marketing';
 import { ensureSource, usable, sourceStates } from '../data/loader';
-import { overviewModules, overviewSQL, type OverviewModule } from '../data/overview';
+import { overviewModules, overviewSQL, withOverviewGroup, type OverviewModule } from '../data/overview';
+import { GroupByPicker, usePersistentGroups } from './ui/GroupByPicker';
+import { useGroupFields } from '../data/group-registry';
 import { fmt } from '../semantics/formats';
 import { contributorPredicate, metrics } from '../semantics/metrics';
 import { tabs, useStore, type Filters } from '../state/store';
@@ -52,7 +54,11 @@ function moduleDrill(m: OverviewModule, filters: Filters, transient: {field:stri
   };
 }
 
-function ModuleSnapshot({ module: m, onDrill }: { module: OverviewModule; onDrill: Drill }) {
+function ModuleSnapshot({ module: base, onDrill }: { module: OverviewModule; onDrill: Drill }) {
+  // The breakdown column is the viewer's choice per module; the summary figures never change with it.
+  const [groups, setGroups] = usePersistentGroups(`overview:${base.key}`, [base.group]);
+  const m = useMemo(() => withOverviewGroup(base, groups[0]), [base, groups]);
+  const fields = useGroupFields(base.source, [m.group]);
   const filters = useStore(s=>s.filters);
   const transient = useStore(s=>s.transient);
   const rate = useStore(s=>s.rate);
@@ -80,7 +86,7 @@ function ModuleSnapshot({ module: m, onDrill }: { module: OverviewModule; onDril
     <p className="overview-module-note">{m.note}{m.tab === 10 ? ` Estimated cost = sessions × ₹${rate.toLocaleString("en-IN")} per session; not actual payroll paid.` : ""}</p>
     {result.loading ? <p className="overview-module-state" role="status">Loading summary…</p> : result.error ? <div className="overview-module-state" role="alert"><p>Summary unavailable: {result.error}</p><button className="button" onClick={()=>setAttempt(v=>v+1)}>Retry summary</button></div> : !Number(result.total?.n) ? <p className="overview-module-state" role="status">No source records match this scope.</p> : <>
       <dl className="overview-module-metrics">{m.ids.map(id=><div key={id}><dt>{metrics[id].label}</dt><dd><button className="overview-drill" onClick={()=>onDrill(moduleDrill(m,filters,transient,`${m.title || tabs[m.tab]} · ${metrics[id].label}`,[id]))} aria-label={`Drill into ${metrics[id].label}: ${fmt(id,result.total?.[id])}`}>{fmt(id,result.total?.[id])}</button></dd></div>)}</dl>
-      <div className="overview-table-label"><span>{m.groupLabel} breakdown</span><small>Top {result.rows.length} by {metrics[m.ids[0]].label.toLowerCase()}</small></div><div className="table-scroll monthly-table overview-module-scroll"><table className="overview-table" aria-label={`${m.title || tabs[m.tab]} · ${m.groupLabel} breakdown`}><thead><tr><th scope="col"><span>{m.groupLabel}</span></th>{m.ids.map(id=><th scope="col" key={id}><span title={metrics[id].label}>{metrics[id].label}</span></th>)}</tr></thead><tbody>{result.rows.map((r,index)=><tr key={String(r.label)}><th scope="row"><span className="overview-row-label"><span className="overview-row-rank" aria-hidden="true">{String(index+1).padStart(2,"0")}</span><button className="overview-drill overview-row-name" title={`Drill into ${r.label}`} onClick={()=>onDrill(moduleDrill(m,filters,transient,`${m.groupLabel} · ${r.label}`,m.ids,String(r.label)))}>{r.label}</button></span></th>{m.ids.map(id=><td key={id}><button className="overview-drill" onClick={()=>onDrill(moduleDrill(m,filters,transient,`${r.label} · ${metrics[id].label}`,[id],String(r.label)))} aria-label={`Drill into ${r.label} ${metrics[id].label}: ${fmt(id,r[id])}`}>{fmt(id,r[id])}</button></td>)}</tr>)}</tbody></table></div>
+      <div className="overview-table-label"><GroupByPicker name={m.title || tabs[m.tab]} label="Breakdown" value={[m.group]} fields={fields} max={1} defaults={[base.group]} onChange={next=>setGroups(next.length?next:[base.group])}/><small>Top {result.rows.length} by {metrics[m.ids[0]].label.toLowerCase()}</small></div><div className="table-scroll monthly-table overview-module-scroll"><table className="overview-table" aria-label={`${m.title || tabs[m.tab]} · ${m.groupLabel} breakdown`}><thead><tr><th scope="col"><span>{m.groupLabel}</span></th>{m.ids.map(id=><th scope="col" key={id}><span title={metrics[id].label}>{metrics[id].label}</span></th>)}</tr></thead><tbody>{result.rows.map((r,index)=><tr key={String(r.label)}><th scope="row"><span className="overview-row-label"><span className="overview-row-rank" aria-hidden="true">{String(index+1).padStart(2,"0")}</span><button className="overview-drill overview-row-name" title={`Drill into ${r.label}`} onClick={()=>onDrill(moduleDrill(m,filters,transient,`${m.groupLabel} · ${r.label}`,m.ids,String(r.label)))}>{r.label}</button></span></th>{m.ids.map(id=><td key={id}><button className="overview-drill" onClick={()=>onDrill(moduleDrill(m,filters,transient,`${r.label} · ${metrics[id].label}`,[id],String(r.label)))} aria-label={`Drill into ${r.label} ${metrics[id].label}: ${fmt(id,r[id])}`}>{fmt(id,r[id])}</button></td>)}</tr>)}</tbody></table></div>
     </>}
   </article>;
 }

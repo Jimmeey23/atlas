@@ -131,7 +131,7 @@ export const blueprints: Blueprint[] = [
   {
     title: "The people behind the progress.",
     subtitle:
-      "Separate popularity from profitability. Class performance, first-visit outcomes and payroll economics for every instructor, on fair and consistent terms.",
+      "Separate popularity from yield. Class performance and first-visit outcomes for every instructor, on fair and consistent terms.",
     source: "sessions",
     domain: "people",
     kpis: [

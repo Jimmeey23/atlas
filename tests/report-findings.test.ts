@@ -136,7 +136,8 @@ test('the chapter prompt is built on findings and no longer asks for one passage
     assert.match(messages[0], /Analyst findings/);
     assert.match(messages[0], /lowest in 6 months/);
     assert.doesNotMatch(messages[0], /one passage with its matching focus ID for EACH/);
-    assert.match(messages[1], /evidence-led recommendations with reasoning/);
+    assert.match(messages[1], /evidence-led recommendations, ordered by priority/);
+    assert.match(messages[1], /Every card uses lens next_step/);
     assert.equal(out['executive-summary'].cards[0].focus, 'kpis', 'a missing verdict is promoted from the first card');
   } finally { globalThis.fetch = originalFetch; (globalThis as any).localStorage = originalStorage; }
 });
@@ -174,4 +175,24 @@ test('failed recommendation generation retains calculated proposals and labels t
   assert.ok(fallback.cards[0].recommendation);
   assert.ok(fallback.cards[0].reasoning);
   assert.equal(fallback.cards[0].focus,'kpis');
+});
+
+test('v2 insights request lenses and metric ids, and drop cited metrics the chapter cannot show', async () => {
+  const originalFetch = globalThis.fetch, originalStorage = (globalThis as any).localStorage;
+  (globalThis as any).localStorage = { getItem: () => null, setItem: () => {} };
+  const bodies: any[] = [];
+  globalThis.fetch = async (_url, init) => {
+    bodies.push(JSON.parse(String(init?.body)));
+    return new Response(JSON.stringify({ answer: JSON.stringify({ summary: 'Verdict.', cards: [{ headline: 'H', meaning: 'M', evidence: 'E', action: 'A', driver: 'D', trend: 'T', impact: '', watch: 'W', recommendation: '', lens: 'risk', focus: 'kpis', metrics: ['gross_revenue', 'not_a_metric', 'fill_rate'], highlight: [], priority: 'high', ownerArea: 'Finance', horizon: 'Monitor', confidence: 'medium' }] }) }));
+  };
+  try {
+    const sales = chapter('revenue-performance', { total: { gross_revenue: 1000, aov: 50 }, prior: { gross_revenue: 900 } });
+    const out = await generateNarratives({ ...model({ 'revenue-performance': sales }), customization: { title: '', subtitle: '', preparedFor: '', preparedBy: '', audience: 'Executive board', tone: 'Professional', detail: 'Comprehensive', instructions: '', chapterIds: ['revenue-performance'], theme: 'light', lenses: ['risk', 'win'] } });
+    assert.equal(bodies[0].insightVersion, 2);
+    assert.ok(bodies[0].metricIds.includes('gross_revenue'));
+    assert.ok(!bodies[0].metricIds.includes('fill_rate'), 'only metrics this chapter holds are citable');
+    assert.deepEqual(bodies[0].lenses, ['risk', 'win']);
+    assert.deepEqual(out['revenue-performance'].cards[0].metrics, ['gross_revenue']);
+    assert.equal(out['revenue-performance'].cards[0].lens, 'risk');
+  } finally { globalThis.fetch = originalFetch; (globalThis as any).localStorage = originalStorage; }
 });

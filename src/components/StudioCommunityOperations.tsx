@@ -1,5 +1,7 @@
 import { communityOperationsSQL } from "../data/studio-operations";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { groupable } from "../data/group-fields";
+import { usePersistentGroups } from "./ui/GroupByPicker";
 import { query, type Row } from "../data/duckdb";
 import { comparison, context, metricFacts } from "../data/analytics";
 import { contributorPredicate } from "../semantics/metrics";
@@ -52,11 +54,18 @@ export function SourceRegister({
   onDrill: (r: TreeRow) => void;
 }) {
   const s = useStore();
-  const [groups, setGroups] = useState(config.groups);
+  const [chosen, setGroups] = usePersistentGroups(`ops-register:${config.source}:${config.title}`, config.groups);
+  // Levels vary in number; unsafe or stale saved fields fall back to the register's defaults.
+  const groupKey = chosen.join();
+  const groups = useMemo(() => {
+    const valid = [...new Set(chosen)].filter(groupable);
+    return valid.length ? valid : config.groups;
+  }, [groupKey, config.groups]); // eslint-disable-line react-hooks/exhaustive-deps
   const [columns, setColumns] = useState(config.columns);
-  const [data, setData] = useState<{ rows: Row[]; total: Row }>({
+  const [data, setData] = useState<{ rows: Row[]; total: Row; key: string }>({
     rows: [],
     total: {},
+    key: "",
   });
   const [priorRows, setPriorRows] = useState<Row[]>([]);
   const [error, setError] = useState("");
@@ -65,7 +74,7 @@ export function SourceRegister({
     let active = true;
     setLoading(true);
     setError("");
-    setData({ rows: [], total: {} });
+    setData({ rows: [], total: {}, key: "" });
     setPriorRows([]);
     (async () => {
       await ensureSource(config.source);
@@ -100,7 +109,7 @@ export function SourceRegister({
         s.compare === "none" ? Promise.resolve([]) : query(previousSql.rows),
       ]);
       if (active) {
-        setData({ rows, total: total[0] || {} });
+        setData({ rows, total: total[0] || {}, key: groups.join() });
         setPriorRows(prior);
       }
     })()
@@ -122,7 +131,7 @@ export function SourceRegister({
   ]);
   const content = (
     <>
-      {loading ? (
+      {loading || (!error && data.key !== groups.join()) ? (
         <p className="ops-status" role="status">
           Loading {config.title.toLowerCase()}…
         </p>

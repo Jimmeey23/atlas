@@ -1,3 +1,5 @@
+import { groupValueSQL } from "./group-fields";
+
 /** Use recorded access categories first; unrecognized categories fall back to product names. */
 export const accessTypeSQL = `CASE
   WHEN lower(trim(category))='memberships' THEN 'Memberships'
@@ -33,8 +35,12 @@ export function monthlyFrequencySQL(scope: string) {
   FROM members GROUP BY GROUPING SETS ((month,access_type),(month)) ORDER BY month DESC,GROUPING(access_type) DESC,access_type`;
 }
 
-/** Attribute newcomer outcomes to the instructor of their earliest recorded first visit. */
-export function instructorMonthlyOutcomesSQL(scope: string, asOf: string) {
+/**
+ * Attribute newcomer outcomes to the instructor of their earliest recorded first visit.
+ * `group` swaps the instructor for any other New-sheet column of that first visit; its value is returned as `group_value`.
+ */
+export function instructorMonthlyOutcomesSQL(scope: string, asOf: string, group = "trainer") {
+  const custom = group !== "trainer" ? groupValueSQL(group) : "";
   return `WITH first_cohort AS (
     SELECT * FROM new WHERE is_new AND NULLIF(trim(member_id),'') IS NOT NULL AND TRY_CAST(date AS DATE) IS NOT NULL
     QUALIFY ROW_NUMBER() OVER(PARTITION BY member_id ORDER BY date,source_row)=1
@@ -53,7 +59,7 @@ export function instructorMonthlyOutcomesSQL(scope: string, asOf: string) {
       observed_through
     FROM cohort c CROSS JOIN coverage
   )
-  SELECT substr(date,1,7) AS month, MIN(COALESCE(trainer,'Unspecified')) AS trainer,
+  SELECT substr(date,1,7) AS month, ${custom ? `${custom} AS group_value` : "MIN(COALESCE(trainer,'Unspecified')) AS trainer"},
     COUNT(*) AS newcomers,
     COUNT(*) FILTER (WHERE conversion IS NOT NULL) AS conversion_known,
     COUNT(*) FILTER (WHERE retention IS NOT NULL) AS retention_known,
@@ -76,5 +82,5 @@ export function instructorMonthlyOutcomesSQL(scope: string, asOf: string) {
     SUM(conversion_days) FILTER (WHERE conversion_days>=0 AND outcome_converted) AS conversion_days_total,
     COUNT(conversion_days) FILTER (WHERE conversion_days>=0 AND outcome_converted) AS conversion_days_n,
     MAX(observed_through)::VARCHAR AS observed_through
-  FROM flags GROUP BY substr(date,1,7),trainer_key ORDER BY month DESC,trainer`;
+  FROM flags GROUP BY substr(date,1,7),${custom || "trainer_key"} ORDER BY month DESC,${custom ? "group_value" : "trainer"}`;
 }

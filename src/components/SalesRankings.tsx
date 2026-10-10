@@ -1,6 +1,7 @@
 import { DropdownField } from "./ui/DropdownField";
-import {salesRankingCriteria,splitSalesRankings} from "../data/sales-rankings";
-import { useEffect, useState } from "react";
+import {salesRankingCriteria,salesRankingDimensions,salesRankingGroup,splitSalesRankings} from "../data/sales-rankings";
+import { useEffect, useMemo, useState } from "react";
+import { useGroupFields } from "../data/group-registry";
 import {
   ArrowUpRight,
   ArrowDownRight,
@@ -15,13 +16,6 @@ import { fmt } from "../semantics/formats";
 import { useStore } from "../state/store";
 import { Register } from "./Register";
 import { exportCSV } from "./exports";
-const dimensions = [
-  ["product", "Products"],
-  ["category", "Categories"],
-  ["associate", "Associates"],
-  ["location", "Studios"],
-  ["member", "Community members"],
-];
 export function SalesRankings({ version }: { version: number }) {
   const filters = useStore((s) => s.filters),
     transient = useStore((s) => s.transient),
@@ -35,21 +29,20 @@ export function SalesRankings({ version }: { version: number }) {
     [loading, setLoading] = useState(true),
     [error, setError] = useState("");
   const facts = metricFacts(filters, "sales", transient);
+  // Named comparisons first, then every other populated column of the Sales sheet.
+  const registry = useGroupFields("sales", [group]);
+  const dimensions = useMemo(() => [
+    ...salesRankingDimensions,
+    ...registry.filter((f) => !salesRankingDimensions.some(([k]) => k === f.field) && f.field !== "member_id").map((f) => [f.field, f.label] as [string, string]),
+  ], [registry]);
+  const spec = useMemo(() => { try { return salesRankingGroup(group); } catch { return salesRankingGroup("product"); } }, [group]);
   useEffect(() => {
     let active = true;
     setLoading(true);
     setError("");
-    const field = group === "member" ? "member_id" : group;
-    const label =
-      group === "member"
-        ? "COALESCE(MAX(NULLIF(trim(member),'')),'Member '||member_id)"
-        : "COALESCE(NULLIF(trim(" + field + "),''),'Unspecified')";
-    const entity =
-      group === "member"
-        ? "member_id"
-        : "COALESCE(NULLIF(trim(" + field + "),''),'Unspecified')";
+    const { entity, label } = spec;
     query(
-      `SELECT ${entity} AS entity,${label} AS label,${metricSQL(salesRankingCriteria, context(filters, transient))},COUNT(*) AS source_rows FROM ${facts} ${group === "member" ? "WHERE member_id IS NOT NULL" : ""} GROUP BY ${entity}`,
+      `SELECT ${entity} AS entity,${label} AS label,${metricSQL(salesRankingCriteria, context(filters, transient))},COUNT(*) AS source_rows FROM ${facts} ${spec.where} GROUP BY ${entity}`,
     )
       .then((result) => {
         if (active) setRows(result);
@@ -63,7 +56,7 @@ export function SalesRankings({ version }: { version: number }) {
     return () => {
       active = false;
     };
-  }, [facts, group, version]);
+  }, [facts, spec, version]);
   const { top, bottom, eligible } = splitSalesRankings(
     rows.filter(
       (r) =>
@@ -192,10 +185,7 @@ export function SalesRankings({ version }: { version: number }) {
                   className="sales-ranking-row"
                   key={String(row.entity)}
                   onClick={() =>
-                    cross(
-                      group === "member" ? "member_id" : group,
-                      String(row.entity),
-                    )
+                    cross(spec.field, String(row.entity))
                   }
                 >
                   <span className="sales-rank-number">

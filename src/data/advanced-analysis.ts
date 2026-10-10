@@ -2,6 +2,7 @@ import { compileOutcomeWindow } from "./outcome-window";
 import { metricNotes } from "../semantics/evidence";
 import { compileAnalyticalSQL } from "./analytical-query";
 import { sqlTypes } from "./normalise";
+import { groupable } from "./group-fields";
 import { metricFacts, context, where, today } from "./analytics";
 import { metrics, metricDenominatorSQL } from "../semantics/metrics";
 import { metricTable } from "../semantics/catalogue";
@@ -95,10 +96,12 @@ export function analysisQueries(
 ) {
   if (!["day", "week", "month", "quarter"].includes(config.grain))
     throw new Error("Invalid analysis grain.");
+  // The curated dimensions lead the picker; any other real, non-sensitive column of the source may also be used.
   if (
     !analysisDimensions.includes(
       config.dimension as (typeof analysisDimensions)[number],
-    )
+    ) &&
+    !groupable(config.dimension)
   )
     throw new Error("Invalid grouping.");
   if (

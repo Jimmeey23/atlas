@@ -1,4 +1,5 @@
 import { paidMembershipSQL } from "../semantics/membership-eligibility";
+import { groupValueSQL } from "./group-fields";
 /**
  * The table and drills share exactly the same deduplicated expiry cohort.
  * Eligibility matches Lapsed members: paid memberships whose names are not restricted
@@ -17,10 +18,17 @@ export function renewalFactsSQL(scope: string, asOf: string) {
 export function renewalCohortSQL(scope: string, asOf: string) {
   return `WITH facts AS (${renewalFactsSQL(scope, asOf)}) SELECT expiry_month AS month,${renewalMeasuresSQL()} FROM facts GROUP BY expiry_month ORDER BY month DESC LIMIT 14`;
 }
-export function renewalDrillPredicate(scope: string, asOf: string, month: string, state: string) {
-  const quotedMonth = "'" + month.replaceAll("'", "''") + "'";
+/** The same 14 expiry months split by any groupable Lapsed column; segments sum to the month row. */
+export function renewalSegmentSQL(scope: string, asOf: string, field: string) {
+  return `WITH facts AS (${renewalFactsSQL(scope, asOf)}), months AS (SELECT DISTINCT expiry_month FROM facts ORDER BY expiry_month DESC LIMIT 14)
+    SELECT expiry_month AS month,${groupValueSQL(field)} AS segment,${renewalMeasuresSQL()} FROM facts WHERE expiry_month IN (SELECT expiry_month FROM months) GROUP BY 1,2 ORDER BY month DESC,segment`;
+}
+export interface RenewalSegment { field: string; value: string }
+export function renewalDrillPredicate(scope: string, asOf: string, month: string, state: string, segment?: RenewalSegment) {
+  const quoted = (value: string) => "'" + value.replaceAll("'", "''") + "'";
   if (!['due', 'renewed', 'lapsed', 'frozen'].includes(state)) throw new Error('Unknown renewal cohort state');
-  return `source_row IN (SELECT source_row FROM (${renewalFactsSQL(scope, asOf)}) WHERE expiry_month=${quotedMonth}${state === 'due' ? '' : ` AND renewal_state='${state}'`})`;
+  const split = segment ? ` AND ${groupValueSQL(segment.field)}=${quoted(segment.value)}` : '';
+  return `source_row IN (SELECT source_row FROM (${renewalFactsSQL(scope, asOf)}) WHERE expiry_month=${quoted(month)}${state === 'due' ? '' : ` AND renewal_state='${state}'`}${split})`;
 }
 
 /** Shared measures over renewalFactsSQL; the report and dashboard use the same cohort. */

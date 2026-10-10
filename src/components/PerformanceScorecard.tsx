@@ -8,6 +8,9 @@ import { exportCSV } from "./exports";
 import { InstructorName } from "./InstructorAvatar";
 import { Register } from "./Register";
 import type { TreeRow } from "./NestedTable";
+import { GroupByPicker, usePersistentGroups } from "./ui/GroupByPicker";
+import { useGroupFields } from "../data/group-registry";
+import { groupable, groupLabel } from "../data/group-fields";
 
 type Column = { id: string; label: string; format?: string; drill?: "sessions" | "new" | "bookings"; extra?: string };
 
@@ -34,7 +37,7 @@ const measures: Column[] = [
 ];
 
 export function PerformanceScorecard({
-  dimension,
+  dimension: initial,
   index,
   version,
   onDrill,
@@ -44,6 +47,10 @@ export function PerformanceScorecard({
   version: number;
   onDrill: (entry: TreeRow) => void;
 }) {
+  // The row dimension defaults to the page's (format or instructor) and may be any Sessions column.
+  const [chosen, setChosen] = usePersistentGroups(`scorecard:${initial}`, [initial]);
+  const dimension: ScorecardDimension = chosen[0] && (chosen[0] === initial || groupable(chosen[0])) ? chosen[0] : initial;
+  const fields = useGroupFields("sessions", [dimension]);
   const filters = useStore((s) => s.filters);
   const transient = useStore((s) => s.transient);
   const [rows, setRows] = useState<Row[]>([]);
@@ -51,8 +58,8 @@ export function PerformanceScorecard({
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState<{ id: string; desc: boolean }>({ id: "attendance", desc: true });
-  const tops = scorecardTops[dimension];
-  const noun = dimension === "trainer" ? "Instructor" : "Format";
+  const tops = scorecardTops(dimension);
+  const noun = dimension === "trainer" ? "Instructor" : dimension === "format_group" ? "Format" : groupLabel(dimension);
   const ready = usable("sessions") && usable("new") && usable("bookings");
 
   useEffect(() => {
@@ -135,6 +142,8 @@ export function PerformanceScorecard({
         </button>
       }
     >
+      <GroupByPicker name={`${noun} scorecard`} label="Rows" value={[dimension]} fields={fields} max={1} defaults={[initial]}
+        onChange={(next) => { setChosen(next.length ? next : [initial]); setSort({ id: "attendance", desc: true }); }} />
       {!ready ? (
         <p role="status">Loading scorecard sources…</p>
       ) : error ? (

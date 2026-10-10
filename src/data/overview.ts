@@ -4,6 +4,7 @@ import { metricSQL } from '../semantics/metrics';
 import { metaScope } from './marketing-channels';
 import { websiteScope } from './performance-marketing';
 import type { Filters } from '../state/store';
+import { groupable, groupLabel } from './group-fields';
 
 export interface OverviewModule {
   key: string; title: string; tab: number; source: string; group: string;
@@ -28,6 +29,12 @@ export const overviewModules: OverviewModule[] = [
   module(3, 'trainer', 'Instructor', ['sessions', 'avg_class_size_incl', 'revenue_per_session'], 'Session performance by instructor; compare alongside sample size.'),
   module(10, 'trainer', 'Instructor', ['payroll_revenue', 'payroll_cost', 'contribution_margin'], 'Payroll-source economics using the module’s governed cost calculation.'),
 ];
+
+/** The module with a viewer-chosen breakdown column; unknown or unsafe columns fall back to the default. */
+export function withOverviewGroup(m: OverviewModule, group?: string): OverviewModule {
+  if (!group || group === m.group || !groupable(group)) return m;
+  return { ...m, group, groupLabel: groupLabel(group) };
+}
 
 export function overviewSQL(m: OverviewModule, filters: Filters, transient: {field:string;value:string}[]) {
   const ctx = context(filters, transient);

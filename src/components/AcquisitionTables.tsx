@@ -7,11 +7,14 @@ import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, CalendarDays, ChevronDown, ChevronRight, CircleHelp, GraduationCap, Handshake, Route, TrendingUp, Users } from "lucide-react";
 import { query, quote, type Row, health } from "../data/duckdb";
 import { where, today } from "../data/analytics";
-import { acquisitionAggregate, instructorAcquisitionAggregate, acquisitionFactsSQL, acquisitionMeasures, acquisitionMonths, acquisitionPeriodLabel, acquisitionDimensions, acquisitionYoYMonths, acquisitionPivotSQL, type AcquisitionDimension, priorMonth } from "../data/acquisition";
+import { acquisitionFactsSQL, acquisitionMeasures, acquisitionMonths, acquisitionPeriodLabel, acquisitionYoYMonths, acquisitionPivotSQL, acquisitionMetricsSQL, requireAcquisitionDimension, priorMonth } from "../data/acquisition";
 import { useStore } from "../state/store";
 import { historicalFilters, historicalTransient } from "../data/periods";
 import { fmt } from "../semantics/formats";
-import { AcquisitionTableShell } from "./AcquisitionTableShell";
+import { AcquisitionTableShell, DimensionOptions, dimensionOr, useAcquisitionDimensions } from "./AcquisitionTableShell";
+import { GroupByPicker, usePersistentGroups } from "./ui/GroupByPicker";
+import { useGroupFields } from "../data/group-registry";
+import { groupColumn, groupLabel as columnLabel, groupable } from "../data/group-fields";
 import { AcquisitionClientTypes } from "./AcquisitionClientTypes";
 import { AcquisitionDrillDown } from "./AcquisitionDrillDown";
 import { AcquisitionReferenceTables } from "./AcquisitionReferenceTables";
@@ -93,8 +96,11 @@ export function ValueSelection({ options, selected, onChange, label }: { options
 }
 function CohortComparison({ mode, version, onDrill }: { mode: "mom" | "yoy"; version: number; onDrill: Drill }) {
   const filters = useStore(s => s.filters), transient = useStore(s => s.transient);
-  const [group, setGroup] = useState<AcquisitionDimension>("entry");
-  const [childGroup, setChildGroup] = useState<AcquisitionDimension>("membership");
+  // [first column, child rows]; any New-sheet column is accepted alongside the static dimensions.
+  const [levels, setLevels] = usePersistentGroups(`acquisition-cohort-${mode}`, ["entry", "membership"]);
+  const group = dimensionOr(levels[0], "entry"), childGroup = dimensionOr(levels[1], "membership");
+  const setGroup = (key: string) => setLevels([key, childGroup]), setChildGroup = (key: string) => setLevels([group, key]);
+  const dimensions = useAcquisitionDimensions([group, childGroup]);
   const [selectedValues, setSelectedValues] = useState<string[] | null>(null);
   const [allRows, setAllRows] = useState<Row[]>([]);
   const [rows, setRows] = useState<Row[]>([]);
@@ -108,9 +114,9 @@ function CohortComparison({ mode, version, onDrill }: { mode: "mom" | "yoy"; ver
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<string[]>([]);
   const [sort, setSort] = useState<Sort>({ key: "parent", desc: false });
-  const child = group === childGroup ? acquisitionDimensions.find(d => d.key !== group)!.key : childGroup;
-  const groupLabel = acquisitionDimensions.find(d => d.key === group)!.label;
-  const childLabel = acquisitionDimensions.find(d => d.key === child)!.label;
+  const child = group === childGroup ? dimensions.all.find(d => d.key !== group)!.key : childGroup;
+  const groupLabel = requireAcquisitionDimension(group).label;
+  const childLabel = requireAcquisitionDimension(child).label;
   const selectedMonths=acquisitionMonths(today(),controls.periods);
   const comparableMonths=new Set([...selectedMonths,...selectedMonths.map(month=>priorMonth(month,12))]);
   const months = mode === "mom" ? selectedMonths.reverse() : acquisitionYoYMonths(today()).filter(month=>comparableMonths.has(month));
@@ -141,8 +147,8 @@ function CohortComparison({ mode, version, onDrill }: { mode: "mom" | "yoy"; ver
   function toggle(value: string) { setExpanded(current => current.includes(value) ? current.filter(x => x !== value) : [...current, value]); }
   function drillCell(parent: string | null, childValue: string | null, month: string) {
     const scope = historyScope;
-    const parentSQL = acquisitionDimensions.find(d => d.key === group)!.sql;
-    const childSQL = acquisitionDimensions.find(d => d.key === child)!.sql;
+    const parentSQL = requireAcquisitionDimension(group).sql;
+    const childSQL = requireAcquisitionDimension(child).sql;
     const parts = [`month=${quote(month)}`];
     if (parent != null) parts.push(`${parentSQL}=${quote(parent)}`);
     else if (selectedValues != null) parts.push(selectedValues.length ? `${parentSQL} IN (${selectedValues.map(quote).join(",")})` : "FALSE");
@@ -160,9 +166,9 @@ function CohortComparison({ mode, version, onDrill }: { mode: "mom" | "yoy"; ver
   return <AcquisitionTableShell title={mode === "mom" ? "Acquisition cohorts · MoM" : "Acquisition cohorts · YoY"} icon={mode === "mom" ? CalendarDays : TrendingUp} count={visible.length}
     description={mode === "mom" ? "14 completed first-visit months, newest first. Other global filters apply." : "Same months across years together, newest year first in each month group. Other global filters apply."} onSearch={setSearch} searchLabel={`Search ${mode.toUpperCase()} first-column values`}
     actions={<>
-      <label className="acq-control">First column<DropdownField aria-label={`${mode.toUpperCase()} first column`} value={group} onChange={e => { setGroup(e.target.value as AcquisitionDimension); setSelectedValues(null); setExpanded([]); }}>{acquisitionDimensions.map(d => <option value={d.key} key={d.key}>{d.label}</option>)}</DropdownField></label>
+      <label className="acq-control">First column<DropdownField aria-label={`${mode.toUpperCase()} first column`} value={group} onChange={e => { setGroup(e.target.value); setSelectedValues(null); setExpanded([]); }}><DimensionOptions columns={dimensions.columns} /></DropdownField></label>
       <ValueSelection options={values} selected={selectedValues} onChange={setSelectedValues} label={`${mode.toUpperCase()} first-column values`} />
-      <label className="acq-control">Child rows<DropdownField aria-label={`${mode.toUpperCase()} child rows`} value={child} onChange={e => setChildGroup(e.target.value as AcquisitionDimension)}>{acquisitionDimensions.filter(d => d.key !== group).map(d => <option value={d.key} key={d.key}>{d.label}</option>)}</DropdownField></label>
+      <label className="acq-control">Child rows<DropdownField aria-label={`${mode.toUpperCase()} child rows`} value={child} onChange={e => setChildGroup(e.target.value)}><DimensionOptions columns={dimensions.columns} exclude={group} /></DropdownField></label>
       <div className="acq-segmented" aria-label="Comparison display" hidden={compareOff}>{["values", "change"].map(d => <button key={d} aria-pressed={d === display} onClick={() => {setDisplay(d);setControls(c=>({...c,mode:d}));}}>{d === "values" ? "Values" : mode === "mom" ? "MoM Δ" : "YoY Δ"}</button>)}</div>
     </>}
     metricBar={<MetricTabs value={metric} onChange={setMetric} />}
@@ -186,7 +192,9 @@ function CohortComparison({ mode, version, onDrill }: { mode: "mom" | "yoy"; ver
     </div>}
   </AcquisitionTableShell>;
 }
-function MetricsTable({ rows, dimensions, kind, scope, onDrill }: { rows: Row[]; dimensions: [string, string][]; kind: "hosted" | "trainers"; scope: string; onDrill: Drill }) {
+// Raw sheet columns compare as text so numeric/boolean groups drill to exactly their rows.
+const columnSQL = (key: string) => groupable(key) ? groupColumn(key) : key;
+function MetricsTable({ rows, dimensions, kind, scope, onDrill, grouping }: { rows: Row[]; dimensions: [string, string][]; kind: "hosted" | "trainers"; scope: string; onDrill: Drill; grouping?: ReactNode }) {
   const [search, setSearch] = useState("");
   const [metric, setMetric] = useState("all");
   const [selectedValues, setSelectedValues] = useState<string[] | null>(null);
@@ -195,7 +203,7 @@ function MetricsTable({ rows, dimensions, kind, scope, onDrill }: { rows: Row[];
   const measures = acquisitionMeasures.filter(m => metric === "all" || m[0] === metric);
   function drill(row: Row, metric?: string) {
     const predicates = kind === "hosted" ? ["ref_hosted"] : [];
-    if (!row.is_total) dimensions.forEach(([key]) => predicates.push(row[key] == null ? `${key} IS NULL` : `${key}=${quote(String(row[key]))}`));
+    if (!row.is_total) dimensions.forEach(([key]) => predicates.push(row[key] == null ? `${columnSQL(key)} IS NULL` : `${columnSQL(key)}=${quote(String(row[key]))}`));
     onDrill({title: `${kind === "hosted" ? "Hosted classes" : "Instructor"} · ${row.is_total ? "Full scope" : dimensions.map(([key]) => key === "month" ? acquisitionPeriodLabel(row[key]) : row[key] ?? "Unspecified").join(" · ")}`,scope,predicate:predicates.join(" AND "),metric,uniqueOutcomes:kind === "trainers"});
   }
   const matching = useMemo(() => sortedRows(rows.filter(r => !r.is_total && (selectedValues == null || selectedValues.includes(String(r[dimensions[0][0]] ?? "Unspecified"))) && dimensions.some(([key]) => String(r[key] ?? "").toLowerCase().includes(search.toLowerCase()))), sort), [rows, dimensions, search, sort, selectedValues]);
@@ -205,7 +213,7 @@ function MetricsTable({ rows, dimensions, kind, scope, onDrill }: { rows: Row[];
   return <AcquisitionTableShell title={kind === "hosted" ? "Signature Partnership Experiences · hosted-class metrics" : "Instructor acquisition metrics"} icon={kind === "hosted" ? Handshake : GraduationCap} count={matching.length}
     description={kind === "hosted" ? "Hosted first visits by experience and month, matching the reference. Selected global filters apply." : "First-visit instructor outcomes with unique member counts and recorded visits. Selected global filters apply."}
     onSearch={v => { setSearch(v); setPage(0); }}
-    actions={<ValueSelection options={[...new Set(rows.filter(r => !r.is_total).map(r => String(r[dimensions[0][0]] ?? "Unspecified")))].sort()} selected={selectedValues} onChange={values => { setSelectedValues(values); setPage(0); }} label={`${kind === "hosted" ? "Hosted" : "Instructor"} first-column values`} />}
+    actions={<>{grouping}<ValueSelection options={[...new Set(rows.filter(r => !r.is_total).map(r => String(r[dimensions[0][0]] ?? "Unspecified")))].sort()} selected={selectedValues} onChange={values => { setSelectedValues(values); setPage(0); }} label={`${kind === "hosted" ? "Hosted" : "Instructor"} first-column values`} /></>}
     metricBar={<MetricTabs value={metric} onChange={setMetric} includeAll />}
     footer={<><Pagination count={matching.length} page={currentPage} setPage={setPage} /><span>{kind === "hosted" ? "First-visit acquisition cohorts; total event attendance and event revenue are not included." : "Instructor attribution follows the member’s first visit."} Footer totals cover the full filtered scope, independent of search.</span><DefinitionNote /></>}>
     <div className="acq-table-scroll" tabIndex={0} aria-label="Metrics table. Scroll horizontally for additional metrics."><table className="acq-table">
@@ -284,30 +292,33 @@ function Journeys({ rows, version, scope, onDrill }: { rows: Row[]; version: num
 }
 
 type TableKind = typeof tableOptions[number]["key"];
+const metricDefaults: Record<string,[string,string][]> = { hosted: [["month","First-visit month"],["format","Signature experience"]], trainers: [["trainer","Instructor"]] };
 export function AcquisitionTableView({version,kind}: {version:number;kind:TableKind}) {
   const filters=useStore(s=>s.filters),transient=useStore(s=>s.transient);
   const scope=where(filters,"new",transient);
+  const metrics=kind==="hosted"||kind==="trainers";
+  const defaults=useMemo(()=>(metricDefaults[kind]??[]).map(([key])=>key),[kind]);
+  const [savedGroups,setGroups]=usePersistentGroups(`acquisition-metrics-${kind}`,defaults);
+  const valid=savedGroups.filter(groupable),groups=valid.length?valid:defaults;
+  const groupFields=useGroupFields(metrics?"new":undefined,groups);
+  const dimensions:[string,string][]=groups.map(g=>[g,metricDefaults[kind]?.find(([key])=>key===g)?.[1]??groupFields.find(f=>f.field===g)?.label??columnLabel(g)]);
+  const grouping=metrics?<GroupByPicker name={kind==="hosted"?"Hosted classes":"Instructor"} value={groups} onChange={setGroups} fields={groupFields} defaults={defaults} min={1} max={3}/>:null;
   const [rows,setRows]=useState<Row[]>([]),[loading,setLoading]=useState(false),[error,setError]=useState("");
   const [request,setRequest]=useState<AcquisitionDrillRequest|null>(null);
   useEffect(()=>{
     if(!["hosted","trainers","journeys"].includes(kind))return;
     let active=true;setLoading(true);setError("");
     const facts=acquisitionFactsSQL(scope,today(),usable("bookings"));
-    const sql=kind==="hosted"
-      ? `SELECT format,month,GROUPING(format) AS is_total,${acquisitionAggregate} FROM facts WHERE ref_hosted GROUP BY GROUPING SETS ((format,month),()) ORDER BY month DESC,format`
-      : kind==="trainers"
-      ? `SELECT trainer,GROUPING(trainer) AS is_total,${instructorAcquisitionAggregate} FROM facts GROUP BY GROUPING SETS ((trainer),()) ORDER BY trainer`
-      : "SELECT * FROM facts WHERE ref_converted ORDER BY date DESC,member,row_id";
+    const sql=kind==="hosted"||kind==="trainers"?acquisitionMetricsSQL(kind,groups,defaults):"SELECT * FROM facts WHERE ref_converted ORDER BY date DESC,member,row_id";
     query(`WITH facts AS (${facts}) ${sql}`).then(data=>{if(active){setRows(data);setLoading(false);}}).catch(error=>{if(active){setError(String(error));setLoading(false);}});
     return()=>{active=false;};
-  },[scope,version,kind]);
+  },[scope,version,kind,groups.join()]); // eslint-disable-line react-hooks/exhaustive-deps
   return <div className="acquisition-tables" data-acquisition-table={kind}>
     {error?<p role="alert">{error}</p>:loading?<p role="status">Loading source analytics…</p>
       :kind==="types"?<AcquisitionClientTypes version={version} onDrill={setRequest}/>
       :kind==="mom"||kind==="yoy"?<CohortComparison mode={kind} version={version} onDrill={setRequest}/>
       :kind==="memberships"||kind==="purchases"?<AcquisitionReferenceTables kind={kind} version={version} onDrill={setRequest}/>
-      :kind==="hosted"?<MetricsTable rows={rows} dimensions={[["month","First-visit month"],["format","Signature experience"]]} kind="hosted" scope={scope} onDrill={setRequest}/>
-      :kind==="trainers"?<MetricsTable rows={rows} dimensions={[["trainer","Instructor"]]} kind="trainers" scope={scope} onDrill={setRequest}/>
+      :kind==="hosted"||kind==="trainers"?<MetricsTable key={groups.join()} rows={rows} dimensions={dimensions} kind={kind} scope={scope} onDrill={setRequest} grouping={grouping}/>
       :<Journeys rows={rows} version={version} scope={scope} onDrill={setRequest}/>}
     {request&&<AcquisitionDrillDown request={request} version={version} imports={filters.imports} onClose={()=>setRequest(null)}/>}
   </div>;

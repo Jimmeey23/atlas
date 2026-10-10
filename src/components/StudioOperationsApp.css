@@ -80,7 +80,7 @@
   font-weight: 500;
   min-width: 0;
 }
-.ops-chart-controls select,
+.ops-chart-controls label select,
 .ops-chart-controls input,
 .ref-table-controls select {
   border: 1px solid var(--hairline);
@@ -94,6 +94,10 @@
 }
 .ops-chart-controls input {
   width: 95px;
+}
+.ops-chart-controls .group-by-picker {
+  flex-basis: 100%;
+  order: 9;
 }
 .ops-chart-controls > button,
 .ops-segmented button {

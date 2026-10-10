@@ -457,7 +457,7 @@
   gap: 8px;
   padding-top: 8px;
 }
-.ops-custom-groups button {
+.ops-custom-groups > button {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -468,11 +468,11 @@
   color: var(--text-2);
   font-size: 11px;
 }
-.ops-custom-groups button[aria-pressed="true"] {
+.ops-custom-groups > button[aria-pressed="true"] {
   color: var(--attendance);
   border-color: var(--attendance);
 }
-.ops-custom-groups b {
+.ops-custom-groups > button b {
   width: 17px;
   height: 17px;
   border-radius: 4px;
@@ -482,7 +482,7 @@
   place-items: center;
   font-size: 9px;
 }
-.ops-custom-groups small {
+.ops-custom-groups > small {
   color: var(--text-2);
   font-size: 10px;
 }

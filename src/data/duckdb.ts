@@ -44,6 +44,15 @@ const presenceFields = [
   "session_type",
   "is_new",
 ];
+// Bumped whenever a table is (re)loaded, so schema-derived views (group-by
+// fields) can recompute once per data version rather than per render.
+let version = 0;
+const dataListeners = new Set<() => void>();
+export const dataVersion = () => version;
+export function onData(listener: () => void) {
+  dataListeners.add(listener);
+  return () => void dataListeners.delete(listener);
+}
 async function measureFields(key: string) {
   try {
     const rows = await connection.query(
@@ -56,6 +65,8 @@ async function measureFields(key: string) {
   } catch {
     delete fieldPresence[key];
   }
+  version++;
+  dataListeners.forEach((l) => l());
 }
 export function query(sql: string): Promise<Row[]> {
   const cacheable = /^\s*(SELECT|WITH)/i.test(sql);

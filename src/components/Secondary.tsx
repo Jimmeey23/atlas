@@ -8,6 +8,9 @@ import { metricSQL, metrics } from "../semantics/metrics";
 import { fmt } from "../semantics/formats";
 import { useStore } from "../state/store";
 import { exportCSV } from "./exports";
+import { GroupByPicker, usePersistentGroups } from "./ui/GroupByPicker";
+import { useGroupFields } from "../data/group-registry";
+import { groupable, groupLabel } from "../data/group-fields";
 const secondaryGroups: Record<number, string[]> = {
   0: ["location", "format", "day"],
   1: ["capacity", "category", "format", "format"],
@@ -36,7 +39,13 @@ export function Secondary({
   const [error, setError] = useState("");
   const state = useStore();
   const bp = blueprints[tab];
-  const group = secondaryGroups[tab]?.[index] || bp.groups[0];
+  const fallback = secondaryGroups[tab]?.[index] || bp.groups[0];
+  // Each register keeps its own grouping; the first level defaults to the fixed register dimension.
+  const [chosen, setGroups] = usePersistentGroups(`secondary:${tab}:${index}`, [fallback]);
+  const levels = [...new Set(chosen)].filter((g) => g === fallback || groupable(g));
+  const groups = levels.length ? levels : [fallback];
+  const fields = useGroupFields(bp.source, groups);
+  const key = groups.join();
   // Conversion's explore tables carry the full newcomer measure set; others stay compact.
   const columns = tab === 5 ? bp.columns : bp.columns.slice(0, 7);
   useEffect(() => {
@@ -62,7 +71,7 @@ export function Secondary({
           )
         : w;
     query(
-      `SELECT CAST("${group}" AS VARCHAR) AS entity,${metricSQL(columns, context())},COUNT(*) AS n FROM ${metricFacts(state.filters, bp.source, [], effective)}${predicate ? (!["sessions", "sales", "checkins"].includes(bp.source) && effective ? " AND " : " WHERE ") + predicate : ""} GROUP BY "${group}" ORDER BY n DESC LIMIT 100`,
+      `SELECT ${groups.map((g, i) => `CAST("${g}" AS VARCHAR) AS ${i ? `g${i}` : "entity"}`).join(",")},${metricSQL(columns, context())},COUNT(*) AS n FROM ${metricFacts(state.filters, bp.source, [], effective)}${predicate ? (!["sessions", "sales", "checkins"].includes(bp.source) && effective ? " AND " : " WHERE ") + predicate : ""} GROUP BY ${groups.map((g) => `"${g}"`).join(",")} ORDER BY n DESC LIMIT 100`,
     )
       .then((r) => {
         if (active) {
@@ -74,7 +83,7 @@ export function Secondary({
     return () => {
       active = false;
     };
-  }, [open, tab, index, state.filters, state.rate]);
+  }, [open, tab, index, state.filters, state.rate, key]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <details
       className="secondary"
@@ -89,6 +98,7 @@ export function Secondary({
         </span>
       </summary>
       <div className="secondary-content">
+        <GroupByPicker name={title} value={groups} fields={fields} defaults={[fallback]} onChange={(next) => setGroups(next.length ? next : [fallback])} />
         {error ? (
           <p className="warn">{error}</p>
         ) : (
@@ -115,7 +125,7 @@ export function Secondary({
               <table>
                 <thead>
                   <tr>
-                    <th>{group}</th>
+                    {groups.map((g) => <th key={g}>{groupLabel(g)}</th>)}
                     {columns.map((id) => (
                       <th key={id}>{metrics[id].label}</th>
                     ))}
@@ -125,13 +135,14 @@ export function Secondary({
                 <tbody>
                   {rows.map((r, i) => (
                     <tr key={i}>
-                      <td>
-                        <button
-                          onClick={() => state.cross(group, String(r.entity))}
-                        >
-                          {group === "trainer" ? <InstructorName name={String(r.entity || "Unspecified")}/> : r.entity || "Unspecified"} <ExternalLink size={10} />
-                        </button>
-                      </td>
+                      {groups.map((g, l) => {
+                        const value = r[l ? `g${l}` : "entity"];
+                        return <td key={g}>
+                          <button onClick={() => state.cross(g, String(value))}>
+                            {g === "trainer" ? <InstructorName name={String(value || "Unspecified")}/> : String(value || "Unspecified")} <ExternalLink size={10} />
+                          </button>
+                        </td>;
+                      })}
                       {columns.map((id) => (
                         <td key={id} title={metrics[id].description}>
                           {fmt(id, r[id])}

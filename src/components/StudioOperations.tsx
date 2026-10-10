@@ -55,7 +55,8 @@ import { useStore } from "../state/store";
 import {
   operationMetrics,
   operationViews,
-  operationDimensions,
+  isOperationGroup,
+  operationGroupFields,
   resolveOperationGroups,
   identity,
   rankOperations,
@@ -68,6 +69,8 @@ import {
   operationsMonthlySQL,
 } from "../data/studio-operations";
 import { exportCSV } from "./exports";
+import { GroupByPicker } from "./ui/GroupByPicker";
+import { useGroupFields } from "../data/group-registry";
 import { Register } from "./Register";
 import type { TreeRow } from "./NestedTable";
 import "./StudioOperations.css";
@@ -189,6 +192,11 @@ export function StudioOperations({
       return null;
     }
   });
+  const registryFields = useGroupFields("sessions", customGroups);
+  const customGroupFields = useMemo(
+    () => operationGroupFields(registryFields),
+    [registryFields],
+  );
   const groupingFields = useMemo(
     () => resolveOperationGroups(view, customGroups),
     [view, customGroups],
@@ -768,25 +776,15 @@ export function StudioOperations({
           )}
           {view === "custom" && !isFlat && (
             <div className="ops-custom-groups">
-              {Object.entries(operationDimensions).map(([field, label]) => (
-                <button
-                  key={field}
-                  aria-pressed={customGroups.includes(field)}
-                  onClick={() =>
-                    setCustomGroups((a) =>
-                      a.includes(field)
-                        ? a.length > 1
-                          ? a.filter((f) => f !== field)
-                          : a
-                        : a.length < 5
-                          ? [...a, field]
-                          : a,
-                    )
-                  }
-                >
-                  {label}
-                </button>
-              ))}
+              <GroupByPicker
+                name="Class intelligence"
+                value={customGroups}
+                onChange={setCustomGroups}
+                fields={customGroupFields}
+                min={1}
+                max={5}
+                defaults={["location", "format"]}
+              />
             </div>
           )}
         </div>
@@ -932,7 +930,7 @@ export function StudioOperations({
                 setColumnSizing(saved.columnSizing || {});
                 if (saved.customGroups?.length)
                   setCustomGroups(
-                    saved.customGroups.filter((f) => f in operationDimensions),
+                    saved.customGroups.filter(isOperationGroup),
                   );
                 setRankSubset("all");
                 setFocusEntity(null);

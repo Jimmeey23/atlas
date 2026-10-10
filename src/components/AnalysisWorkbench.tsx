@@ -44,6 +44,8 @@ import { readLocal } from "../data/control-storage";
 import { buildCSV, type ExportReceipt } from "../data/export-format";
 import { download } from "./exports";
 import type { TreeRow } from "./NestedTable";
+import { useGroupFields } from "../data/group-registry";
+import { groupLabel } from "../data/group-fields";
 interface SavedAnalysis {
   id: string;
   name: string;
@@ -89,6 +91,12 @@ export function AnalysisWorkbench({
   const [open, setOpen] = useState(false);
   const [config, setConfig] = useState<AnalysisConfig>(() =>
     defaultAnalysisConfig(initialSource, metricFor(initialSource)),
+  );
+  // Every populated column of the analysed sheet, beyond the curated dimensions.
+  const sourceColumns = useGroupFields(config.source, [config.dimension]);
+  const sheetDimensions = useMemo(
+    () => sourceColumns.filter((f) => !(analysisDimensions as readonly string[]).includes(f.field)),
+    [sourceColumns],
   );
   const [rollingDays, setRollingDays] = useState(30);
   const [from, setFrom] = useState(store.filters.from);
@@ -547,7 +555,7 @@ export function AnalysisWorkbench({
     () => [
       {
         id: "segment",
-        label: fieldLabel(result?.config.dimension || config.dimension),
+        label: ((d) => (d.startsWith("nf_") ? groupLabel(d) : fieldLabel(d)))(result?.config.dimension || config.dimension),
         format: (v) => String(v ?? "Unspecified"),
       },
       {
@@ -1012,11 +1020,22 @@ export function AnalysisWorkbench({
                   setConfig((c) => ({ ...c, dimension: e.target.value }))
                 }
               >
-                {analysisDimensions.map((f) => (
-                  <option key={f} value={f}>
-                    {fieldLabel(f)}
-                  </option>
-                ))}
+                <optgroup label="Common">
+                  {analysisDimensions.map((f) => (
+                    <option key={f} value={f}>
+                      {fieldLabel(f)}
+                    </option>
+                  ))}
+                </optgroup>
+                {sheetDimensions.length > 0 && (
+                  <optgroup label={`All ${fieldLabel(config.source)} columns`}>
+                    {sheetDimensions.map((f) => (
+                      <option key={f.field} value={f.field}>
+                        {f.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </DropdownField>
             </label>
             <label>

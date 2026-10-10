@@ -2,13 +2,14 @@ import { metricFacts, where, context } from "./analytics";
 import { quote } from "./duckdb";
 import { metricSQL } from "../semantics/metrics";
 import type { Filters } from "../state/store";
+import { groupColumn } from "./group-fields";
 
 /**
  * One row per format or instructor, combining three sheets that the generic register
  * cannot join: Sessions (supply, demand, revenue), New (first-visit outcomes, by the
  * format or instructor of the first visit) and Bookings (late cancellations).
  */
-export type ScorecardDimension = "format_group" | "trainer";
+export type ScorecardDimension = "format_group" | "trainer" | (string & {});
 type Transient = { field: string; value: string }[];
 
 export const scorecardSessionIds = [
@@ -24,22 +25,17 @@ export const scorecardSessionIds = [
 ];
 
 /** The busiest value of a second dimension inside each row, by attendance. */
-export const scorecardTops: Record<ScorecardDimension, [id: string, column: string, label: string][]> = {
-  format_group: [
-    ["top_trainer", "trainer", "Top instructor"],
-    ["top_class", "format", "Top class"],
-    ["top_slot", "time", "Top time slot"],
-    ["top_day", "day", "Top day"],
-    ["top_studio", "location", "Top studio"],
-  ],
-  trainer: [
-    ["top_format", "format_group", "Top format"],
-    ["top_class", "format", "Top class"],
-    ["top_slot", "time", "Top time slot"],
-    ["top_day", "day", "Top day"],
-    ["top_studio", "location", "Top studio"],
-  ],
-};
+const topColumns: [id: string, column: string, label: string][] = [
+  ["top_trainer", "trainer", "Top instructor"],
+  ["top_format", "format_group", "Top format"],
+  ["top_class", "format", "Top class"],
+  ["top_slot", "time", "Top time slot"],
+  ["top_day", "day", "Top day"],
+  ["top_studio", "location", "Top studio"],
+];
+/** Every other familiar session dimension; the row's own column is never its own "top". */
+export const scorecardTops = (dimension: ScorecardDimension) =>
+  topColumns.filter(([, column]) => column !== dimension).slice(0, 5);
 
 /** Inputs to the composite score; inverse measures count lower as better. */
 export const compositeInputs: [expression: string, inverse: boolean][] = [
@@ -52,11 +48,12 @@ export const compositeInputs: [expression: string, inverse: boolean][] = [
   ["empty_share", true],
 ];
 
+// Any other groupable column is joined on its text value; groupColumn rejects unsafe identifiers.
 const display = (dimension: ScorecardDimension) =>
-  dimension === "format_group" ? "COALESCE(format_group,'Barre')" : "trainer";
+  dimension === "format_group" ? "COALESCE(format_group,'Barre')" : dimension === "trainer" ? "trainer" : groupColumn(dimension);
 /** Instructor names differ in spacing and case between sheets; join on a folded form. */
 export const scorecardKey = (dimension: ScorecardDimension) =>
-  dimension === "format_group" ? "COALESCE(format_group,'Barre')" : "regexp_replace(lower(trim(trainer)),'\\s+',' ','g')";
+  dimension === "format_group" ? "COALESCE(format_group,'Barre')" : dimension === "trainer" ? "regexp_replace(lower(trim(trainer)),'\\s+',' ','g')" : groupColumn(dimension);
 
 const scoped = (filters: Filters, source: string, transient: Transient, extra: string) => {
   const w = where(filters, source, transient);
@@ -65,7 +62,7 @@ const scoped = (filters: Filters, source: string, transient: Transient, extra: s
 
 export function scorecardSQL(dimension: ScorecardDimension, filters: Filters, transient: Transient) {
   const key = scorecardKey(dimension);
-  const tops = scorecardTops[dimension];
+  const tops = scorecardTops(dimension);
   const rank = (expression: string, inverse: boolean) =>
     `PERCENT_RANK() OVER (ORDER BY COALESCE(${inverse ? `-${expression}` : expression}, ${inverse ? "-1" : "0"}))`;
   return `WITH f AS (SELECT * FROM ${metricFacts(filters, "sessions", transient)} WHERE ${display(dimension)} IS NOT NULL),

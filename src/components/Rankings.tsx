@@ -26,12 +26,16 @@ export function Rankings({
     : validColumns.find((x) => x.includes("rate") || x === "contribution_margin") ||
       validColumns[0];
   const m = metrics[id];
+  // Rows may still come from the previous grouping while a new one loads, and analyse drops
+  // duplicate/unknown levels, so derive the depth from the rows' own g0..gN columns.
+  const depth = Object.keys(rows[0] ?? {}).filter((k) => /^g\d+$/.test(k)).length || groups.length;
+  const firstLevel = 2 ** Math.max(depth - 1, 0) - 1;
   const eligible = useMemo(
     () =>
       rows
         .filter(
           (r) =>
-            Number(r.level) === 2 ** (groups.length - 1) - 1 &&
+            Number(r.level) === firstLevel &&
             Number(r.n) >= (m?.minSample ?? 1) &&
             r[id] != null,
         )
@@ -39,7 +43,7 @@ export function Rankings({
           (a, b) =>
             (Number(b[id]) - Number(a[id])) * (m?.higherIsBetter ? 1 : -1),
         ),
-    [rows, id, groups, m],
+    [rows, id, firstLevel, m],
   );
   const s = useStore();
   const maximum = Math.max(...eligible.map((r) => Math.abs(Number(r[id]))), 1);
@@ -108,7 +112,7 @@ export function Rankings({
         {
           rows.filter(
             (r) =>
-              Number(r.level) === 2 ** (groups.length - 1) - 1 &&
+              Number(r.level) === firstLevel &&
               Number(r.n) < m.minSample,
           ).length
         }{" "}

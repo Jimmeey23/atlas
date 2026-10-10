@@ -1,7 +1,8 @@
 import { DropdownField } from "./ui/DropdownField";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { query, quote } from "../data/duckdb";
-import { leadDimensions, metaDimensions, websiteColumns, metaColumns } from "../data/performance-marketing";
+import { marketingDimensionOptions, websiteColumns, metaColumns } from "../data/performance-marketing";
+import { useGroupFields } from "../data/group-registry";
 import { fmt, formatField } from "../semantics/formats";
 import { exportCSV } from "./exports";
 import type { TreeRow } from "./NestedTable";
@@ -29,7 +30,8 @@ export function MarketingRecords({ source, scope, version, onDrill }: {
   const [page,setPage] = useState(0);
   const [exporting,setExporting] = useState(false);
   const [exportError,setExportError] = useState("");
-  const dimensions = source === "meta" ? metaDimensions : leadDimensions;
+  const registry = useGroupFields(source, group ? [group] : []);
+  const dimensions = useMemo(() => marketingDimensionOptions(source, registry), [source, registry]);
   const fields = source === "meta" ? metaFields : leadFields;
   const ids = source === "meta" ? metaColumns : websiteColumns;
   const needle = search.trim().toLowerCase();
@@ -54,11 +56,11 @@ export function MarketingRecords({ source, scope, version, onDrill }: {
   return <div data-marketing-records={source}>
     <div className="pm-controls">
       <label>Search <input aria-label={`Search ${source} records`} value={search} onChange={e=>setSearch(e.target.value)} placeholder={source==="meta"?"Campaign, ID, platform…":"Name, email, campaign, stage…"}/></label>
-      <label>Group records <DropdownField aria-label={`Group ${source} records`} value={group} onChange={e=>setGroup(e.target.value)}><option value="">Individual source records</option>{Object.entries(dimensions).map(([key,d])=><option key={key} value={key}>{d.label}</option>)}</DropdownField></label>
+      <label>Group records <DropdownField aria-label={`Group ${source} records`} value={group} onChange={e=>setGroup(e.target.value)}><option value="">Individual source records</option>{dimensions.map(d=><option key={d.field} value={d.field}>{d.label}</option>)}</DropdownField></label>
       {!group && <button className="button" disabled={exporting||data.loading||!total} onClick={()=>void exportRecords()}>{exporting ? "Exporting…" : `Export all ${total.toLocaleString("en-IN")} matching records`}</button>}
     </div>
     {exportError && <p role="alert">{exportError}</p>}
-    {group ? <MarketingTable key={group} title={`${source} records`} source={source} scope={filteredScope} initialGroups={[group]} ids={ids} version={version} onDrill={onDrill}/> : <>
+    {group ? <MarketingTable key={group} title={`${source} records`} source={source} scope={filteredScope} initialGroups={[group]} storageKey={`marketing:${source}:records:${group}`} ids={ids} version={version} onDrill={onDrill}/> : <>
       <MarketingStatus loading={data.loading||count.loading} error={data.error||count.error} empty={!total}/>
       {!data.loading && data.rows.length>0 && <div className="pm-table table-scroll"><table><thead><tr><th>Details</th>{fields.map(([key,label])=><th key={key}>{label}</th>)}</tr></thead>
         <tbody>{data.rows.map(row=><tr key={String(row.source_row)}><td><button className="pm-cell" aria-label={`Inspect ${source} source row ${row.source_row}`} onClick={()=>onDrill(marketingDrill(source,filteredScope,source==="meta"?`${row.campaign_name} · ${row.date}`:`${row.member} · ${row.date}`,source==="meta"?["meta_spend","meta_leads","meta_cpl","meta_purchases"]:["leads","website_trials","website_members","website_retained"],`source_row=${Number(row.source_row)}`))}>Open</button></td>{fields.map(([key])=><td className="pm-wrap" title={String(row[key]??"")} key={key}>{["spend","purchase_value","ltv"].includes(key) ? fmt("revenue",row[key]) : key==="response_hours" ? fmt("touches",row[key]) : formatField(key,row[key])}</td>)}</tr>)}</tbody>

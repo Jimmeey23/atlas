@@ -11,6 +11,9 @@ import { useStore } from '../state/store';
 import { Register } from './Register';
 import { InstructorName } from './InstructorAvatar';
 import { exportCSV } from './exports';
+import { GroupByPicker, usePersistentGroups } from './ui/GroupByPicker';
+import { useGroupFields } from '../data/group-registry';
+import { groupable, groupLabel } from '../data/group-fields';
 import './MonthlyMemberIntelligence.css';
 
 const frequencyColumns = [['members', 'Members'], ['one_class', '1 session'], ['two_six', '2–6 sessions'], ['seven_fourteen', '7–14 sessions'], ['fifteen_plus', '15+ sessions'], ['visits', 'Total sessions']] as const;
@@ -50,6 +53,12 @@ export function MonthlyMemberIntelligence({ kind, version }: { kind: 'frequency'
   const [month, setMonth] = useState('all'), [search, setSearch] = useState('');
   const [showShare, setShowShare] = useState(false);
   const frequency = kind === 'frequency';
+  // Newcomer outcomes can be attributed to any New-sheet column of the first visit; instructor by default.
+  const [groups, setGroups] = usePersistentGroups('monthly-outcomes', ['trainer']);
+  const group = groups[0] && groupable(groups[0]) ? groups[0] : 'trainer';
+  const fields = useGroupFields(frequency ? undefined : 'new', [group]);
+  const instructor = group === 'trainer', noun = instructor ? 'instructor' : groupLabel(group).toLowerCase();
+  const entity = (row: Row) => String(instructor ? row.trainer : row.group_value);
   useEffect(() => {
     let active = true;
     setBusy(true); setError(''); setRows([]);
@@ -59,14 +68,14 @@ export function MonthlyMemberIntelligence({ kind, version }: { kind: 'frequency'
       if (sources.some(source => !usable(source))) throw new Error('Source unavailable. Refresh the required sheets in Data quality.');
       const history = historicalFilters(filters, today());
       const scope = where(history, frequency ? 'checkins' : 'new', historicalTransient(transient));
-      const result = await query(frequency ? monthlyFrequencySQL(scope) : instructorMonthlyOutcomesSQL(scope, today()));
+      const result = await query(frequency ? monthlyFrequencySQL(scope) : instructorMonthlyOutcomesSQL(scope, today(), group));
       if (active) setRows(result);
     })().catch(e => { if (active) setError(String(e)); }).finally(() => { if (active) setBusy(false); });
     return () => { active = false; };
-  }, [frequency, version, filters, transient]);
+  }, [frequency, version, filters, transient, group]);
   const months = [...new Set(rows.map(row => String(row.month)))];
   const selectedMonth = months.includes(month) ? month : 'all';
-  const visible = rows.filter(row => (selectedMonth === 'all' || row.month === selectedMonth) && (frequency || String(row.trainer).toLowerCase().includes(search.toLowerCase())));
+  const visible = rows.filter(row => (selectedMonth === 'all' || row.month === selectedMonth) && (frequency || entity(row).toLowerCase().includes(search.toLowerCase())));
   const totals = visible.filter(row => row.access_type === 'All access types');
   const splits = visible.filter(row => row.access_type !== 'All access types');
   function frequencyValue(row: Row, key: string) {
@@ -77,24 +86,24 @@ export function MonthlyMemberIntelligence({ kind, version }: { kind: 'frequency'
     <thead><tr><th scope="col">Month</th>{split && <th scope="col">Access type</th>}{frequencyColumns.map(([key, label]) => <th scope="col" key={key}>{label}{showShare && key !== 'members' && key !== 'visits' ? ' %' : ''}</th>)}</tr></thead>
     <tbody>{data.map(row => <tr key={`${row.month}-${row.access_type}`}><th scope="row">{acquisitionPeriodLabel(row.month)}</th>{split && <td>{String(row.access_type)}</td>}{frequencyColumns.map(([key]) => <td key={key}>{frequencyValue(row, key)}</td>)}</tr>)}</tbody>
   </table></div>;
-  return <Register index={frequency ? 'OF' : '03c'} title={frequency ? 'Monthly member practice frequency' : 'Monthly instructor retention & conversion'}
+  return <Register index={frequency ? 'OF' : '03c'} title={frequency ? 'Monthly member practice frequency' : `Monthly ${noun} retention & conversion`}
     subtitle="Last 26 completed months · studio and other non-date filters apply"
     actions={<button className="button" disabled={busy || !visible.length} onClick={() => exportCSV(`${kind}-monthly`, visible)}>Export CSV</button>}>
     <div className="member-month-controls"><label>Month <DropdownField value={selectedMonth} onChange={e => setMonth(e.target.value)}><option value="all">All months</option>{months.map(value => <option key={value} value={value}>{acquisitionPeriodLabel(value)}</option>)}</DropdownField></label>
-      {frequency ? <label><input type="checkbox" checked={showShare} onChange={e => setShowShare(e.target.checked)} />Show frequency as % of members</label> : <label className="instructor-search"><Search size={13} aria-hidden="true" /><input type="search" value={search} placeholder="Find an instructor…" aria-label="Find an instructor" onChange={e => setSearch(e.target.value)} />{search && <button type="button" className="instructor-search-clear" aria-label="Clear instructor search" onClick={() => setSearch('')}>×</button>}</label>}
+      {frequency ? <label><input type="checkbox" checked={showShare} onChange={e => setShowShare(e.target.checked)} />Show frequency as % of members</label> : <><GroupByPicker name="Newcomer outcomes" label="Attribute to" value={[group]} fields={fields} max={1} defaults={['trainer']} onChange={next => { setGroups(next.length ? next : ['trainer']); setSearch(''); }} /><label className="instructor-search"><Search size={13} aria-hidden="true" /><input type="search" value={search} placeholder={instructor ? 'Find an instructor…' : 'Find a group…'} aria-label={instructor ? 'Find an instructor' : 'Find a group'} onChange={e => setSearch(e.target.value)} />{search && <button type="button" className="instructor-search-clear" aria-label={instructor ? 'Clear instructor search' : 'Clear group search'} onClick={() => setSearch('')}>×</button>}</label></>}
     </div>
     {busy ? <p role="status">Loading monthly member intelligence…</p> : error ? <p role="alert">{error}</p> : !visible.length ? <p>No identified member records match this scope.</p> : frequency ? <>
       {table(totals, false)}<h3 className="member-month-subtitle">Frequency by membership & access type</h3>{table(splits, true)}
-    </> : <div className="table-scroll" tabIndex={0} aria-label="Instructor outcomes by first-visit month"><table className="worklist-table">
-      <thead><tr><th scope="col">Instructor</th><th scope="col">First-visit month</th>{outcomeColumns.map(([key, label]) => <th scope="col" key={key}>{label}</th>)}</tr></thead>
-      <tbody>{visible.map(row => <tr key={`${row.month}-${row.trainer}`}><th scope="row"><InstructorName name={String(row.trainer)} /></th><td>{acquisitionPeriodLabel(row.month)}</td>{outcomeColumns.map(([key]) => <td key={key}>{outcomeValue(key, row[key])}</td>)}</tr>)}</tbody>
-      <tfoot><tr><th scope="row">All instructors</th><td>{selectedMonth === 'all' ? 'All months' : acquisitionPeriodLabel(selectedMonth)}</td>{(t => outcomeColumns.map(([key]) => <td key={key}>{outcomeValue(key, t[key])}</td>))(outcomeTotals(visible))}</tr></tfoot>
+    </> : <div className="table-scroll" tabIndex={0} aria-label={`${instructor ? 'Instructor' : groupLabel(group)} outcomes by first-visit month`}><table className="worklist-table">
+      <thead><tr><th scope="col">{instructor ? 'Instructor' : groupLabel(group)}</th><th scope="col">First-visit month</th>{outcomeColumns.map(([key, label]) => <th scope="col" key={key}>{label}</th>)}</tr></thead>
+      <tbody>{visible.map(row => <tr key={`${row.month}-${entity(row)}`}><th scope="row">{instructor ? <InstructorName name={entity(row)} /> : entity(row)}</th><td>{acquisitionPeriodLabel(row.month)}</td>{outcomeColumns.map(([key]) => <td key={key}>{outcomeValue(key, row[key])}</td>)}</tr>)}</tbody>
+      <tfoot><tr><th scope="row">{instructor ? 'All instructors' : 'All groups'}</th><td>{selectedMonth === 'all' ? 'All months' : acquisitionPeriodLabel(selectedMonth)}</td>{(t => outcomeColumns.map(([key]) => <td key={key}>{outcomeValue(key, t[key])}</td>))(outcomeTotals(visible))}</tr></tfoot>
     </table></div>}
     <details className="member-month-definitions"><summary>Definitions & source coverage</summary>{frequency ? <>
       <p>Only attended check-ins with a member ID count. Each member belongs to exactly one frequency band per calendar month in the filtered scope. Repeated check-ins for the same member and session count once; when session ID is missing, date, studio, experience, time and instructor identify the session. Members can appear in multiple months.</p>
       <p>Access types use the recorded Cleaned Category, with the membership/product name as a fallback when the category is unrecognized. Members attending with multiple types appear once under Mixed access. Unrecognized or missing names appear under Other / unspecified. Percentage mode divides each band by the member count on that row. Cancellations and no-shows are excluded.</p>
     </> : <>
-      <p>Each identified newcomer is attributed once to their earliest recorded first visit and its instructor, before applying the selected studio and other filters. Overall conversion and retention use recorded source statuses divided by the newcomer count; these statuses reflect the latest source snapshot. Known-status counts show coverage.</p>
+      <p>Each identified newcomer is attributed once to their earliest recorded first visit and its {noun}, before applying the selected studio and other filters. Overall conversion and retention use recorded source statuses divided by the newcomer count; these statuses reflect the latest source snapshot. Known-status counts show coverage.</p>
       <p>30-day conversion requires Converted status and a purchase dated from the first visit through day 30. 30-day retention means a subsequent attended studio session on days 1–30, with any instructor or studio. Both rates divide by eligible newcomers whose full 30-day window is observable. Observation is capped at the earlier of today and the latest check-in date{rows[0]?.observed_through ? ` (${String(rows[0].observed_through)})` : ''}. Recent cohorts remain unavailable until eligible. Undated converted purchases remain unverified and are counted separately.</p>
       <p>Second-visit rate uses recorded post-trial visits. Days to convert averages non-negative recorded conversion spans for converted newcomers. A blank value means unavailable evidence or no eligible denominator. A complete, current check-in feed is required to assess return visits.</p>
     </>}</details>

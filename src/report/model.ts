@@ -60,7 +60,35 @@ export interface ChapterData {
   /** One row per month, trailing 14 months inclusive. */
   history: Row[];
 }
+/**
+ * How an insight is framed. Each lens answers a different leadership question,
+ * so a chapter reads as a set of decisions rather than repeated month/year prose.
+ */
+export type InsightLens = 'win' | 'risk' | 'driver' | 'opportunity' | 'watch' | 'next_step';
+export const INSIGHT_LENSES: { id: InsightLens; label: string; question: string }[] = [
+  { id: 'win', label: 'What’s working', question: 'Which result is genuinely better, and is it repeatable?' },
+  { id: 'risk', label: 'Red flag', question: 'What is deteriorating or exposed, and how much is at stake?' },
+  { id: 'driver', label: 'What moved the number', question: 'Which segment, mix shift or rate change explains the headline?' },
+  { id: 'opportunity', label: 'Untapped opportunity', question: 'Where is capacity, demand or value being left on the table?' },
+  { id: 'watch', label: 'Early warning', question: 'Which leading indicator is turning before the headline does?' },
+  { id: 'next_step', label: 'Recommended move', question: 'What should leadership decide or change next?' },
+];
 export interface InsightCard {
+  /** v2 framing; cards written before lenses existed carry `category` instead. */
+  lens?: InsightLens;
+  /** Why it happened: the quantified driver and the offsetting force. */
+  driver?: string;
+  /** Durability verdict folding MoM, same month last year and YTD into one reading. */
+  trend?: string;
+  /** Metric ids the claim rests on; rendered beside the card as its evidence. */
+  metrics?: string[];
+  /** Rows of the focus breakdown the claim names; highlighted in the inline chart. */
+  highlight?: string[];
+  priority?: 'high' | 'medium' | 'low';
+  /** Team best placed to act, e.g. "Studio operations". Never a named person. */
+  ownerArea?: string;
+  /** When the move should be reviewed, e.g. "Next 30 days". */
+  horizon?: string;
   layout?: 'comparison' | 'narrative' | 'full';
   monthContext?: string;
   yearContext?: string;
@@ -96,10 +124,27 @@ export interface ReportCustomization {
   /** Management targets by metric id, in the metric's own units (rates as 0–1). */
   targets?: Record<string, number>;
   density?: 'compact' | 'comfortable'; layout?: 'adaptive' | 'full'; evidenceView?: 'auto' | 'chart' | 'table';
-  historyMonths?: 6 | 12 | 14; accent?: 'navy' | 'teal' | 'graphite'; focusAreas?: string[];
+  historyMonths?: 6 | 12 | 14; accent?: ReportAccent; focusAreas?: string[];
   showCover?: boolean; showDefinitions?: boolean; showConfidence?: boolean; showSources?: boolean;
   showAppendix?: boolean; showCharts?: boolean;
+  /** Insight lenses the AI may use; all when empty. */
+  lenses?: InsightLens[];
+  /** Insight cards per performance chapter, excluding the verdict. */
+  insightsPerChapter?: number;
+  /** Practical move + signal to watch on every insight, not only in Recommendations. */
+  includeActions?: boolean;
+  /** Ask for the value at stake, with its arithmetic, wherever the data supports it. */
+  quantifyImpact?: boolean;
+  /** Which comparison the interpretation should lean on. */
+  comparisonFocus?: 'balanced' | 'mom' | 'yoy' | 'ytd';
+  typography?: 'modern' | 'editorial' | 'classic';
+  cardStyle?: 'bordered' | 'elevated' | 'minimal';
+  confidentiality?: string;
+  showGlance?: boolean; showContents?: boolean; showInlineEvidence?: boolean; showActionPlan?: boolean;
+  /** Print each chapter on a new page. */
+  pageBreaks?: boolean;
 }
+export type ReportAccent = 'navy' | 'teal' | 'graphite' | 'plum' | 'forest' | 'rose' | 'amber';
 /** A rule-engine signal scoped to the report's studio and month. */
 export interface ReportSignal {
   rule: string;

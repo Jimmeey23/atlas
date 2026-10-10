@@ -11,10 +11,12 @@ import { exportCSV } from './exports';
 import type { Row } from '../data/duckdb';
 
 const performance = ['sessions','attendance','avg_class_size_incl','fill_rate','draw_premium_pp','show_up_rate','empty_session_rate','revenue','revenue_per_session','rev_pas'];
-const economics = ['payroll_revenue','payroll_revenue_per_session','payroll_cost','contribution','contribution_margin','payroll_pct_of_revenue','empty_session_cost','new_handled','payroll_conversion','payroll_retention'];
+// Rate-based cost estimates (estimated payroll, contribution, empty-session cost) are deliberately excluded:
+// this tab reports recorded performance, not modelled pay.
+const economics = ['payroll_revenue','payroll_revenue_per_session','new_handled','payroll_conversion','payroll_retention'];
 const columns = [...performance, ...economics];
 /** Payroll cards appended to the instructor tab's session KPI strip so the tab shows one combined set. */
-export const instructorPayrollKpis = ['payroll_cost','contribution','contribution_margin','payroll_conversion','payroll_retention'];
+export const instructorPayrollKpis = ['new_handled','payroll_conversion','payroll_retention'];
 
 export function useInstructorPayroll(version: string | number, enabled: boolean) {
   const s = useStore();
@@ -24,7 +26,7 @@ export function useInstructorPayroll(version: string | number, enabled: boolean)
     let live = true; setPayroll(null);
     if (payrollReady) analyse(10,['trainer'],economics).then(a => { if(live) setPayroll(a); }).catch(() => {});
     return () => {live=false;};
-  }, [version,s.filters,s.transient,s.compare,s.rate,payrollReady]);
+  }, [version,s.filters,s.transient,s.compare,payrollReady]);
   return payroll;
 }
 
@@ -47,7 +49,7 @@ export function InstructorIntelligence({ version }: { version: string | number }
     if (payrollReady) tasks.push(analyse(10,['trainer'],economics).then(a => {if(live) setPayroll(a);}).catch(e => {if(live) setPayrollError(String(e));}));
     void Promise.all(tasks).finally(() => {if(live) setBusy(false);});
     return () => {live=false;};
-  }, [version,s.filters,s.transient,s.compare,s.rate,payrollReady]);
+  }, [version,s.filters,s.transient,s.compare,payrollReady]);
   const rows = useMemo(() => {
     const combined = new Map<string, Row>();
     for (const [analysis, ids] of [[session, performance],[payroll,economics]] as const) {
@@ -65,12 +67,12 @@ export function InstructorIntelligence({ version }: { version: string | number }
   },[session,payroll,sort,ascending,search]);
   const owner = (id: string) => economics.includes(id) ? payroll : session;
   const monthlyRows = [...new Set([...(session?.trend ?? []),...(payroll?.trend ?? [])].map(r=>String(r.month)))].sort().reverse().map(month => ({month,...Object.fromEntries(columns.map(id=>[id,owner(id)?.trend.find(r=>String(r.month)===month)?.[id] ?? null]))}));
-  return <Register index="I1" title="Instructor performance & economics" subtitle="One instructor scorecard across studio demand, revenue, cost and community outcomes" actions={<button className="button" disabled={!rows.length || busy} onClick={() => exportCSV('instructor-consolidated', (view === 'monthly' ? monthlyRows : rows).map((r: Row) => ({[view === 'monthly' ? 'Month' : 'Instructor']:view === 'monthly' ? r.month : r.instructor,...Object.fromEntries(visible.map(id=>[metrics[id].label,r[id] ?? null]))})))}>Export CSV</button>}>
+  return <Register index="I1" title="Instructor performance" subtitle="One instructor scorecard across studio demand, revenue and community outcomes" actions={<button className="button" disabled={!rows.length || busy} onClick={() => exportCSV('instructor-consolidated', (view === 'monthly' ? monthlyRows : rows).map((r: Row) => ({[view === 'monthly' ? 'Month' : 'Instructor']:view === 'monthly' ? r.month : r.instructor,...Object.fromEntries(visible.map(id=>[metrics[id].label,r[id] ?? null]))})))}>Export CSV</button>}>
     <div className="segmented" style={{marginBottom:16}}><button className={view==='instructors'?'active':''} onClick={()=>setView('instructors')}>Instructor comparison</button><button className={view==='monthly'?'active':''} onClick={()=>setView('monthly')}>Monthly comparison</button></div>
     <div className="report-controls"><label><span className="small">Find instructor</span><input aria-label="Find instructor" disabled={view==='monthly'} value={search} onChange={e => setSearch(e.target.value)}/></label><label><span className="small">Rank by</span><DropdownField aria-label="Rank instructors by" value={sort} onChange={e=>setSort(e.target.value)}>{columns.map(id=><option value={id} key={id}>{metrics[id].label}</option>)}</DropdownField></label><button className="button" onClick={()=>setAscending(v=>!v)}>{ascending?'Lowest first':'Highest first'}</button></div>
     <details className="format-full-scorecard"><summary>Customise comparison metrics</summary><div className="instructor-metric-options">{columns.map(id=><label key={id}><input type="checkbox" checked={visible.includes(id)} onChange={e=>setVisible(v=>e.target.checked ? columns.filter(c=>c===id || v.includes(c)) : v.filter(c=>c!==id))}/>{metrics[id].label}</label>)}</div></details>
-    <p className="small">Class performance is measured per session; costs, contribution and conversion/retention are measured per payroll month. Payroll costs use ₹{s.rate.toLocaleString('en-IN')} per session. Source populations differ; missing values are unavailable. Use complete months for payroll comparisons.</p>
-    {busy && <p role="status">Building consolidated instructor scorecard…</p>}{error && <p role="alert">{error}</p>}{payrollError && <p role="alert">Payroll metrics unavailable: {payrollError}</p>}{!payrollReady && <p role="status">Cost and contribution data is loading or unavailable; class performance remains available.</p>}
+    <p className="small">Class performance is measured per session; payroll-reported revenue and newcomer conversion/retention are measured per payroll month. Source populations differ; missing values are unavailable. Use complete months for payroll comparisons.</p>
+    {busy && <p role="status">Building consolidated instructor scorecard…</p>}{error && <p role="alert">{error}</p>}{payrollError && <p role="alert">Payroll metrics unavailable: {payrollError}</p>}{!payrollReady && <p role="status">Payroll-reported outcomes are loading or unavailable; class performance remains available.</p>}
     {view === 'instructors' ? <div className="table-scroll"><table className="worklist-table"><thead><tr><th>Instructor</th>{visible.map(id=><th key={id}>{metrics[id].label}</th>)}</tr></thead><tbody>{rows.map(row=><tr key={String(row.instructor)}><th scope="row"><InstructorName name={String(row.instructor)}/></th>{visible.map(id=><td key={id}>{fmt(id,row[id])}</td>)}</tr>)}</tbody><tfoot><tr><th>All instructors</th>{visible.map(id=><td key={id}>{fmt(id,owner(id)?.total[id])}</td>)}</tr></tfoot></table></div> : <div className="table-scroll"><table className="worklist-table"><thead><tr><th>Month</th>{visible.map(id=><th key={id}>{metrics[id].label}</th>)}</tr></thead><tbody>{monthlyRows.map(row=><tr key={row.month}><th scope="row">{row.month}</th>{visible.map(id=><td key={id}>{fmt(id,(row as Row)[id])}</td>)}</tr>)}</tbody></table><p className="small">Trailing completed months; the selected instructors and other non-date filters apply.</p></div>}
     {!busy && !rows.length && <p className="empty-state">No instructor records match this scope.</p>}
   </Register>;

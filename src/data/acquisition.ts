@@ -1,3 +1,5 @@
+import { assertGroupable, groupable, groupColumn, groupLabel, groupValueSQL } from './group-fields';
+
 // Cohort outcomes are grouped by first visit. Legacy _30 IDs remain stable for saved table preferences; their displayed definitions now use calendar-month purchases.
 export const acquisitionMeasures = [
   ['cohort_rows', 'Clients / trials', 'integer'],
@@ -116,7 +118,20 @@ export const acquisitionDimensions = [
   { key: 'trainer', label: 'Instructor', sql: "COALESCE(trainer,'Unspecified')" },
   { key: 'product', label: 'First purchase', sql: "COALESCE(product,'Unspecified')" },
 ] as const;
-export type AcquisitionDimension = typeof acquisitionDimensions[number]['key'];
+/** A static dimension key or any groupable New-sheet column. */
+export type AcquisitionDimension = string;
+export interface AcquisitionDimensionDef { key: string; label: string; sql: string }
+/** Source columns the static dimensions already present; not offered again as raw columns. */
+export const acquisitionDimensionColumns: readonly string[] = ['entry_type', 'membership_sequence', 'format', 'location', 'trainer', 'product'];
+/** Static dimension, else a raw sheet column grouped as text; undefined for anything else. */
+export function acquisitionDimension(key: string): AcquisitionDimensionDef | undefined {
+  return acquisitionDimensions.find(d => d.key === key) ?? (groupable(key) ? { key, label: groupLabel(key), sql: groupValueSQL(key) } : undefined);
+}
+export function requireAcquisitionDimension(key: string) {
+  const dimension = acquisitionDimension(key);
+  if (!dimension) throw new Error(`Unknown acquisition dimension: ${key}`);
+  return dimension;
+}
 
 /** Same calendar month is adjacent across years; groups follow latest month order. */
 export function acquisitionYoYMonths(now: string) {
@@ -126,7 +141,7 @@ export function acquisitionYoYMonths(now: string) {
 }
 
 export function acquisitionPivotSQL(scope: string, now: string, parent: AcquisitionDimension, child: AcquisitionDimension, values: string[] | null = null) {
-  const dimensionSQL = (key: AcquisitionDimension) => acquisitionDimensions.find(d => d.key === key)!.sql;
+  const dimensionSQL = (key: AcquisitionDimension) => requireAcquisitionDimension(key).sql;
   const selected = values == null ? '' : values.length ? `WHERE parent_value IN (${values.map(value => "'" + value.replaceAll("'", "''") + "'").join(',')})` : 'WHERE FALSE';
   return `WITH facts AS (${acquisitionFactsSQL(scope, now)}),
     labelled AS (SELECT *, ${dimensionSQL(parent)} AS parent_value, ${dimensionSQL(child)} AS child_value FROM facts),
@@ -144,3 +159,14 @@ export const instructorAcquisitionAggregate = acquisitionAggregate
   .replaceAll('COUNT(*) FILTER (WHERE ref_retained)', 'COUNT(DISTINCT member_id) FILTER (WHERE ref_retained)')
   .replaceAll('COUNT(*) FILTER (WHERE ref_new AND visits_post>0)', 'COUNT(DISTINCT member_id) FILTER (WHERE ref_new AND visits_post>0)')
   .replaceAll('NULLIF(COUNT(*) FILTER (WHERE ref_new),0)', 'NULLIF(COUNT(DISTINCT member_id) FILTER (WHERE ref_new),0)');
+/** Body over a `facts` CTE (acquisitionFactsSQL). Default grouping keeps the reference SQL; any other New-sheet columns group as text with NULL kept distinct. */
+export function acquisitionMetricsSQL(kind: "hosted" | "trainers", groups: string[], defaults: string[]) {
+  const aggregate = kind === "hosted" ? acquisitionAggregate : instructorAcquisitionAggregate, filter = kind === "hosted" ? "WHERE ref_hosted" : "";
+  if (groups.join() === defaults.join()) return kind === "hosted"
+    ? `SELECT format,month,GROUPING(format) AS is_total,${aggregate} FROM facts WHERE ref_hosted GROUP BY GROUPING SETS ((format,month),()) ORDER BY month DESC,format`
+    : `SELECT trainer,GROUPING(trainer) AS is_total,${aggregate} FROM facts GROUP BY GROUPING SETS ((trainer),()) ORDER BY trainer`;
+  groups.forEach(assertGroupable);
+  const keys = groups.map((_, i) => `acq_group_${i}`).join(",");
+  return `SELECT ${groups.map((g, i) => `acq_group_${i} AS "${g}"`).join(",")},GROUPING(acq_group_0) AS is_total,${aggregate}
+    FROM (SELECT *,${groups.map((g, i) => `${groupColumn(g)} AS acq_group_${i}`).join(",")} FROM facts ${filter}) labelled GROUP BY GROUPING SETS ((${keys}),()) ORDER BY ${keys}`;
+}

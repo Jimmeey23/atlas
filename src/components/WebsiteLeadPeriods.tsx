@@ -8,7 +8,8 @@ import { context, where, today } from "../data/analytics";
 import { comparisonDates, relativePeriod } from "../data/periods";
 import { blueprints } from "../data/blueprints";
 
-import { WEBSITE, websiteScope, marketingMetricSQL, leadDimensions, marketingContributor } from "../data/performance-marketing";
+import { WEBSITE, websiteScope, marketingMetricSQL, marketingDimension, marketingDimensionOptions, marketingContributor } from "../data/performance-marketing";
+import { useGroupFields } from "../data/group-registry";
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const shiftDays = (range: { from: string; to: string }, days: number) => ({
   from: iso(new Date(Date.parse(range.from + "T00:00:00Z") + days * 86400000)),
@@ -44,7 +45,12 @@ import { marketingDrill } from "./MarketingAnalytics";
 export function WebsiteLeadPeriods({ version, onDrill }: { version: string | number; onDrill?: (entry: TreeRow) => void }) {
   const s = useStore();
   const compareOff = s.compare === "none";
-  const [group, setGroup] = useState("");
+  const [chosen, setGroup] = useState("");
+  const registry = useGroupFields("leads", chosen ? [chosen] : []);
+  // Date and month are the comparison windows themselves, so they are not segments here.
+  const options = useMemo(() => marketingDimensionOptions("leads", registry, ["date", "month"]), [registry]);
+  const dimension = chosen ? marketingDimension("leads", chosen) : undefined;
+  const group = dimension ? chosen : "";
   const [rows, setRows] = useState<Row[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -95,11 +101,11 @@ export function WebsiteLeadPeriods({ version, onDrill }: { version: string | num
               to: range.to,
               source: [WEBSITE],
             };
-            return `SELECT '${w.key}:${slot}' AS bucket,${group ? leadDimensions[group].sql : "'All Website leads'"} AS segment,${marketingMetricSQL(ids, context(filters, transient))},COUNT(*) AS n FROM "leads"${websiteScope(where({ ...filters, source: [] }, "leads", transient))}${group ? " GROUP BY 2" : ""}`;
+            return `SELECT '${w.key}:${slot}' AS bucket,${dimension ? dimension.sql : "'All Website leads'"} AS segment,${marketingMetricSQL(ids, context(filters, transient))},COUNT(*) AS n FROM "leads"${websiteScope(where({ ...filters, source: [] }, "leads", transient))}${group ? " GROUP BY 2" : ""}`;
           }),
         )
         .join(" UNION ALL "),
-    [windows, s.filters, transient, group],
+    [windows, s.filters, transient, dimension],
   );
   useEffect(() => {
     let active = true;
@@ -125,7 +131,7 @@ export function WebsiteLeadPeriods({ version, onDrill }: { version: string | num
     const window = windows.find(w=>w.key===key)!;
     const filters = { ...s.filters, ...window[slot], source: [WEBSITE] };
     const scope = websiteScope(where({ ...filters, source: [] }, "leads", transient));
-    const segmentPredicate = group ? `${leadDimensions[group].sql}=${quote(segment)}` : "";
+    const segmentPredicate = dimension ? `${dimension.sql}=${quote(segment)}` : "";
     const ctx = context(filters, transient);
     const contribution = marketingContributor(id)||contributorPredicate(id,ctx);
     const entry = marketingDrill("leads",scope,`${window.title} · ${slot} · ${segment} · ${metrics[id]?.label || id}`,[id],[segmentPredicate,contribution].filter(Boolean).join(" AND "),segmentPredicate);
@@ -139,7 +145,7 @@ export function WebsiteLeadPeriods({ version, onDrill }: { version: string | num
         <span className="small">Source exactly “{WEBSITE}”</span>
       </summary>
       <div className="secondary-content">
-        <div className="pm-controls"><label>Group comparisons <DropdownField aria-label="Group Website period comparisons" value={group} onChange={event=>setGroup(event.target.value)}><option value="">All Website leads</option>{Object.entries(leadDimensions).filter(([key])=>!["date","month"].includes(key)).map(([key,dimension])=><option key={key} value={key}>{dimension.label}</option>)}</DropdownField></label></div>
+        <div className="pm-controls"><label>Group comparisons <DropdownField aria-label="Group Website period comparisons" value={group} onChange={event=>setGroup(event.target.value)}><option value="">All Website leads</option>{options.map(o=><option key={o.field} value={o.field}>{o.label}</option>)}</DropdownField></label></div>
         {error && <p role="alert">{error}</p>}
         {loading && <p role="status">Loading website enquiry periods…</p>}
         <div className="table-scroll">

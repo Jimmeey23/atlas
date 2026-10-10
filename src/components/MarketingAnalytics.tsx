@@ -5,7 +5,9 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { query, quote, type Row } from "../data/duckdb";
 import { tree } from "../data/hierarchy";
 import { today } from "../data/analytics";
-import { marketingGroupSQL, leadDimensions, metaDimensions, marketingContributor } from "../data/performance-marketing";
+import { marketingGroupSQL, marketingDimension, marketingDimensionOptions, marketingContributor } from "../data/performance-marketing";
+import { useGroupFields } from "../data/group-registry";
+import { GroupByPicker, usePersistentGroups } from "./ui/GroupByPicker";
 import { metricSQL, metrics, contributorPredicate } from "../semantics/metrics";
 import { fmt } from "../semantics/formats";
 import { useStore, emptyFilters } from "../state/store";
@@ -89,12 +91,16 @@ export function MarketingChart({ rows, ids, onInspect, title, chronological = fa
   </div>;
 }
 
-export function MarketingTable({ source, scope, initialGroups, ids, version, onDrill, title, showChart = false, chronological = false }: {
+export function MarketingTable({ source, scope, initialGroups, ids, version, onDrill, title, showChart = false, chronological = false, storageKey }: {
   source: "leads" | "meta"; scope: string; initialGroups: string[]; ids: string[]; version: string | number;
-  onDrill: (entry: TreeRow) => void; title: string; showChart?: boolean; chronological?: boolean;
+  onDrill: (entry: TreeRow) => void; title: string; showChart?: boolean; chronological?: boolean; storageKey?: string;
 }) {
-  const dimensions = source === "meta" ? metaDimensions : leadDimensions;
-  const [groups,setGroups] = useState(initialGroups);
+  const [saved,saveGroups] = usePersistentGroups(storageKey ?? `marketing:${source}:${title}`, initialGroups);
+  // A remembered grouping that no longer resolves falls back to the table's default.
+  const groups = useMemo(() => { const g=[...new Set(saved)].filter(k=>marketingDimension(source,k)).slice(0,3); return g.length ? g : initialGroups; }, [saved.join(),source,initialGroups.join()]); // eslint-disable-line react-hooks/exhaustive-deps
+  const dimension = (g: string) => marketingDimension(source,g)!;
+  const registry = useGroupFields(source,groups);
+  const options = useMemo(() => marketingDimensionOptions(source,registry), [source,registry]);
   const [visible,setVisible] = useState(ids);
   const [expanded,setExpanded] = useState<Set<string>>(new Set());
   const [chart,setChart] = useState(showChart);
@@ -116,30 +122,25 @@ export function MarketingTable({ source, scope, initialGroups, ids, version, onD
     }; walk(nodes,0); return result;
   },[nodes,sort,expanded]);
   function inspect(node: TreeRow,id?: string) {
-    const groupPredicate = node.path.map(p=>`${dimensions[p.field].sql}=${quote(p.value)}`).join(" AND ");
+    const groupPredicate = node.path.map(p=>`${dimension(p.field).sql}=${quote(p.value)}`).join(" AND ");
     const contribution = id ? marketingContributor(id) || contributorPredicate(id,ctx) : undefined;
     onDrill(marketingDrill(source,scope,`${node.path.map(p=>p.value).join(" / ")}${id ? ` · ${metrics[id].label}` : ""}`,id ? [id] : ids.slice(0,4),[groupPredicate,contribution].filter(Boolean).join(" AND "),groupPredicate));
   }
-  function changeGroup(index: number,value: string) {
-    setGroups(current => value ? [...current.slice(0,index),value,...current.slice(index+1)].slice(0,3) : current.slice(0,index));
-    setExpanded(new Set());
-  }
+  function changeGroups(next: string[]) { saveGroups(next.slice(0,3)); setExpanded(new Set()); }
   const chartRows = useMemo(()=>nodes.map(n=>({...n.values,label:n.label,nodeId:n.id})),[nodes]);
   return <div className="pm-analytics-table" data-marketing-table={title}>
     <div className="pm-table-toolbar nested-toolbar">
-      <div className="grouping">{[0,1,2].filter(i=>i<=groups.length).map(i=><label className="group-chip" key={i}>{i ? `Then group ${i+1}` : "Group by"} <DropdownField aria-label={`${title} group ${i+1}`} value={groups[i] || ""} onChange={e=>changeGroup(i,e.target.value)}>
-        {i>0 && <option value="">None</option>}{Object.entries(dimensions).filter(([key])=>!groups.includes(key)||groups[i]===key).map(([key,d])=><option key={key} value={key}>{d.label}</option>)}
-      </DropdownField></label>)}</div>
+      <GroupByPicker name={title} value={groups} onChange={changeGroups} fields={options} min={1} max={3} defaults={initialGroups}/>
       <div className="table-controls"><button className="button" onClick={()=>setExpanded(expanded.size ? new Set() : new Set(data.rows.map(r=>JSON.stringify(groups.slice(0,groups.length-Math.round(Math.log2(Number(r.level)+1))).map((field,i)=>({field,value:String(r[`g${i}`]??'Unspecified')}))))))}>{expanded.size ? "Collapse groups" : "Expand groups"}</button>
       <button className="button" aria-pressed={chart} onClick={()=>setChart(!chart)}>{chart ? "Hide chart" : "Show chart"}</button>
       <details className="pm-column-menu"><summary>Columns</summary><div>{ids.map(id=><label key={id}><input type="checkbox" checked={visible.includes(id)} onChange={()=>setVisible(v=>v.includes(id) ? v.length>1 ? v.filter(x=>x!==id) : v : ids.filter(x=>v.includes(x)||x===id))}/>{metrics[id].label}</label>)}</div></details>
-      <button className="button" disabled={data.loading||!!data.error||!data.rows.length} onClick={()=>exportCSV(`marketing-${source}-${title}`,data.rows.map(r=>Object.fromEntries([...groups.map((g,i)=>[dimensions[g].label,r[`g${i}`]]),["Grouping level",r.level],...ids.map(id=>[metrics[id].label,r[id]]),["Source rows",r.n]])),`${source} · ${scope || 'All dates'} · grouped ${groups.join(' → ')}`)}>Export CSV</button></div>
+      <button className="button" disabled={data.loading||!!data.error||!data.rows.length} onClick={()=>exportCSV(`marketing-${source}-${title}`,data.rows.map(r=>Object.fromEntries([...groups.map((g,i)=>[dimension(g).label,r[`g${i}`]]),["Grouping level",r.level],...ids.map(id=>[metrics[id].label,r[id]]),["Source rows",r.n]])),`${source} · ${scope || 'All dates'} · grouped ${groups.join(' → ')}`)}>Export CSV</button></div>
     </div>
     <MarketingStatus loading={data.loading} error={data.error||total.error} empty={!data.rows.length}/>
     {!data.loading && !data.error && data.rows.length>0 && <>
       {chart && <MarketingChart title={title} rows={chartRows} ids={visible} chronological={chronological && ["month","date"].includes(groups[0])} onInspect={(r,id)=>{const node=nodes.find(n=>n.id===r.nodeId);if(node) inspect(node,id);}}/>}
       <div className="pm-table table-scroll"><table>
-        <thead><tr><th scope="col"><button className="pm-cell" onClick={()=>setSort(s=>({id:"label",descending:s.id==="label"&&!s.descending}))}>{groups.map(g=>dimensions[g].label).join(" / ")}</button></th>{visible.map(id=><th scope="col" key={id}><button className="pm-cell" title={`Sort by ${metrics[id].label}`} onClick={()=>setSort(s=>({id,descending:s.id===id ? !s.descending : true}))}>{metrics[id].label}{sort.id===id ? sort.descending ? " ↓" : " ↑" : ""}</button></th>)}</tr></thead>
+        <thead><tr><th scope="col"><button className="pm-cell" onClick={()=>setSort(s=>({id:"label",descending:s.id==="label"&&!s.descending}))}>{groups.map(g=>dimension(g).label).join(" / ")}</button></th>{visible.map(id=><th scope="col" key={id}><button className="pm-cell" title={`Sort by ${metrics[id].label}`} onClick={()=>setSort(s=>({id,descending:s.id===id ? !s.descending : true}))}>{metrics[id].label}{sort.id===id ? sort.descending ? " ↓" : " ↑" : ""}</button></th>)}</tr></thead>
         <tbody>{displayRows.map(({node,depth})=><tr key={node.id} className={`level-${depth}${depth ? " pm-child-row" : ""}`}>
           <td><div className="pm-group-label row-label" style={{paddingLeft:depth*18}}>{node.children.length>0 && <button className="pm-expander row-chevron" aria-label={`${expanded.has(node.id) ? "Collapse" : "Expand"} ${node.label}`} aria-expanded={expanded.has(node.id)} onClick={()=>setExpanded(current=>{const next=new Set(current);next.has(node.id)?next.delete(node.id):next.add(node.id);return next;})}>{expanded.has(node.id)?<ChevronDown size={14}/>:<ChevronRight size={14}/>}</button>}<button className="pm-cell pm-wrap row-name" title={node.label} onClick={()=>inspect(node)}>{node.label}</button></div></td>
           {visible.map(id=><td key={id}><button className="pm-cell cell-value" aria-label={`Inspect ${metrics[id].label} for ${node.label}`} onClick={()=>inspect(node,id)}>{fmt(id,node.values[id])}{id==="response_time_hours"&&node.values[id]!=null ? "h" : ""}</button></td>)}

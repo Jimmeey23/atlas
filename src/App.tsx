@@ -67,7 +67,7 @@ import {
   revalidate,
 } from "./data/loader";
 import { SourceStatus } from "./components/SourceStatus";
-import { ReportBuilder } from "./components/report/ReportBuilder";
+import { ReportBuilder, ReportJobIndicator } from "./components/report/ReportBuilder";
 import { RetentionWorklists } from "./components/RetentionWorklists";
 import { CohortRetention } from "./components/CohortRetention";
 import {
@@ -123,6 +123,7 @@ import "./design/acquisition.css";
 import "./design/report.css";
 import "./design/report-review.css";
 import "./design/report-builder.css";
+import "./design/report-v2.css";
 import "./design/chrome.css";
 import "./design/sales.css";
 import "./design/controls.css";
@@ -898,6 +899,7 @@ export default function App() {
               complete; narrow the period or location to inspect every leaf.
             </div>
           )}
+          {s.tab !== 15 && <ReportJobIndicator onOpen={() => s.set({ tab: 15 })} />}
           {s.tab === 15 ? (
             ready ? (
               <ReportBuilder version={version} />

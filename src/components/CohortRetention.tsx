@@ -12,6 +12,9 @@ import {
   type CohortRow,
 } from "../data/cohorts";
 import type { TreeRow } from "./NestedTable";
+import { GroupByPicker, usePersistentGroups } from "./ui/GroupByPicker";
+import { useGroupFields } from "../data/group-registry";
+import { groupable } from "../data/group-fields";
 
 export function CohortRetention({
   version,
@@ -30,12 +33,18 @@ export function CohortRetention({
   // every mature cohort. Other filters still scope who entered.
   const cohortFilters = { ...filters, from: "", to: "" };
   const scope = where(cohortFilters, "new", transient);
+  // Optional split of every cohort by one New-sheet column; none keeps one row per month.
+  const [saved, setSplit] = usePersistentGroups("cohort-retention", []);
+  const split = saved.filter(groupable).slice(0, 1);
+  const field = split[0];
+  const fields = useGroupFields("new", split);
+  const splitLabel = field ? fields.find((f) => f.field === field)?.label ?? field : "";
 
   useEffect(() => {
     let active = true;
     setLoading(true);
     setError("");
-    query(cohortRetentionSQL(scope, today()))
+    query(cohortRetentionSQL(scope, today(), field))
       .then((r) => {
         if (active) setRows(cohortTriangle(r as Record<string, unknown>[]));
       })
@@ -48,16 +57,16 @@ export function CohortRetention({
     return () => {
       active = false;
     };
-  }, [scope, version]);
+  }, [scope, version, field]);
 
   function drill(row: CohortRow, offset: number | null) {
     onDrill({
-      id: `cohort-${row.month}-${offset ?? "all"}`,
-      label: `${acquisitionPeriodLabel(row.month)} cohort · ${offset == null ? "all members" : offset === 0 ? "acquisition month" : `month ${offset}`}`,
+      id: `cohort-${row.month}-${row.segment != null ? `${field}-${row.segment}-` : ""}${offset ?? "all"}`,
+      label: `${acquisitionPeriodLabel(row.month)} cohort${row.segment != null ? ` · ${row.segment}` : ""} · ${offset == null ? "all members" : offset === 0 ? "acquisition month" : `month ${offset}`}`,
       source: "new",
       filters: cohortFilters,
       metrics: ["new_clients", "conversion_rate", "avg_ltv"],
-      predicate: cohortDrillPredicate(scope, today(), row.month, offset),
+      predicate: cohortDrillPredicate(scope, today(), row.month, offset, field && row.segment != null ? { field, value: row.segment } : undefined),
       path: [],
       values: { n: offset == null ? row.size : (row.retained[offset] ?? 0) } as Row,
       children: [],
@@ -85,6 +94,7 @@ export function CohortRetention({
           </p>
         </div>
         <div className="cohort-actions">
+          <GroupByPicker name="Cohorts" label="Split cohorts by" value={split} onChange={setSplit} fields={fields} defaults={[]} min={0} max={1} emptyLabel="No split" />
           <button
             className="button"
             aria-pressed={share}
@@ -100,6 +110,7 @@ export function CohortRetention({
                 "cohort-retention",
                 rows.map((row) => ({
                   Cohort: row.month,
+                  ...(field ? { [splitLabel]: row.segment ?? "" } : {}),
                   Members: row.size,
                   ...Object.fromEntries(
                     offsets.map((o) => [`Month ${o}`, row.retained[o] ?? ""]),
@@ -122,6 +133,7 @@ export function CohortRetention({
             <thead>
               <tr>
                 <th scope="col">Cohort</th>
+                {field && <th scope="col">{splitLabel}</th>}
                 <th scope="col">Members</th>
                 {offsets.map((o) => (
                   <th key={o} scope="col">{o === 0 ? "Month 0" : `+${o}`}</th>
@@ -130,12 +142,13 @@ export function CohortRetention({
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.month}>
+                <tr key={`${row.month}\u0000${row.segment ?? ""}`}>
                   <th scope="row">
                     <button className="scorecard-cell" onClick={() => drill(row, null)}>
                       {acquisitionPeriodLabel(row.month)}
                     </button>
                   </th>
+                  {field && <td>{row.segment}</td>}
                   <td>
                     <button className="scorecard-cell" onClick={() => drill(row, null)}>
                       {row.size}
@@ -154,7 +167,7 @@ export function CohortRetention({
                             style={{
                               background: `color-mix(in srgb,var(--accent) ${Math.round(Math.min(1, rate ?? 0) * 60)}%,transparent)`,
                             }}
-                            aria-label={`${acquisitionPeriodLabel(row.month)} cohort, month ${o}: ${v} of ${row.size} members`}
+                            aria-label={`${acquisitionPeriodLabel(row.month)} cohort${row.segment != null ? ` · ${row.segment}` : ""}, month ${o}: ${v} of ${row.size} members`}
                             onClick={() => drill(row, o)}
                           >
                             {text(row, o)}
