@@ -210,12 +210,34 @@ export async function createApp({ serveStatic = false } = {}) {
         reason: probe.reason || null,
       };
     });
-    res.set("Cache-Control", "no-store").json({ checkedAt: Date.now(), sources });
+    // Shared briefly by the CDN: every open browser polls this, and a 30-second-old answer
+    // only delays noticing an edit. A forced check adds a unique query to bypass it.
+    res.set({ "Cache-Control": "public, max-age=0, must-revalidate", "Vercel-CDN-Cache-Control": "max-age=30" })
+      .json({ checkedAt: Date.now(), sources });
   });
   app.get("/api/sheets/:key", async (req, res, next) => {
     try {
     const source = config.find((s) => s.key === req.params.key);
     if (!source) return res.status(404).json({ error: "Unknown source" });
+    // A request for one Drive revision. Its answer never changes, so the CDN serves every
+    // later request for it and this function runs once per sheet edit, not once per load.
+    const rev = typeof req.query.rev === "string" ? req.query.rev : "";
+    if (rev) {
+      const metaKey = `.cache/${source.key}.meta.json`;
+      let meta = await store.read(metaKey).catch(() => null);
+      if (meta?.revision !== rev) {
+        // Forced, so the loader re-reads Drive and refetches only if its copy is older.
+        const data = await load(source, true);
+        if (data.status === "error") return res.set("Cache-Control", "no-store").status(502).json(data);
+        meta = await store.read(metaKey).catch(() => null);
+      }
+      if (meta) {
+        known.set(source.key, meta);
+        // Only a copy that is provably the requested revision may be cached under its URL; a
+        // sheet edited again since is still answered, privately, with the newer rows.
+        if (await sendSnapshot(req, res, cacheRoot, source, meta, { shared: meta.revision === rev })) return;
+      }
+    }
     // Metadata is tiny and persists with the snapshot across warm/cold requests.
     // Only an expired/edited sheet or an explicit refresh needs its rows parsed.
     const meta = await store.read(`.cache/${source.key}.meta.json`).catch(() => null);

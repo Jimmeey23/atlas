@@ -102,3 +102,27 @@ test('expired KRA results are reused while every workbook revision is unchanged'
     assert.equal(loads, 10, 'an edited workbook must recompute');
   } finally { await new Promise<void>(resolve => server.close(() => resolve())); }
 });
+
+test('a revision snapshot is gzipped and CDN-cacheable; ordinary snapshots stay private', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'atlas-shared-'));
+  await mkdir(path.join(root, '.cache'));
+  const bytes = JSON.stringify({ key: 'bookings', rows: Array.from({ length: 2000 }, (_, i) => ['Member ' + i, 'Barre 57']), hash: 'h', fetchedAt: 1 });
+  await writeFile(path.join(root, '.cache/bookings.json'), bytes);
+  const app = express();
+  app.get('/:mode', async (req, res) => { await sendSnapshot(req, res, root, { key: 'bookings' }, { hash: 'h', fetchedAt: 1 }, { shared: req.params.mode === 'shared' }); });
+  const server = app.listen(0, '127.0.0.1');
+  await new Promise(resolve => server.once('listening', resolve));
+  const base = `http://127.0.0.1:${(server.address() as any).port}`;
+  try {
+    const shared = await fetch(base + '/shared', { headers: { 'Accept-Encoding': 'gzip' } });
+    assert.equal(shared.headers.get('content-encoding'), 'gzip');
+    assert.equal(shared.headers.get('vercel-cdn-cache-control'), 'max-age=31536000, immutable');
+    assert.doesNotMatch(shared.headers.get('cache-control')!, /private|no-cache|no-store/);
+    assert.equal(await shared.text(), bytes, 'decompresses to the exact snapshot');
+    const own = await fetch(base + '/own', { headers: { 'Accept-Encoding': 'gzip' } });
+    assert.equal(own.headers.get('cache-control'), 'private, no-cache');
+    assert.equal(own.headers.get('vercel-cdn-cache-control'), null);
+    assert.equal(own.headers.get('content-encoding'), null);
+    assert.equal(await own.text(), bytes);
+  } finally { await new Promise<void>(resolve => server.close(() => resolve())); await rm(root, { recursive: true, force: true }); }
+});

@@ -110,7 +110,15 @@ export async function ensureSource(key: string, force = false, latest = false): 
     publish();
     try {
       if (!force && !usable(key) && (await restore(key))) publish();
-      if (!force && !usable(key)) {
+      // With a Drive revision, the rows for it come from one CDN-cached URL and a copy that
+      // already matches needs no request at all, however old it is.
+      const revision = await currentRevision(key, force);
+      if (revision && usable(key) && health[key]?.revision === revision) {
+        sourceStates[key] = { state: "ready" };
+        publish();
+        return;
+      }
+      if (!revision && !force && !usable(key)) {
         const snapshot = await fetch(`/api/sheets/${key}?snapshot=true`);
         if (snapshot.ok) {
           await ingest(await snapshot.json());
@@ -120,7 +128,7 @@ export async function ensureSource(key: string, force = false, latest = false): 
       const stale =
         !health[key]?.fetchedAt ||
         Date.now() - health[key].fetchedAt! >= 15 * 60 * 1000;
-      if (!force && !latest && !stale && usable(key)) {
+      if (!revision && !force && !latest && !stale && usable(key)) {
         sourceStates[key] = { state: "ready" };
         publish();
         return;
@@ -128,10 +136,12 @@ export async function ensureSource(key: string, force = false, latest = false): 
       sourceStates[key] = { state: usable(key) ? "refreshing" : "loading" };
       publish();
       const data = await liveRead(async () => {
-        const response = await fetch(
-          `/api/sheets/${key}${force ? "?refresh=true" : ""}`,
-          { headers: usable(key) && health[key]?.hash ? { "If-None-Match": `"${health[key].hash}"` } : {} },
-        );
+        const response = revision
+          ? await fetch(`/api/sheets/${key}?rev=${encodeURIComponent(revision)}`)
+          : await fetch(
+              `/api/sheets/${key}${force ? "?refresh=true" : ""}`,
+              { headers: usable(key) && health[key]?.hash ? { "If-None-Match": `"${health[key].hash}"` } : {} },
+            );
         if (response.status === 304) return {
           status: "ok", hash: health[key].hash,
           fetchedAt: Number(response.headers.get("X-Snapshot-Fetched-At")) || health[key].fetchedAt,
@@ -187,12 +197,13 @@ let probedAt = 0;
  * since the rows we hold. It never blocks a render: callers fire it after the
  * data on screen is already painted.
  */
-export async function probeFreshness(minInterval = 10000) {
+export async function probeFreshness(minInterval = 10000, bypassCache = false) {
   if (probing) return probing;
   if (Date.now() - probedAt < minInterval) return lastFreshness;
   probing = (async () => {
     try {
-      const response = await fetch("/api/sheets/freshness");
+      // The CDN shares an answer for 30 seconds; a forced refresh must see an edit made now.
+      const response = await fetch(`/api/sheets/freshness${bypassCache ? `?at=${Date.now()}` : ""}`);
       if (!response.ok) return lastFreshness;
       lastFreshness = (await response.json()) as FreshnessReport;
       probedAt = Date.now();
@@ -204,6 +215,13 @@ export async function probeFreshness(minInterval = 10000) {
     }
   })();
   return probing;
+}
+
+/** The workbook's current Drive revision for a source, or null when it cannot be verified. */
+async function currentRevision(key: string, force: boolean) {
+  // A forced load reuses a check made moments ago (revalidate's own) instead of repeating it.
+  const report = await probeFreshness(force ? 5000 : 60000, force);
+  return report?.sources.find((s) => s.key === key)?.currentRevision ?? null;
 }
 
 /**
