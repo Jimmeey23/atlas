@@ -4,29 +4,32 @@ import type { ReportModel, SpeakerNotes } from "../../../report/model";
 import { deckPages, liveNotes, pageKey, sectionContext, SECTION_LABEL, type DeckSection, type DeckTab } from "../../../report/deck";
 import { generateSpeakerNotes, saveNotes } from "../../../report/storage";
 
+import { useSpeechFollow } from "./useSpeechFollow";
 const clock = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 const FONT_KEY = "atlas-speaker-font";
 
 /** The presenter's script for whatever page is on screen; follows navigation automatically. */
-export function SpeakerNotesView({ notes, fontScale, teleprompter }: { notes: SpeakerNotes; fontScale: number; teleprompter: boolean }) {
+export function SpeakerNotesView({ notes, fontScale, teleprompter, speed = 20, activeLine = -1, voice = false }: { notes: SpeakerNotes; fontScale: number; teleprompter: boolean; speed?: number; activeLine?: number; voice?: boolean }) {
   const body = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!teleprompter || !body.current) return;
+    if (!teleprompter || voice || !body.current) return;
     const el = body.current; el.scrollTop = 0;
-    const id = setInterval(() => { el.scrollTop += 1; }, 60);
+    const id = setInterval(() => { el.scrollTop += speed / 20; }, 50);
     return () => clearInterval(id);
-  }, [teleprompter, notes]);
-  return <div className="deck-notes-body" ref={body} style={{ "--notes-scale": fontScale } as React.CSSProperties}>
-    <p className="deck-notes-opener"><Quote size={14}/>{notes.opener}</p>
-    {!!notes.points.length && <section><h4><ScrollText size={13}/>Talking points</h4><ol className="deck-notes-points">{notes.points.map((p, i) => <li key={i}><span>{i + 1}</span>{p}</li>)}</ol></section>}
-    {!!notes.numbers.length && <section><h4><Hash size={13}/>Numbers to say aloud</h4><ul className="deck-notes-numbers">{notes.numbers.map((n, i) => <li key={i}>{n}</li>)}</ul></section>}
+  }, [teleprompter, notes, speed, voice]);
+  useEffect(() => { if (voice && activeLine >= 0) body.current?.querySelector(`[data-script-line="${activeLine}"]`)?.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); }, [activeLine, voice]);
+  return <div className="deck-notes-body" data-prompter={teleprompter} ref={body} style={{ "--notes-scale": fontScale } as React.CSSProperties}>
+    <p className="deck-notes-opener" data-script-line={0} data-active={activeLine === 0}><Quote size={14}/>{notes.opener}</p>
+    {!!notes.points.length && <section><h4><ScrollText size={13}/>Talking points</h4><ol className="deck-notes-points">{notes.points.map((p, i) => <li key={i} data-script-line={i + 1} data-active={activeLine === i + 1}><span>{i + 1}</span>{p}</li>)}</ol></section>}
+    {!!notes.numbers.length && <section><h4><Hash size={13}/>Numbers to say aloud</h4><ul className="deck-notes-numbers">{notes.numbers.map((n, i) => <li key={i} data-script-line={notes.points.length + i + 1} data-active={activeLine === notes.points.length + i + 1}>{n}</li>)}</ul></section>}
     {!!notes.questions.length && <section><h4><MessageCircleQuestion size={13}/>Likely questions</h4>{notes.questions.map((q, i) => <details key={i} className="deck-notes-qa"><summary><ChevronRight size={13}/>{q.q}</summary><p>{q.a}</p></details>)}</section>}
-    {notes.transition && <p className="deck-notes-transition"><ArrowRight size={13}/>{notes.transition}</p>}
+    {notes.transition && <p className="deck-notes-transition" data-script-line={notes.points.length + notes.numbers.length + 1} data-active={activeLine === notes.points.length + notes.numbers.length + 1}><ArrowRight size={13}/>{notes.transition}</p>}
   </div>;
 }
 
-export function SpeakerDrawer({ model, tabs, tab, section, open, onClose, onNotes }: {
+export function SpeakerDrawer({ model, tabs, tab, section, open, onClose, onNotes, onNavigate }: {
   model: ReportModel; tabs: DeckTab[]; tab: string; section: DeckSection; open: boolean; onClose: () => void;
+  onNavigate: (page: { tab: string; section: DeckSection }) => void;
   onNotes: (patch: Pick<ReportModel, "presenterNotes" | "speakerNotes">) => void;
 }) {
   const key = pageKey(tab, section);
@@ -37,6 +40,10 @@ export function SpeakerDrawer({ model, tabs, tab, section, open, onClose, onNote
   const [view, setView] = useState<"script" | "mine">("script");
   const [fontScale, setFontScale] = useState(() => Number(localStorage.getItem(FONT_KEY)) || 1);
   const [teleprompter, setTeleprompter] = useState(false);
+  const [speed, setSpeed] = useState(20), [autoFollow, setAutoFollow] = useState(true);
+  const candidates = useMemo(() => deckPages(tabs).map(p => { const script = liveNotes(model, tabs, p.tab, p.section); return { key: pageKey(p.tab, p.section), text: `${tabs.find(t => t.id === p.tab)?.label} ${SECTION_LABEL[p.section]} ${script.opener} ${script.points.join(' ')} ${script.numbers.join(' ')}` }; }), [model, tabs]);
+  const speech = useSpeechFollow({ candidates, current: key, lines: [notes.opener, ...notes.points, ...notes.numbers, notes.transition], enabled: open,
+    onMatch: matched => { if (!autoFollow) return; const page = pages.find(p => pageKey(p.tab, p.section) === matched); if (page) { onNavigate(page); setView('script'); } } });
   const [busy, setBusy] = useState(false), [error, setError] = useState(""), [saved, setSaved] = useState("");
   const [mine, setMine] = useState(model.presenterNotes?.[key] ?? "");
   // Timer: whole session plus time spent on this page, against a target length.
@@ -47,7 +54,13 @@ export function SpeakerDrawer({ model, tabs, tab, section, open, onClose, onNote
   // A popped-out notes window follows this page.
   const channel = useRef<BroadcastChannel | null>(null);
   useEffect(() => { if (!model.id || typeof BroadcastChannel === "undefined") return; channel.current = new BroadcastChannel(`atlas-deck:${model.id}`); return () => channel.current?.close(); }, [model.id]);
-  useEffect(() => { channel.current?.postMessage({ type: "page", tab, section, notes, elapsed }); }, [tab, section, notes, elapsed]);
+  useEffect(() => {
+    const broadcast = () => channel.current?.postMessage({ type: "page", tab, section, notes, elapsed });
+    broadcast();
+    const connection = channel.current;
+    if (connection) connection.onmessage = event => { if (event.data?.type === "request-page") broadcast(); };
+    return () => { if (connection) connection.onmessage = null; };
+  }, [tab, section, notes, elapsed]);
   // Presenter notes save themselves a moment after typing stops.
   const timer = useRef<ReturnType<typeof setTimeout>>();
   function typeMine(text: string) {
@@ -99,8 +112,15 @@ export function SpeakerDrawer({ model, tabs, tab, section, open, onClose, onNote
       <button className="button" aria-pressed={teleprompter} onClick={() => setTeleprompter(t => !t)}>Teleprompter</button>
       {model.id && <button className="icon-button" aria-label="Pop out notes window" title="Pop out notes to another screen" onClick={() => window.open(`/report?id=${model.id}&notes=1`, `atlas-notes-${model.id}`, "width=460,height=760")}><ExternalLink size={14}/></button>}
     </div>
+    <section className="deck-listener" aria-label="Voice-follow listener">
+      <div><button className="button" disabled={!speech.supported} aria-pressed={speech.listening} onClick={speech.toggle}><Mic size={14}/>{speech.listening ? 'Stop listening' : 'Start listener'}</button><span role="status">{speech.supported ? speech.status : 'Speech capture unavailable in this browser'}</span></div>
+      <label><input type="checkbox" checked={autoFollow} onChange={e => setAutoFollow(e.target.checked)}/>Follow spoken section automatically</label>
+      <label>Scroll speed <input type="range" aria-label="Teleprompter speed" min={5} max={60} value={speed} onChange={e => setSpeed(Number(e.target.value))}/>{speed}px/s</label>
+      <small>{speech.listening ? 'Script follows matching speech; automatic scrolling pauses.' : 'Start the microphone to follow your speech. Browser recognition may use its speech service. Transcript stays in this window.'}</small>
+      {(speech.transcript || speech.interim) && <details className="deck-transcript"><summary>Captured speaker voice</summary><p>{speech.transcript}<em>{speech.interim}</em></p><button className="button" disabled={!speech.sectionTranscript} onClick={() => { typeMine([mine, `Speaker voice · ${tabLabel} / ${SECTION_LABEL[section]}\n${speech.sectionTranscript}`].filter(Boolean).join("\n\n")); setView("mine"); }}>Save this section’s voice to my notes</button><button className="button" onClick={speech.clear}>Clear transcript</button></details>}
+    </section>
     {view === "script" ? <>
-      <SpeakerNotesView notes={notes} fontScale={fontScale} teleprompter={teleprompter} />
+      <SpeakerNotesView notes={notes} fontScale={fontScale} teleprompter={teleprompter} speed={speed} voice={speech.listening} activeLine={speech.activeLine} />
       <div className="deck-drawer-ai">
         <button className="button" disabled={busy} onClick={() => void writeWithAI()}>{busy ? <Loader2 size={14} className="rb2-spin"/> : <Sparkles size={14}/>}{model.speakerNotes?.[key] ? "Rewrite talk track" : "Write talk track with AI"}</button>
         {model.speakerNotes?.[key] && <button className="button" onClick={resetAI}>Use report pointers</button>}
@@ -122,6 +142,7 @@ export function PoppedNotes({ model }: { model: ReportModel }) {
     if (!model.id || typeof BroadcastChannel === "undefined") return;
     const channel = new BroadcastChannel(`atlas-deck:${model.id}`);
     channel.onmessage = e => { if (e.data?.type === "page") setState(e.data); };
+    channel.postMessage({ type: "request-page" });
     return () => channel.close();
   }, [model.id]);
   return <div className="deck-popped">

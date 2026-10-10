@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TrendingUp, TriangleAlert, GitBranch, Lightbulb, Radar, ArrowRightCircle, Crosshair, IndianRupee, ShieldCheck, Users, CalendarClock, ChevronRight, ChartNoAxesColumn, Eye, Activity } from "lucide-react";
+import { EvidenceBlock } from "../ReportEvidence";
 import { InsightDrilldown } from "../InsightDrilldown";
-import { FocusBars, FocusTrend, lensLabel, lensOf, metricSource } from "../Insight";
+import { FocusTrend, lensLabel, lensOf, metricSource } from "../Insight";
 import { chapters } from "../../../report/chapters";
 import { definition, reportFmt as fmt, reportDelta as delta } from "../../../report/definitions";
 import type { ChapterData, InsightCard, InsightLens, ReportModel } from "../../../report/model";
@@ -15,12 +16,17 @@ const tone = (id: string, value: unknown, prior: unknown) => value == null || pr
  * (cause → where → worth), the move, and the proof beside it.
  */
 export function DeckInsightCard({ card, model, chapterId, index, plan = false, confidence = true }: { card: InsightCard; model: ReportModel; chapterId: string; index: number; plan?: boolean; confidence?: boolean }) {
+  const claim = useRef<HTMLDivElement>(null);
+  const [claimHeight, setClaimHeight] = useState(0);
+  useEffect(() => { const el = claim.current; if (!el) return; const observer = new ResizeObserver(([entry]) => setClaimHeight(entry.contentRect.height)); observer.observe(el); return () => observer.disconnect(); }, []);
   const [chart, setChart] = useState(false);
   const lens = lensOf(card);
   const Icon = LENS_ICON[lens];
   const table = model.chapters[chapterId]?.groups.find(g => (g.id ?? g.field) === card.focus);
   const cited = (card.metrics?.length ? card.metrics : [table?.compare, ...(chapters.find(c => c.id === chapterId)?.metrics ?? [])].filter((id): id is string => !!id).slice(0, 2))
     .map(id => ({ id, data: metricSource(model, chapterId, id) })).filter((m): m is { id: string; data: ChapterData } => !!m.data && m.data.total[m.id] != null).slice(0, 3);
+  const fullVisual = claimHeight < 520 || !!(table && table.columns.length > 4);
+  const visual = chart && <div className="deck-proof-visual" data-full={fullVisual}>{table ? <EvidenceBlock table={table} full initialView="chart"/> : cited[0] && <FocusTrend id={cited[0].id} history={cited[0].data.history.slice(-14)} />}</div>;
   const cause = card.driver || card.reasoning;
   const chain = [
     cause && { key: "cause", icon: GitBranch, label: plan ? "Why this move" : "Cause", text: plan && card.recommendation ? card.recommendation : cause },
@@ -37,8 +43,8 @@ export function DeckInsightCard({ card, model, chapterId, index, plan = false, c
       <span className="deck-insight-no">{String(index + 1).padStart(2, "0")}</span>
     </header>
     <div className="deck-insight-body">
-      <div className="deck-insight-claim">
-        <div className="deck-insight-headline"><InsightDrilldown model={model} chapterId={chapterId} headline={card.headline} metrics={cited} table={table}>{card.headline}</InsightDrilldown></div>
+      <div className="deck-insight-claim"><div ref={claim} className="deck-claim-content">
+        <div className="deck-insight-headline"><InsightDrilldown modal model={model} chapterId={chapterId} headline={card.headline} metrics={cited} table={table}>{card.headline}</InsightDrilldown></div>
         {card.meaning && <p className="deck-insight-meaning">{card.meaning}</p>}
         {!!chain.length && <ol className="deck-chain">{chain.map((step, i) => <li key={step.key} data-step={step.key}>
           <span className="deck-chain-label"><step.icon size={12}/>{step.label}</span><p>{step.text}</p>
@@ -54,17 +60,19 @@ export function DeckInsightCard({ card, model, chapterId, index, plan = false, c
           {card.offset && <span title={card.offset}><ShieldCheck size={12}/>Held up: {card.offset}</span>}
           {card.watch && <span title={card.watch}><Eye size={12}/>Watch: {card.watch}</span>}
         </footer>}
-      </div>
+      </div></div>
       {(cited.length > 0 || table || card.evidence) && <aside className="deck-insight-proof" aria-label="Evidence">
-        <span className="deck-eyebrow">Proof</span>
+        <span className="deck-eyebrow"><ShieldCheck size={13}/>Evidence & comparisons</span><small className="deck-proof-source">{model.scope.studio} · {model.scope.month} · saved report</small>
         {card.evidence && <p className="deck-insight-evidence">{card.evidence}</p>}
         {cited.map(({ id, data }) => <div className="deck-proof-metric" key={id} data-tone={tone(id, data.total[id], data.prior[id])}>
           <span>{definition(id)?.label ?? id}</span><strong>{fmt(id, data.total[id])}</strong>
-          <em>MoM {delta(id, data.total[id], data.prior[id])}</em><em>YoY {delta(id, data.total[id], data.priorYear[id])}</em>
+          <small>Previous month {fmt(id, data.prior[id])} · Last year {fmt(id, data.priorYear[id])}</small><em>MoM {delta(id, data.total[id], data.prior[id])}</em><em>YoY {delta(id, data.total[id], data.priorYear[id])}</em>
         </div>)}
         {(table || cited[0]) && <button type="button" className="deck-proof-toggle" aria-expanded={chart} onClick={() => setChart(c => !c)}><ChartNoAxesColumn size={13}/>{chart ? "Hide chart" : table ? `Show ${table.title.toLowerCase()}` : "Show trend"}</button>}
-        {chart && (table ? <FocusBars table={table} highlight={card.highlight} metric={card.metrics?.find(id => table.columns.includes(id))} /> : cited[0] && <FocusTrend id={cited[0].id} history={cited[0].data.history.slice(-14)} />)}
+        {!!cited.length && <details className="deck-proof-definitions"><summary>Definitions & source coverage</summary>{cited.map(({ id, data }) => <p key={id}><b>{definition(id)?.label}</b> · {definition(id)?.description}<br/>{data.n.toLocaleString('en-IN')} contributing records · {data.history.length} months. {data.notes?.join(' ')}</p>)}</details>}
+        {!fullVisual && visual}
       </aside>}
+      {fullVisual && visual}
     </div>
   </article>;
 }

@@ -1,5 +1,5 @@
 import { useId, useRef, useState } from 'react';
-import { ChevronDown, Database, ArrowUpRight } from 'lucide-react';
+import { ChevronDown, Database, ArrowUpRight, X } from 'lucide-react';
 import type { ChapterData, GroupTable, ReportModel } from '../../report/model';
 import { reportAnalyticsLink } from '../../report/drilldown';
 import { chapters } from '../../report/chapters';
@@ -7,10 +7,13 @@ import { definition, reportFmt as fmt, reportDelta as delta } from '../../report
 import { MonthlyHistory } from './kit';
 import { EvidenceBlock } from './ReportEvidence';
 
-export function InsightDrilldown({ model, chapterId, headline, metrics, table, children }: {
+export function InsightDrilldown({ model, chapterId, headline, metrics, table, children, modal = false }: {
   model: ReportModel; chapterId: string; headline: string;
-  metrics: {id:string;data:ChapterData}[]; table?: GroupTable; children: React.ReactNode;
+  metrics: {id:string;data:ChapterData}[]; table?: GroupTable; modal?: boolean; children: React.ReactNode;
 }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const close = () => { dialog.current?.close(); setExpanded(false); trigger.current?.focus(); };
   const detail = useRef<HTMLDetailsElement>(null);
   const detailId = useId();
   const [expanded, setExpanded] = useState(false);
@@ -20,9 +23,7 @@ export function InsightDrilldown({ model, chapterId, headline, metrics, table, c
   const unique = [...new Set(breakdowns)];
   const liveLink = reportAnalyticsLink(model, chapterId, location.origin);
   const label = (id:string) => definition(id)?.label ?? id;
-  return <>
-    <h3><button type="button" className="r-insight-title" data-insight-toggle aria-expanded={expanded} aria-controls={detailId} onClick={() => { if (detail.current) { detail.current.open = !detail.current.open; if (detail.current.open) detail.current.scrollIntoView({block:'nearest'}); } }} aria-label={`Explore data: ${headline}`}>{children}<ArrowUpRight size={16} aria-hidden="true"/></button></h3>
-    <details id={detailId} className="r-insight-drilldown" ref={detail} onToggle={e => setExpanded(e.currentTarget.open)}>
+  const detailContent = <details id={detailId} className="r-insight-drilldown" open={modal ? true : undefined} ref={detail} onToggle={e => { if (!modal) setExpanded(e.currentTarget.open); }}>
       <summary><Database size={15}/><span>Explore underlying data & analytics<small>{metrics.length} measures · {unique.length} stored breakdowns</small></span><ChevronDown size={16}/></summary>
       <div className="r-drilldown-body">
         <p className="r-note">{model.scope.studio} · {model.scope.month} · Frozen at {new Date(model.builtAt).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})}. These are the saved report’s aggregated figures. Individual source records and omitted ranking rows are not stored in this snapshot.</p>
@@ -34,6 +35,9 @@ export function InsightDrilldown({ model, chapterId, headline, metrics, table, c
         {sources.map(data => <div key={data.id} className="r-drilldown-source"><b>{chapters.find(c => c.id === data.id)?.source || data.id} · {data.n.toLocaleString('en-IN')} contributing records</b>{data.notes?.map((note,i) => <p key={i}>{note}</p>)}</div>)}
         <p className="r-note">Changes use the previous month and the same month last year. Missing data remains unavailable. Ranking totals may include groups excluded from the displayed ranking. A correlation does not establish a cause.</p>
       </div>
-    </details>
+    </details>;
+  return <>
+    <h3><button ref={trigger} type="button" className="r-insight-title" data-insight-toggle aria-expanded={expanded} aria-controls={detailId} onClick={() => { if (modal) { dialog.current?.showModal(); setExpanded(true); return; } if (detail.current) { detail.current.open = !detail.current.open; if (detail.current.open) detail.current.scrollIntoView({block:'nearest'}); } }} aria-label={`Explore data: ${headline}`}>{children}<ArrowUpRight size={16} aria-hidden="true"/></button></h3>
+    {modal ? <dialog ref={dialog} className="deck-record-dialog" onCancel={close} aria-label={`Evidence: ${headline}`} data-export="omit"><header><h2>{headline}</h2><button className="icon-button" aria-label="Close insight evidence" onClick={close}><X size={18}/></button></header>{detailContent}</dialog> : detailContent}
   </>;
 }

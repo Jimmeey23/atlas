@@ -1,3 +1,4 @@
+import { CompleteMetricGrid } from "./CompleteMetricGrid";
 import { ArrowDownRight, ArrowUpRight, Minus, TriangleAlert, Lightbulb, Target, CheckCircle2, Info, TrendingUp, TrendingDown, Sparkles } from "lucide-react";
 import type { ReportComponentSpec } from "../../../report/model";
 import { axisStyle, chartPalette, tooltipStyle, useChart } from "./useChart";
@@ -34,13 +35,14 @@ function SpecChart({ chart }: { chart: NonNullable<ReportComponentSpec["chart"]>
 export function ComponentRenderer({ spec }: { spec: ReportComponentSpec }) {
   return <section className="deck-spec" data-kind={spec.kind} data-tone={spec.tone}>
     <header className="deck-spec-head"><span className="deck-eyebrow"><Sparkles size={11}/>AI redesigned</span><h3>{spec.title}</h3>{spec.subtitle && <p>{spec.subtitle}</p>}</header>
-    {spec.kind === "metrics" && <div className="deck-metric-grid">{spec.items?.map((item, i) => {
+    {spec.kind === "metrics" && <CompleteMetricGrid items={(spec.items ?? []).map((_, i) => String(i))} render={index => {
+      const i = Number(index), item = spec.items![i];
       const Arrow = item.tone === "up" ? ArrowUpRight : item.tone === "down" ? ArrowDownRight : Minus;
       return <article className="metric-card" key={i}><div className="metric-label"><span>{item.label}</span></div>
         <div className="metric-reading"><span className="metric-value number">{item.value}</span></div>
         {item.delta && <div className={`metric-delta ${item.tone === "up" ? "positive" : item.tone === "down" ? "negative" : "muted"}`}><Arrow size={12}/>{item.delta}</div>}
         {item.note && <div className="metric-footer"><span>{item.note}</span></div>}</article>;
-    })}</div>}
+    }}/>}
     {spec.kind === "chart" && spec.chart && spec.chart.categories.length > 0 && <div className="chart-surface"><SpecChart chart={spec.chart} /></div>}
     {spec.kind === "table" && <div className="table-scroll deck-spec-table"><table><thead><tr>{spec.columns?.map((c, i) => <th key={i}>{c}</th>)}</tr></thead>
       <tbody>{spec.rows?.map((row, i) => <tr key={i}>{row.map((cell, j) => j ? <td key={j}>{cell}</td> : <th scope="row" key={j}>{cell}</th>)}</tr>)}</tbody></table></div>}

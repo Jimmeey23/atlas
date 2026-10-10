@@ -24,6 +24,9 @@ import { VerdictPanel } from "./Verdict";
 import { InsightsSection } from "./Insights";
 import { DeckRegister, ReportMoMTable, TrendChartPanel } from "./ReportTrends";
 import { DataExplorer } from "./DataExplorer";
+import { AdaptiveGrid } from "../AdaptiveGrid";
+import { CompleteMetricGrid } from "./CompleteMetricGrid";
+import { RecordDrilldownProvider } from "./RecordDrilldown";
 import { SpeakerDrawer } from "./SpeakerDrawer";
 import "../../../design/report-deck.css";
 
@@ -149,8 +152,8 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
     if (s === "summary") return <>
       {!!ids.length && data && <Slot id={slot("metrics")} tab={tab.id} section={s} kind="metrics" describe="key metric cards">
         <div className="deck-metrics-head"><span className="deck-eyebrow"><Gauge size={12}/>Key measures</span><small>Click a card to flip it to 14 months of history · click again to flip back</small></div>
-        <div className="deck-metric-grid">{ids.slice(0, 8).map(id => <FlipMetricCard key={id} id={id} data={data} target={model.customization?.targets?.[id]}
-          flipped={flipped === id} onToggle={() => setFlipped(current => current === id ? "" : id)} />)}</div>
+        <CompleteMetricGrid items={ids} render={id => <FlipMetricCard key={id} id={id} data={data} target={model.customization?.targets?.[id]}
+          flipped={flipped === id} onToggle={() => setFlipped(current => current === id ? "" : id)} />}/>
       </Slot>}
       <Slot id={slot("verdict")} tab={tab.id} section={s} kind="verdict" describe="chapter verdict"><VerdictPanel model={model} tab={tab.id} ids={ids} /></Slot>
     </>;
@@ -165,17 +168,17 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
     }
     if (s === "evidence" && data) {
       const ranking = tab.id === "instructors" ? data.groups.filter(g => g.id?.startsWith("trainer-")) : [];
-      return <div className="deck-evidence">
+      return <AdaptiveGrid className="deck-evidence">
         {data.groups.filter(g => !ranking.includes(g)).map((g, i) => <Slot key={`${g.id ?? g.field}-${i}`} id={slot(`group-${g.id ?? g.field}`)} tab={tab.id} section={s} kind="evidence" describe={`${g.title} breakdown`}>
           <EvidenceBlock table={g} showCharts={options.showCharts} initialView={options.evidenceView === "auto" ? undefined : options.evidenceView} /></Slot>)}
         {!!ranking.length && <Slot id={slot("ranking")} tab={tab.id} section={s} kind="evidence" describe="instructor ranking"><CriterionEvidence tables={ranking} showCharts={options.showCharts} /></Slot>}
-      </div>;
+      </AdaptiveGrid>;
     }
     if (s === "data" && tab.spec) return <DeckRegister index="Data" title="Explore underlying data" subtitle="Live source records for this studio and month"><DataExplorer model={model} spec={tab.spec} /></DeckRegister>;
     return <p className="empty-state">Nothing recorded for this page.</p>;
   }
 
-  return <EditContext.Provider value={edit}>
+  return <EditContext.Provider value={edit}><RecordDrilldownProvider model={model} chapterId={tab.id}>
     <div className="report-page deck" data-report-id={model.id || ""} data-drawer={drawer} data-editing={edit.editing} data-full={full}>
       <header className="deck-nav" data-export="omit">
         <div className="deck-nav-top">
@@ -221,7 +224,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
             <button className="button" disabled={index >= pages.length - 1} onClick={() => go(1)}>Next<ChevronRight size={15}/></button>
           </footer>
         </main>
-        <SpeakerDrawer model={model} tabs={tabs} tab={tab.id} section={page.section} open={drawer} onClose={() => setDrawer(false)}
+        <SpeakerDrawer model={model} tabs={tabs} tab={tab.id} section={page.section} open={drawer} onNavigate={setPage} onClose={() => setDrawer(false)}
           onNotes={patch => { setModel(m => ({ ...m, ...patch })); setSaved(s => ({ ...s, ...patch })); }} />
       </div>
       <FloatingReviewTools><PresentationTools standalone beforeHost={async () => { if (!model.id) throw new Error(storageError || "Save the report before hosting a shared review."); }} />
@@ -230,5 +233,5 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
       {exportMounted && <div className="deck-export-source" aria-hidden="true"><ReportDocument ref={exportRef} model={model} theme={model.customization?.theme || "light"} /></div>}
       {busy === "export" && <div className="deck-toast" role="status"><Loader2 size={14} className="rb2-spin"/>Preparing export…</div>}
     </div>
-  </EditContext.Provider>;
+  </RecordDrilldownProvider></EditContext.Provider>;
 }

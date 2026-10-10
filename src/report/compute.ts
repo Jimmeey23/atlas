@@ -25,7 +25,7 @@ export function scopeFilters(scope: ReportScope, month = scope.month): Filters {
 const usableMetrics = (ids: string[]) => ids.filter((id) => definition(id));
 const tracked = new Set(['location','trainer','format','source','category','day','time','member','month','status','product','associate']);
 const carries = (source: string, field: string) => !tracked.has(field) || !fieldPresence[source] || fieldPresence[source].has(field);
-const factsFor = (spec: ChapterSpec, filters: Filters) => spec.renewal
+export const factsFor = (spec: ChapterSpec, filters: Filters) => spec.renewal
   ? `(${renewalFactsSQL(where(filters, 'lapsed', []), today())})`
   : metricFacts(filters, spec.source, [], spec.website ? websiteScope(where(filters, spec.source, [])) : undefined);
 const measuresFor = (spec: ChapterSpec, ids: string[], filters: Filters) => spec.renewal ? renewalMeasuresSQL(ids) : metricSQL(ids, context(filters, []));

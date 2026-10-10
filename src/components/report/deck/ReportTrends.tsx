@@ -9,6 +9,7 @@ import { monthLabel } from "../../../report/period";
 import type { Row } from "../../../data/duckdb";
 import { axisStyle, chartPalette, tooltipStyle, useChart } from "./useChart";
 
+import { useRecordDrilldown } from "./RecordDrilldown";
 const label = (id: string) => definition(id)?.label ?? id;
 const shortMonth = (key: string) => new Date(`${key}-01T00:00:00Z`).toLocaleDateString("en-IN", { month: "short", year: "2-digit", timeZone: "UTC" });
 const shift = (key: string, months: number) => { const d = new Date(`${key}-01T00:00:00Z`); return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - months, 1)).toISOString().slice(0, 7); };
@@ -82,6 +83,7 @@ export function TrendChartPanel({ history, ids, selected, onSelect, title }: { h
 
 /** The dashboard's month-by-month table, read from the report's frozen 14-month history. */
 export function ReportMoMTable({ history, ids, selected, onSelect, title }: { history: Row[]; ids: string[]; selected: string; onSelect: (month: string) => void; title: string }) {
+  const drill = useRecordDrilldown();
   const [controls, setControls] = useState<MonthlyTableState>({ periods: 14, newest: true, dense: true, mode: "absolute" });
   const [search, setSearch] = useState(""), [measure, setMeasure] = useState("all"), [baseline, setBaseline] = useState(false);
   const all = useMemo(() => [...history].sort((a, b) => String(a.month).localeCompare(String(b.month))), [history]);
@@ -117,7 +119,7 @@ export function ReportMoMTable({ history, ids, selected, onSelect, title }: { hi
             const movement = value == null || prev == null ? null : Number(value) - Number(prev);
             const tone = movement == null || movement === 0 ? "neutral" : (movement > 0) === (definition(id)?.higherIsBetter ?? true) ? "positive" : "negative";
             return <td key={m} className={[m === latest && "latest-month", m === selected && "deck-selected-month"].filter(Boolean).join(" ") || undefined}>
-              <button className={`monthly-value ${["change", "year"].includes(controls.mode) ? tone : ""}`} title={`${monthLabel(m)}: ${fmt(id, value)} · baseline ${fmt(id, prev)}. Click to pin this month on the chart.`} onClick={() => onSelect(m)}>
+              <button className={`monthly-value ${["change", "year"].includes(controls.mode) ? tone : ""}`} title={`${monthLabel(m)}: ${fmt(id, value)} · baseline ${fmt(id, prev)}. Click to explore item-level records and pin the chart.`} onClick={() => { onSelect(m); drill?.({ month: m, metric: id }); }}>
                 {cell(id, m)}{baseline && <small>{controls.mode === "year" ? "Last year" : "Prior month"} {fmt(id, prev)}</small>}
               </button></td>;
           })}
@@ -125,6 +127,6 @@ export function ReportMoMTable({ history, ids, selected, onSelect, title }: { hi
       </table>
     </div>
     {!visible.length && <p className="empty-state">No measures match this selection.</p>}
-    <p className="ranking-foot"><CalendarRange size={12}/> Frozen at report build. Rates use percentage points; Index 100 uses the first available month. Click a value to pin the month on the chart.</p>
+    <p className="ranking-foot"><CalendarRange size={12}/> Frozen at report build. Rates use percentage points; Index 100 uses the first available month. Click a value to explore item-level records and pin the month on the chart.</p>
   </>;
 }

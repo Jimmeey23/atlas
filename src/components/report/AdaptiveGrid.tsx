@@ -13,7 +13,7 @@ export function AdaptiveGrid({children,className='',enabled=true}:{children:Reac
         if(!enabled || width<700)return;
         let pending:HTMLElement|undefined;
         for(const panel of panels){
-          if(panel.dataset.dense==='true' || panel.dataset.measuredFull){if(pending){pending.dataset.measuredFull='true';pending=undefined;}continue;}
+          if(panel.dataset.dense==='true' || panel.querySelector('.r-span-full') || panel.dataset.measuredFull){if(pending){pending.dataset.measuredFull='true';pending=undefined;}continue;}
           if(!pending){pending=panel;continue;}
           const ah=pending.getBoundingClientRect().height,bh=panel.getBoundingClientRect().height;
           if(Math.max(ah,bh)>440 || Math.abs(ah-bh)>90){pending.dataset.measuredFull='true';panel.dataset.measuredFull='true';}
@@ -22,8 +22,10 @@ export function AdaptiveGrid({children,className='',enabled=true}:{children:Reac
         if(pending)pending.dataset.measuredFull='true';
       });
     };
+    const reset=()=>{Array.from(root.children).forEach(el=>delete (el as HTMLElement).dataset.measuredFull);measure();};
+    root.addEventListener('toggle',reset,true);root.addEventListener('click',reset);
     const observer=new ResizeObserver(measure);observer.observe(root);Array.from(root.children).forEach(el=>observer.observe(el));measure();
-    return()=>{observer.disconnect();cancelAnimationFrame(frame);};
+    return()=>{root.removeEventListener('toggle',reset,true);root.removeEventListener('click',reset);observer.disconnect();cancelAnimationFrame(frame);};
   },[children,enabled]);
   return <div ref={ref} className={`r-adaptive-grid ${className}`} data-adaptive={enabled}>{children}</div>;
 }

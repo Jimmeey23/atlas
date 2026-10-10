@@ -1,6 +1,8 @@
 import {ChartNoAxesCombined,CalendarDays,CalendarRange,Lightbulb,GitCompareArrows} from "lucide-react";
 import {AdaptiveGrid} from "./AdaptiveGrid";
 import { DropdownField } from "../ui/DropdownField";
+import { useRecordDrilldown } from "./deck/RecordDrilldown";
+import { CompleteMetricGrid } from "./deck/CompleteMetricGrid";
 import { useState } from "react";
 import { exportCSV } from "../exports";
 import { InstructorName } from "../InstructorAvatar";
@@ -57,11 +59,10 @@ export function MetricCards({
   priorYear: Row;
   history?: Row[]; definitions?: boolean; data?: ChapterData;
 }) {
-  const shown = ids.filter((id) => definition(id) && total[id] != null).slice(0, 5);
+  const shown = ids.filter((id) => definition(id) && total[id] != null).slice(0, 8);
   if (!shown.length) return null;
   return (
-    <div className="r-cards" style={{ "--r-card-count": shown.length } as React.CSSProperties}>
-      {shown.map((id) => (
+    <CompleteMetricGrid className="r-cards" items={shown} render={id => (
         <article className={`r-card ${tone(id,total[id],prior[id])}`} key={id}>
           <div className="r-card-label">{label(id)}{currentSnapshotMetrics.has(id) && <small className="r-comparison">Current snapshot at report build</small>}</div>
           <div className="r-card-value">{fmt(id, total[id])}</div>
@@ -84,12 +85,12 @@ export function MetricCards({
             <p className="r-card-def" title={metricNotes[id].definition}>{definition(id)?.description}</p>
           )}
         </article>
-      ))}
-    </div>
+      )}/>
   );
 }
 
 export function GroupTableView({ table }: { table: GroupTable }) {
+  const drill = useRecordDrilldown();
   return (
     <div className="r-table-wrap">
       <div className="r-table-head">
@@ -110,7 +111,7 @@ export function GroupTableView({ table }: { table: GroupTable }) {
         <tbody>
           {table.rows.map((row, index) => (
             <tr key={String(row.g) + index}>
-              <td>{row.rank_lane && <small className="r-rank">{String(row.rank_lane)}</small>}{table.field === "trainer" ? <InstructorName name={String(row.g ?? "Unspecified")}/> : String(row.g ?? "Unspecified")}</td>
+              <td>{row.rank_lane && <small className="r-rank">{String(row.rank_lane)}</small>}{drill ? <button className="deck-group-drill" onClick={() => drill({ table, group: String(row.g ?? "Unspecified") })}>{table.field === "trainer" ? <InstructorName name={String(row.g ?? "Unspecified")}/> : String(row.g ?? "Unspecified")}<span>Explore items ↗</span></button> : table.field === "trainer" ? <InstructorName name={String(row.g ?? "Unspecified")}/> : String(row.g ?? "Unspecified")}</td>
               {table.columns.map((id) => (
                 <td
                   className="r-num"
@@ -209,6 +210,7 @@ function Sparkline({id,history}:{id:string;history:Row[]}) {
 }
 
 export function MonthlyHistory({data,ids,title,initialPeriods=12}:{data:ChapterData;ids:string[];title:string;initialPeriods?:number}) {
+  const drill = useRecordDrilldown();
   const [periods,setPeriods]=useState(initialPeriods),[mode,setMode]=useState('values'),[metric,setMetric]=useState('all'),[newest,setNewest]=useState(true);
   const history=[...data.history].sort((a,b)=>String(a.month).localeCompare(String(b.month)));
   const visible=history.slice(-periods).map(row=>String(row.month));
@@ -222,7 +224,7 @@ export function MonthlyHistory({data,ids,title,initialPeriods=12}:{data:ChapterD
     <label>Order<DropdownField data-history-control="order" aria-label={`${title} monthly order`} value={newest?'newest':'oldest'} onChange={e=>setNewest(e.target.value==='newest')}><option value="newest">Newest first</option><option value="oldest">Oldest first</option></DropdownField></label>
     <button data-history-export className="r-pill" onClick={()=>exportCSV('report-monthly-'+mode,ordered.filter(row=>visible.includes(String(row.month))).map(row=>({Month:row.month,...Object.fromEntries(ids.filter(id=>metric==='all'||id===metric).map(id=>[label(id),mode==='values'?fmt(id,row[id]):delta(id,row[id],previous(String(row.month),mode==='mom'?1:12)?.[id])]))})))}>CSV</button>
   </div>
-  <div className="r-table-wrap"><table className="r-table r-history-table"><thead><tr><th>Month</th>{ids.map(id=><th data-history-metric={id} hidden={metric!=='all'&&metric!==id} key={id}>{label(id)}</th>)}</tr></thead><tbody>{ordered.map(row=><tr data-history-month={String(row.month)} hidden={!visible.includes(String(row.month))} key={String(row.month)}><th scope="row">{String(row.month)}</th>{ids.map(id=><td data-history-metric={id} hidden={metric!=='all'&&metric!==id} key={id}><span data-history-value="values" hidden={mode!=='values'}>{fmt(id,row[id])}</span><span data-history-value="mom" hidden={mode!=='mom'}>{delta(id,row[id],previous(String(row.month),1)?.[id])}</span><span data-history-value="yoy" hidden={mode!=='yoy'}>{delta(id,row[id],previous(String(row.month),12)?.[id])}</span></td>)}</tr>)}</tbody></table></div><p className="r-history-note">Missing values and comparison baselines remain unavailable. Rates change in percentage points.</p></details>;
+  <div className="r-table-wrap"><table className="r-table r-history-table"><thead><tr><th>Month</th>{ids.map(id=><th data-history-metric={id} hidden={metric!=='all'&&metric!==id} key={id}>{label(id)}</th>)}</tr></thead><tbody>{ordered.map(row=><tr data-history-month={String(row.month)} hidden={!visible.includes(String(row.month))} key={String(row.month)}><th scope="row">{String(row.month)}</th>{ids.map(id=><td data-history-metric={id} hidden={metric!=='all'&&metric!==id} key={id}><span data-history-value="values" hidden={mode!=='values'}>{fmt(id,row[id])}</span><span data-history-value="mom" hidden={mode!=='mom'}>{delta(id,row[id],previous(String(row.month),1)?.[id])}</span><span data-history-value="yoy" hidden={mode!=='yoy'}>{delta(id,row[id],previous(String(row.month),12)?.[id])}</span>{drill && <button className="deck-month-drill" aria-label={`Explore ${label(id)} items for ${row.month}`} onClick={() => drill({ chapterId: data.id, month: String(row.month), metric: id })}>Explore items ↗</button>}</td>)}</tr>)}</tbody></table></div><p className="r-history-note">Missing values and comparison baselines remain unavailable. Rates change in percentage points.</p></details>;
 }
 
 export function RankingBoard({table,criterion}:{table:GroupTable;criterion:string}) {

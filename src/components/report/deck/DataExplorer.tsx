@@ -7,34 +7,39 @@ import type { Row } from "../../../data/duckdb";
 import type { ReportModel } from "../../../report/model";
 import type { ChapterSpec } from "../../../report/chapters";
 
+import type { RecordSelection } from "./RecordDrilldown";
 const PAGE = 50;
-const HIDDEN = /^(row_id|source_row|source_snapshot|.*token.*|email|phone)$/i;
+const HIDDEN = /(^row_id$|^source_row$|^source_snapshot$|^raw_json$|token|email|phone)/i;
 
 /**
  * Live source records behind a chapter, for answering questions in the room.
  * Loads the source on demand; the frozen figures above are not recomputed from it.
  */
-export function DataExplorer({ model, spec }: { model: ReportModel; spec: ChapterSpec }) {
-  const [state, setState] = useState<{ loading: boolean; error?: string; rows: Row[] }>({ loading: true, rows: [] });
+export function DataExplorer({ model, spec, selection }: { model: ReportModel; spec: ChapterSpec; selection?: RecordSelection }) {
+  const [state, setState] = useState<{ loading: boolean; error?: string; rows: Row[]; truncated?: boolean }>({ loading: true, rows: [] });
   const [search, setSearch] = useState(""), [page, setPage] = useState(0), [group, setGroup] = useState(""), [sort, setSort] = useState<{ key: string; desc: boolean } | null>(null);
+  const [item, setItem] = useState<Row | null>(null);
   const [columns, setColumns] = useState<string[]>([]);
   useEffect(() => {
     let live = true;
     setState({ loading: true, rows: [] });
     void (async () => {
       try {
-        const [{ ensureSource }, { query }, { where }, { scopeFilters }] = await Promise.all([import("../../../data/loader"), import("../../../data/duckdb"), import("../../../data/analytics"), import("../../../report/compute")]);
+        const [{ ensureSource }, { query }, { recordGroupConstraint }, { scopeFilters, factsFor }] = await Promise.all([import("../../../data/loader"), import("../../../data/duckdb"), import("../../../report/source-records"), import("../../../report/compute")]);
         await ensureSource(spec.source);
-        const filters = spec.network ? { ...scopeFilters(model.scope), location: [] } : scopeFilters(model.scope);
-        const rows = await query(`SELECT * FROM ${spec.source}${where(filters, spec.source, [])} LIMIT 5000`);
+        const filters = spec.network ? { ...scopeFilters(model.scope, selection?.month), location: [] } : scopeFilters(model.scope, selection?.month);
+        const constraint = recordGroupConstraint(selection?.table, selection?.group);
+        const rows = await query(`SELECT * FROM ${factsFor(spec, filters)}${constraint} LIMIT 5001`);
+        const truncated = rows.length > 5000;
+        if (truncated) rows.pop();
         if (!live) return;
-        setState({ loading: false, rows });
+        setState({ loading: false, rows, truncated });
         const keys = Object.keys(rows[0] ?? {}).filter(k => !HIDDEN.test(k) && rows.some(r => r[k] != null && r[k] !== ""));
         setColumns(keys.slice(0, 9));
       } catch (e) { if (live) setState({ loading: false, rows: [], error: (e as Error).message }); }
     })();
     return () => { live = false; };
-  }, [spec.id, model.scope.studio, model.scope.month]);
+  }, [spec.id, model.scope.studio, model.scope.month, selection]);
   const available = useMemo(() => Object.keys(state.rows[0] ?? {}).filter(k => !HIDDEN.test(k) && state.rows.some(r => r[k] != null && r[k] !== "")), [state.rows]);
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -49,27 +54,30 @@ export function DataExplorer({ model, spec }: { model: ReportModel; spec: Chapte
     return [...counts].sort((a, b) => b[1] - a[1]).slice(0, 12);
   }, [filtered, group]);
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE));
-  const shown = filtered.slice(page * PAGE, page * PAGE + PAGE);
+  const shown = filtered.slice(Math.min(page, pages - 1) * PAGE, (Math.min(page, pages - 1) + 1) * PAGE);
   useEffect(() => setPage(0), [search, sort, columns]);
   const peak = Math.max(1, ...grouped.map(g => g[1]));
   return <div className="deck-explorer">
     <div className="monthly-table-controls deck-explorer-controls">
-      <span className="deck-explorer-title"><Database size={14}/>{spec.source} records · {model.scope.studio}{spec.network ? " (account level)" : ""} · {model.scope.month}</span>
+      <span className="deck-explorer-title"><Database size={14}/>{spec.source} records · {model.scope.studio}{spec.network ? " (account level)" : ""} · {selection?.month ?? model.scope.month}</span>
       <label className="deck-search"><Search size={13}/><input type="search" placeholder="Search these records…" aria-label="Search records" value={search} onChange={e => setSearch(e.target.value)} /></label>
       <label><Columns3 size={12}/>Group<DropdownField aria-label="Group records by" value={group} onChange={e => setGroup(e.target.value)}><option value="">No grouping</option>{available.filter(k => typeof state.rows[0]?.[k] !== "number").map(k => <option key={k} value={k}>{k}</option>)}</DropdownField></label>
       <details className="deck-columns"><summary className="button">Columns · {columns.length}</summary><div>{available.map(k => <label key={k}><input type="checkbox" checked={columns.includes(k)} onChange={e => setColumns(c => e.target.checked ? [...c, k] : c.filter(x => x !== k))}/>{k}</label>)}</div></details>
-      <button className="button" disabled={!filtered.length} onClick={() => exportCSV(`${spec.id}-${model.scope.month}-records`, filtered.map(r => Object.fromEntries(columns.map(c => [c, r[c]]))))}><Download size={12}/>CSV</button>
+      <button className="button" disabled={!filtered.length} onClick={() => exportCSV(`${spec.id}-${selection?.month ?? model.scope.month}-records`, filtered.map(r => Object.fromEntries(columns.map(c => [c, r[c]]))))}><Download size={12}/>CSV</button>
     </div>
     {state.loading && <p className="deck-loading" role="status"><Loader2 size={15} className="rb2-spin"/>Loading live source records…</p>}
     {state.error && <p className="notice" role="alert"><TriangleAlert size={13}/>Source records unavailable: {state.error}</p>}
     {!state.loading && !state.error && <>
-      <p className="ranking-foot">{filtered.length.toLocaleString("en-IN")} of {state.rows.length.toLocaleString("en-IN")} records{state.rows.length === 5000 ? " (first 5,000)" : ""} · current source data; the report's figures are frozen at {new Date(model.builtAt).toLocaleDateString("en-IN")} and may differ if the sheet changed.</p>
+      {!state.rows.length && <p className="empty-state">No source items match this month and breakdown.</p>}
+      {selection?.metric && <p className="ranking-foot">Source items for the selected period and group. Metric eligibility and rate denominators follow the report definition; these items are not a recomputed metric total.</p>}
+      <p className="ranking-foot">{filtered.length.toLocaleString("en-IN")} of {state.rows.length.toLocaleString("en-IN")} records{state.truncated ? " (first 5,000)" : ""} · current source data; the report's figures are frozen at {new Date(model.builtAt).toLocaleDateString("en-IN")} and may differ if the sheet changed.</p>
       {!!grouped.length && <div className="deck-group-bars">{grouped.map(([name, count]) => <button type="button" key={name} onClick={() => setSearch(name)} title={`Filter to ${name}`}><span>{name}</span><i style={{ width: `${count / peak * 100}%` }}/><b>{count}</b></button>)}</div>}
+      {item && <section className="deck-item-detail" aria-label="Full source item"><header><h3>Source item · all available fields</h3><button className="button" onClick={() => setItem(null)}>Close item details</button></header><dl>{available.map(field => <div key={field}><dt>{field.replaceAll('_', ' ')}</dt><dd>{formatField(field, item[field])}</dd></div>)}</dl></section>}
       <div className="table-scroll monthly-table compact deck-explorer-table" tabIndex={0}>
-        <table><thead><tr>{columns.map(c => <th key={c}><button className="deck-sort" aria-label={`Sort by ${c}`} onClick={() => setSort(s => s?.key === c ? { key: c, desc: !s.desc } : { key: c, desc: true })}>{c}{sort?.key === c ? (sort.desc ? " ↓" : " ↑") : ""}</button></th>)}</tr></thead>
-          <tbody>{shown.map((r, i) => <tr key={i}>{columns.map(c => <td key={c}>{formatField(c, r[c])}</td>)}</tr>)}</tbody></table>
+        <table><thead><tr><th>Item detail</th>{columns.map(c => <th key={c}><button className="deck-sort" aria-label={`Sort by ${c}`} onClick={() => setSort(s => s?.key === c ? { key: c, desc: !s.desc } : { key: c, desc: true })}>{c}{sort?.key === c ? (sort.desc ? " ↓" : " ↑") : ""}</button></th>)}</tr></thead>
+          <tbody>{shown.map((r, i) => <tr key={i}><td><button className="deck-group-drill" aria-label={`View full source item ${page * PAGE + i + 1}`} onClick={() => setItem(r)}>View item ↗</button></td>{columns.map(c => <td key={c}>{formatField(c, r[c])}</td>)}</tr>)}</tbody></table>
       </div>
-      <div className="deck-pager"><button className="icon-button" aria-label="Previous page" disabled={!page} onClick={() => setPage(p => p - 1)}><ChevronLeft size={15}/></button><span>Page {page + 1} of {pages}</span><button className="icon-button" aria-label="Next page" disabled={page >= pages - 1} onClick={() => setPage(p => p + 1)}><ChevronRight size={15}/></button></div>
+      <div className="deck-pager"><button className="icon-button" aria-label="Previous page" disabled={!page} onClick={() => setPage(p => p - 1)}><ChevronLeft size={15}/></button><span>Page {Math.min(page, pages - 1) + 1} of {pages}</span><button className="icon-button" aria-label="Next page" disabled={page >= pages - 1} onClick={() => setPage(p => p + 1)}><ChevronRight size={15}/></button></div>
     </>}
   </div>;
 }
