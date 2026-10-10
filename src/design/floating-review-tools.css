@@ -1,0 +1,16 @@
+.floating-review{position:fixed;right:24px;bottom:24px;z-index:1300;color:var(--text-1);font-family:inherit}
+.floating-review-trigger{position:relative;display:grid;place-items:center;width:52px;height:52px;margin-left:auto;border:1px solid var(--hairline);border-radius:50%;background:var(--surface-1,#fff);color:var(--text-1);box-shadow:0 8px 30px #0002;cursor:pointer}
+.floating-review-trigger:hover{background:var(--surface-2)}.floating-review-trigger:focus-visible{outline:3px solid #3478df;outline-offset:3px}
+.floating-review-content{position:absolute;right:0;bottom:64px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;width:min(680px,calc(100vw - 32px));padding:16px;border:1px solid var(--hairline);border-radius:18px;background:var(--surface-1,#fff);box-shadow:0 16px 60px #0003;box-sizing:border-box}
+.floating-review-heading{width:100%;font-size:13px;font-weight:650;display:flex;justify-content:space-between;gap:8px}.floating-review-heading small{font-weight:400;font-size:11px;color:var(--text-3)}
+.floating-review[data-open=false] .floating-review-content{background:none;border:0;box-shadow:none;padding:0;pointer-events:none}
+.floating-review[data-open=false] .floating-review-content>:is(.floating-review-heading,.presenter-toolbar,.annotation-toolbar,.presentation-launch,.sticky-note-trigger){display:none!important}
+.floating-review .floating-review-content>.presentation-panel{pointer-events:auto;z-index:1350}
+:root .floating-review .presenter-toolbar,:root .floating-review .annotation-toolbar{position:static;transform:none;box-shadow:none;display:flex;flex-wrap:wrap;overflow:visible;width:100%;max-width:100%;margin:0;padding:10px;box-sizing:border-box;border-radius:10px;order:0;font-size:11px}
+:root .floating-review select[aria-label="Presentation chapter"]{width:180px;min-width:0;max-width:180px}
+:root .floating-review select[aria-label="Presentation zoom"]{width:72px;min-width:0}
+@media(max-width:700px){.floating-review{right:12px;bottom:12px}.floating-review-content{max-height:calc(100dvh - 130px);overflow:auto}.floating-review-heading{display:block}.floating-review-heading small{display:block;margin-top:3px}:root .floating-review .presenter-toolbar>strong{display:none}:root .floating-review .presenter-toolbar::after,:root .floating-review .annotation-toolbar::after{content:none}}
+@media print{.floating-review{display:none!important}}
+/* Drawing and blackout overlays stay below the controls that switch them off. */
+.floating-review-trigger{z-index:1400}
+.floating-review-content>.button,.floating-review-heading{position:relative;z-index:1202}

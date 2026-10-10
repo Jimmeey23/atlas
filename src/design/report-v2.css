@@ -164,6 +164,45 @@
 }
 @media(prefers-reduced-motion:reduce){.report-doc .r2-score{transition:none}}
 
+/* Interactive report cards, layouts and palettes. */
+.report-doc .r-live-analytics{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--r-border);border-radius:10px;background:var(--r-bg-soft);font-size:12px;font-weight:650;color:var(--r-primary)}.report-doc .r-live-analytics small{display:block;color:var(--r-subtle);font-weight:400;font-size:10px;margin-top:4px}.report-doc .r-live-analytics:hover{border-color:var(--r-primary-3)}
+.report-doc .r-chip-explore{background:none;border:0;padding:4px 0;color:var(--r-primary);font:inherit;font-size:10px;text-align:left;text-decoration:underline;cursor:pointer}
+
+.report-doc.r2[data-surface=warm]{--r-bg:#fbf8f2;--r-card:#fffdf8;--r-bg-soft:#f2ede3;--r-border:#e2dacb;--r-text:#302a23;--r-muted:#5e554b;--r-subtle:#776b5d}
+.report-doc.r2[data-surface=mist]{--r-bg:#f3f7f9;--r-card:#fcfefe;--r-bg-soft:#eaf1f5;--r-border:#d5e1e8;--r-text:#19303e;--r-muted:#415c6b;--r-subtle:#5b7381}
+.report-doc.r2[data-report-theme=dark][data-surface=warm]{--r-bg:#1d1916;--r-card:#26211d;--r-bg-soft:#312a24;--r-border:#50453a;--r-text:#faf0e5;--r-muted:#d7c7b8;--r-subtle:#b9a694}
+.report-doc.r2[data-report-theme=dark][data-surface=mist]{--r-bg:#0f2028;--r-card:#152b35;--r-bg-soft:#1d3640;--r-border:#365561;--r-text:#edf9ff;--r-muted:#c2dce5;--r-subtle:#9bbbc7}
+.report-doc.r2[data-accent=indigo]{--r-primary:#393177;--r-primary-3:#5546b8}.report-doc.r2[data-accent=copper]{--r-primary:#69391f;--r-primary-3:#99522e}
+.report-doc.r2[data-report-theme=dark][data-accent=indigo]{--r-primary:#e0d9ff;--r-primary-3:#b7a5ff}.report-doc.r2[data-report-theme=dark][data-accent=copper]{--r-primary:#ffe3cf;--r-primary-3:#edb18a}
+.report-doc.r2 .r-topbar{position:sticky;top:0;z-index:30;display:flex;flex-wrap:wrap;padding:14px 24px;box-shadow:0 4px 14px #00000008}
+.report-doc.r2 .r-topbar nav{flex-wrap:nowrap;min-width:0;max-width:100%;scrollbar-width:thin}.report-doc.r2 .r-topbar nav a{padding:8px 0}
+.report-doc.r2 .r-section,.report-doc.r2 #at-a-glance,.report-doc.r2 #report-cover{scroll-margin-top:120px}
+.report-doc.r2 .r2-insight{border-radius:18px;box-shadow:0 3px 14px #12233d06;border-color:color-mix(in srgb,var(--lens) 20%,var(--r-border))}
+.report-doc.r2 .r2-insight-main{display:flex;flex-direction:column;padding:24px 26px;gap:0}
+.report-doc.r2 .r2-insight h3{font-size:21px;line-height:1.4;margin:14px 0 10px}
+.report-doc .r-insight-title{appearance:none;border:0;background:none;color:inherit;font:inherit;letter-spacing:inherit;line-height:inherit;text-align:left;padding:0;cursor:pointer;display:inline;overflow-wrap:anywhere}
+.report-doc .r-insight-title svg{display:inline;margin-left:8px;vertical-align:middle;color:var(--lens)}
+.report-doc .r-insight-title:hover{color:var(--lens)}.report-doc .r-insight-title:focus-visible,.report-doc summary:focus-visible{outline:2px solid var(--r-primary-3);outline-offset:4px;border-radius:3px}
+.report-doc .r-insight-drilldown{order:10;margin-top:20px;border-top:1px solid var(--r-border);padding-top:14px;min-width:0}
+.report-doc .r-insight-drilldown>summary{display:flex;align-items:center;gap:10px;cursor:pointer;list-style:none;font-size:12px;font-weight:650;color:var(--r-primary)}
+.report-doc .r-insight-drilldown>summary::-webkit-details-marker{display:none}.report-doc .r-insight-drilldown>summary>span{flex:1}.report-doc .r-insight-drilldown>summary small{display:block;font-size:10px;font-weight:400;color:var(--r-subtle);margin-top:3px}
+.report-doc .r-insight-drilldown[open]>summary>svg:last-child{transform:rotate(180deg)}
+.report-doc .r-drilldown-body{display:grid;gap:14px;padding-top:18px;min-width:0}.report-doc .r-drilldown-body .r-note{margin:0}.report-doc .r-drilldown-source{font-size:11px;color:var(--r-muted);line-height:1.65}
+.report-doc .r-table caption{text-align:left;font-size:13px;font-weight:650;padding:10px 12px;color:var(--r-text)}
+.report-doc.r2 .r2-insight:has(.r-insight-drilldown[open]){grid-template-columns:minmax(0,1fr)}
+.report-doc.r2 .r2-insight:has(.r-insight-drilldown[open]) .r2-evidence{border-left:0;border-top:1px solid var(--r-border)}
+.report-doc.r2[data-report-layout=full] .r2-insight{grid-template-columns:minmax(0,1fr)}
+.report-doc.r2[data-report-layout=full] .r2-evidence{border-left:0;border-top:1px solid var(--r-border);display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.report-doc.r2[data-report-layout=full] .r2-evidence-title,.report-doc.r2[data-report-layout=full] .r2-evidence-text{grid-column:1/-1}
+.report-doc.r2[data-report-layout=grid] .r2-insights{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:20px}
+.report-doc.r2[data-report-layout=grid] .r2-insights-head{grid-column:1/-1}
+.report-doc.r2[data-report-layout=grid] .r2-insight{grid-template-columns:minmax(0,1fr);height:100%}
+.report-doc.r2[data-report-layout=grid] .r2-insight:has(.r-insight-drilldown[open]){grid-column:1/-1}
+.report-doc.r2[data-report-layout=grid] .r2-evidence{border-left:0;border-top:1px solid var(--r-border)}
+.report-doc .r-metric-drilldown{font-size:11px;margin-top:14px;min-width:0}.report-doc .r-metric-drilldown>summary{cursor:pointer;color:var(--r-primary);font-weight:600}.report-doc .r-card:has(.r-metric-drilldown[open]){grid-column:1/-1}
+@media(max-width:800px){.report-doc.r2[data-report-layout=grid] .r2-insights{grid-template-columns:minmax(0,1fr)}.report-doc.r2[data-report-layout=full] .r2-evidence{display:flex}.report-doc.r2 .r-topbar{gap:8px;padding:12px 16px}.report-doc.r2 .r-topbar nav{margin:0;width:100%}.report-doc.r2 .r2-insight-main{padding:20px}.report-doc.r2 .r2-insight h3{font-size:19px}.report-doc.r2 .r2-classification{display:none}}
+@media print{.report-doc.r2 .r-topbar{display:none!important}.report-doc.r2[data-report-layout=grid] .r2-insights{display:block}.report-doc .r-insight-drilldown:not([open]),.report-doc .r-metric-drilldown:not([open]){display:none}.report-doc .r-insight-title svg{display:none}}
+
 /* ---------- Builder (app chrome, app tokens) ---------- */
 .button.rb2-stop{border-color:color-mix(in srgb,#c2410c 45%,transparent);color:#c2410c}
 .button.rb2-stop:hover{background:color-mix(in srgb,#c2410c 10%,transparent)}

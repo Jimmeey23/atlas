@@ -22,7 +22,7 @@ const styles: { id: string; label: string; note: string; patch: Partial<ReportCu
 ];
 const ACCENTS: { id: ReportAccent; label: string; swatch: string }[] = [
   { id: 'navy', label: 'Navy', swatch: '#173656' }, { id: 'teal', label: 'Teal', swatch: '#087d86' }, { id: 'graphite', label: 'Graphite', swatch: '#3b475a' },
-  { id: 'plum', label: 'Plum', swatch: '#6b2f6b' }, { id: 'forest', label: 'Forest', swatch: '#1f5f3f' }, { id: 'rose', label: 'Rose', swatch: '#a3324f' }, { id: 'amber', label: 'Amber', swatch: '#a8620a' },
+  { id: 'plum', label: 'Plum', swatch: '#6b2f6b' }, { id: 'forest', label: 'Forest', swatch: '#1f5f3f' }, { id: 'rose', label: 'Rose', swatch: '#a3324f' }, { id: 'amber', label: 'Amber', swatch: '#a8620a' }, { id: 'indigo', label: 'Indigo', swatch: '#5546b8' }, { id: 'copper', label: 'Copper', swatch: '#99522e' },
 ];
 const tabs = [{ id: 'style', label: 'Report style', icon: Wand2 }, { id: 'analysis', label: 'Analysis & insights', icon: ChartNoAxesCombined }, { id: 'appearance', label: 'Layout & design', icon: PanelsTopLeft }, { id: 'chapters', label: 'Chapters', icon: Layers3 }, { id: 'identity', label: 'Cover & identity', icon: BookOpen }] as const;
 
@@ -66,10 +66,11 @@ export function ReportSettings({ value, patch, busy, onTarget, moveChapter }: { 
       <div className="rb2-swatches" role="radiogroup" aria-label="Accent colour">{ACCENTS.map(a => <button type="button" role="radio" aria-checked={options.accent === a.id} key={a.id} onClick={() => patch({ accent: a.id })} style={{ '--swatch': a.swatch } as React.CSSProperties}><i/>{a.label}</button>)}</div>
       <div className="rb-fields">
         {select('theme', 'Appearance', [['light', 'Light'], ['dark', 'Dark']])}
+        {select('surface', 'Surface palette', [['paper', 'Crisp paper'], ['warm', 'Warm parchment'], ['mist', 'Cool mist']])}
         {select('typography', 'Typography', [['modern', 'Modern sans'], ['editorial', 'Editorial serif'], ['classic', 'Classic report']])}
         {select('cardStyle', 'Card style', [['bordered', 'Bordered'], ['elevated', 'Elevated'], ['minimal', 'Minimal']])}
         {select('density', 'Spacing', [['comfortable', 'Comfortable'], ['compact', 'Compact']])}
-        {select('layout', 'Panel arrangement', [['adaptive', 'Adaptive two-column'], ['full', 'Full width']])}
+        {select('layout', 'Panel arrangement', [['adaptive', 'Side-by-side'], ['full', 'Reading'], ['grid', 'Card grid']])}
         {select('evidenceView', 'Evidence pack opens as', [['auto', 'Automatic'], ['chart', 'Chart'], ['table', 'Table']])}
         {select('historyMonths', 'Visible history (months)', ['6', '12', '14'])}
       </div>

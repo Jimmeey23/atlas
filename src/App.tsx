@@ -8,6 +8,7 @@ import { StudioOperationsDeepDive } from "./components/StudioOperationsDeepDive"
 import { StudioCommunityOperations } from "./components/StudioCommunityOperations";
 import { StudioOperations } from "./components/StudioOperations";
 import { SalesRankings } from "./components/SalesRankings";
+import { FloatingReviewTools } from "./components/FloatingReviewTools";
 import { StickyNotes } from "./components/StickyNotes";
 import { workspaceIcons, useWorkspaceCopy } from "./data/workspaceCopy";
 import { OverviewModules } from "./components/OverviewModules";
@@ -600,7 +601,7 @@ export default function App() {
         </div>
         <div className="toolbar">
           <div className="toolbar-group" aria-label="Workspace tools">
-            <PresentationTools /><StickyNotes />
+            <FloatingReviewTools><PresentationTools /><StickyNotes /></FloatingReviewTools>
             <button
               className="button hide-mobile"
               title="Command palette (⌘K)"

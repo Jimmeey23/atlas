@@ -15,8 +15,8 @@ const api=express();api.use(express.json({limit:'20mb'}));reportRoutes(api,store
 const http=api.listen(0,'127.0.0.1');await new Promise(resolve=>http.once('listening',resolve));
 const vite=await createServer({server:{host:'127.0.0.1',port:5199,strictPort:true,proxy:{'/api':`http://127.0.0.1:${http.address().port}`}}});
 let browser;
-const model={scope:{studio:'Kenkere House',month:'2026-09'},builtAt:'2026-10-10T00:00:00Z',figuresHash:'review-fixture',schemaVersion:6,chapters:{},narratives:{},customization:{title:'Review verification',subtitle:'',preparedFor:'',preparedBy:'',audience:'Studio leadership',tone:'Professional',detail:'Comprehensive',instructions:'',chapterIds:['sessions','revenue-performance'],theme:'light',showCharts:false}};
-for(const id of model.customization.chapterIds){model.chapters[id]={id,n:10,total:{sessions:10,attendance:80,gross_revenue:100000},prior:{sessions:8,attendance:60,gross_revenue:80000},priorYear:{},groups:[],history:[]};model.narratives[id]={generated:true,summary:`Frozen ${id} analysis`,cards:[]};}
+const model={scope:{studio:'Kenkere House',month:'2026-09'},builtAt:'2026-10-10T00:00:00Z',figuresHash:'review-fixture',schemaVersion:6,chapters:{},narratives:{},customization:{title:'Review verification',subtitle:'',preparedFor:'',preparedBy:'',audience:'Studio leadership',tone:'Professional',detail:'Comprehensive',instructions:'',chapterIds:['sessions','revenue-performance'],theme:'light',showCharts:true}};
+for(const id of model.customization.chapterIds){model.chapters[id]={id,n:10,total:{sessions:10,attendance:80,gross_revenue:100000},prior:{sessions:8,attendance:60,gross_revenue:80000},priorYear:{},groups:[{id:'format',field:'format',title:'Signature experience breakdown',columns:['attendance'],compare:'attendance',minimum:'At least three records',rows:[{g:'Barre',attendance:50},{g:'Mat',attendance:30}],prior:{Barre:{attendance:40},Mat:{attendance:20}},priorYear:{},total:{attendance:80}}],history:[{month:'2026-08',attendance:60,sessions:8,gross_revenue:80000},{month:'2026-09',attendance:80,sessions:10,gross_revenue:100000}]};model.narratives[id]={generated:true,summary:`Frozen ${id} analysis`,cards:[{headline:'Monthly performance verdict',meaning:'Frozen baseline',evidence:'Stored figures',action:'',focus:'kpis'},{headline:'Barre attendance improved',meaning:'Barre has 50 of 80 visits.',evidence:'50 vs 40 visits in August',action:'Review timetable capacity.',focus:'format',metrics:['attendance'],lens:'win',driver:'Observed increase; cause is not established.',priority:'medium'},{headline:'Attendance rose alongside session supply',meaning:'Visits increased from 60 to 80 while sessions increased from 8 to 10.',evidence:'Saved monthly figures',action:'Compare attendance per session.',focus:'trend',metrics:['attendance','sessions'],lens:'driver',priority:'low'}]};}
 try {
  await vite.listen();const url='http://127.0.0.1:5199';
  browser=await chromium.launch({headless:true});
@@ -31,7 +31,39 @@ try {
  review.on('pageerror',e=>errors.push(e.message));
  await review.waitForURL(/\/report\?id=/,{timeout:60000});
  await review.locator('.report-doc').waitFor();
+ const tools=review.getByRole('button',{name:'Review tools',exact:true});
+ assert.equal(await tools.getAttribute('aria-expanded'),'false');
+ assert.equal(await review.locator('[aria-label="Annotation tools"]').isVisible(),false);
+ await tools.click();
+ await review.waitForFunction(()=>document.querySelector('.floating-review').dataset.open==='false',{},{timeout:10000});
+ await tools.click();
  assert.equal(await review.locator('[aria-label="Annotation tools"]').isVisible(),true);
+ // Restyling a saved report keeps its snapshot and works in all three layouts.
+ for(const layout of ['adaptive','full','grid']){await review.getByLabel('Report layout',{exact:true}).selectOption(layout);assert.equal(await review.locator('.report-doc').getAttribute('data-report-layout'),layout);}
+ await review.getByLabel('Report theme',{exact:true}).selectOption('dark:warm');await review.getByLabel('Report accent',{exact:true}).selectOption('indigo');
+ assert.equal(await review.locator('.report-doc').getAttribute('data-surface'),'warm');assert.equal(await review.locator('.report-doc').getAttribute('data-report-theme'),'dark');
+ const insight=review.locator('.r2-insight').first();await insight.getByRole('button',{name:'Explore data: Barre attendance improved'}).click();
+ assert.equal(await insight.locator('.r-insight-drilldown').getAttribute('open'),'');
+ const liveLink=new URL(await insight.getByRole('link',{name:/Open full source analytics/}).getAttribute('href'));
+ assert.equal(liveLink.searchParams.get('tab'),'1');assert.deepEqual(JSON.parse(liveLink.searchParams.get('f')),{from:'2026-09-01',to:'2026-09-30',location:['Kenkere House']});
+ await insight.getByRole('button',{name:'Detail',exact:true}).click();
+ assert.ok((await insight.innerText()).includes('Previous month'));assert.ok((await insight.innerText()).includes('Mat'));assert.ok((await insight.innerText()).includes('stored in this snapshot'));
+ await insight.getByRole('button',{name:'Explore data: Barre attendance improved'}).click();
+ await review.locator('.r-metric-drilldown').first().locator(':scope > summary').click();assert.ok((await review.locator('.r-card').first().innerText()).includes('Previous month'));
+ await review.locator('.r-metric-drilldown').first().locator(':scope > summary').click();
+ await review.getByLabel('Report theme',{exact:true}).selectOption('light:paper');await review.getByLabel('Report layout',{exact:true}).selectOption('adaptive');
+ // Chapter navbar remains pinned while the content scrolls.
+ await review.locator('#main').evaluate(el=>el.scrollTop=700);await review.waitForTimeout(100);
+ const nav=await review.locator('.r-topbar').boundingBox(),canvas=await review.locator('#main').boundingBox();assert.ok(Math.abs(nav.y-canvas.y)<3,`chapter navigation stays pinned: ${JSON.stringify({nav,canvas,style:await review.locator('.r-topbar').evaluate(el=>({position:getComputedStyle(el).position,top:getComputedStyle(el).top,ancestors:Array.from((function*(el){while(el){yield el;el=el.parentElement;}})(el)).map(p=>({tag:p.tagName,class:p.className,overflow:getComputedStyle(p).overflow,position:getComputedStyle(p).position}))}))})}`);
+ await review.locator('#main').evaluate(el=>el.scrollTop=0);
+ await insight.scrollIntoViewIfNeeded();await review.screenshot({path:'/tmp/atlas-report-cards-desktop.png'});
+ await review.getByLabel('Report layout',{exact:true}).selectOption('grid');await review.screenshot({path:'/tmp/atlas-report-cards-grid.png'});
+ await review.getByLabel('Report layout',{exact:true}).selectOption('adaptive');
+ // Exported HTML keeps native drilldowns and the headline shortcut without React.
+ const exported=await review.evaluate(async model=>{const {serialiseReport}=await import('/src/report/export.ts');return serialiseReport(document.querySelector('.report-doc'),model);},model);
+ const file=await hostContext.newPage();await file.setContent(exported);await file.locator('.r-insight-title').first().click();
+ assert.equal(await file.locator('.r-insight-drilldown').first().getAttribute('open'),'');await file.close();
+ if(await tools.getAttribute('aria-expanded')==='false')await tools.click();
  assert.equal(await review.locator('[aria-label="Presenter toolkit"]').isVisible(),true);
  await review.getByRole('button',{name:'Sound clips',exact:true}).click();await review.getByRole('searchbox',{name:'Search sound clips'}).waitFor();
  assert.ok(await review.locator('.sound-list button').count()>0);
@@ -52,6 +84,7 @@ try {
  await review.getByRole('button',{name:'pen',exact:true}).click();
  const box=await review.locator('.presentation-ink').boundingBox();await review.mouse.move(box.x+100,box.y+100);await review.mouse.down();await review.mouse.move(box.x+240,box.y+150);await review.mouse.up();
  await guest.waitForFunction(()=>document.querySelectorAll('.presentation-ink polyline').length===1);
+ if(await tools.getAttribute('aria-expanded')==='false')await tools.click();
  await review.getByRole('button',{name:'Add note',exact:true}).click();
  const wizard=review.getByRole('dialog',{name:'Sticky note wizard'});
  await wizard.getByLabel('Your name',{exact:true}).fill('Host reviewer');await wizard.getByLabel('Note title',{exact:true}).fill('Shared decision');await wizard.getByLabel('Note text',{exact:true}).fill('Confirm the follow-up owner.');await wizard.getByRole('button',{name:'Choose position'}).click();
@@ -63,8 +96,10 @@ try {
  // Another snapshot never receives these notes.
  const other={...model,id:randomUUID(),savedAt:new Date().toISOString()};await store.write(`.floor/reports/${other.id}.json`,other);
  const separate=await guestContext.newPage();await separate.goto(`${url}/report?id=${other.id}`);await separate.locator('.report-doc').waitFor();assert.equal(await separate.locator('[data-note-id]').count(),0);
+ if(await guest.getByRole('button',{name:'Review tools',exact:true}).getAttribute('aria-expanded')==='false')await guest.getByRole('button',{name:'Review tools',exact:true}).click();
  await guest.getByRole('button',{name:'Following host',exact:true}).click();
  await guest.getByRole('button',{name:'Next chapter',exact:true}).click();assert.equal(await guest.getByLabel('Presentation chapter').inputValue(),'revenue-performance');
+ if(await tools.getAttribute('aria-expanded')==='false')await tools.click();
  await review.getByRole('button',{name:'Live session',exact:true}).click();await review.getByRole('button',{name:'Pause sharing',exact:true}).click();
  await guest.waitForFunction(()=>document.querySelector('.session-status')?.textContent.includes('Paused'));
  await review.getByRole('button',{name:'Resume sharing',exact:true}).click();
@@ -77,6 +112,7 @@ try {
  await separate.screenshot({path:'/tmp/atlas-report-review-mobile.png'});
  const overflow=await separate.evaluate(()=>document.documentElement.scrollWidth>innerWidth);
  assert.equal(overflow,false,'mobile page should not overflow horizontally');
+ await separate.getByRole('button',{name:'Review tools',exact:true}).click();
  assert.equal(await separate.getByRole('button',{name:'Add note',exact:true}).isVisible(),true);
  assert.equal(await separate.getByRole('button',{name:'Sound clips',exact:true}).isVisible(),true);
  const navBounds=await separate.getByRole('button',{name:'Next chapter',exact:true}).boundingBox();assert.ok(navBounds.x+navBounds.width<=390,'next chapter stays visible on mobile');
@@ -86,6 +122,7 @@ try {
  await local.goto(`${url}/report`);
  const draft=randomUUID();await local.evaluate(({draft,model})=>sessionStorage.setItem(`atlas-report-page:${draft}`,JSON.stringify(model)),{draft,model});
  await local.goto(`${url}/report?draft=${draft}`);await local.locator('.report-doc').waitFor();
+ await local.getByRole('button',{name:'Review tools',exact:true}).click();
  assert.equal(await local.getByRole('button',{name:'Add note',exact:true}).isVisible(),true);
  await local.getByRole('button',{name:'Host a session',exact:true}).click();await local.locator('.presentation-panel').getByRole('button',{name:'Host a session',exact:true}).click();
  await local.getByRole('alert').filter({hasText:'Storage unavailable for verification.'}).waitFor();
@@ -93,5 +130,5 @@ try {
  await review.reload();await review.locator('[data-note-id]').waitFor();
  assert.equal(await review.locator('[data-note-id] textarea').inputValue(),'Owner confirmed by guest.');
  assert.deepEqual(errors,[]);
- console.log('PASS: new-tab snapshot, full toolkit, host/join, chapter/ink sharing, independent navigation, pause/resume, raised hands, shared notes, isolation, reload and mobile overflow.');
+ console.log('PASS: saved-snapshot drilldowns, three layouts, palettes, pinned navbar, floating toolkit auto-collapse, new-tab snapshot, full toolkit, host/join, chapter/ink sharing, independent navigation, pause/resume, raised hands, shared notes, isolation, reload and mobile overflow.');
 } finally {await browser?.close();await vite.close();http.closeAllConnections();await new Promise(resolve=>http.close(resolve));}

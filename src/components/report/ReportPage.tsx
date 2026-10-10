@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { FloatingReviewTools } from "../FloatingReviewTools";
+import { ReportViewControls } from "./ReportViewControls";
 import { Download, Printer, ArrowUp, FileText } from "lucide-react";
 import { ReportDocument } from "./ReportDocument";
 import { PresentationTools } from "../PresentationTools";
@@ -78,8 +80,9 @@ export function ReportPage() {
     <header className="report-page-header">
       <div className="report-page-heading"><FileText size={20}/><div><small>ATLAS · COLLABORATIVE REPORT REVIEW</small><h1>{model?.customization?.title || "Monthly performance report"}</h1></div></div>
       <div className="report-page-actions" aria-label="Report review controls">
-        <PresentationTools standalone beforeHost={async()=>{if (!model?.id) throw new Error(storageError || "Wait for the saved report before hosting a shared review.");}}/>
-        {model && <StickyNotes key={model.id || draftId} reportId={model.id || draftId}/>}
+        <FloatingReviewTools><PresentationTools standalone beforeHost={async()=>{if (!model?.id) throw new Error(storageError || "Wait for the saved report before hosting a shared review.");}}/>
+        {model && <StickyNotes key={model.id || draftId} reportId={model.id || draftId}/>}</FloatingReviewTools>
+        {model && <ReportViewControls model={model} onChange={setModel}/>}
         <button className="button" disabled={!model||busy} onClick={()=>void exportReport(false)}><Download size={14}/>Download</button>
         <button className="button" disabled={!model||busy} onClick={()=>void exportReport(true)}><Printer size={14}/>Print / PDF</button>
         <button className="button" aria-label="Back to report cover" onClick={()=>{window.dispatchEvent(new CustomEvent('p57-report-navigate',{detail:''}));document.getElementById('main')?.scrollTo({top:0,behavior:'smooth'});}}><ArrowUp size={14}/>Cover</button>

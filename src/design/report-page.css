@@ -18,3 +18,11 @@ html[data-presenting=true] .report-page .sticky-note-layer,html[data-presenting=
 :root .report-page .presenter-toolbar select[aria-label="Presentation chapter"]{width:200px;min-width:0;max-width:200px}
 :root .report-page .presenter-toolbar select[aria-label="Presentation zoom"]{width:80px;min-width:0;max-width:80px}
 @media(max-width:700px){.report-page .presenter-toolbar>strong{display:none}:root .report-page .presenter-toolbar select[aria-label="Presentation chapter"]{width:180px;max-width:180px}.report-page .presenter-toolbar>.icon-button{min-width:32px}.report-page .presenter-toolbar::after,.report-page .annotation-toolbar::after{content:'Swipe for more tools';font-size:10px;color:var(--text-3);white-space:nowrap;padding:0 6px}}
+
+/* The outer header stays outside the scroll area; chapter navigation remains pinned inside it. */
+.report-page-header{position:sticky;top:0;gap:10px;padding:12px 20px}.report-page-actions{width:auto;gap:8px}
+.report-view-controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.report-view-controls label{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-2)}.report-view-controls select{max-width:160px}
+.report-page .report-page-canvas{padding-top:0}.report-page .report-doc{overflow:visible}.report-page .report-doc .r-topbar{border-radius:12px 12px 0 0}
+@media(max-width:700px){.report-page-header{padding:10px}.report-page-actions{width:100%}.report-view-controls{width:100%;gap:6px}.report-view-controls label{flex:1;display:grid;gap:3px;min-width:0}.report-view-controls select{width:100%;max-width:100%;font-size:11px}.report-page .report-page-canvas{padding-top:0}}
+html[data-presenting=true] .report-page .canvas{padding-top:0}
+.floating-review .floating-review-content>:is(.presenter-notes,.presenter-spotlight){pointer-events:auto}

@@ -74,6 +74,10 @@ export async function serialiseReport(element: HTMLElement, model: ReportModel) 
     document.addEventListener('click', function(event) {
       const button = event.target.closest('button');
       if (!button) return;
+      if(button.hasAttribute('data-insight-toggle')) {
+        const details=button.closest('.r2-insight').querySelector('.r-insight-drilldown');
+        if(details) details.open=!details.open;
+      }
       if(button.hasAttribute('data-history-export')) {
         const root=button.closest('[data-report-history]');
         const table=root.querySelector('table');

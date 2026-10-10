@@ -125,7 +125,7 @@ export interface ReportCustomization {
   chapterIds: string[]; theme: "light" | "dark";
   /** Management targets by metric id, in the metric's own units (rates as 0–1). */
   targets?: Record<string, number>;
-  density?: 'compact' | 'comfortable'; layout?: 'adaptive' | 'full'; evidenceView?: 'auto' | 'chart' | 'table';
+  density?: 'compact' | 'comfortable'; layout?: 'adaptive' | 'full' | 'grid'; surface?: 'paper' | 'warm' | 'mist'; evidenceView?: 'auto' | 'chart' | 'table';
   historyMonths?: 6 | 12 | 14; accent?: ReportAccent; focusAreas?: string[];
   showCover?: boolean; showDefinitions?: boolean; showConfidence?: boolean; showSources?: boolean;
   showAppendix?: boolean; showCharts?: boolean;
@@ -146,7 +146,7 @@ export interface ReportCustomization {
   /** Print each chapter on a new page. */
   pageBreaks?: boolean;
 }
-export type ReportAccent = 'navy' | 'teal' | 'graphite' | 'plum' | 'forest' | 'rose' | 'amber';
+export type ReportAccent = 'navy' | 'teal' | 'graphite' | 'plum' | 'forest' | 'rose' | 'amber' | 'indigo' | 'copper';
 /** A rule-engine signal scoped to the report's studio and month. */
 export interface ReportSignal {
   rule: string;

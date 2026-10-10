@@ -1,3 +1,4 @@
+import { InsightDrilldown } from "./InsightDrilldown";
 import { TrendingUp, TriangleAlert, GitBranch, Lightbulb, Radar, ArrowRightCircle, Target, Gauge, Activity, Coins, Eye, Users, CalendarClock } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Row } from "../../data/duckdb";
@@ -66,6 +67,7 @@ export function MetricChip({ id, data, target, compact = false }: { id: string; 
       {hit != null && <span data-tone={hit ? 'up' : 'down'}><Target size={10}/>{hit ? 'On target' : 'Below target'} {fmt(id, target)}</span>}
     </span>
     {!compact && <Spark id={id} history={data.history.slice(-12)} />}
+    <button type="button" className="r-chip-explore" data-insight-toggle onClick={e => { const detail = e.currentTarget.closest('.r2-insight')?.querySelector<HTMLDetailsElement>('.r-insight-drilldown'); if (detail) detail.open = true; }} aria-label={`Explore ${label(id)} evidence`}>Explore data</button>
   </div>;
 }
 
@@ -140,7 +142,7 @@ export function InsightBlock({ card, model, chapterId, index, inlineEvidence = t
         {card.priority && <span className="r2-tag" data-priority={card.priority}>{card.priority} priority</span>}
         {confidence && card.confidence && <span className="r2-tag r2-confidence" title="Interpretation confidence">{card.confidence} confidence</span>}
       </header>
-      <h3>{card.headline}</h3>
+      <InsightDrilldown model={model} chapterId={chapterId} headline={card.headline} metrics={cited} table={table}>{card.headline}</InsightDrilldown>
       {card.meaning && <p className="r2-meaning">{card.meaning}</p>}
       <div className="r2-facets">
         {driver && <Facet icon={GitBranch} title={plan ? 'Why this move' : 'What drove it'}>{plan && card.recommendation ? card.recommendation : driver}</Facet>}

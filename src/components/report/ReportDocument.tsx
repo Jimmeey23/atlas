@@ -42,7 +42,7 @@ export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; them
     const targets = model.customization?.targets;
     const initialView = options.evidenceView === 'table' || !options.showCharts ? 'table' : options.evidenceView === 'chart' ? 'chart' : undefined;
     return <article className="report-doc r2" data-report-theme={theme} data-density={options.density} data-accent={options.accent}
-      data-typography={options.typography} data-card-style={options.cardStyle} data-page-breaks={options.pageBreaks} ref={ref}>
+      data-report-layout={options.layout} data-surface={options.surface} data-typography={options.typography} data-card-style={options.cardStyle} data-page-breaks={options.pageBreaks} ref={ref}>
       <div className="r-page-frame" aria-hidden="true"/>
       <div className="r-topbar"><a className="r-brand" href="#report-cover"><img src={logo} alt="Physique 57"/><span>Studio intelligence<small>{model.scope.studio} · {monthLabel(model.scope.month)}</small></span></a>
         {options.confidentiality && <span className="r2-classification">{options.confidentiality}</span>}
@@ -83,7 +83,7 @@ export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; them
                 {statement.impact && <div><dt>At stake</dt><dd>{statement.impact}</dd></div>}
               </dl>}
             </div>}
-            {data && <MetricCards ids={metrics.slice(0, 5)} total={data.total} prior={data.prior} priorYear={data.priorYear} history={options.showCharts ? data.history.slice(-options.historyMonths) : undefined} definitions={options.showDefinitions}/>}
+            {data && <MetricCards data={data} ids={metrics.slice(0, 5)} total={data.total} prior={data.prior} priorYear={data.priorYear} history={options.showCharts ? data.history.slice(-options.historyMonths) : undefined} definitions={options.showDefinitions}/>}
             {plan && options.showActionPlan && <ActionPlan cards={narrative?.cards ?? []}/>}
             {!!insights.length && <div className="r2-insights">
               <div className="r2-insights-head"><span className="r-eyebrow">{plan ? 'Recommendations in detail' : 'Insights & evidence'}</span><small>{insights.length} {plan ? 'moves' : 'insights'} · evidence shown beside each claim</small></div>

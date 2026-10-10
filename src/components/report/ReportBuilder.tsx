@@ -27,7 +27,7 @@ function storedPreferences(): Partial<ReportCustomization> {
   try { const parsed = JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'); return parsed && typeof parsed === 'object' ? parsed : {}; }
   catch { return {}; }
 }
-const REMEMBERED: (keyof ReportCustomization)[] = ['audience','tone','detail','density','layout','evidenceView','historyMonths','accent','typography','cardStyle','lenses','insightsPerChapter','includeActions','quantifyImpact','comparisonFocus','showCover','showGlance','showContents','showInlineEvidence','showActionPlan','showCharts','showDefinitions','showConfidence','showSources','showAppendix','pageBreaks','preparedBy','confidentiality'];
+const REMEMBERED: (keyof ReportCustomization)[] = ['audience','tone','detail','surface','density','layout','evidenceView','historyMonths','accent','typography','cardStyle','lenses','insightsPerChapter','includeActions','quantifyImpact','comparisonFocus','showCover','showGlance','showContents','showInlineEvidence','showActionPlan','showCharts','showDefinitions','showConfidence','showSources','showAppendix','pageBreaks','preparedBy','confidentiality'];
 
 const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.max(0, seconds) % 60).padStart(2, '0')}`;
 
@@ -61,7 +61,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
   const patch = (value: Partial<ReportCustomization>) => {
     const next = { ...customization, ...value };
     try { localStorage.setItem(PREFS_KEY, JSON.stringify(Object.fromEntries(REMEMBERED.map(k => [k, next[k]])))); } catch { /* preferences still apply to this session */ }
-    const appearance = ['title','subtitle','preparedFor','preparedBy','theme','density','layout','evidenceView','historyMonths','accent','typography','cardStyle','confidentiality','showCover','showGlance','showContents','showInlineEvidence','showActionPlan','showCharts','showDefinitions','showConfidence','showSources','showAppendix','pageBreaks','chapterIds'];
+    const appearance = ['title','subtitle','preparedFor','preparedBy','theme','surface','density','layout','evidenceView','historyMonths','accent','typography','cardStyle','confidentiality','showCover','showGlance','showContents','showInlineEvidence','showActionPlan','showCharts','showDefinitions','showConfidence','showSources','showAppendix','pageBreaks','chapterIds'];
     // Presentation changes restyle the open report without rewriting it; it becomes an unsaved variant.
     const restyled = model && !running && Object.keys(value).every(key => appearance.includes(key))
       ? { ...model, customization: { ...customization, ...model.customization, ...value }, id: undefined, savedAt: undefined } : model;

@@ -49,13 +49,13 @@ export function MetricCards({
   ids,
   total,
   prior,
-  priorYear, history, definitions = false,
+  priorYear, history, definitions = false, data,
 }: {
   ids: string[];
   total: Row;
   prior: Row;
   priorYear: Row;
-  history?: Row[]; definitions?: boolean;
+  history?: Row[]; definitions?: boolean; data?: ChapterData;
 }) {
   const shown = ids.filter((id) => definition(id) && total[id] != null).slice(0, 5);
   if (!shown.length) return null;
@@ -74,6 +74,12 @@ export function MetricCards({
             </span>
           </div>
           {history && <Sparkline id={id} history={history} />}
+          {data && <details className="r-metric-drilldown"><summary>Explore {label(id)} data</summary>
+            <div className="r-table-wrap"><table className="r-table"><tbody><tr><th>Previous month</th><td>{fmt(id,prior[id])}</td></tr><tr><th>Same month last year</th><td>{fmt(id,priorYear[id])}</td></tr></tbody></table></div>
+            {!!data.history.length && <MonthlyHistory data={data} ids={[id]} title={label(id)} initialPeriods={14}/>}
+            {data.groups.filter(g => g.columns.includes(id)).map((g,i) => <GroupTableView key={`${g.id || g.field}-${i}`} table={{...g,columns:[id],compare:id}}/>)}
+            <p className="r-note">{data.n.toLocaleString('en-IN')} contributing records. Stored aggregate data; unavailable values remain a dash.</p>
+          </details>}
           {definitions && metricNotes[id]?.definition && (
             <p className="r-card-def" title={metricNotes[id].definition}>{definition(id)?.description}</p>
           )}
