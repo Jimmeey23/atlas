@@ -75,3 +75,30 @@ test('concurrent KRA refreshes share one computation and fresh results are reuse
     assert.equal(loads, 10, 'expired results must recompute before responding');
   } finally { release(); await new Promise<void>(resolve => server.close(() => resolve())); }
 });
+
+test('expired KRA results are reused while every workbook revision is unchanged', async () => {
+  const docs = new Map();
+  const store = { read: async (key: string) => docs.get(key) ?? null, write: async (key: string, value: any) => { docs.set(key, value); return value; } };
+  const keys = ['sales', 'leads', 'bookings', 'lapsed', 'new'];
+  let revision = 'r1';
+  let loads = 0;
+  const freshness = { revisions: async (sources: any[]) => new Map(sources.map(s => [s.id, { id: s.id, revision }])) };
+  const app = express();
+  kraRoutes(app, tmpdir(), keys.map(key => ({ key, id: 'book-' + key })), async (source: any) => {
+    loads++;
+    return { key: source.key, columns: [], rows: [], status: 'ok', fetchedAt: Date.now(), revision };
+  }, store, freshness as any);
+  const server = app.listen(0, '127.0.0.1');
+  await new Promise(resolve => server.once('listening', resolve));
+  const base = `http://127.0.0.1:${(server.address() as any).port}/api/kra/performance`;
+  try {
+    assert.equal((await fetch(base)).status, 200);
+    assert.equal(loads, 5);
+    docs.get('.floor/kra-result-direct.json').computedAt = Date.now() - 60 * 60 * 1000;
+    assert.equal((await fetch(base)).status, 200);
+    assert.equal(loads, 5, 'unchanged workbooks must not recompute');
+    revision = 'r2';
+    assert.equal((await fetch(base)).status, 200);
+    assert.equal(loads, 10, 'an edited workbook must recompute');
+  } finally { await new Promise<void>(resolve => server.close(() => resolve())); }
+});

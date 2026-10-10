@@ -15,6 +15,11 @@ test("public reads keep minority-type cells that gviz blanked", async () => {
   const result = await publicSheet(source, { titles: ["Lapsed"], request: async () => csvResponse(body) as any });
   assert.deepEqual(result.rows, [["1", "8"], ["2", "None"], ["3", "12"]], "trailing blank rows dropped, values kept");
   assert.match(result.mode, /CSV/);
+  const again = await publicSheet(source, { titles: ["Lapsed"], request: async () => csvResponse(body) as any });
+  const edited = await publicSheet(source, { titles: ["Lapsed"], request: async () => csvResponse(body.replace("12", "13")) as any });
+  assert.match(result.hash, /^[0-9a-f]{40}$/);
+  assert.equal(again.hash, result.hash, "identical exports share a content hash");
+  assert.notEqual(edited.hash, result.hash);
 });
 
 test("public reads reject a missing tab, a private workbook and a schema mismatch", async () => {

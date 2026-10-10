@@ -105,14 +105,21 @@ export async function createApp({ serveStatic = false } = {}) {
     try {
       cached = remember(await store.read(cacheKey));
     } catch {}
-    if (cached && !force && Date.now() - cached.fetchedAt < ttl) {
+    if (cached && (force || Date.now() - cached.fetchedAt < ttl)) {
       // Inside the TTL the cache is only trustworthy while the workbook has not
       // been edited. One metadata call decides it; the TTL is just the fallback
       // for when no revision can be read.
-      const { revision } = await freshness.revision(source.id);
+      const { revision } = await freshness.revision(source.id, force ? { maxAge: 0 } : undefined);
       const edited =
         revision && cached.revision && revision !== cached.revision;
-      if (!edited) {
+      // A forced refresh exists to pick up an edit. Every browser that notices the same edit
+      // sends one, and each refetch of Bookings costs tens of CPU-seconds, so it is skipped
+      // when Drive proves this copy is already the current revision, or (unverifiable) when
+      // the copy was fetched moments ago.
+      const reuse = force
+        ? (revision && cached.revision === revision) || (!revision && Date.now() - cached.fetchedAt < 60000)
+        : !edited;
+      if (reuse) {
         await saveMetadata(cached).catch(() => {});
         return { ...cached, cached: true, revision: revision ?? cached.revision ?? null };
       }
@@ -122,12 +129,12 @@ export async function createApp({ serveStatic = false } = {}) {
       // recording the older revision makes the next probe refetch. Recording
       // the newer one would make it skip and keep partially stale rows.
       const { revision } = await freshness.revision(source.id, { maxAge: 0 });
-      let rows, columns, mode, foundTitles;
+      let rows, columns, mode, foundTitles, hash;
       try {
         if (process.env.ALLOW_PUBLIC_SHEETS === "false") throw new Error("Public reads disabled.");
         // Tab titles are re-read on a forced refresh so a renamed tab is caught.
         const titles = force ? undefined : metadata.get(source.id);
-        ({ rows, columns, mode, foundTitles } = await publicSheet(source, { force, titles }));
+        ({ rows, columns, mode, foundTitles, hash } = await publicSheet(source, { force, titles }));
         metadata.set(source.id, foundTitles);
       } catch (publicError) {
         ({ rows, columns, mode, foundTitles } = await authenticatedSheet(source, publicError));
@@ -136,10 +143,15 @@ export async function createApp({ serveStatic = false } = {}) {
       const missing = missingColumns(source, columns);
       // Identifies the content, not the fetch: serverless instances fetch separately, so two
       // copies of an unchanged sheet share a hash even though their fetchedAt differs.
-      const digest = createHash("sha1").update(JSON.stringify(columns));
-      for (const row of rows) digest.update(JSON.stringify(row));
+      // The public path hashes the CSV bytes as they stream; stringifying ~300k rows again
+      // just to hash them was a large share of each fetch's CPU.
+      if (!hash) {
+        const digest = createHash("sha1").update(JSON.stringify(columns));
+        for (const row of rows) digest.update(JSON.stringify(row));
+        hash = digest.digest("hex");
+      }
       const result = {
-        hash: digest.digest("hex"),
+        hash,
         key: source.key,
         title: source.title,
         id: source.id,

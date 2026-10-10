@@ -5,7 +5,8 @@ import {normalise} from '../src/data/normalise.ts';
 import {performanceMarketingTopics} from './kra-curriculum.mjs';
 import {validateKraEdit} from './kra-edits.mjs';
 import {kraPerformance,kraDefinitions} from './kra-metrics.mjs';
-export function kraRoutes(app,root,config,load,store=createStore({root})) {
+import {createFreshness} from './freshness.mjs';
+export function kraRoutes(app,root,config,load,store=createStore({root}),freshness=createFreshness()) {
   const file='.floor/kra-jimmeey-jun-nov-2026.json';
   const cache=key=>`.cache/${key}.json`;
   const asOf=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
@@ -20,6 +21,17 @@ export function kraRoutes(app,root,config,load,store=createStore({root})) {
   // cached durably; expired results are refreshed once per instance before responding.
   const resultKey=imports=>`.floor/kra-result-${imports?'imports':'direct'}.json`;
   const RESULT_TTL=30*60*1000;
+  // Past the TTL, a result computed from the workbooks' current Drive revisions is still exact.
+  // Recomputing it anyway re-normalises ~300k rows, the costliest thing this gateway does.
+  const UNCHANGED_TTL=12*60*60*1000;
+  const KEYS=['sales','leads','bookings','lapsed','new'];
+  async function unchanged(cached) {
+    if(!cached?.revisions||Date.now()-cached.computedAt>=UNCHANGED_TTL)return false;
+    const sources=KEYS.map(key=>config.find(item=>item.key===key));
+    if(sources.some(source=>!source?.id||!cached.revisions[source.key]))return false;
+    const current=await freshness.revisions(sources);
+    return sources.every(source=>current.get(source.id)?.revision===cached.revisions[source.key]);
+  }
   const computations=new Map();
   function computeOnce(imports,refresh) {
     const key=String(imports);
@@ -27,19 +39,20 @@ export function kraRoutes(app,root,config,load,store=createStore({root})) {
     return computations.get(key);
   }
   async function compute(imports,refresh) {
-    const sources={};
-    await Promise.all(['sales','leads','bookings','lapsed','new'].map(async key=>{
+    const sources={},revisions={};
+    await Promise.all(KEYS.map(async key=>{
       const source=config.find(item=>item.key===key);
       let data;
       if(!refresh)try{data=await store.read(cache(key));if(data)data.stale=Date.now()-data.fetchedAt>=15*60*1000;}catch{}
       if(!data)data=await load(source,refresh);
+      revisions[key]=data.revision??null;
       const normalized=normalise(data,false).rows;
       if(key==='leads'){const index=data.columns.indexOf('ID');normalized.forEach((row,i)=>{row.lead_id=index>=0?String(data.rows[i][index]??'').trim()||null:null;});}
       sources[key]={...data,rows:normalized};
     }));
     const result=kraPerformance(sources,asOf(),{imports});
     // Caching is an optimisation: a failed write must never fail the request.
-    await store.write(resultKey(imports),{computedAt:Date.now(),result}).catch(error=>console.error('KRA result cache write skipped:',error?.message??error));
+    await store.write(resultKey(imports),{computedAt:Date.now(),revisions,result}).catch(error=>console.error('KRA result cache write skipped:',error?.message??error));
     return result;
   }
   const decorate=(result,saved,computedAt)=>({...result,definitions:result.definitions.map(definition=>{const info=saved.scorecardInfo?.[definition.id];return {...definition,...info,targetEdited:!!info&&info.target!==definition.target,manual:!!info&&(info.area!==definition.area||info.target!==definition.target||info.weight!==definition.weight)};}),evidence:saved,scorecardEdits:saved.scorecardEdits??{},scorecardHistory:saved.scorecardHistory??[],trainingTopics:performanceMarketingTopics,computedAt:computedAt??Date.now()});
@@ -52,7 +65,7 @@ export function kraRoutes(app,root,config,load,store=createStore({root})) {
       const saved=await evidence();
       if(!refresh){
         const cached=await store.read(resultKey(imports)).catch(()=>null);
-        if(cached?.result&&Date.now()-cached.computedAt<RESULT_TTL){
+        if(cached?.result&&(Date.now()-cached.computedAt<RESULT_TTL||await unchanged(cached).catch(()=>false))){
           res.json(decorate(cached.result,saved,cached.computedAt));
           return;
         }

@@ -3,6 +3,8 @@
 // cell that disagrees with the majority (e.g. 28,963 of 29,064 "Total Sessions Completed"
 // values in Lapsed), so it is not a faithful source for analytics.
 
+import { createHash } from "node:crypto";
+
 // Configured columns a workbook may legitimately omit; the normaliser has fallbacks for them.
 export const OPTIONAL_COLUMNS = {
   sales: ["Paid In Money", "Credits"],
@@ -156,14 +158,20 @@ export async function publicSheet(source, { force = false, request = fetch, titl
   if (/text\/html/i.test(response.headers?.get?.("content-type") || ""))
     throw new Error("Workbook is not publicly readable. Configure the service account.");
   const parser = csvParser();
+  // Identifies the content: the export is deterministic, so identical sheets hash identically.
+  const digest = createHash("sha1");
+  const consume = (text) => {
+    digest.update(text);
+    parser.push(text);
+  };
   if (response.body?.getReader) {
     const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
     for (;;) {
       const { value, done } = await reader.read();
       if (done) break;
-      parser.push(value);
+      consume(value);
     }
-  } else parser.push(await response.text());
+  } else consume(await response.text());
   const parsed = parser.end();
   const columns = (parsed[0] || []).map((c) => c.trim());
   // Rows stay positional (row i is sheet row i + 2) so source links resolve; only the trailing
@@ -177,7 +185,7 @@ export async function publicSheet(source, { force = false, request = fetch, titl
     throw new Error(
       `Schema mismatch for '${source.title}': ${missing.join(", ")}. Found columns: ${columns.join(", ")}`,
     );
-  return { columns, rows, mode: "Public Google Sheets CSV (title + schema verified)", foundTitles };
+  return { columns, rows, mode: "Public Google Sheets CSV (title + schema verified)", foundTitles, hash: digest.digest("hex") };
 }
 
 /** Keeps the newest `keep` archived snapshots per source; older versions are regenerable. */

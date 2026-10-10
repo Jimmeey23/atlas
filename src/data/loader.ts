@@ -217,14 +217,14 @@ export async function revalidate(tab: number, minInterval = 10000) {
   if (tab===8 && useStore.getState().view===PERFORMANCE_MARKETING_VIEW) watched.add("meta");
   // A source we have never loaded is handled by the normal load path.
   const loaded = report.sources.filter((s) => watched.has(s.key) && usable(s.key));
+  // A Drive revision is proof: force a refetch only when it differs from the rows we hold.
   const stale = loaded
-    .filter((s) =>
-      s.currentRevision
-        ? // A Drive revision is proof: refetch only when it differs from the rows we hold.
-          s.currentRevision !== health[s.key]?.revision
-        : // Unverifiable: our own copy's age decides, never the server instance's cache.
-          Date.now() - (health[s.key]?.fetchedAt ?? 0) >= 15 * 60 * 1000,
-    )
+    .filter((s) => s.currentRevision && s.currentRevision !== health[s.key]?.revision)
+    .map((s) => s.key);
+  // Unverifiable: our own copy's age decides, but the gateway's TTL decides whether Google is
+  // asked again. Forcing here made every open browser refetch every sheet each 15 minutes.
+  const aged = loaded
+    .filter((s) => !s.currentRevision && Date.now() - (health[s.key]?.fetchedAt ?? 0) >= 15 * 60 * 1000)
     .map((s) => s.key);
   // The gateway already holds a different, newer copy (another tab or user refreshed it):
   // take it without asking Google again. Same content under a new timestamp is not news.
@@ -232,15 +232,16 @@ export async function revalidate(tab: number, minInterval = 10000) {
     .filter(
       (s) =>
         !stale.includes(s.key) &&
+        !aged.includes(s.key) &&
         (s.fetchedAt ?? 0) > (health[s.key]?.fetchedAt ?? 0) &&
         !(s.hash && s.hash === health[s.key]?.hash),
     )
     .map((s) => s.key);
-  if (!stale.length && !newer.length) return [];
-  const before = new Map([...stale, ...newer].map((key) => [key, health[key]?.hash ?? health[key]?.fetchedAt]));
+  if (!stale.length && !aged.length && !newer.length) return [];
+  const before = new Map([...stale, ...aged, ...newer].map((key) => [key, health[key]?.hash ?? health[key]?.fetchedAt]));
   await Promise.all([
     ...stale.map((key) => ensureSource(key, true)),
-    ...newer.map((key) => ensureSource(key, false, true)),
+    ...[...aged, ...newer].map((key) => ensureSource(key, false, true)),
   ]);
   // Report only sources whose rows actually changed.
   return [...before].filter(([key, was]) => (health[key]?.hash ?? health[key]?.fetchedAt) !== was).map(([key]) => key);

@@ -8,7 +8,6 @@ import { credentialStore } from "./credentials.mjs";
 import { createClient } from "@supabase/supabase-js";
 import WebSocket from "ws";
 import OpenAI from "openai";
-import { DuckDBInstance } from "@duckdb/node-api";
 import { readFile, writeFile, mkdir, stat, rm } from "node:fs/promises";
 import { createWriteStream } from "node:fs";
 import { createGzip } from "node:zlib";
@@ -132,7 +131,9 @@ export function intelligenceRoutes(
   const metadata = new Map();
   async function connection() {
     if (!engine)
-      engine = await DuckDBInstance.create(":memory:", {
+      // Loaded on first query: the native engine is costly to load on every cold start, and
+      // most requests (sheet snapshots, KRA, notes) never touch it.
+      engine = await (await import("@duckdb/node-api")).DuckDBInstance.create(":memory:", {
         allow_unsigned_extensions: "false",
         // Tables beyond this spill into /tmp (capped at 512MB on serverless); the JS heap and
         // this limit must together fit the 2GB instance.
