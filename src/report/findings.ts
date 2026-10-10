@@ -218,10 +218,10 @@ function groupFindings(spec: ChapterSpec, table: GroupTable, ctx: ValueContext):
     const m = a.metric;
     const list = (xs: { g: string; change: number }[] = []) => xs.map((x) => `${x.g} ${signed(m, x.change)}`).join(", ");
     const largest = [...(a.gainers ?? []), ...(a.decliners ?? [])].sort((x, y) => Math.abs(y.change) - Math.abs(x.change))[0];
-    const share = largest && a.totalChange ? Math.abs(largest.change / a.totalChange) : 0;
+    const share = largest && a.totalChange ? largest.change / a.totalChange : 0;
     const money = definition(m)?.format === "currency" ? Math.abs(a.totalChange) : m === "attendance" && ctx.revPerVisit ? Math.abs(a.totalChange) * ctx.revPerVisit : undefined;
     out.push({ chapter: spec.id, focus, kind: "driver", tone: (a.totalChange >= 0) === better(m) ? "context" : "risk", inr: money,
-      text: `${label(m)} by ${by} moved ${signed(m, a.totalChange)} net against last month.${a.gainers?.length ? ` Biggest gains: ${list(a.gainers)}.` : ""}${a.decliners?.length ? ` Biggest declines: ${list(a.decliners)}.` : ""}${share > 1.2 ? ` ${largest.g} alone moved more than the net change, so other groups offset it.` : share >= 0.5 ? ` ${largest.g} accounts for ${(share * 100).toFixed(0)}% of the net change.` : ""}` });
+      text: `${label(m)} by ${by} moved ${signed(m, a.totalChange)} net against last month.${a.gainers?.length ? ` Biggest gains: ${list(a.gainers)}.` : ""}${a.decliners?.length ? ` Biggest declines: ${list(a.decliners)}.` : ""}${share > 1 ? ` ${largest.g} alone moved more than the net change, so other groups offset it.` : share >= 0.5 ? ` ${largest.g} accounts for ${(share * 100).toFixed(0)}% of the net change, not of gross losses; gains and declines elsewhere may offset.` : ""}` });
   }
   if (a?.bridge && Math.abs(a.bridge.current - a.bridge.prior) >= 0.005) {
     const b = a.bridge;

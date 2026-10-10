@@ -62,7 +62,7 @@ export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; them
           // Instructor scorecards already contain all ranking measures. Keep the alternatives in one criterion switch.
           const rankingGroups = spec.id === 'instructors' ? groups.filter(g => g.id?.startsWith('trainer-')) : [];
           const shownGroups = groups.filter(g => !rankingGroups.includes(g));
-          const insights = (narrative?.cards ?? []).filter(card => card !== statement && (spec.id === 'recommendations' || options.lenses.includes(lensOf(card))));
+          const insights = (narrative?.cards ?? []).filter(card => (card !== statement || card.decisionBrief) && (spec.id === 'recommendations' || options.lenses.includes(lensOf(card))));
           const plan = spec.id === 'recommendations';
           const flags = spec.derived ? [] : (findings[spec.id] ?? []).slice(0, 6);
           const metrics = [...new Set([...(PRIORITY_METRICS[spec.id] ?? []), ...spec.metrics])].filter(id => data?.total[id] != null);

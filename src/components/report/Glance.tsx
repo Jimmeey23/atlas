@@ -3,6 +3,7 @@ import { chapters, chapterNumber, type ChapterSpec } from "../../report/chapters
 import { definition, reportFmt as fmt, reportDelta as delta } from "../../report/definitions";
 import type { Finding } from "../../report/findings";
 import type { InsightCard, ReportModel } from "../../report/model";
+import { decisionBrief } from "../../report/decision-brief";
 import { lensOf, Spark, tone } from "./Insight";
 
 /** The one or two measures that best summarise each area on the scorecard. */
@@ -75,21 +76,17 @@ export function AtAGlance({ model, specs, ranked, targets }: { model: ReportMode
         </a>;
       })}
     </div>}
-    <div className="r2-glance-columns">
-      <section className="r2-glance-list" data-kind="wins"><h3><TrendingUp size={15}/>What’s working</h3>
-        <ol>{wins.map((p, i) => <li key={i}><a href={`#${p.spec.id}`}><b>{p.card.headline}</b><span>{p.spec.nav}{p.card.impact ? ` · ${p.card.impact}` : ''}</span></a></li>)}
-          {fallbackWins.map((f, i) => <li key={`f${i}`}><a href={`#${f.chapter}`}><b>{f.text.split('. ')[0]}</b><span>{nav(f.chapter)}</span></a></li>)}</ol>
-        {!wins.length && !fallbackWins.length && <p className="r2-muted">No material improvement was identified this month.</p>}
-      </section>
-      <section className="r2-glance-list" data-kind="risks"><h3><TriangleAlert size={15}/>What needs attention</h3>
-        <ol>{risks.map((p, i) => <li key={i}><a href={`#${p.spec.id}`}><b>{p.card.headline}</b><span>{p.spec.nav}{p.card.impact ? ` · ${p.card.impact}` : ''}</span></a></li>)}
-          {fallbackRisks.map((f, i) => <li key={`f${i}`}><a href={`#${f.chapter}`}><b>{f.text.split('. ')[0]}</b><span>{nav(f.chapter)}</span></a></li>)}</ol>
-        {!risks.length && !fallbackRisks.length && <p className="r2-muted">No material risk was identified this month.</p>}
-      </section>
-      <section className="r2-glance-list" data-kind="moves"><h3><ArrowRightCircle size={15}/>Decisions for leadership</h3>
-        <ol>{moves.map((p, i) => <li key={i}><a href="#recommendations"><b>{p.card.action || p.card.headline}</b><span>{[p.card.ownerArea, p.card.horizon].filter(Boolean).join(' · ') || 'Recommendation'}</span></a></li>)}</ol>
-        {!moves.length && <p className="r2-muted">Include the Recommendations chapter to list decisions here.</p>}
-      </section>
+    <div className="r3-overview" aria-label="Leadership decision brief">
+      {[
+        {title:"Where we're losing ground",icon:TrendingUp,pick:risks[0],fallback:fallbackRisks[0],kind:'decline'},
+        {title:'What needs immediate attention',icon:TriangleAlert,pick:risks[1] || moves[0] || risks[0],fallback:fallbackRisks[1],kind:'attention'},
+        {title:'Recovery opportunity to prioritise',icon:ArrowRightCircle,pick:picks(model,specs.filter(s=>s.id !== 'recommendations'),['opportunity'])[0] || risks[0] || wins[0],fallback:fallbackWins[0],kind:'opportunity'},
+      ].map(({title,icon:Icon,pick,fallback,kind})=><section key={kind} data-kind={kind}>
+        <h3><Icon size={18}/>{title}</h3>
+        {pick ? <a href={`#${pick.spec.id}`}><b>{pick.card.headline}</b><p>{kind === 'opportunity' ? decisionBrief(pick.card)?.opportunity || pick.card.meaning : pick.card.meaning}</p></a>
+          : fallback ? <a href={`#${fallback.chapter}`}><b>{fallback.text.split('. ')[0]}</b><p>{fallback.text}</p></a>
+          : <p>No supported finding is available for this brief.</p>}
+      </section>)}
     </div>
   </section>;
 }
@@ -101,15 +98,15 @@ export function ActionPlan({ cards }: { cards: InsightCard[] }) {
   return <div className="r2-plan">
     <div className="r2-plan-head"><span className="r-eyebrow">Action plan</span><h3>{rows.length} moves, in priority order</h3><p>Owner areas and horizons are proposals for discussion. Values at stake are indicative and can overlap; do not add them up.</p></div>
     <div className="r-table-wrap"><table className="r-table r2-plan-table">
-      <thead><tr><th>#</th><th>Move</th><th>Why</th><th>Owner</th><th>When</th><th>At stake</th><th>Signal to watch</th></tr></thead>
+      <thead><tr><th>#</th><th>Move</th><th>Why</th><th>Owner</th><th>When</th><th>Recovery / scaling potential</th><th>Success signal & target</th></tr></thead>
       <tbody>{rows.map((card, i) => <tr key={i} data-priority={card.priority ?? 'medium'}>
         <td><span className="r2-plan-no">{chapterNumber(i)}</span><small className="r2-tag" data-priority={card.priority ?? 'medium'}>{card.priority ?? 'medium'}</small></td>
-        <td><b>{card.action || card.headline}</b></td>
+        <td><b>{card.headline}</b>{decisionBrief(card)?.steps.length ? <ol>{decisionBrief(card)!.steps.map((step,j)=><li key={j}><b>{step.label}: </b>{step.detail}</li>)}</ol> : <p>{card.action}</p>}</td>
         <td>{card.recommendation || card.meaning}</td>
         <td>{card.ownerArea ? <span className="r2-inline"><Users size={11}/>{card.ownerArea}</span> : '—'}</td>
-        <td>{card.horizon ? <span className="r2-inline"><CalendarClock size={11}/>{card.horizon}</span> : '—'}</td>
-        <td>{card.impact || '—'}</td>
-        <td>{card.watch ? <span className="r2-inline"><Eye size={11}/>{card.watch}</span> : '—'}</td>
+        <td>{card.horizon ? <span className="r2-inline"><CalendarClock size={11}/>{decisionBrief(card)?.review || card.horizon}</span> : '—'}</td>
+        <td>{decisionBrief(card)?.opportunity || card.impact || '—'}</td>
+        <td>{(decisionBrief(card)?.success || card.watch) ? <span className="r2-inline"><Eye size={11}/>{decisionBrief(card)?.success || card.watch}</span> : '—'}</td>
       </tr>)}</tbody>
     </table></div>
   </div>;

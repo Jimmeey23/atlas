@@ -5,6 +5,7 @@ import { InstructorName } from "../InstructorAvatar";
 import { chapters } from "../../report/chapters";
 import { definition, reportFmt as fmt, reportDelta as delta } from "../../report/definitions";
 import type { ChapterData, GroupTable, InsightCard, InsightLens, ReportModel } from "../../report/model";
+import { decisionBrief, decisionTopic, DECISION_KINDS, DECISION_SECTIONS } from "../../report/decision-brief";
 import { INSIGHT_LENSES } from "../../report/model";
 
 const label = (id: string) => definition(id)?.label ?? id;
@@ -129,37 +130,51 @@ export function InsightBlock({ card, model, chapterId, index, inlineEvidence = t
   const cited = (card.metrics?.length ? card.metrics : [table?.compare, ...(chapters.find(c => c.id === chapterId)?.metrics ?? [])].filter((id): id is string => !!id).slice(0, 2))
     .map(id => ({ id, data: metricSource(model, chapterId, id) })).filter((m): m is { id: string; data: ChapterData } => !!m.data && m.data.total[m.id] != null).slice(0, 4);
   const lead = cited[0];
-  const driver = card.driver || card.reasoning;
-  const trend = card.trend || [card.monthContext, card.yearContext].filter(Boolean).join(' ');
-  const hasEvidence = inlineEvidence && (cited.length > 0 || !!table);
-  return <article className="r2-insight" data-lens={lens} data-priority={card.priority ?? 'medium'} data-evidence={hasEvidence}>
+  const brief = decisionBrief(card);
+  const topic = decisionTopic(card,chapterId);
+  const titles = DECISION_SECTIONS[topic];
+  const kind = brief?.kind ?? (lens === 'win' || lens === 'opportunity' ? 'growth_opportunity' : lens === 'risk' ? (topic === 'retention' ? 'retention_risk' : 'performance_anomaly') : lens === 'watch' ? 'early_warning' : 'decision');
+  const trend = card.trend || [card.monthContext,card.yearContext].filter(Boolean).join(' ');
+  const steps = brief?.steps ?? ((card.action || (plan && card.recommendation)) ? [{label:'Recommended intervention',detail:card.action || card.recommendation!}] : []);
+  const success = brief?.success || card.watch;
+  const hasEvidence = inlineEvidence && (cited.length > 0 || !!table || !!card.evidence || !!card.driver);
+  return <article className="r2-insight r3-decision" data-dense="true" data-lens={lens} data-priority={card.priority ?? 'medium'} data-evidence={hasEvidence}>
     <div className="r2-insight-main">
       <header>
         {plan && <span className="r2-plan-no">{String(index + 1).padStart(2, '0')}</span>}
-        <span className="r2-lens"><Icon size={13}/>{lensLabel(lens)}</span>
+        <span className="r2-lens"><Icon size={13}/>{DECISION_KINDS[kind]}</span>
         {card.priority && <span className="r2-tag" data-priority={card.priority}>{card.priority} priority</span>}
-        {confidence && card.confidence && <span className="r2-tag r2-confidence" title="Interpretation confidence">{card.confidence} confidence</span>}
+        <span className="r2-tag">{topic === 'general' ? 'Studio performance' : topic}</span>
+        {confidence && card.confidence && <span className="r2-tag r2-confidence" title="Interpretation confidence, not proof of a cause">{card.confidence} confidence</span>}
       </header>
       <h3>{card.headline}</h3>
       {card.meaning && <p className="r2-meaning">{card.meaning}</p>}
-      <div className="r2-facets">
-        {driver && <Facet icon={GitBranch} title={plan ? 'Why this move' : 'What drove it'}>{plan && card.recommendation ? card.recommendation : driver}</Facet>}
-        {trend && !plan && <Facet icon={Activity} title="Is it durable?">{trend}</Facet>}
-        {card.impact && <Facet icon={Coins} title="At stake" kind="impact">{card.impact}</Facet>}
+      <div className="r3-facts" aria-label="Insight facts and assumptions">
+        {brief ? brief.stats.map((stat,i)=><div className="r3-fact" key={i} data-status={stat.status} data-tone={lens === 'risk' && /^[−-]/.test(stat.value) ? 'down' : undefined}><small>{stat.label}</small><strong>{stat.value}</strong><p>{stat.basis}</p><span>{stat.status === 'estimated' ? 'Indicative estimate' : stat.status === 'hypothesis' ? 'Hypothesis · validate' : 'Confirmed finding'}</span></div>) : <>
+          {card.evidence && <div className="r3-fact"><small>Recorded evidence</small><p>{card.evidence}</p><span>Saved finding · inspect source detail</span></div>}
+          {card.impact && <div className="r3-fact"><small>Indicative exposure</small><p>{card.impact}</p><span>Legacy valuation · validate basis</span></div>}
+          {trend && <div className="r3-fact"><small>Pattern</small><p>{trend}</p><span>Saved interpretation</span></div>}
+        </>}
       </div>
-      {(card.action || (plan && card.recommendation && !driver)) && <div className="r2-move">
-        <h4><ArrowRightCircle size={14}/>{plan ? 'The move' : 'Recommended move'}</h4>
-        <p>{card.action || card.recommendation}</p>
-        {(card.ownerArea || card.horizon) && <div className="r2-move-meta">{card.ownerArea && <span><Users size={12}/>{card.ownerArea}</span>}{card.horizon && <span><CalendarClock size={12}/>{card.horizon}</span>}</div>}
-      </div>}
-      {card.watch && <p className="r2-watch"><Eye size={13}/><b>Signal to watch</b> {card.watch}</p>}
+      <div className="r2-facets r3-facets">
+        <Facet icon={GitBranch} title={titles[0]} kind="diagnosis"><span className="r3-status">Investigation · hypotheses to test</span>{brief?.diagnosis || 'The saved insight identifies a movement, not its underlying cause. Compare source volumes, rates, mix and affected cohorts before attributing the change or choosing an intervention.'}</Facet>
+        <Facet icon={Users} title={titles[1]} kind="affected"><span className="r3-status">Affected scope · confirm coverage</span>{brief?.affected || (card.highlight?.length ? `Named source segments: ${card.highlight.join(', ')}. Member-level effects and linked cohorts require verification.` : 'Affected members, cohorts and time slots were not specified in this saved insight. Identify them from the source records before targeted action.')}</Facet>
+        <Facet icon={Target} title={titles[2]} kind="opportunity"><span className="r3-status">Estimated opportunity · conditional</span>{brief?.opportunity || 'A recovery or scaling target was not quantified in this saved insight. Establish an eligible baseline, capacity and unit-value basis before estimating the opportunity.'}</Facet>
+      </div>
+      {!!steps.length && <section className="r2-move r3-action-plan" aria-label="Recommended action plan">
+        <div className="r3-action-heading"><h4><ArrowRightCircle size={16}/>Recommended Action Plan</h4>{card.horizon && <span className="r2-tag">{card.horizon}</span>}</div>
+        <ol>{steps.map((step,i)=><li key={i}><b>{step.label}: </b>{step.detail}</li>)}</ol>
+        {card.recommendation && <p className="r3-tradeoff">Guardrail & trade-off: {card.recommendation}</p>}
+        <div className="r2-move-meta"><span><Users size={13}/>Suggested owner: {card.ownerArea || 'To be assigned'}</span><span><CalendarClock size={13}/>Review: {brief?.review || 'Deadline to be agreed'}</span></div>
+      </section>}
+      {success && <section className="r3-success"><h4><Activity size={15}/>Success Signal & Target</h4><p>{success}</p><small>Suggested measurement · validate baseline, target and capacity before rollout</small></section>}
     </div>
-    {hasEvidence && <aside className="r2-evidence" aria-label="Supporting evidence">
+    {hasEvidence && <details className="r2-evidence" aria-label="Supporting evidence"><summary className="r3-source-toggle">Inspect source evidence & chapter context</summary>
       <span className="r2-evidence-title"><Gauge size={12}/>Evidence</span>
-      {card.evidence && <p className="r2-evidence-text">{card.evidence}</p>}
+      {card.evidence && <p className="r2-evidence-text">{card.evidence}</p>}{!brief && (card.driver || card.reasoning) && <p className="r2-evidence-text">Saved analysis: {card.driver || card.reasoning}</p>}
       {!!cited.length && <div className="r2-chips">{cited.map(m => <MetricChip key={m.id} id={m.id} data={m.data} target={targets?.[m.id]} compact={cited.length > 2} />)}</div>}
       {table ? <FocusBars table={table} highlight={card.highlight} metric={card.metrics?.find(id => table.columns.includes(id))} />
         : lead && (card.focus === 'trend' || cited.length <= 2) ? <FocusTrend id={lead.id} history={lead.data.history.slice(-14)} /> : null}
-    </aside>}
+    </details>}
   </article>;
 }

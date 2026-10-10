@@ -1,6 +1,13 @@
 import { randomUUID } from "node:crypto";
 const PREFIX = ".floor/reports/";
 const uuid = /^[a-f0-9-]{36}$/i;
+function validBrief(b) {
+  return b && ['attendance','conversion','retention','revenue','growth','instructor','general'].includes(b.topic)
+    && ['performance_anomaly','growth_opportunity','retention_risk','decision','early_warning'].includes(b.kind)
+    && ['diagnosis','affected','opportunity','review','success'].every(key=>typeof b[key]==='string')
+    && Array.isArray(b.steps) && b.steps.length<=3 && b.steps.every(s=>s && typeof s.label==='string' && typeof s.detail==='string')
+    && Array.isArray(b.stats) && b.stats.length<=3 && b.stats.every(s=>s && [s.label,s.value,s.basis].every(v=>typeof v==='string') && ['confirmed','estimated','hypothesis'].includes(s.status));
+}
 export function reportRoutes(app, store, cloud) {
   const route = fn => async (req, res) => {
     try {
@@ -36,7 +43,7 @@ export function reportRoutes(app, store, cloud) {
       throw Object.assign(new Error("A complete report snapshot is required."), { status: 400 });
     for (const narrative of Object.values(report.narratives)) {
       if (!narrative || typeof narrative.summary !== "string" || typeof narrative.generated !== "boolean"
-        || !Array.isArray(narrative.cards) || narrative.cards.some(card => !card ||
+        || !Array.isArray(narrative.cards) || narrative.cards.some(card => !card || (card.decisionBrief != null && !validBrief(card.decisionBrief)) ||
           ["headline", "meaning", "evidence", "action"].some(field => typeof card[field] !== "string") || ["monthContext","yearContext","reasoning","recommendation","layout"].some(field=>card[field]!=null && typeof card[field]!=="string")))
         throw Object.assign(new Error("Report analysis is malformed."), { status: 400 });
     }
