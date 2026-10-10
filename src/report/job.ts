@@ -3,7 +3,7 @@ import { computeReport } from "./compute";
 import { chapters } from "./chapters";
 import { fallbackNarrative, generateNarratives } from "./narrative";
 import { findingsFor } from "./findings";
-import { saveReport, type SavedReport } from "./storage";
+import { KEEP_RECENT, saveReport, type SavedReport } from "./storage";
 import type { ChapterNarrative, ReportCustomization, ReportModel } from "./model";
 
 export type ReportStage = { label: string; done: number; total: number } | null;
@@ -51,6 +51,10 @@ export function estimateSeconds(c: ReportCustomization) {
   return 20 + c.chapterIds.length * (c.detail === "Concise" ? 45 : 60);
 }
 
+/** Mirrors the server's retention: pinned reports plus the latest KEEP_RECENT. */
+export function retained(item: SavedReport, _index: number, all: SavedReport[]) {
+  return !!item.pinned || all.filter(r => !r.pinned).indexOf(item) < KEEP_RECENT;
+}
 export async function persistReport(report: ReportModel, signal?: AbortSignal) {
   const job = useReportJob.getState();
   job.set({ storageError: "" });
@@ -62,7 +66,7 @@ export async function persistReport(report: ReportModel, signal?: AbortSignal) {
       model: saved,
       savedReports: [{ id: saved.id!, scope: saved.scope, builtAt: saved.builtAt, savedAt: saved.savedAt!,
         aiChapters: Object.values(saved.narratives).filter(n => n.generated).length,
-        chapterCount: Object.keys(saved.narratives).length }, ...current.savedReports].slice(0, 50),
+        chapterCount: Object.keys(saved.narratives).length, title: saved.customization?.title }, ...current.savedReports].filter(retained),
     });
   } catch (e) {
     if (!signal?.aborted) useReportJob.getState().set({ storageError: `This report is not saved. ${String(e)}` });

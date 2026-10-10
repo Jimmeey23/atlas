@@ -38,31 +38,36 @@ try {
  await review.waitForFunction(()=>document.querySelector('.floating-review').dataset.open==='false',{},{timeout:10000});
  await tools.click();
  assert.equal(await review.locator('[aria-label="Annotation tools"]').isVisible(),true);
- // Restyling a saved report keeps its snapshot and works in all three layouts.
- for(const layout of ['adaptive','full','grid']){await review.getByLabel('Report layout',{exact:true}).selectOption(layout);assert.equal(await review.locator('.report-doc').getAttribute('data-report-layout'),layout);}
+ // Appearance restyles the saved snapshot without changing it.
+ const appearance=async()=>{if(!(await review.getByLabel('Report layout',{exact:true}).isVisible()))await review.getByRole('button',{name:'Appearance',exact:true}).click();};
+ await appearance();
+ for(const layout of ['adaptive','full','grid']){await review.getByLabel('Report layout',{exact:true}).selectOption(layout);}
  await review.getByLabel('Report theme',{exact:true}).selectOption('dark:warm');await review.getByLabel('Report accent',{exact:true}).selectOption('indigo');
  assert.equal(await review.locator('.report-doc').getAttribute('data-surface'),'warm');assert.equal(await review.locator('.report-doc').getAttribute('data-report-theme'),'dark');
+ await review.getByLabel('Report theme',{exact:true}).selectOption('light:paper');await review.getByLabel('Report layout',{exact:true}).selectOption('adaptive');
+ await review.getByRole('button',{name:'Appearance',exact:true}).click();
+ // Chapter tabs → insights keep their evidence drilldowns.
+ await review.locator('.deck-tabs button',{hasText:'Schedule'}).click();
+ await review.locator('.deck-sections').getByRole('tab',{name:/Insights/}).click();
  const insight=review.locator('.r2-insight').first();await insight.getByRole('button',{name:'Explore data: Barre attendance improved'}).click();
  assert.equal(await insight.locator('.r-insight-drilldown').getAttribute('open'),'');
  const liveLink=new URL(await insight.getByRole('link',{name:/Open full source analytics/}).getAttribute('href'));
  assert.equal(liveLink.searchParams.get('tab'),'1');assert.deepEqual(JSON.parse(liveLink.searchParams.get('f')),{from:'2026-09-01',to:'2026-09-30',location:['Kenkere House']});
  await insight.getByRole('button',{name:'Detail',exact:true}).click();
  assert.ok((await insight.innerText()).includes('Previous month'));assert.ok((await insight.innerText()).includes('Mat'));assert.ok((await insight.innerText()).includes('stored in this snapshot'));
- await insight.getByRole('button',{name:'Explore data: Barre attendance improved'}).click();
- await review.locator('.r-metric-drilldown').first().locator(':scope > summary').click();assert.ok((await review.locator('.r-card').first().innerText()).includes('Previous month'));
- await review.locator('.r-metric-drilldown').first().locator(':scope > summary').click();
- await review.getByLabel('Report theme',{exact:true}).selectOption('light:paper');await review.getByLabel('Report layout',{exact:true}).selectOption('adaptive');
- // Chapter navbar remains pinned while the content scrolls.
- await review.locator('#main').evaluate(el=>el.scrollTop=700);await review.waitForTimeout(100);
- const nav=await review.locator('.r-topbar').boundingBox(),canvas=await review.locator('#main').boundingBox();assert.ok(Math.abs(nav.y-canvas.y)<3,`chapter navigation stays pinned: ${JSON.stringify({nav,canvas,style:await review.locator('.r-topbar').evaluate(el=>({position:getComputedStyle(el).position,top:getComputedStyle(el).top,ancestors:Array.from((function*(el){while(el){yield el;el=el.parentElement;}})(el)).map(p=>({tag:p.tagName,class:p.className,overflow:getComputedStyle(p).overflow,position:getComputedStyle(p).position}))}))})}`);
- await review.locator('#main').evaluate(el=>el.scrollTop=0);
  await insight.scrollIntoViewIfNeeded();await review.screenshot({path:'/tmp/atlas-report-cards-desktop.png'});
- await review.getByLabel('Report layout',{exact:true}).selectOption('grid');await review.screenshot({path:'/tmp/atlas-report-cards-grid.png'});
- await review.getByLabel('Report layout',{exact:true}).selectOption('adaptive');
+ // The navbar stays fixed at the very top while pages scroll.
+ await review.locator('#main').evaluate(el=>el.scrollTop=700);await review.waitForTimeout(100);
+ assert.equal(Math.round((await review.locator('.deck-nav').boundingBox()).y),0,'navbar pinned at the top');
+ // Metric cards flip to their history.
+ await review.locator('.deck-sections').getByRole('tab',{name:/Verdict/}).click();
+ const flip=review.locator('.deck-flip').first();await flip.locator('.deck-flip-front').click();assert.equal(await flip.getAttribute('data-flipped'),'true');
  // Exported HTML keeps native drilldowns and the headline shortcut without React.
- const exported=await review.evaluate(async model=>{const {serialiseReport}=await import('/src/report/export.ts');return serialiseReport(document.querySelector('.report-doc'),model);},model);
+ const downloadPromise=review.waitForEvent('download');await review.getByRole('button',{name:'Download HTML',exact:true}).click();
+ const exported=await (await import('node:fs/promises')).readFile(await (await downloadPromise).path(),'utf8');
  const file=await hostContext.newPage();await file.setContent(exported);await file.locator('.r-insight-title').first().click();
  assert.equal(await file.locator('.r-insight-drilldown').first().getAttribute('open'),'');await file.close();
+ await review.locator('.deck-tabs button').first().click();
  if(await tools.getAttribute('aria-expanded')==='false')await tools.click();
  assert.equal(await review.locator('[aria-label="Presenter toolkit"]').isVisible(),true);
  await review.getByRole('button',{name:'Sound clips',exact:true}).click();await review.getByRole('searchbox',{name:'Search sound clips'}).waitFor();
@@ -130,5 +135,5 @@ try {
  await review.reload();await review.locator('[data-note-id]').waitFor();
  assert.equal(await review.locator('[data-note-id] textarea').inputValue(),'Owner confirmed by guest.');
  assert.deepEqual(errors,[]);
- console.log('PASS: saved-snapshot drilldowns, three layouts, palettes, pinned navbar, floating toolkit auto-collapse, new-tab snapshot, full toolkit, host/join, chapter/ink sharing, independent navigation, pause/resume, raised hands, shared notes, isolation, reload and mobile overflow.');
+ console.log('PASS: deck tabs, saved-snapshot drilldowns, appearance, fixed navbar, flip cards, floating toolkit auto-collapse, new-tab snapshot, full toolkit, host/join, chapter/ink sharing, independent navigation, pause/resume, raised hands, shared notes, isolation, reload and mobile overflow.');
 } finally {await browser?.close();await vite.close();http.closeAllConnections();await new Promise(resolve=>http.close(resolve));}

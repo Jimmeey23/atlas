@@ -13,7 +13,8 @@
     "verify:upgrades": "node scripts/verify-upgrades.mjs",
     "verify:atlas": "node scripts/verify-atlas.mjs",
     "build:api": "node scripts/build-api.mjs",
-    "verify:report-page": "node scripts/verify-report-page.mjs"
+    "verify:report-page": "node scripts/verify-report-page.mjs",
+    "verify:report-deck": "node scripts/verify-report-deck.mjs"
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.30.0",

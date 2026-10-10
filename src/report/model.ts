@@ -106,6 +106,10 @@ export interface InsightCard {
   impact?: string;
   /** The leading indicator and threshold to review next month. */
   watch?: string;
+  /** Where the movement concentrates: the segments, slots or people that carry most of it. */
+  concentration?: string;
+  /** What held up or offset the headline, so the verdict is not one-sided. */
+  offset?: string;
 }
 export interface ChapterNarrative {
   /** Prose under the chapter header. Empty when no provider answered. */
@@ -176,4 +180,45 @@ export interface ReportModel {
   signals?: ReportSignal[];
   /** Stable over re-runs whose figures have not moved; keys the narrative cache. */
   figuresHash: string;
+  /** Pinned reports are exempt from history retention. */
+  pinned?: boolean;
+  /** Last admin edit saved over this version. */
+  editedAt?: string;
+  /** Admin replacements of individual components, keyed by slot id (chapter:section:component). */
+  replacements?: Record<string, ReportComponentSpec>;
+  /** Presenter's own notes per page, keyed chapter:section. */
+  presenterNotes?: Record<string, string>;
+  /** AI-written talk tracks per page, keyed chapter:section. */
+  speakerNotes?: Record<string, SpeakerNotes>;
 }
+/** A speaker script for one report page. */
+export interface SpeakerNotes {
+  opener: string;
+  points: string[];
+  numbers: string[];
+  questions: { q: string; a: string }[];
+  transition: string;
+  generated?: boolean;
+}
+/**
+ * A declarative component an admin had the AI write in place of the original.
+ * Figures are copied from the frozen snapshot; the renderer never queries.
+ */
+export type ReportComponentSpec = {
+  kind: 'metrics' | 'chart' | 'table' | 'bullets' | 'callout' | 'comparison';
+  title: string;
+  subtitle?: string;
+  /** metrics */
+  items?: { label: string; value: string; delta?: string; tone?: 'up' | 'down' | 'flat'; note?: string }[];
+  /** chart */
+  chart?: { type: 'bar' | 'line' | 'area' | 'pie' | 'hbar'; categories: string[]; series: { name: string; values: (number | null)[] }[]; unit?: string };
+  /** table */
+  columns?: string[]; rows?: string[][];
+  /** bullets / callout */
+  bullets?: { icon?: 'up' | 'down' | 'alert' | 'idea' | 'target' | 'check' | 'info'; text: string }[];
+  body?: string;
+  tone?: 'positive' | 'negative' | 'neutral' | 'info';
+  /** comparison */
+  left?: { label: string; points: string[] }; right?: { label: string; points: string[] };
+  prompt?: string; generatedAt?: string;
+};

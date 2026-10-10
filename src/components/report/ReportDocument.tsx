@@ -77,10 +77,13 @@ export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; them
             {(narrative?.summary || statement) && <div className="r2-verdict">
               <span className="r-eyebrow">Chapter verdict</span>
               <p>{narrative?.summary || statement?.meaning}</p>
-              {statement && (statement.driver || statement.trend || statement.impact) && <dl>
-                {statement.driver && <div><dt>Main driver</dt><dd>{statement.driver}</dd></div>}
-                {statement.trend && <div><dt>Durability</dt><dd>{statement.trend}</dd></div>}
-                {statement.impact && <div><dt>At stake</dt><dd>{statement.impact}</dd></div>}
+              {statement && (statement.driver || statement.concentration || statement.offset || statement.trend || statement.impact || statement.watch) && <dl>
+                {statement.driver && <div><dt>Root cause</dt><dd>{statement.driver}</dd></div>}
+                {statement.concentration && <div><dt>Where it concentrates</dt><dd>{statement.concentration}</dd></div>}
+                {statement.offset && <div><dt>What held up</dt><dd>{statement.offset}</dd></div>}
+                {statement.trend && <div><dt>Structural or one-off?</dt><dd>{statement.trend}</dd></div>}
+                {statement.impact && <div><dt>Value at stake</dt><dd>{statement.impact}</dd></div>}
+                {statement.watch && <div><dt>Watch next month</dt><dd>{statement.watch}</dd></div>}
               </dl>}
             </div>}
             {data && <MetricCards data={data} ids={metrics.slice(0, 5)} total={data.total} prior={data.prior} priorYear={data.priorYear} history={options.showCharts ? data.history.slice(-options.historyMonths) : undefined} definitions={options.showDefinitions}/>}

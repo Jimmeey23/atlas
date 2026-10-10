@@ -1,5 +1,5 @@
 import { InsightDrilldown } from "./InsightDrilldown";
-import { TrendingUp, TriangleAlert, GitBranch, Lightbulb, Radar, ArrowRightCircle, Target, Gauge, Activity, Coins, Eye, Users, CalendarClock } from "lucide-react";
+import { TrendingUp, TriangleAlert, GitBranch, Lightbulb, Radar, ArrowRightCircle, Target, Gauge, Activity, Coins, Eye, Users, CalendarClock, Crosshair, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Row } from "../../data/duckdb";
 import { InstructorName } from "../InstructorAvatar";
@@ -145,9 +145,11 @@ export function InsightBlock({ card, model, chapterId, index, inlineEvidence = t
       <InsightDrilldown model={model} chapterId={chapterId} headline={card.headline} metrics={cited} table={table}>{card.headline}</InsightDrilldown>
       {card.meaning && <p className="r2-meaning">{card.meaning}</p>}
       <div className="r2-facets">
-        {driver && <Facet icon={GitBranch} title={plan ? 'Why this move' : 'What drove it'}>{plan && card.recommendation ? card.recommendation : driver}</Facet>}
-        {trend && !plan && <Facet icon={Activity} title="Is it durable?">{trend}</Facet>}
-        {card.impact && <Facet icon={Coins} title="At stake" kind="impact">{card.impact}</Facet>}
+        {driver && <Facet icon={GitBranch} title={plan ? 'Why this move' : 'Root cause'}>{plan && card.recommendation ? card.recommendation : driver}</Facet>}
+        {card.concentration && !plan && <Facet icon={Crosshair} title="Where it concentrates">{card.concentration}</Facet>}
+        {card.offset && !plan && <Facet icon={ShieldCheck} title="What held up" kind="offset">{card.offset}</Facet>}
+        {trend && !plan && <Facet icon={Activity} title="Structural or one-off?">{trend}</Facet>}
+        {card.impact && <Facet icon={Coins} title="Value at stake" kind="impact">{card.impact}</Facet>}
       </div>
       {(card.action || (plan && card.recommendation && !driver)) && <div className="r2-move">
         <h4><ArrowRightCircle size={14}/>{plan ? 'The move' : 'Recommended move'}</h4>

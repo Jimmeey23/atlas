@@ -168,17 +168,19 @@ function insightRules(model: ReportModel, spec: ChapterSpec) {
   const recs = spec.id === "recommendations";
   const lenses = INSIGHT_LENSES.filter(l => recs ? l.id === "next_step" : l.id !== "next_step" && o.lenses.includes(l.id));
   return [
-    "Return JSON with summary and cards. Every card has headline, meaning, evidence, driver, trend, impact, action, watch, recommendation, lens, focus, metrics, highlight, priority, ownerArea, horizon and confidence.",
+    "Return JSON with summary and cards. Every card has headline, meaning, evidence, driver, trend, impact, action, watch, concentration, offset, recommendation, lens, focus, metrics, highlight, priority, ownerArea, horizon and confidence.",
     "PURPOSE: a practical, decision-led review of the SELECTED MONTH. Every card answers exactly one leadership question, named by its lens. Do not repeat the same movement across cards, and do not write cards that merely restate a table.",
     "Lenses allowed in this chapter:\n" + lenses.map(l => `- ${l.id} (${l.label}): ${l.question}`).join("\n"),
     recs ? "Every card uses lens next_step." : "Use a mix of lenses where the evidence supports it; skip a lens rather than force it. The kpis verdict card may use any lens.",
     "headline: the verdict in at most 16 words, including the key number.",
     "meaning (shown as 'Why it matters'): 45–80 words on the business consequence for members, revenue, capacity or the brand. Do not restate the figure.",
     "evidence: at most 40 words of exact supplied figures with their comparison periods.",
-    "driver (shown as 'What drove it'): 30–60 words decomposing the movement: which breakdown rows or mix shifts contributed how much, and the offsetting force. Decompositions are arithmetic; label a causal idea as a hypothesis and name the check that would confirm it.",
-    `trend (shown as 'Is it durable?'): at most 35 words giving one verdict — new, persistent for n months, reversing, seasonal or one-off. ${COMPARISON_FOCUS[o.comparisonFocus]}`,
+    "driver (shown as 'Root cause'): 30–60 words decomposing the movement: which breakdown rows or mix shifts contributed how much, and the offsetting force. Decompositions are arithmetic; label a causal idea as a hypothesis and name the check that would confirm it.",
+    "concentration (shown as 'Where it concentrates'): at most 30 words naming the specific segments, formats, slots, channels or instructors that carry most of the movement, with their share or contribution. Empty string when the movement is broad-based or no breakdown supports it.",
+    "offset (shown as 'What held up'): at most 25 words on the strongest counter-signal: the metric or segment moving the other way, so the reading stays balanced. Empty string when nothing material offsets it.",
+    `trend (shown as 'Structural or one-off?'): at most 35 words giving one verdict — new, persistent for n months, reversing, seasonal or one-off. ${COMPARISON_FOCUS[o.comparisonFocus]}`,
     o.quantifyImpact
-      ? "impact (shown as 'At stake'): at most 30 words quantifying rupees, members, seats or sessions at stake with the arithmetic shown, labelled indicative where it rests on an average. Empty string when the evidence cannot be valued."
+      ? "impact (shown as 'Value at stake'): at most 30 words quantifying rupees, members, seats or sessions at stake with the arithmetic shown, labelled indicative where it rests on an average. Empty string when the evidence cannot be valued."
       : "impact: empty string.",
     o.includeActions || recs
       ? "action (shown as 'Recommended move'): at most 40 words — one concrete, practical move that follows from this evidence: what to change, where and for whom. No invented deadlines, named people, policies or promised uplift. watch (shown as 'Signal to watch'): at most 25 words naming the leading indicator and the threshold that would confirm or reject the reading next month."

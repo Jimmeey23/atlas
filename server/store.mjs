@@ -7,7 +7,7 @@
 // always stay on local disk — pushing them through Supabase on every request is slow and buys
 // nothing. On serverless the cache root moves to /tmp, which is writable but per-instance:
 // a cold start simply refetches from Sheets.
-import { readFile, rename, mkdir, open } from "node:fs/promises";
+import { readFile, rename, mkdir, open, rm } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { gzip, gunzip } from "node:zlib";
@@ -102,5 +102,13 @@ export function createStore({ root, cloud = null, cacheRoot = root }) {
     backend: cloud ? "supabase documents + local cache" : "filesystem",
     read: key => (durable(key) ? readMigrating(key) : readLocal(key)),
     write: (key, value) => (durable(key) ? writeCloud(key, value) : writeLocal(key, value)),
+    /** Deletes the document everywhere it may live: the cloud row and any local copy. */
+    async remove(key) {
+      if (durable(key)) {
+        const { error } = await cloud.from(TABLE).delete().eq("key", key);
+        if (error) throw new Error(`Store delete failed for ${key}: ${error.message}`);
+      }
+      await rm(path.join(base(key), key), { force: true });
+    },
   };
 }

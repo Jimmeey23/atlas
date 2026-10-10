@@ -26,14 +26,18 @@ export function MonthlyTableControls({
     ["year", "YoY Δ"],
   ],
   children,
+  comparisons,
 }: {
   state: MonthlyTableState;
   onChange: (patch: Partial<MonthlyTableState>) => void;
   onExport?: () => void;
   modes?: string[][];
   children?: React.ReactNode;
+  /** Force comparison modes on or off regardless of the dashboard's comparison setting. */
+  comparisons?: boolean;
 }) {
-  const compareOff = useStore((s) => s.compare) === "none";
+  const globalOff = useStore((s) => s.compare) === "none";
+  const compareOff = comparisons == null ? globalOff : !comparisons;
   const shown = compareOff ? modes.filter(([key]) => !comparisonModes.has(key)) : modes;
   useEffect(() => {
     if (compareOff && comparisonModes.has(state.mode) && shown[0]) onChange({ mode: shown[0][0] });

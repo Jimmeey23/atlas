@@ -1,0 +1,54 @@
+/* Monthly report studio: builder on the left, generate + library on the right. App tokens only. */
+.rs{display:grid;gap:18px;padding-bottom:40px}
+.rs-hero{position:relative;overflow:hidden;display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:center;padding:22px 26px;border-radius:20px;border:1px solid var(--hairline);
+  background:radial-gradient(120% 140% at 0% 0%,color-mix(in srgb,var(--accent) 16%,transparent),transparent 55%),linear-gradient(160deg,var(--raised,var(--surface-2)),var(--surface-1))}
+.rs-hero-mark{display:grid;place-items:center;width:52px;height:52px;border-radius:16px;color:#fff;background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 50%,#8b5cf6));box-shadow:0 10px 24px color-mix(in srgb,var(--accent) 35%,transparent)}
+.rs-hero-copy h2{font-family:var(--font-display);font-size:clamp(20px,2.2vw,27px);margin:4px 0 6px;letter-spacing:-.01em}
+.rs-hero-copy p{margin:0;max-width:640px;color:var(--text-2);font-size:13.5px;line-height:1.55}
+.rs-hero-features{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.rs-hero-features li{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--text-2);padding:7px 12px;border-radius:999px;background:var(--surface-1);border:1px solid var(--hairline)}
+.rs-hero-features svg{color:var(--accent)}
+.rs-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,380px);gap:18px;align-items:start}
+.rs-main{display:grid;gap:18px;min-width:0}
+.rs-side{position:sticky;top:12px;display:grid;gap:14px}
+.rs-card{padding:18px 20px;border-radius:18px;background:var(--raised,var(--surface-2));border:1px solid var(--hairline);box-shadow:var(--elev-1,none)}
+.rs-card-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.rs-card-head h3{margin:0;font-size:15px}.rs-card-head p{margin:2px 0 0;font-size:12px;color:var(--text-3)}
+.rs-card-head>svg{color:var(--accent);margin-top:2px}
+.rs-step{flex:none;display:grid;place-items:center;width:26px;height:26px;border-radius:8px;font-size:12px;font-weight:800;color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.rs-scope-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.rs-field{display:grid;gap:6px}.rs-field>span{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em}
+.rs-field .dropdown-field,.rs-field select{width:100%}
+.rs-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 14px}
+.rs-summary div{padding:10px;border-radius:12px;background:var(--surface-1);border:1px solid var(--hairline)}
+.rs-summary dt{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--text-3)}.rs-summary dd{margin:4px 0 0;font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+.rs-cta{width:100%;justify-content:center;min-height:42px;font-size:13.5px;border-radius:12px}
+.rs-progress{display:grid;gap:8px;margin-top:14px}
+.rs-progress-head{display:flex;align-items:center;gap:8px;font-size:12.5px}.rs-progress-head span{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--text-3)}
+.rs-progress small{font-size:11px;color:var(--text-3)}
+.rs-hint{display:flex;align-items:flex-start;gap:6px;margin:12px 0 0;font-size:12px;color:var(--text-2)}.rs-hint[data-tone=warn]{color:var(--warn)}
+.rs-ready{border-color:color-mix(in srgb,var(--pos) 35%,var(--hairline));background:linear-gradient(160deg,color-mix(in srgb,var(--pos) 7%,var(--raised,var(--surface-2))),var(--raised,var(--surface-2)))}
+.rs-ready-head{display:flex;gap:10px;align-items:center;margin-bottom:12px}.rs-ready-head b{display:block;font-size:14px}.rs-ready-head small{font-size:11.5px;color:var(--text-3)}
+.rs-ready-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;color:var(--pos);background:color-mix(in srgb,var(--pos) 14%,transparent)}
+.rs-ready-actions{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.rs-library-group+.rs-library-group{margin-top:12px}
+.rs-library-label{display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-3);margin-bottom:6px}
+.rs-library ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.rs-library li{display:flex;align-items:center;gap:4px;padding:4px;border-radius:12px;border:1px solid transparent}
+.rs-library li:hover,.rs-library li[data-current=true]{background:var(--surface-1);border-color:var(--hairline)}
+.rs-library-open{flex:1;min-width:0;display:flex;align-items:center;gap:10px;text-align:left;padding:6px;border-radius:9px;color:inherit}
+.rs-library-open>span:nth-child(2){flex:1;min-width:0;display:grid}
+.rs-library-open b{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rs-library-open small{font-size:11px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rs-library-open>svg{color:var(--text-3)}.rs-library-open:hover>svg{color:var(--accent)}
+.rs-library-icon{flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:var(--surface-2);color:var(--accent)}
+.rs-library .icon-button[aria-pressed=true]{color:var(--accent)}
+.rs-empty{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-3);margin:0}
+
+/* The existing settings component, re-skinned into the studio card. */
+.rs .rs-settings-card .report-settings{border:0;padding:0;margin:0;background:none;box-shadow:none}
+.rs .rs-settings-card .report-settings>legend,.rs .rs-settings-card .rb-settings-heading{display:none}
+.rs .rs-settings-card .rb-tabs{display:flex;flex-wrap:wrap;gap:4px;padding:4px;border-radius:12px;background:var(--surface-1);border:1px solid var(--hairline);margin-bottom:16px}
+.rs .rs-settings-card .rb-tabs button{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:9px;font-size:12px;font-weight:600;color:var(--text-2);border:0;background:none}
+.rs .rs-settings-card .rb-tabs button[aria-pressed=true]{background:var(--raised,var(--surface-3));color:var(--text-1);box-shadow:var(--elev-1,0 1px 3px rgba(0,0,0,.12))}
+@media(max-width:1080px){.rs-grid{grid-template-columns:1fr}.rs-side{position:static}.rs-hero{grid-template-columns:auto 1fr}.rs-hero-features{grid-column:1/-1;display:flex;flex-wrap:wrap}}
+@media(max-width:560px){.rs-hero{grid-template-columns:1fr;padding:18px}.rs-summary{grid-template-columns:1fr 1fr 1fr}.rs-card{padding:16px}}
