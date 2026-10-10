@@ -107,6 +107,15 @@ test("sticky notes validate placement and persist independent documents across g
       (await call("/" + id, "PUT", { ...note, tab: 16 })).status,
       400,
     );
+    const reportId=randomUUID(), scopedId=randomUUID();
+    assert.throws(()=>validateNote({...note,reportId:'../../other'}));
+    assert.equal((await call('/'+scopedId,'PUT',{...note,id:scopedId,tab:15,reportId})).status,200);
+    const scoped=(await call('?reportId='+reportId)).data.notes;
+    assert.equal(scoped.length,1);
+    assert.equal(scoped[0].reportId,reportId);
+    assert.deepEqual((await call('?reportId='+randomUUID())).data.notes,[]);
+    await call('/'+scopedId,'DELETE');
+    assert.deepEqual((await call('?reportId='+reportId)).data.notes,[]);
     await call("/" + id, "DELETE");
     assert.deepEqual((await call()).data.notes, []);
   } finally {

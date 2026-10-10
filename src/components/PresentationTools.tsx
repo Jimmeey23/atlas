@@ -16,7 +16,7 @@ async function request(path:string,method='GET',body?:unknown,token?:string) {
 function context() {const {tab,view,filters,compare,transient}=useStore.getState();return {tab,view,filters,compare,transient};}
 const canvas=()=>document.querySelector<HTMLElement>('main.canvas, main#main, .canvas');
 
-export function PresentationTools() {
+export function PresentationTools({standalone=false, beforeHost}: {standalone?:boolean; beforeHost?:()=>Promise<void>} = {}) {
   const [panel,setPanel]=useState<'audio'|'session'|null>(null);
   const [search,setSearch]=useState(''),[playing,setPlaying]=useState(''),[paused,setPaused]=useState(false),[volume,setVolume]=useState(.6);
   const audio=useRef<HTMLAudioElement>();
@@ -24,12 +24,12 @@ export function PresentationTools() {
   const [name,setName]=useState(''),[code,setCode]=useState(new URLSearchParams(location.search).get('session')||'');
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[follow,setFollow]=useState(true),[hand,setHand]=useState(false),[draw,setDraw]=useState(false),[copied,setCopied]=useState(false);
   const [strokes,setStrokes]=useState<Stroke[]>([]),[draft,setDraft]=useState<Stroke|null>(null),[bounds,setBounds]=useState({left:0,top:0,width:1,height:1,scroll:0});
-  const [presenter,setPresenter]=useState<PresenterState>(initialPresenter);
+  const [presenter,setPresenter]=useState<PresenterState>({...initialPresenter,active:standalone});
   const [inkTool,setInkTool]=useState<NonNullable<Stroke['tool']>|'eraser'>('pen'),[inkColor,setInkColor]=useState('#e5aa29'),[inkWidth,setInkWidth]=useState(4),[inkText,setInkText]=useState(''),[redo,setRedo]=useState<Stroke[]>([]);
   const token=useRef(''),participant=useRef('');
   const live=useRef({room,role,follow,hand,strokes,presenter});live.current={room,role,follow,hand,strokes,presenter};
   const lastApplied=useRef('');
-  const snapshot=():SharedState=>({context:context(),scroll:canvas()?.scrollTop||0,reportId:document.querySelector('[data-report-id]')?.getAttribute('data-report-id')||'',annotations:live.current.strokes,presenter:live.current.presenter});
+  const snapshot=():SharedState=>({context:standalone?{...context(),tab:15,view:'performance'}:context(),scroll:canvas()?.scrollTop||0,reportId:document.querySelector('[data-report-id]')?.getAttribute('data-report-id')||'',annotations:live.current.strokes,presenter:live.current.presenter});
   useEffect(()=>{audio.current=new Audio();audio.current.preload='none'; const a=audio.current;a.onended=()=>{setPlaying('');setPaused(false);};a.onerror=()=>{setError('This sound clip could not be loaded.');setPlaying('');};if(code)setPanel('session');return()=>{a.pause();a.src='';};},[]);
   useEffect(()=>{if(audio.current)audio.current.volume=volume;},[volume]);
   async function play(src:string){setError('');const a=audio.current!;if(a.src===new URL(src,location.href).href&&!a.paused){a.pause();setPaused(true);return;}if(a.src!==new URL(src,location.href).href)a.src=src;try{await a.play();setPlaying(src);setPaused(false);}catch{setError('Playback was blocked. Select the clip again to play it.');}}
@@ -50,7 +50,7 @@ export function PresentationTools() {
       const current=live.current;
       const r=role==='host'?await request('/'+room!.code,'PUT',{state:snapshot(),paused:current.room?.paused},token.current):await request('/'+room!.code+'/heartbeat','POST',{participantId:participant.current,hand:current.hand});
       if(!cancelled){apply(r);setError('');}
-    }catch(e){if(!cancelled){setError(String((e as Error).message));if((e as Error & {status?:number}).status===410){setRoom(null);setRole(null);setStrokes([]);setDraw(false);setPresenter(initialPresenter);}}}finally{if(!cancelled)timer=setTimeout(tick,1200);}}
+    }catch(e){if(!cancelled){setError(String((e as Error).message));if((e as Error & {status?:number}).status===410){setRoom(null);setRole(null);setStrokes([]);setDraw(false);setPresenter({...initialPresenter,active:standalone});}}}finally{if(!cancelled)timer=setTimeout(tick,1200);}}
     void tick();return()=>{cancelled=true;clearTimeout(timer);};
   },[role,room?.code]);
   useEffect(()=>{
@@ -58,22 +58,23 @@ export function PresentationTools() {
     const update=()=>{const el=canvas();if(!el)return;const b=el.getBoundingClientRect();setBounds({left:b.left,top:b.top,width:b.width,height:b.height,scroll:el.scrollTop});};
     update();const timer=setInterval(update,250);window.addEventListener('resize',update);return()=>{clearInterval(timer);window.removeEventListener('resize',update);};
   },[role,presenter.active]);
-  async function host(){setBusy(true);setError('');try{const r=await request('','POST',{name:name||'Studio review',state:snapshot()});token.current=r.token;setRole('host');setRoom(r);setStrokes([]);}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
+  async function host(){setBusy(true);setError('');try{await beforeHost?.();const r=await request('','POST',{name:name||'Studio review',state:snapshot()});token.current=r.token;setRole('host');setRoom(r);setStrokes([]);}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
   async function join(){setBusy(true);setError('');try{const value=code.trim().match(/[a-f0-9]{12}/)?.[0]||code.trim();const r=await request('/'+value+'/join','POST',{name:name||'Guest'});participant.current=r.participantId;setRole('viewer');live.current.role='viewer';apply(r);}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
-  async function leave(){setBusy(true);try{await request('/'+room!.code+(role==='host'?'':'/leave'),role==='host'?'DELETE':'POST',role==='host'?undefined:{participantId:participant.current},token.current);setRoom(null);setRole(null);setDraw(false);setStrokes([]);setPresenter(initialPresenter);lastApplied.current='';}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
+  async function leave(){setBusy(true);try{await request('/'+room!.code+(role==='host'?'':'/leave'),role==='host'?'DELETE':'POST',role==='host'?undefined:{participantId:participant.current},token.current);setRoom(null);setRole(null);setDraw(false);setStrokes([]);setPresenter({...initialPresenter,active:standalone});lastApplied.current='';}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
+  useEffect(()=>{const navigate=()=>setDraw(false);window.addEventListener('p57-note-place',navigate);return()=>window.removeEventListener('p57-note-place',navigate);},[]);
   const point=(e:React.PointerEvent):[number,number]=>[Number(((e.clientX-bounds.left)/bounds.width).toFixed(5)),Number((e.clientY-bounds.top+bounds.scroll).toFixed(1))];
   const canAnnotate=role==='host'||(!role&&presenter.active);
   const undoInk=()=>{const last=strokes.at(-1);if(last){setRedo([...redo,last]);setStrokes(strokes.slice(0,-1));}};
   return <>
-    <PresenterToolkit state={presenter} onChange={setPresenter} viewer={role==='viewer'}/>
-    {canAnnotate&&<div className="annotation-toolbar" role="toolbar" aria-label="Annotation tools">
+    <PresenterToolkit state={presenter} onChange={setPresenter} viewer={role==='viewer'&&follow} alwaysVisible={standalone}/>
+    {(canAnnotate||standalone)&&<fieldset disabled={!canAnnotate} className="annotation-toolbar" role="toolbar" aria-label="Annotation tools">
       <button className="button" aria-pressed={!draw} onClick={()=>setDraw(false)}><MousePointer2 size={14}/>Navigate</button>
       {(['pen','highlight','rectangle','arrow','text','eraser'] as const).map(tool=><button className="button" key={tool} aria-pressed={draw&&inkTool===tool} onClick={()=>{setInkTool(tool);setDraw(true);}}>{tool}</button>)}
       <label>Ink <input aria-label="Annotation color" type="color" value={inkColor} onChange={e=>setInkColor(e.target.value)}/></label>
       <label>Width <DropdownField aria-label="Annotation width" value={inkWidth} onChange={e=>setInkWidth(Number(e.target.value))}>{[2,4,8,16].map(w=><option key={w}>{w}</option>)}</DropdownField></label>
       {inkTool==='text'&&<input aria-label="Annotation text" placeholder="Label then click report" maxLength={180} value={inkText} onChange={e=>setInkText(e.target.value)}/>}
       <button className="button" disabled={!strokes.length} onClick={undoInk}>Undo</button><button className="button" disabled={!redo.length} onClick={()=>{setStrokes([...strokes,redo.at(-1)!]);setRedo(redo.slice(0,-1));}}>Redo</button><button className="button" disabled={!strokes.length} onClick={()=>{setStrokes([]);setRedo([]);}}>Clear</button>
-    </div>}
+    </fieldset>}
 
     <button className="button presentation-launch" aria-label="Sound clips" title="Sound clips" onClick={()=>setPanel(panel==='audio'?null:'audio')} aria-expanded={panel==='audio'}><Music2 size={14}/><span>Sound clips</span></button>
     <button className="button presentation-launch" aria-label={room?"Live session":"Host a session"} title={room?"Live session":"Host a session"} onClick={()=>setPanel(panel==='session'?null:'session')} aria-expanded={panel==='session'}><Radio size={14}/><span>{room?'Live session':'Host a session'}</span>{room&&<i className="session-live-dot"/>}</button>
@@ -98,7 +99,7 @@ export function PresentationTools() {
           <button className="button" onClick={async()=>{try{const url=new URL(location.href);url.searchParams.set('session',room.code);await navigator.clipboard.writeText(url.href);setCopied(true);setTimeout(()=>setCopied(false),2000);}catch{setError('Copy this session code to share the invite: '+room.code);}}}><Copy size={14}/>{copied?'Invite copied':'Copy invite link'}</button>
           <div className="session-tools"><button className="button" onClick={()=>setRoom({...room,paused:!room.paused})}>{room.paused?<Play size={14}/>:<Pause size={14}/>} {room.paused?'Resume sharing':'Pause sharing'}</button><button className="button" aria-pressed={draw} onClick={()=>setDraw(!draw)}>{draw?<PenLine size={14}/>:<MousePointer2 size={14}/>} {draw?'Pen enabled':'Annotate'}</button></div>
           <div className="session-tools"><button className="button" disabled={!strokes.length} onClick={()=>setStrokes(strokes.slice(0,-1))}>Undo annotation</button><button className="button" disabled={!strokes.length} onClick={()=>setStrokes([])}>Clear annotations</button></div>
-        </>:<div className="session-tools"><button className="button" aria-pressed={follow} onClick={()=>setFollow(!follow)}>{follow?'Following host':'Explore independently'}</button><button className="button" aria-pressed={hand} onClick={()=>setHand(!hand)}><Hand size={14}/>{hand?'Lower hand':'Raise hand'}</button></div>}
+        </>:<div className="session-tools"><button className="button" aria-pressed={follow} onClick={()=>{setFollow(!follow);live.current.follow=!follow;if(follow){setPresenter({...presenter,blackout:false,spotlight:false});setDraw(false);}else if(room)apply(room);}}>{follow?'Following host':'Explore independently'}</button><button className="button" aria-pressed={hand} onClick={()=>setHand(!hand)}><Hand size={14}/>{hand?'Lower hand':'Raise hand'}</button></div>}
         <h4>Viewers · {room.participants.length}</h4><ul className="session-roster">{room.participants.map(p=><li key={p.id}><span>{p.name}</span>{p.hand&&<span>✋ Hand raised</span>}</li>)}</ul>{!room.participants.length&&<p className="small">Share the invite to bring viewers into this review.</p>}
         <button className="button" disabled={busy} onClick={()=>void leave()}>{role==='host'?'End session':'Leave session'}</button>
       </>}

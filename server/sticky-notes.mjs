@@ -8,6 +8,8 @@ export function validateNote(body) {
     )
   )
     throw new Error("Invalid note ID.");
+  if (body.reportId != null && !/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(body.reportId))
+    throw new Error("Invalid report ID.");
   if (!Number.isInteger(body.tab) || body.tab < 0 || body.tab > 15)
     throw new Error("Invalid workspace.");
   if (
@@ -54,6 +56,7 @@ export function validateNote(body) {
       : Math.max(min, Math.min(max, Number.isFinite(value) ? value : fallback));
   return {
     id: body.id,
+    ...(body.reportId ? {reportId: body.reportId} : {}),
     tab: body.tab,
     view: body.view === "kra" ? "kra" : "performance",
     x: body.x,
@@ -94,7 +97,7 @@ export function stickyNoteRoutes(app, store, cloud) {
           error: "Supabase is not configured. Notes cannot be saved yet.",
         }),
   );
-  app.get("/api/sticky-notes", async (_req, res) => {
+  app.get("/api/sticky-notes", async (req, res) => {
     try {
       const { data, error } = await cloud
         .from("atlas_store")
@@ -105,7 +108,7 @@ export function stickyNoteRoutes(app, store, cloud) {
         (data ?? []).map((row) => store.read(row.key)),
       );
       res.json({
-        notes: notes.filter((note) => note && !note.deleted),
+        notes: notes.filter((note) => note && !note.deleted && (!req.query.reportId || note.reportId === req.query.reportId)),
         backend: "supabase",
       });
     } catch (error) {

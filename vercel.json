@@ -20,6 +20,10 @@
     {
       "source": "/kra/(.*)",
       "destination": "/index.html"
+    },
+    {
+      "source": "/report",
+      "destination": "/index.html"
     }
   ]
 }

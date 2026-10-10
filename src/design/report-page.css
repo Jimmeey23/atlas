@@ -1,0 +1,20 @@
+.report-page{height:100dvh;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);color:var(--text-1)}
+.report-page-header{flex:none;position:relative;z-index:1202;padding:14px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;background:var(--surface-1);border-bottom:1px solid var(--hairline)}
+.report-page-heading{display:flex;align-items:center;gap:12px;min-width:0}.report-page-heading small{font-size:9px;letter-spacing:1.5px;color:var(--text-3)}.report-page-heading h1{font-size:17px;line-height:1.3;margin:4px 0 0;overflow-wrap:anywhere}
+.report-page-actions{display:flex;align-items:center;flex-wrap:wrap;gap:7px;width:100%}
+.report-page .presenter-toolbar,.report-page .annotation-toolbar{position:static;transform:none;box-shadow:none;max-width:100%;width:100%;box-sizing:border-box;flex-wrap:nowrap;overflow-x:auto;min-inline-size:0;scrollbar-width:thin;border-radius:8px;gap:7px;padding:7px;margin:0;order:10;flex-shrink:0}
+.report-page .annotation-toolbar{order:11}.report-page .presenter-toolbar>* ,.report-page .annotation-toolbar>*{flex-shrink:0}.report-page .presenter-toolbar .dropdown-field{min-width:150px}.report-page .annotation-toolbar:disabled{opacity:.5}
+.report-page .report-page-canvas,html[data-presenting=true] .report-page .canvas{flex:1;min-height:0;overflow:auto;position:relative;padding:24px 24px 80px;scroll-behavior:smooth;overscroll-behavior:contain}
+.report-page .report-doc{width:100%;max-width:1400px;margin:0 auto}
+.report-page-status{flex:none;padding:10px 20px;margin:0;background:var(--surface-2);font-size:12px}
+html[data-presenting=true] .report-page .sticky-note-layer,html[data-presenting=true] .report-page .sticky-note-trigger{display:block}
+.report-page .sticky-note-layer{z-index:950}.report-page .sticky-note-trigger{display:inline-flex!important}
+.report-page .presentation-panel{z-index:1250;top:90px}.report-page .presenter-notes{z-index:1250;bottom:20px}
+.sticky-note-wizard form{display:grid;gap:12px}.sticky-note-wizard label{display:grid;gap:4px}.sticky-note-wizard textarea,.sticky-note-wizard select{width:100%;box-sizing:border-box;background:var(--surface-inset);color:var(--text-1);border:1px solid var(--hairline);border-radius:8px;padding:8px}.sticky-note-wizard textarea{min-height:110px;resize:vertical}
+@media(max-width:700px){.report-page-header{padding:10px;gap:8px}.report-page-heading h1{font-size:15px}.report-page-actions{gap:5px}.report-page-actions>.button{font-size:11px;padding:7px}.report-page .report-page-canvas,html[data-presenting=true] .report-page .canvas{padding:12px 8px 60px}.report-page .presentation-panel{top:60px;max-height:calc(100dvh - 75px);right:12px}.report-page .presenter-toolbar,.report-page .annotation-toolbar{width:100%;gap:6px}.report-page .presenter-toolbar .button,.report-page .annotation-toolbar .button{padding:7px}}
+@media(prefers-reduced-motion:reduce){.report-page .canvas{scroll-behavior:auto!important}}
+@media print{.report-page-header,.report-page-status{display:none!important}.report-page,.report-page .report-page-canvas{height:auto;overflow:visible;padding:0}}
+/* Keep both chapter arrows within reach before the rest of the horizontally scrollable toolkit. */
+:root .report-page .presenter-toolbar select[aria-label="Presentation chapter"]{width:200px;min-width:0;max-width:200px}
+:root .report-page .presenter-toolbar select[aria-label="Presentation zoom"]{width:80px;min-width:0;max-width:80px}
+@media(max-width:700px){.report-page .presenter-toolbar>strong{display:none}:root .report-page .presenter-toolbar select[aria-label="Presentation chapter"]{width:180px;max-width:180px}.report-page .presenter-toolbar>.icon-button{min-width:32px}.report-page .presenter-toolbar::after,.report-page .annotation-toolbar::after{content:'Swipe for more tools';font-size:10px;color:var(--text-3);white-space:nowrap;padding:0 6px}}

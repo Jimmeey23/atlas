@@ -183,13 +183,15 @@ export async function printReport(element: HTMLElement, model: ReportModel) {
   } catch(error) { frame.remove(); throw error; }
 }
 
-/** Open synchronously to preserve browser user activation, then populate the standalone report. */
-export async function openReportPage(element: HTMLElement, model: ReportModel) {
+/** Transfer the frozen snapshot into the live report app without losing user activation. */
+export async function openReportPage(_element: HTMLElement, model: ReportModel) {
   const page = window.open('about:blank', '_blank');
   if (!page) throw new Error('The browser blocked the new page. Allow pop-ups and retry.');
-  page.opener = null;
   try {
-    const html = await serialiseReport(element, model);
-    page.document.open(); page.document.write(html); page.document.close();
+    const key = crypto.randomUUID();
+    // Session storage belongs to the new tab and survives refresh; no report data in the URL.
+    page.sessionStorage.setItem(`atlas-report-page:${key}`, JSON.stringify(model));
+    page.opener = null;
+    page.location.replace(`/report?draft=${key}`);
   } catch (error) { page.close(); throw error; }
 }

@@ -25,6 +25,7 @@ import {
 import { useStore } from "../state/store";
 type Note = {
   id: string;
+  reportId?: string;
   tab: number;
   view: string;
   x: number;
@@ -59,7 +60,7 @@ function askAuthor(): string {
 type SaveState = "saving" | "saved" | "error";
 const DRAFTS = "atlas-sticky-note-drafts";
 const colors = ["lemon", "rose", "mint", "sky"];
-export function StickyNotes() {
+export function StickyNotes({reportId}: {reportId?:string} = {}) {
   const tab = useStore((s) => s.tab),
     view = useStore((s) => s.view) === "kra" ? "kra" : "performance";
   const [canvas, setCanvas] = useState<HTMLElement | null>(null),
@@ -68,6 +69,11 @@ export function StickyNotes() {
     [status, setStatus] = useState<Record<string, SaveState>>({}),
     [error, setError] = useState("");
   const author = useRef(readAuthor());
+  const [wizard, setWizard] = useState(false);
+  const [composition, setComposition] = useState({author:readAuthor(),title:"",text:"",color:"lemon",priority:"normal"});
+  const matchesScope = (note: Note) => reportId ? note.reportId === reportId : !note.reportId && note.tab === tab && note.view === view;
+  const notesUrl = reportId ? `/api/sticky-notes?reportId=${encodeURIComponent(reportId)}` : "/api/sticky-notes";
+  const deleting = useRef(new Set<string>());
   const [connecting, setConnecting] = useState<{
     id: string;
     type: "arrow" | "line";
@@ -139,6 +145,7 @@ export function StickyNotes() {
     }, 500);
   }
   async function remove(id: string) {
+    deleting.current.add(id);
     clearTimeout(timers.current[id]);
     await queues.current[id];
     try {
@@ -147,6 +154,7 @@ export function StickyNotes() {
       replace(current.current.filter((n) => n.id !== id));
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
+      deleting.current.delete(id);
       setStatus((s) => ({ ...s, [id]: "error" }));
     }
   }
@@ -157,9 +165,9 @@ export function StickyNotes() {
     let drafts: Note[] = [];
     try {
       const saved = JSON.parse(localStorage.getItem(DRAFTS) || "{}");
-      drafts = Array.isArray(saved) ? [] : Object.values(saved);
+      drafts = Array.isArray(saved) ? [] : (Object.values(saved) as Note[]).filter(matchesScope);
     } catch {}
-    request("/api/sticky-notes", { signal: controller.signal })
+    request(notesUrl, { signal: controller.signal })
       .then((body) => {
         if (mounted.current) {
           // Notes placed or edited while the initial read is in flight win over that read.
@@ -199,6 +207,25 @@ export function StickyNotes() {
     };
   }, []);
   useEffect(() => {
+    if (!reportId) return;
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout>;
+    async function refresh() {
+      const before = new Map(current.current.map(note=>[note.id, JSON.stringify(note)]));
+      try {
+        const body = await request(notesUrl, {signal:controller.signal});
+        if (controller.signal.aborted) return;
+        let pending: Record<string,Note> = {};
+        try { pending = JSON.parse(localStorage.getItem(DRAFTS) || "{}"); } catch {}
+        const local = new Map(current.current.filter(note=>pending[note.id] || before.get(note.id)!==JSON.stringify(note)).map(note=>[note.id,note]));
+        replace([...body.notes.filter((note:Note)=>!local.has(note.id)&&!deleting.current.has(note.id)), ...local.values()].filter(note=>!deleting.current.has(note.id)));
+      } catch { /* The initial read and write states report errors; retain the last shared view. */ }
+      finally { if (!controller.signal.aborted) timer=setTimeout(refresh,2000); }
+    }
+    timer=setTimeout(refresh,2000);
+    return ()=>{controller.abort();clearTimeout(timer);};
+  }, [reportId, notesUrl]);
+  useEffect(() => {
     if (!canvas || !placing) return;
     canvas.classList.add("placing-sticky-note");
     const place = (event: MouseEvent) => {
@@ -207,7 +234,8 @@ export function StickyNotes() {
       const rect = canvas.getBoundingClientRect();
       const note: Note = {
         id: crypto.randomUUID(),
-        tab,
+        tab: reportId ? 15 : tab,
+        reportId,
         view,
         x: Math.max(
           0,
@@ -218,8 +246,10 @@ export function StickyNotes() {
           ),
         ),
         y: Math.max(0, event.clientY - rect.top + canvas.scrollTop - 12),
-        text: "",
-        color: "lemon",
+        text: reportId ? composition.text : "",
+        title: reportId ? composition.title : "",
+        priority: reportId ? composition.priority : "normal",
+        color: reportId ? composition.color : "lemon",
         collapsed: false,
         author: author.current || undefined,
         createdAt: new Date().toISOString(),
@@ -239,11 +269,11 @@ export function StickyNotes() {
       canvas.removeEventListener("click", place, true);
       window.removeEventListener("keydown", escape);
     };
-  }, [canvas, placing, tab, view]);
+  }, [canvas, placing, tab, view, reportId, composition]);
   useEffect(() => {
     setPlacing(false);
     setConnecting(null);
-  }, [tab, view]);
+  }, [tab, view, reportId]);
   useEffect(() => {
     if (!canvas || !connecting) return;
     canvas.classList.add("connecting-sticky-note");
@@ -327,7 +357,7 @@ export function StickyNotes() {
     if (!canvas) return;
     if (
       !notes.some(
-        (n) => n.tab === tab && n.view === view && n.connections?.length,
+        (n) => matchesScope(n) && n.connections?.length,
       )
     ) {
       setPaths((old) => (old.length ? [] : old));
@@ -337,7 +367,7 @@ export function StickyNotes() {
       const bounds = canvas.getBoundingClientRect(),
         next: typeof paths = [];
       for (const note of notes.filter(
-        (n) => n.tab === tab && n.view === view,
+        (n) => matchesScope(n),
       )) {
         const card = canvas.querySelector<HTMLElement>(
           `[data-note-id="${note.id}"]`,
@@ -397,7 +427,7 @@ export function StickyNotes() {
       clearInterval(timer);
       window.removeEventListener("resize", measure);
     };
-  }, [canvas, notes, tab, view]);
+  }, [canvas, notes, tab, view, reportId]);
   function duplicate(note: Note) {
     const copy = {
       ...note,
@@ -422,13 +452,28 @@ export function StickyNotes() {
         title={error || "Add a movable note saved to Supabase"}
         onClick={() => {
           setConnecting(null);
-          if (!placing) author.current = askAuthor();
-          setPlacing(!placing);
+          if (placing) { setPlacing(false); return; }
+          if (reportId) { setComposition({author:readAuthor(),title:"",text:"",color:"lemon",priority:"normal"}); setWizard(true); return; }
+          author.current = askAuthor();
+          window.dispatchEvent(new Event('p57-note-place'));
+          setPlacing(true);
         }}
       >
         <StickyNote size={13} />
         <span>{placing ? "Click to place" : "Add note"}</span>
       </button>
+      {wizard && <aside className="presentation-panel sticky-note-wizard" role="dialog" aria-modal="false" aria-label="Sticky note wizard">
+        <div className="presentation-head"><h3>Sticky note wizard</h3><button className="icon-button" aria-label="Close sticky note wizard" onClick={()=>setWizard(false)}><X size={16}/></button></div>
+        <p className="small">Add a shared note, then choose its position on this report. Changes sync with other readers.</p>
+        <form onSubmit={event=>{event.preventDefault();author.current=composition.author.trim();try{localStorage.setItem(AUTHOR_KEY,author.current);}catch{}setWizard(false);window.dispatchEvent(new Event('p57-note-place'));setPlacing(true);}}>
+          <label>Your name<input autoFocus required maxLength={60} value={composition.author} onChange={e=>setComposition({...composition,author:e.target.value})}/></label>
+          <label>Note title<input maxLength={120} value={composition.title} onChange={e=>setComposition({...composition,title:e.target.value})}/></label>
+          <label>Note text<textarea required maxLength={4000} value={composition.text} onChange={e=>setComposition({...composition,text:e.target.value})}/></label>
+          <label>Color<select value={composition.color} onChange={e=>setComposition({...composition,color:e.target.value})}>{colors.map(color=><option key={color}>{color}</option>)}</select></label>
+          <label>Priority<select value={composition.priority} onChange={e=>setComposition({...composition,priority:e.target.value})}>{['normal','important','urgent'].map(priority=><option key={priority}>{priority}</option>)}</select></label>
+          <button className="button primary" type="submit">Choose position</button>
+        </form>
+      </aside>}
       {canvas &&
         createPortal(
           <div className="sticky-note-layer">
@@ -478,7 +523,7 @@ export function StickyNotes() {
               </div>
             )}
             {notes
-              .filter((n) => n.tab === tab && n.view === view)
+              .filter((n) => matchesScope(n))
               .map((note) => (
                 <article
                   key={note.id}
