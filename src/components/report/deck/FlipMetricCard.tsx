@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { ArrowDownRight, ArrowUpRight, Minus, RotateCcw, Target, ChartColumnBig } from "lucide-react";
 import { Sparkline } from "../../MetricCard";
 import { definition, reportFmt as fmt, reportDelta as delta } from "../../../report/definitions";
@@ -35,8 +34,7 @@ function MetricHistoryChart({ id, data, active }: { id: string; data: ChapterDat
 }
 
 /** The app's metric card; clicking flips it to its 14-month history. */
-export function FlipMetricCard({ id, data, target }: { id: string; data: ChapterData; target?: number }) {
-  const [flipped, setFlipped] = useState(false);
+export function FlipMetricCard({ id, data, target, flipped, onToggle }: { id: string; data: ChapterData; target?: number; flipped: boolean; onToggle: () => void }) {
   const m = definition(id);
   const value = data.total[id], prior = data.prior[id], lastYear = data.priorYear[id];
   const mom = direction(id, value, prior), yoy = direction(id, value, lastYear);
@@ -44,7 +42,7 @@ export function FlipMetricCard({ id, data, target }: { id: string; data: Chapter
   const finite = values.filter((v): v is number => v != null && Number.isFinite(v));
   const hit = target == null || value == null ? null : (Number(value) >= target) === (m?.higherIsBetter ?? true);
   const Arrow = mom === "flat" ? Minus : Number(value) >= Number(prior) ? ArrowUpRight : ArrowDownRight;
-  const toggle = () => setFlipped(f => !f);
+  const toggle = onToggle;
   return <div className="deck-flip" data-flipped={flipped}>
     <div className="deck-flip-inner">
       <article className="metric-card deck-flip-face deck-flip-front" role="button" tabIndex={0} aria-pressed={flipped} aria-label={`${m?.label}: ${fmt(id, value)}. Show 14-month history`}
@@ -61,9 +59,9 @@ export function FlipMetricCard({ id, data, target }: { id: string; data: Chapter
             : <span>{currentSnapshotMetrics.has(id) ? "Snapshot" : m?.aggregation === "sum" ? "Total" : "Weighted"}</span>}
         </div>
       </article>
-      <article className="metric-card deck-flip-face deck-flip-back" aria-hidden={!flipped}>
+      <article className="metric-card deck-flip-face deck-flip-back" aria-hidden={!flipped} title="Click to flip back" onClick={toggle}>
         <div className="metric-label"><span>{m?.label ?? id} · 14 months</span>
-          <button className="icon-button" aria-label="Flip back" tabIndex={flipped ? 0 : -1} onClick={toggle}><RotateCcw size={13}/></button></div>
+          <button className="icon-button" aria-label="Flip back" tabIndex={flipped ? 0 : -1} onClick={e => { e.stopPropagation(); toggle(); }}><RotateCcw size={13}/></button></div>
         <MetricHistoryChart id={id} data={data} active={flipped} />
         {finite.length > 1 && <dl className="deck-flip-stats">
           <div><dt>Low</dt><dd>{fmt(id, Math.min(...finite))}</dd></div>

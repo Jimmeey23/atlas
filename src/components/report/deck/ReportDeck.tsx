@@ -69,6 +69,8 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
   const [full, setFull] = useState(false);
   const [appearance, setAppearance] = useState(false);
   const [exportMounted, setExportMounted] = useState(false);
+  // One flipped metric card at a time; leaving the page resets it.
+  const [flipped, setFlipped] = useState("");
   const exportRef = useRef<HTMLElement>(null);
   const main = useRef<HTMLElement>(null);
   const dirty = JSON.stringify([model.narratives, model.replacements ?? {}]) !== JSON.stringify([saved.narratives, saved.replacements ?? {}]);
@@ -76,7 +78,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
   const index = pages.findIndex(p => p.tab === page.tab && p.section === page.section);
 
   useEffect(() => { void adminStatus().then(s => { setAdminConfigured(s.configured); if (!s.unlocked && adminToken()) { lockAdmin(); setAdmin(false); } }).catch(() => undefined); }, []);
-  useEffect(() => { history.replaceState(null, "", `#${page.tab}/${page.section}`); main.current?.scrollTo({ top: 0 }); }, [page.tab, page.section]);
+  useEffect(() => { history.replaceState(null, "", `#${page.tab}/${page.section}`); main.current?.scrollTo({ top: 0 }); setFlipped(""); }, [page.tab, page.section]);
   // Shared review sessions: the presenter toolkit follows and drives the chapter tab.
   useEffect(() => { window.dispatchEvent(new CustomEvent("p57-report-navigate", { detail: page.tab === "overview" ? "" : page.tab })); }, [page.tab]);
   useEffect(() => {
@@ -145,11 +147,12 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
       aiCount={Object.values(model.narratives).filter(n => n.generated).length} total={specs.length} title={model.customization?.title} subtitle={model.customization?.subtitle} preparedFor={model.customization?.preparedFor} preparedBy={model.customization?.preparedBy} />;
     if (s === "glance") return <Slot id={slot("glance")} tab={tab.id} section={s} kind="glance" describe="month-at-a-glance scorecard"><AtAGlance model={model} specs={specs} ranked={ranked} targets={model.customization?.targets} /></Slot>;
     if (s === "summary") return <>
-      <Slot id={slot("verdict")} tab={tab.id} section={s} kind="verdict" describe="chapter verdict"><VerdictPanel model={model} tab={tab.id} ids={ids} /></Slot>
       {!!ids.length && data && <Slot id={slot("metrics")} tab={tab.id} section={s} kind="metrics" describe="key metric cards">
-        <div className="deck-metrics-head"><span className="deck-eyebrow"><Gauge size={12}/>Key measures</span><small>Click any card to flip it to 14 months of history</small></div>
-        <div className="deck-metric-grid">{ids.slice(0, 8).map(id => <FlipMetricCard key={id} id={id} data={data} target={model.customization?.targets?.[id]} />)}</div>
+        <div className="deck-metrics-head"><span className="deck-eyebrow"><Gauge size={12}/>Key measures</span><small>Click a card to flip it to 14 months of history · click again to flip back</small></div>
+        <div className="deck-metric-grid">{ids.slice(0, 8).map(id => <FlipMetricCard key={id} id={id} data={data} target={model.customization?.targets?.[id]}
+          flipped={flipped === id} onToggle={() => setFlipped(current => current === id ? "" : id)} />)}</div>
       </Slot>}
+      <Slot id={slot("verdict")} tab={tab.id} section={s} kind="verdict" describe="chapter verdict"><VerdictPanel model={model} tab={tab.id} ids={ids} /></Slot>
     </>;
     if (s === "insights") return <Slot id={slot("insights")} tab={tab.id} section={s} kind="insights" describe="insight list"><InsightsSection model={model} tab={tab.id} plan={tab.id === "recommendations"} /></Slot>;
     if (s === "plan") return <Slot id={slot("plan")} tab={tab.id} section={s} kind="plan" describe="action plan"><ActionPlan cards={model.narratives[tab.id]?.cards ?? []} /></Slot>;

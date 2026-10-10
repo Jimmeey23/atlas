@@ -49,11 +49,11 @@ try {
  // Chapter tabs → insights keep their evidence drilldowns.
  await review.locator('.deck-tabs button',{hasText:'Schedule'}).click();
  await review.locator('.deck-sections').getByRole('tab',{name:/Insights/}).click();
- const insight=review.locator('.r2-insight').first();await insight.getByRole('button',{name:'Explore data: Barre attendance improved'}).click();
+ const insight=review.locator('.deck-insight').first();await insight.getByRole('button',{name:'Explore data: Barre attendance improved'}).click();
  assert.equal(await insight.locator('.r-insight-drilldown').getAttribute('open'),'');
  const liveLink=new URL(await insight.getByRole('link',{name:/Open full source analytics/}).getAttribute('href'));
  assert.equal(liveLink.searchParams.get('tab'),'1');assert.deepEqual(JSON.parse(liveLink.searchParams.get('f')),{from:'2026-09-01',to:'2026-09-30',location:['Kenkere House']});
- await insight.getByRole('button',{name:'Detail',exact:true}).click();
+ await insight.locator('.r-insight-drilldown').getByRole('button',{name:'Detail',exact:true}).first().click();
  assert.ok((await insight.innerText()).includes('Previous month'));assert.ok((await insight.innerText()).includes('Mat'));assert.ok((await insight.innerText()).includes('stored in this snapshot'));
  await insight.scrollIntoViewIfNeeded();await review.screenshot({path:'/tmp/atlas-report-cards-desktop.png'});
  // The navbar stays fixed at the very top while pages scroll.

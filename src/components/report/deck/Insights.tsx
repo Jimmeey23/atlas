@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { TrendingUp, TriangleAlert, GitBranch, Lightbulb, Radar, ArrowRightCircle, Plus, Trash2, ListFilter } from "lucide-react";
-import { InsightBlock, lensOf, lensLabel } from "../Insight";
+import { lensOf, lensLabel } from "../Insight";
+import { DeckInsightCard } from "./InsightCard";
 import { reportOptions } from "../../../report/options";
 import { INSIGHT_LENSES, type InsightCard, type InsightLens, type ReportModel } from "../../../report/model";
 import { EditableText, useEdit } from "./editing";
@@ -47,7 +48,6 @@ export function InsightsSection({ model, tab, plan = false }: { model: ReportMod
       <button aria-pressed={lens === "all"} onClick={() => setLens("all")}>All <b>{indexed.length}</b></button>
       {lenses.map(id => { const Icon = LENS_ICON[id]; return <button key={id} data-lens={id} aria-pressed={lens === id} onClick={() => setLens(id)}><Icon size={13}/>{lensLabel(id)} <b>{indexed.filter(({ card }) => lensOf(card) === id).length}</b></button>; })}
     </div>}
-    <div className="r2-insights">{shown.map(({ card, index }, i) => <InsightBlock key={index} card={card} model={model} chapterId={tab} index={i} plan={plan} targets={model.customization?.targets}
-      inlineEvidence={options.showInlineEvidence && options.showCharts} confidence={options.showConfidence} />)}</div>
+    <div className="deck-insight-list">{shown.map(({ card, index }, i) => <DeckInsightCard key={index} card={card} model={model} chapterId={tab} index={i} plan={plan} confidence={options.showConfidence} />)}</div>
   </div>;
 }

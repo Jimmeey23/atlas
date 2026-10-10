@@ -70,12 +70,20 @@ try {
   // Chapter tab → verdict with the new categories and flip cards.
   await page.getByRole('navigation', { name: 'Report chapters' }).getByRole('button', { name: 'Schedule' }).or(page.locator('.deck-tabs button', { hasText: /Sessions|Schedule|Classes/ })).first().click();
   await page.locator('.deck-verdict').waitFor();
-  for (const label of ['Root cause', 'Where it concentrates', 'What held up', 'Structural or one-off?', 'Value at stake', 'Watch next month', 'Decision for leadership']) assert.ok(await page.locator('.deck-verdict').getByText(label, { exact: true }).count(), `verdict shows ${label}`);
+  for (const label of ['Root cause', 'Where it concentrates', 'What held up', 'Structural or one-off?', 'Value at stake', 'Watch next month', 'Decision for leadership']) assert.ok(await page.locator('.deck-verdict').getByText(label).count(), `verdict shows ${label}`);
+  assert.ok((await page.locator('.deck-metric-grid').boundingBox()).y < (await page.locator('.deck-verdict').boundingBox()).y, 'metric cards sit above the verdict');
   assert.ok(await page.locator('.deck-bullets li').count() >= 3, 'summary renders as bullets'); await page.waitForTimeout(500);
   await page.screenshot({ path: `${shots}/deck-verdict.png`, fullPage: false });
   const card = page.locator('.deck-flip').first();
   await card.locator('.deck-flip-front').click();
   assert.equal(await card.getAttribute('data-flipped'), 'true');
+  const second = page.locator('.deck-flip').nth(1);
+  await second.locator('.deck-flip-front').click(); await page.waitForTimeout(700);
+  assert.equal(await card.getAttribute('data-flipped'), 'false', 'flipping another card unflips the first');
+  assert.equal(await page.locator('.deck-flip[data-flipped=true]').count(), 1, 'only one card flipped');
+  await second.locator('.deck-flip-back').click(); await page.waitForTimeout(700);
+  assert.equal(await second.getAttribute('data-flipped'), 'false', 'clicking again flips back');
+  await card.locator('.deck-flip-front').click();
   await page.waitForTimeout(700);
   assert.ok(await card.locator('.deck-flip-chart svg').count(), 'flipped card draws its 14-month chart');
   await card.scrollIntoViewIfNeeded(); await page.screenshot({ path: `${shots}/deck-flip.png` });
@@ -84,7 +92,7 @@ try {
   const opener = await page.locator('.deck-notes-opener').innerText();
   await page.locator('.deck-sections').getByRole('tab', { name: /Insights/ }).click();
   await page.waitForFunction(previous => document.querySelector('.deck-notes-opener')?.textContent !== previous, opener);
-  assert.ok(await page.locator('.r2-insight').count() >= 2); await page.waitForTimeout(500);
+  assert.ok(await page.locator('.deck-insight').count() >= 2); await page.waitForTimeout(500);
   await page.screenshot({ path: `${shots}/deck-insights.png` });
   await page.keyboard.press('ArrowRight');
   await page.locator('.deck-register').waitFor();

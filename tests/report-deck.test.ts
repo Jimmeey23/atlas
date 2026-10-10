@@ -86,3 +86,26 @@ test('deck pages and live speaker notes come from the frozen report', () => {
   assert.ok(JSON.parse(sectionContext(model, 'executive-summary', 'summary')).narrative.summary.startsWith('September'));
   assert.deepEqual(setIn({ a: [{ b: 1 }] }, ['a', 0, 'b'], 2), { a: [{ b: 2 }] });
 });
+
+test('AI component replacement sends a strict JSON schema and requires admin', async () => {
+  const { intelligenceRoutes } = await import('../server/intelligence.mjs');
+  const { unlockAdmin } = await import('../server/report-admin.mjs');
+  const { mkdtemp } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const path = await import('node:path');
+  process.env.ATLAS_ADMIN_PASSCODE = 'schema-test';
+  let call: any;
+  const component = { kind: 'callout', title: 'T', subtitle: '', body: 'B', tone: 'info', items: [], chart: { type: 'bar', categories: [], series: [], unit: '' }, columns: [], rows: [], bullets: [], left: { label: '', points: [] }, right: { label: '', points: [] } };
+  const ai = { responses: { create: async (request: any) => { call = request; return { status: 'completed', output_text: JSON.stringify(component) }; } } };
+  const app = express(); app.use(express.json()); intelligenceRoutes(app, await mkdtemp(path.join(tmpdir(), 'atlas-component-')), [], undefined, { ai });
+  const api = await serve(app);
+  try {
+    assert.equal((await post(api.url + '/api/reports/component', { context: '{}', prompt: 'x' })).status, 403);
+    const { token } = unlockAdmin('schema-test');
+    const response = await post(api.url + '/api/reports/component', { context: '{"metrics":[]}', prompt: 'A callout' }, { 'x-atlas-admin': token });
+    assert.equal(response.status, 200);
+    assert.equal(call.text.format.type, 'json_schema');
+    assert.ok(call.text.format.schema?.properties?.kind, 'schema is sent');
+    assert.equal((await response.json()).component.title, 'T');
+  } finally { await api.close(); delete process.env.ATLAS_ADMIN_PASSCODE; }
+});
