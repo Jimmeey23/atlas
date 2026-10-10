@@ -4,11 +4,10 @@ import { chapters, type ChapterSpec } from "./chapters";
 import { monthLabel, shiftMonth } from "./period";
 import { findingsFor, findingsPayload, ledger, seasonalScenario, type Finding } from "./findings";
 import { INSIGHT_LENSES, type ChapterData, type ChapterNarrative, type InsightCard, type ReportModel } from "./model";
-import { decisionBrief } from "./decision-brief";
 import { reportOptions } from "./options";
 import { addCall, type CallUsage, type ChapterUsage } from "./usage";
 
-const CACHE_PREFIX = "atlas-report-narrative:v13:";
+const CACHE_PREFIX = "atlas-report-narrative:v12:";
 /** Exact evidence and request identity, independent of presentation settings. */
 async function analysisKey(value: unknown) {
   const bytes = new TextEncoder().encode(JSON.stringify(value));
@@ -169,17 +168,24 @@ function insightRules(model: ReportModel, spec: ChapterSpec) {
   const recs = spec.id === "recommendations";
   const lenses = INSIGHT_LENSES.filter(l => recs ? l.id === "next_step" : l.id !== "next_step" && o.lenses.includes(l.id));
   return [
-    "Return JSON with summary and cards. Every card has headline, meaning, evidence, driver, trend, impact, action, watch, recommendation, lens, focus, metrics, highlight, priority, ownerArea, horizon, confidence and decisionBrief.",
+    "Return JSON with summary and cards. Every card has headline, meaning, evidence, driver, trend, impact, action, watch, recommendation, lens, focus, metrics, highlight, priority, ownerArea, horizon and confidence.",
     "PURPOSE: a practical, decision-led review of the SELECTED MONTH. Every card answers exactly one leadership question, named by its lens. Do not repeat the same movement across cards, and do not write cards that merely restate a table.",
     "Lenses allowed in this chapter:\n" + lenses.map(l => `- ${l.id} (${l.label}): ${l.question}`).join("\n"),
     recs ? "Every card uses lens next_step." : "Use a mix of lenses where the evidence supports it; skip a lens rather than force it. The kpis verdict card may use any lens.",
-    "headline: a specific quantified finding in at most 24 words, naming the segment and comparison. meaning: a two-sentence evidence summary, at most 65 words; state the observed movement and what it warrants, without asserting its cause. evidence: exact supplied figures and comparison periods, at most 40 words.",
-    "decisionBrief.topic: attendance, conversion, retention, revenue, growth, instructor or general; match the actual issue. kind: performance_anomaly, growth_opportunity, retention_risk, decision or early_warning. Strong performance uses growth; instructor variation does not prove instructor quality.",
-    "decisionBrief.diagnosis: 30–60 words on the root cause TO INVESTIGATE. Name alternative hypotheses and the source comparison that would confirm or reject each. Separate observed concentration from unverified mechanisms; never blame an instructor based on correlation. decisionBrief.affected: 25–50 words naming evidenced members/cohorts, leads, instructors, formats or slots, and what must be identified where linked data is absent. Never invent identities or claim unseen cohort joins.",
-    o.quantifyImpact ? "decisionBrief.opportunity: at most 45 words on recoverable volume or scaling potential. Use a clearly labelled suggested scenario, explicit arithmetic and observed unit value, with capacity/eligibility guardrails. Do not promise uplift or treat indicative visit value as incremental cash revenue. If a defensible scenario is unavailable, explain what data is needed; never invent values." : "decisionBrief.opportunity: unquantified opportunity and required validation; no valuation.",
-    "decisionBrief.stats: up to 3 compact facts: observed segment movement, indicative value with arithmetic, and pattern. Each has label, value, basis and status (confirmed, estimated or hypothesis). Use ONLY supplied facts or reproducible arithmetic. Use the named segment, never silently substitute studio totals. Pattern persistence requires a supporting time series; otherwise state not established. Empty array when unavailable. Any indicative valuation has status estimated.",
-    (o.includeActions || recs) && spec.id !== "predictions" ? "decisionBrief.steps: 2–3 distinct actions with label and detail: diagnose, recover/scale, optimise or validate; each specifies what, where and for whom, grounded in supplied evidence. decisionBrief.review: a proposed review deadline, clearly prefixed Suggested, not a claimed policy. decisionBrief.success: measurable indicator, explicit baseline, suggested target where defensible, observation period and guardrail. Proposed targets must be labelled Suggested; no unsupported uplift promise. ownerArea: accountable team, never a named person. horizon: urgency. action/watch: empty strings, because steps/success carry the plan without repetition." : "decisionBrief.steps: empty array; review and success, action and watch: empty strings (actions disabled).",
-    `trend: at most 30 words on observed durability, keeping uncertainty explicit. ${COMPARISON_FOCUS[o.comparisonFocus]} driver and impact: empty strings; diagnosis and opportunity carry distinct reasoning. recommendation: ${recs ? 'at most 40 words on the trade-off and guardrail, without repeating the action steps' : 'empty string'}.`,
+    "headline: the verdict in at most 16 words, including the key number.",
+    "meaning (shown as 'Why it matters'): 45–80 words on the business consequence for members, revenue, capacity or the brand. Do not restate the figure.",
+    "evidence: at most 40 words of exact supplied figures with their comparison periods.",
+    "driver (shown as 'What drove it'): 30–60 words decomposing the movement: which breakdown rows or mix shifts contributed how much, and the offsetting force. Decompositions are arithmetic; label a causal idea as a hypothesis and name the check that would confirm it.",
+    `trend (shown as 'Is it durable?'): at most 35 words giving one verdict — new, persistent for n months, reversing, seasonal or one-off. ${COMPARISON_FOCUS[o.comparisonFocus]}`,
+    o.quantifyImpact
+      ? "impact (shown as 'At stake'): at most 30 words quantifying rupees, members, seats or sessions at stake with the arithmetic shown, labelled indicative where it rests on an average. Empty string when the evidence cannot be valued."
+      : "impact: empty string.",
+    o.includeActions || recs
+      ? "action (shown as 'Recommended move'): at most 40 words — one concrete, practical move that follows from this evidence: what to change, where and for whom. No invented deadlines, named people, policies or promised uplift. watch (shown as 'Signal to watch'): at most 25 words naming the leading indicator and the threshold that would confirm or reject the reading next month."
+      : "action and watch: empty strings.",
+    recs
+      ? "recommendation: 40–70 words — why this move is preferred to the obvious alternative, the trade-off, and the guardrail that limits it."
+      : "recommendation: empty string.",
     `metrics: 1–4 ids from AVAILABLE METRIC IDS that prove the claim. The page shows each one's value, MoM, YoY and monthly trend beside the card, so choose the ids a sceptical reader would check.`,
     "focus: kpis for the single chapter verdict card, trend when the claim rests on the monthly history, cross for cross-chapter context, otherwise the breakdown ID whose chart proves the claim.",
     "highlight: up to 4 exact group labels, copied character-for-character from the focus breakdown table, that the claim names. Empty array when none.",
@@ -193,7 +199,6 @@ function insightRules(model: ReportModel, spec: ChapterSpec) {
 const ACCURACY_RULES = [
   'Accuracy rules (these override style):',
   'Use only supplied figures, findings and diagnostics. Use percentage points for rate changes. Do not say doubled or halved unless the ratio supports it. Proposed targets and timings must be labelled as proposals.',
-  'A segment change divided by studio net change is a contribution to NET change, not a share of gross losses. Offsetting gains may make this exceed 100%. A share of gross losses requires the complete negative-change denominator; truncated rankings cannot establish it. Preserve the sign and name the comparison and population.',
   'Separate additive contributions, changes within groups and changes in mix. Never add overlapping distinct transaction or member counts from groups, and never sum ledger items that can overlap.',
   'Gross collections per transaction is an observed average, not a price index. Volume/yield bridges decompose totals arithmetically; they cannot establish causal effects.',
   'Higher AOV alone does not establish a price increase. Do not claim a price change caused demand or conversion changes without evidence. Missing-ID warnings must use the supplied coverage counts.',
@@ -435,7 +440,7 @@ export async function generateNarratives(
           ...(!spec.derived ? [{ label: "Figures:", text: figures }] : []),
           { label: "All-tab performance context (independent of visible chapter selection):", text: portfolio },
         ]);
-        const extra = { insightVersion: 3, metricIds, lenses: spec.id === "recommendations" ? ["next_step"] : o.lenses.filter(l => l !== "next_step") };
+        const extra = { insightVersion: 2, metricIds, lenses: spec.id === "recommendations" ? ["next_step"] : o.lenses.filter(l => l !== "next_step") };
         // Include complete pre-budget evidence: changes to omitted records must invalidate reuse too.
         const fingerprint = await analysisKey({ version: 12, providerModel, providerPolicy, message, focusIds, extra,
           figures, portfolio, preferences, scenarios: spec.id === "predictions" ? forwardScenarios(model) : "" });
@@ -456,7 +461,7 @@ export async function generateNarratives(
                   !!c && typeof c.headline === "string" && !!c.headline.trim(),
               )
             : [];
-          const valid = cards.every(c => [c.meaning,c.evidence].every(v => typeof v === "string" && !!v.trim()) && !!c.focus && !!(c.lens || c.category) && !!c.confidence && (c.decisionBrief == null || !!decisionBrief(c)));
+          const valid = cards.every(c => [c.meaning,c.evidence].every(v => typeof v === "string" && !!v.trim()) && !!c.focus && !!(c.lens || c.category) && !!c.confidence);
           // Cited ids outside this chapter's figures would render as blank evidence.
           for (const c of cards) c.metrics = (Array.isArray(c.metrics) ? c.metrics : []).filter(id => metricIds.includes(id)).slice(0, 4);
           if (!valid || !cards.length || typeof parsed?.summary !== "string" || !parsed.summary.trim())

@@ -73,23 +73,7 @@ export const INSIGHT_LENSES: { id: InsightLens; label: string; question: string 
   { id: 'watch', label: 'Early warning', question: 'Which leading indicator is turning before the headline does?' },
   { id: 'next_step', label: 'Recommended move', question: 'What should leadership decide or change next?' },
 ];
-export type DecisionTopic = 'attendance' | 'conversion' | 'retention' | 'revenue' | 'growth' | 'instructor' | 'general';
-export interface DecisionBrief {
-  topic: DecisionTopic;
-  kind: 'performance_anomaly' | 'growth_opportunity' | 'retention_risk' | 'decision' | 'early_warning';
-  /** Investigation, never an unsupported attribution of cause. */
-  diagnosis: string;
-  affected: string;
-  /** Conditional recovery or scaling scenario, with its basis and capacity guardrail. */
-  opportunity: string;
-  steps: { label: string; detail: string }[];
-  review: string;
-  /** Suggested target, baseline and measurement period; never a promised outcome. */
-  success: string;
-  stats: { label: string; value: string; basis: string; status: 'confirmed' | 'estimated' | 'hypothesis' }[];
-}
 export interface InsightCard {
-  decisionBrief?: DecisionBrief;
   /** v2 framing; cards written before lenses existed carry `category` instead. */
   lens?: InsightLens;
   /** Why it happened: the quantified driver and the offsetting force. */

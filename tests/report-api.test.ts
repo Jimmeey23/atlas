@@ -34,13 +34,6 @@ test('report database snapshots survive a new route instance and preserve immuta
     assert.deepEqual(restored.narratives, snapshot().narratives);
     const history = await (await fetch(api.url + '/api/reports')).json();
     assert.equal(history.length, 2); assert.equal(history[0].aiChapters, 1);
-    const brief={topic:'attendance',kind:'performance_anomaly',diagnosis:'Investigate volumes and mix.',affected:'Verify linked regulars.',opportunity:'Suggested 50 visits, capacity permitting.',steps:[{label:'Diagnose',detail:'Compare source counts.'}],review:'Suggested: 7 days',success:'Track +50 against the stated baseline.',stats:[{label:'Lost visits',value:'−84',basis:'55% of net decline.',status:'confirmed'}]};
-    const withBrief={...snapshot(),narratives:{overview:{summary:'Evidence first.',generated:true,cards:[{headline:'A net decline contribution',meaning:'A concentration, not a cause.',evidence:'84 / 152 net lost visits.',action:'',decisionBrief:brief}]}}};
-    const briefSaved=await (await fetch(api.url+'/api/reports',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(withBrief)})).json();
-    const briefRestored=await (await fetch(api.url+'/api/reports/'+briefSaved.id)).json();
-    assert.deepEqual(briefRestored.narratives.overview.cards[0].decisionBrief,brief);
-    withBrief.narratives.overview.cards[0].decisionBrief.stats[0].status='made_up';
-    assert.equal((await fetch(api.url+'/api/reports',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(withBrief)})).status,400);
     assert.equal((await fetch(api.url + '/api/reports/not-an-id')).status, 400);
     assert.equal((await fetch(api.url + '/api/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })).status, 400);
   } finally { await api.close(); }
@@ -70,13 +63,6 @@ test('report narration bypasses chat tools and returns a structured chapter', as
     assert.ok(schema.required.includes('plainLanguage')); assert.ok(schema.required.includes('confidence'));
     assert.ok(schema.required.includes('impact')); assert.ok(schema.required.includes('watch'));
     assert.match(call.instructions, /Session-attributed revenue is not cash collections/);
-    await fetch(api.url+'/api/reports/narrative',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'Write a decision brief.',insightVersion:3,metricIds:['attendance']})});
-    const briefSchema=call.text.format.schema.properties.cards.items.properties.decisionBrief;
-    assert.equal(briefSchema.additionalProperties,false);
-    assert.ok(briefSchema.required.includes('diagnosis'));
-    assert.ok(briefSchema.required.includes('steps'));
-    assert.ok(briefSchema.required.includes('success'));
-    assert.deepEqual(briefSchema.properties.stats.items.properties.status.enum,['confirmed','estimated','hypothesis']);
   } finally { await api.close(); await rm(root, { recursive: true, force: true }); }
 });
 
