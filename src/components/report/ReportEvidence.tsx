@@ -1,5 +1,5 @@
 import { InstructorName } from "../InstructorAvatar";
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { Row } from '../../data/duckdb';
 import type { ChapterNarrative, GroupTable } from '../../report/model';
 import { definition, reportFmt as fmt, reportDelta as delta } from '../../report/definitions';
@@ -12,12 +12,14 @@ export function ReportSwitch({ label: title, views, initial }: {
   label: string; views: { id: string; label: string; content: ReactNode }[]; initial?: string;
 }) {
   const [active, setActive] = useState(initial ?? views[0]?.id);
+  useEffect(()=>{setActive(initial ?? views[0]?.id);},[initial]);
   if (!views.length) return null;
+  const selected = views.some(view=>view.id===active) ? active : views[0].id;
   return <div data-switch-root="" className="r-switch-view">
     <div className="r-switch-toolbar"><span className="r-control-label">{title}</span><div className="r-switches" role="group" aria-label={title}>
-      {views.map(view => <button type="button" key={view.id} data-view-control={view.id} aria-pressed={active === view.id} onClick={() => setActive(view.id)}>{view.label}</button>)}
+      {views.map(view => <button type="button" key={view.id} data-view-control={view.id} aria-pressed={selected === view.id} onClick={() => setActive(view.id)}>{view.label}</button>)}
     </div></div>
-    {views.map(view => <div key={view.id} data-view-panel={view.id} hidden={active !== view.id}>{view.content}</div>)}
+    {views.map(view => <div key={view.id} data-view-panel={view.id} hidden={selected !== view.id}>{view.content}</div>)}
   </div>;
 }
 
@@ -46,13 +48,13 @@ function ComparisonBars({ table, metric }: { table: GroupTable; metric: string }
   </div>;
 }
 
-export function EvidenceBlock({ table, narrative, metric, full = false, initialView }: { table: GroupTable; narrative?: ChapterNarrative; metric?: string; full?: boolean; initialView?: 'chart' | 'table' }) {
+export function EvidenceBlock({ table, narrative, metric, full = false, initialView, showCharts = true }: { table: GroupTable; narrative?: ChapterNarrative; metric?: string; full?: boolean; initialView?: 'chart' | 'table'; showCharts?: boolean }) {
   const primary = metric ?? table.compare ?? table.columns[0];
   const dense = table.columns.length > 5;
-  return <article className={`r-evidence-block${dense || full ? ' r-span-full' : ''}`}>
+  return <article data-dense={dense || table.rows.length>8 ? 'true' : 'false'} className={`r-evidence-block${dense || full ? ' r-span-full' : ''}`}>
     <header className="r-block-head"><span className="r-eyebrow">Evidence / {table.fields?.length ? 'Combination' : 'Breakdown'}</span><h3>{table.title}</h3></header>
-    <ReportSwitch label="View" initial={initialView ?? (dense ? 'table' : 'chart')} views={[
-      {id:'chart',label:'Chart',content:<ReportSwitch label="Measure" initial={primary} views={table.columns.map(id => ({id,label:label(id),content:<ComparisonBars table={table} metric={id}/>}))}/>},
+    <ReportSwitch label="View" initial={!showCharts ? 'table' : initialView ?? (dense ? 'table' : 'chart')} views={[
+      ...(showCharts ? [{id:'chart',label:'Chart',content:<ReportSwitch label="Measure" initial={primary} views={table.columns.map(id => ({id,label:label(id),content:<ComparisonBars table={table} metric={id}/>}))}/>}]:[]),
       {id:'table',label:'Detail',content:<GroupTableView table={table}/>},
     ]}/>
     <InsightPane title={`${table.title} interpretation`} narrative={narrative}/>
@@ -60,15 +62,15 @@ export function EvidenceBlock({ table, narrative, metric, full = false, initialV
 }
 
 /** Criteria share one slot instead of repeating identical scorecards three times. */
-export function CriterionEvidence({ tables, narrative }: { tables: GroupTable[]; narrative?: ChapterNarrative }) {
+export function CriterionEvidence({ tables, narrative, initialView, showCharts = true }: { tables: GroupTable[]; narrative?: ChapterNarrative; initialView?: "chart" | "table"; showCharts?: boolean }) {
   return <div className="r-span-full r-criterion-block"><ReportSwitch label="Ranking criterion · source-limited eligible samples" views={tables.map(table => ({
     id:table.id ?? table.field,label:label(table.compare ?? table.columns[0]),
-    content:<EvidenceBlock table={table} metric={table.compare} narrative={narrative ? {...narrative,summary:'',cards:narrative.cards.filter(card=>card.focus === (table.id ?? table.field)).slice(0,1)} : undefined}/>,
+    content:<EvidenceBlock initialView={initialView} showCharts={showCharts} table={table} metric={table.compare} narrative={narrative ? {...narrative,summary:'',cards:narrative.cards.filter(card=>card.focus === (table.id ?? table.field)).slice(0,1)} : undefined}/>,
   }))}/></div>;
 }
 
 export function TrendEvidence({ history, ids, title, narrative }: {history:Row[];ids:string[];title:string;narrative?:ChapterNarrative}) {
   const usable = ids.filter(id => history.filter(row=>row[id]!=null).length>1);
   if (!usable.length) return null;
-  return <div className="r-trend-module"><ReportSwitch label="Trend measure" views={usable.map(id=>({id,label:label(id),content:<TrendChart history={history} ids={[id]} title={title} note="Fourteen monthly observations · actual units · gaps indicate unavailable data."/>}))}/><InsightPane title="Trend interpretation" narrative={narrative}/></div>;
+  return <div className="r-trend-module"><ReportSwitch label="Trend measure" views={usable.map(id=>({id,label:label(id),content:<TrendChart history={history} ids={[id]} title={title} note={`${history.length} monthly observations · actual units · gaps indicate unavailable data.`}/>}))}/><InsightPane title="Trend interpretation" narrative={narrative}/></div>;
 }

@@ -3,7 +3,7 @@ import "dotenv/config";
 import express from "express";
 import { authenticatedSheet } from "./sheets-auth.mjs";
 import { publicSheet, missingColumns, snapshotsToPrune } from "./sheets-public.mjs";
-import { readFile, mkdir, copyFile, readdir, unlink } from "node:fs/promises";
+import { readFile, mkdir, copyFile, readdir, unlink, stat } from "node:fs/promises";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import v8 from "node:v8";
@@ -17,6 +17,7 @@ import { createFreshness } from "./freshness.mjs";
 import { intelligenceRoutes } from "./intelligence.mjs";
 import { followupRoutes } from "./followups.mjs";
 import { fileURLToPath } from "node:url";
+import { sendSnapshot } from "./snapshot-response.mjs";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const config = JSON.parse(
   await readFile(path.join(root, "server/sheets.json"), "utf8"),
@@ -85,7 +86,19 @@ export async function createApp({ serveStatic = false } = {}) {
     return data;
   };
   const freshness = createFreshness();
-  async function load(source, force) {
+  async function saveMetadata(data) {
+    const info = await stat(path.join(cacheRoot, ".cache", `${data.key}.json`));
+    await store.write(`.cache/${data.key}.meta.json`, {
+      fetchedAt: data.fetchedAt, revision: data.revision, hash: data.hash,
+      fileSize: info.size, fileMtime: info.mtimeMs,
+    });
+  }
+  function load(source, force) {
+    if (!inflight.has(source.key)) inflight.set(source.key,
+      loadSource(source, force).finally(() => inflight.delete(source.key)));
+    return inflight.get(source.key);
+  }
+  async function loadSource(source, force) {
     const start = performance.now();
     const cacheKey = `.cache/${source.key}.json`;
     let cached;
@@ -99,7 +112,10 @@ export async function createApp({ serveStatic = false } = {}) {
       const { revision } = await freshness.revision(source.id);
       const edited =
         revision && cached.revision && revision !== cached.revision;
-      if (!edited) return { ...cached, cached: true, revision: revision ?? cached.revision ?? null };
+      if (!edited) {
+        await saveMetadata(cached).catch(() => {});
+        return { ...cached, cached: true, revision: revision ?? cached.revision ?? null };
+      }
     }
     try {
       // Read before the rows, not after: if the workbook is edited mid-fetch,
@@ -139,6 +155,7 @@ export async function createApp({ serveStatic = false } = {}) {
       };
       await archiveSnapshot(result);
       await store.write(cacheKey, result);
+      await saveMetadata(result).catch(() => {});
       return remember(result);
     } catch (error) {
       return {
@@ -183,9 +200,23 @@ export async function createApp({ serveStatic = false } = {}) {
     });
     res.set("Cache-Control", "no-store").json({ checkedAt: Date.now(), sources });
   });
-  app.get("/api/sheets/:key", async (req, res) => {
+  app.get("/api/sheets/:key", async (req, res, next) => {
+    try {
     const source = config.find((s) => s.key === req.params.key);
     if (!source) return res.status(404).json({ error: "Unknown source" });
+    // Metadata is tiny and persists with the snapshot across warm/cold requests.
+    // Only an expired/edited sheet or an explicit refresh needs its rows parsed.
+    const meta = await store.read(`.cache/${source.key}.meta.json`).catch(() => null);
+    if (meta && req.query.refresh !== "true") {
+      const snapshot = req.query.snapshot === "true";
+      if (snapshot || Date.now() - meta.fetchedAt < ttl) {
+        const probe = snapshot ? null : await freshness.revision(source.id);
+        if (snapshot || !probe?.revision || !meta.revision || probe.revision === meta.revision) {
+          known.set(source.key, meta);
+          if (await sendSnapshot(req, res, cacheRoot, source, meta)) return;
+        }
+      }
+    }
     if (req.query.snapshot === "true") {
       try {
         const cached = await store.read(`.cache/${source.key}.json`);
@@ -201,12 +232,10 @@ export async function createApp({ serveStatic = false } = {}) {
       }
     }
     const force = req.query.refresh === "true";
-    if (!inflight.has(source.key))
-      inflight.set(
-        source.key,
-        load(source, force).finally(() => inflight.delete(source.key)),
-      );
-    sendJSON(res, await inflight.get(source.key));
+    const data = await load(source, force);
+    if (data.status !== "error" && await sendSnapshot(req, res, cacheRoot, source, data)) return;
+    sendJSON(res, data);
+    } catch (error) { next(error); }
   });
   app.get("/api/field-health", async (_, res) => {
     const result = [];

@@ -1,3 +1,5 @@
+import {ChartNoAxesCombined,CalendarDays,CalendarRange,Lightbulb,GitCompareArrows} from "lucide-react";
+import {AdaptiveGrid} from "./AdaptiveGrid";
 import { DropdownField } from "../ui/DropdownField";
 import { useState } from "react";
 import { exportCSV } from "../exports";
@@ -47,13 +49,13 @@ export function MetricCards({
   ids,
   total,
   prior,
-  priorYear, history,
+  priorYear, history, definitions = false,
 }: {
   ids: string[];
   total: Row;
   prior: Row;
   priorYear: Row;
-  history?: Row[];
+  history?: Row[]; definitions?: boolean;
 }) {
   const shown = ids.filter((id) => definition(id) && total[id] != null).slice(0, 5);
   if (!shown.length) return null;
@@ -72,7 +74,7 @@ export function MetricCards({
             </span>
           </div>
           {history && <Sparkline id={id} history={history} />}
-          {metricNotes[id]?.definition && (
+          {definitions && metricNotes[id]?.definition && (
             <p className="r-card-def" title={metricNotes[id].definition}>{definition(id)?.description}</p>
           )}
         </article>
@@ -155,34 +157,36 @@ export function TrendChart({ history, ids, title, note }: { history: Row[]; ids:
 
 export function InsightPane({
   title,
-  narrative, variant = "findings", hideHeadline = false,
+  narrative, variant = "findings", hideHeadline = false, adaptive = true, confidence = true,
 }: {
   title: string;
   narrative: ChapterNarrative | undefined;
   variant?: "findings" | "verdict" | "plan";
-  hideHeadline?: boolean;
+  hideHeadline?: boolean; adaptive?: boolean; confidence?: boolean;
 }) {
   if (!narrative || (!narrative.summary && !narrative.cards.length)) return null;
   const unique = narrative.cards.filter((card,index,cards)=>cards.findIndex(c=>c.headline===card.headline)===index);
   return (
-    <div className={`r-editorial r-editorial-${variant}`} data-count={Math.min(unique.length, 3)} aria-label={title}>
+    <AdaptiveGrid className={`r-editorial r-editorial-${variant}`} enabled={adaptive}>
       {narrative.summary && <p className="r-summary">{narrative.summary}</p>}
-      {!narrative.generated && <p className="r-analysis-note">Data commentary · AI analysis unavailable{narrative.error ? `: ${narrative.error}` : ""}</p>}
       {unique.map((passage, index) => (
-        <article className="r-passage" key={index}>
-          <header className="r-passage-lead">{variant === "plan" && <span className="r-plan-number">{String(index + 1).padStart(2, "0")}</span>}{passage.category && <span className="r-analysis-label">{{red_flag:"Red flag",worked:"What worked",didnt_work:"What didn’t work",meaning:"What this means",next_step:"What to do next",plain_language:"Simply put"}[passage.category]}</span>}
+        <article className="r-passage" data-insight-layout={passage.layout ?? "comparison"} data-dense={passage.layout === "full" || variant === "verdict" || variant === "plan" || (passage.meaning?.length ?? 0)>600 ? "true" : "false"} key={index}>
+          <header className="r-passage-lead">{variant === "plan" && <span className="r-plan-number">{String(index + 1).padStart(2, "0")}</span>}{passage.category && <span className="r-analysis-label"><ChartNoAxesCombined size={13}/>{{red_flag:"Red flag",worked:"What worked",didnt_work:"What didn’t work",meaning:"What this means",next_step:"Recommendation",plain_language:"Simply put"}[passage.category]}</span>}
           {!hideHeadline && <h3>{passage.headline}</h3>}</header>
           {passage.meaning && <p>{passage.meaning}</p>}
           {passage.evidence && <p className="r-citation"><strong>Evidence:</strong> {passage.evidence}</p>}
-          {passage.confidence && <small className="r-confidence">Interpretation confidence: {passage.confidence}</small>}
+          {confidence && passage.confidence && <small className="r-confidence">Interpretation confidence: {passage.confidence}</small>}
 
-          {passage.impact && <p className="r-impact"><strong>At stake:</strong> {passage.impact}</p>}
-          {passage.action && <p className="r-action"><strong>Next step:</strong> {passage.action}</p>}
-          {passage.watch && <p className="r-watch"><strong>Watch next month:</strong> {passage.watch}</p>}
+          <div className="r-performance-context">
+            {passage.monthContext && <section><h4><CalendarDays size={14}/>Month-on-month</h4><p>{passage.monthContext}</p></section>}
+            {passage.yearContext && <section><h4><CalendarRange size={14}/>In the year</h4><p>{passage.yearContext}</p></section>}
+          </div>
+          {passage.reasoning && <div className="r-reasoning"><h4><GitCompareArrows size={14}/>What the evidence tells us</h4><p>{passage.reasoning}</p></div>}
+          {variant === 'plan' && (passage.recommendation || passage.action) && <div className="r-recommendation"><h4><Lightbulb size={14}/>Recommendation & rationale</h4><p>{passage.recommendation || passage.action}</p></div>}
 
         </article>
       ))}
-    </div>
+    </AdaptiveGrid>
   );
 }
 
@@ -198,13 +202,13 @@ function Sparkline({id,history}:{id:string;history:Row[]}) {
   return <svg className="r-sparkline" viewBox="0 0 180 40" role="img" aria-label={`${label(id)} over ${history.length} months; gaps are unavailable. Exact values in monthly history.`}><line x1="4" x2="176" y1="36" y2="36" stroke="var(--r-border)"/><path d={d} fill="none" stroke="var(--r-primary-3)" strokeWidth="2"/></svg>;
 }
 
-export function MonthlyHistory({data,ids,title}:{data:ChapterData;ids:string[];title:string}) {
-  const [periods,setPeriods]=useState(14),[mode,setMode]=useState('values'),[metric,setMetric]=useState('all'),[newest,setNewest]=useState(true);
+export function MonthlyHistory({data,ids,title,initialPeriods=12}:{data:ChapterData;ids:string[];title:string;initialPeriods?:number}) {
+  const [periods,setPeriods]=useState(initialPeriods),[mode,setMode]=useState('values'),[metric,setMetric]=useState('all'),[newest,setNewest]=useState(true);
   const history=[...data.history].sort((a,b)=>String(a.month).localeCompare(String(b.month)));
   const visible=history.slice(-periods).map(row=>String(row.month));
   const ordered=newest?[...history].reverse():history;
   const previous=(month:string,offset:number)=>{const d=new Date(month+'-01T00:00:00Z');const key=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()-offset,1)).toISOString().slice(0,7);return history.find(row=>row.month===key);};
-  return <details className="r-mom-panel" data-report-history><summary><div><span className="r-eyebrow">Monthly comparison</span><h3>{title} — monthly comparison</h3><p>Fourteen months · {ids.length} measures · source-backed values and comparisons</p></div><span className="r-mom-open">Show history <span aria-hidden="true">⌄</span></span></summary>
+  return <details className="r-mom-panel" data-report-history><summary><div><span className="r-eyebrow">Monthly comparison</span><h3>{title} — monthly comparison</h3><p>{data.history.length} available monthly observations · {ids.length} measures · source-backed values and comparisons</p></div><span className="r-mom-open">Show history <span aria-hidden="true">⌄</span></span></summary>
   <div className="r-history-controls">
     <label>Display<DropdownField data-history-control="mode" aria-label={`${title} monthly display`} value={mode} onChange={e=>setMode(e.target.value)}><option value="values">Values</option><option value="mom">MoM Δ</option><option value="yoy">YoY Δ</option></DropdownField></label>
     <label>Periods<DropdownField data-history-control="periods" aria-label={`${title} monthly periods`} value={periods} onChange={e=>setPeriods(Number(e.target.value))}>{[3,6,12,14].map(n=><option key={n} value={n}>{n} months</option>)}</DropdownField></label>
@@ -233,7 +237,7 @@ export function FindingList({ findings, title = "What the numbers flag" }: { fin
   return <section className="r-flags" aria-label={title}>
     <header><span className="r-eyebrow">{title}</span><small>Computed from this snapshot · ranked by value at stake, then risk</small></header>
     <ol>{findings.map((f, i) => <li key={i} data-tone={f.tone}>
-      <span className="r-flag-tone">{TONE_LABEL[f.tone]}</span>
+      <span className="r-flag-tone"><ChartNoAxesCombined size={14}/>{TONE_LABEL[f.tone]}</span>
       <p>{f.text}</p>
       {f.inr ? <b className="r-flag-value">≈{rupees(f.inr)}</b> : <span/>}
     </li>)}</ol>

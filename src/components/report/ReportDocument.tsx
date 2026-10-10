@@ -1,10 +1,12 @@
+import {AdaptiveGrid} from "./AdaptiveGrid";
+import {reportOptions} from "../../report/options";
 import logo from '../../assets/report/logo.png';
 import { forwardRef } from 'react';
 import { chapters, chapterNumber } from '../../report/chapters';
 import { monthLabel } from '../../report/compute';
 import { definition, reportFmt as fmt, reportDelta as delta } from '../../report/definitions';
 import type { ReportModel } from '../../report/model';
-import { FindingList, InsightPane, MetricCards, SectionHeader, MonthlyHistory, ValueLedger } from './kit';
+import { FindingList, InsightPane, MetricCards, SectionHeader, MonthlyHistory } from './kit';
 import { findingsFor, ledger } from '../../report/findings';
 import { ReferenceHero } from './ReportChrome';
 import { CriterionEvidence, EvidenceBlock, TrendEvidence } from './ReportEvidence';
@@ -12,15 +14,17 @@ import { CriterionEvidence, EvidenceBlock, TrendEvidence } from './ReportEvidenc
 /** Layout consumes the frozen engine snapshot; interactive views never recompute its figures. */
 export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; theme: 'light' | 'dark' }>(
   function ReportDocument({ model, theme }, ref) {
+    const options=reportOptions(model.customization);
+    const adaptive=options.layout === "adaptive";
     const built = new Date(model.builtAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
     const ordered = model.customization ? model.customization.chapterIds.flatMap(id => chapters.find(c => c.id === id) ?? []) : chapters;
     const available = ordered.filter(spec => model.chapters[spec.id] || model.narratives[spec.id]);
     const aiCount = Object.values(model.narratives).filter(n=>n.generated).length;
     const findings = findingsFor(model), ranked = ledger(findings);
-    return <article className="report-doc" data-report-theme={theme} ref={ref}>
+    return <article className="report-doc" data-report-theme={theme} data-density={options.density} data-accent={options.accent} ref={ref}>
       <div className="r-page-frame" aria-hidden="true"/>
       <div className="r-topbar"><a className="r-brand" href="#report-cover"><img src={logo} alt="Physique 57"/><span>Studio intelligence<small>{model.scope.studio} · {monthLabel(model.scope.month)}</small></span></a><nav aria-label="Chapter navigation">{available.map(spec=><a key={spec.id} href={`#${spec.id}`}>{spec.nav}</a>)}</nav></div>
-      <ReferenceHero studio={model.scope.studio} period={monthLabel(model.scope.month)} built={built} aiCount={aiCount} total={available.length} title={model.customization?.title} subtitle={model.customization?.subtitle} preparedFor={model.customization?.preparedFor} preparedBy={model.customization?.preparedBy}/>
+      {options.showCover ? <ReferenceHero studio={model.scope.studio} period={monthLabel(model.scope.month)} built={built} aiCount={aiCount} total={available.length} title={model.customization?.title} subtitle={model.customization?.subtitle} preparedFor={model.customization?.preparedFor} preparedBy={model.customization?.preparedBy}/> : <header className="r-container r-personal-cover" id="report-cover"><h1>{model.customization?.title || `${model.scope.studio} monthly review`}</h1><p>{monthLabel(model.scope.month)}</p></header>}
       <nav className="r-container r-contents" aria-label="Report contents">{available.map((spec,index)=><a key={spec.id} href={`#${spec.id}`}><span>{chapterNumber(index)}</span><b>{spec.nav}</b></a>)}</nav>
       <div className="r-container">
         {available.map((spec,index)=>{
@@ -50,38 +54,37 @@ export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; them
           const metrics=[...new Set([...(priorities[spec.id] ?? []),...spec.metrics])].filter(id=>data?.total[id]!=null);
           return <section className="r-section" data-layout={layout} id={spec.id} key={spec.id}>
             <SectionHeader number={chapterNumber(index)} total={available.length} topic={spec.title} eyebrow={spec.eyebrow} title={statement?.headline || spec.title} deck={narrative?.summary || spec.deck} id={`${spec.id}-title`}/>
-            {!narrative?.generated && <p className="r-analysis-note">AI interpretation unavailable for this snapshot. {narrative?.error ? 'Rewrite insights to retry.' : 'Generate insights to add a decision brief.'} Recorded figures remain available.</p>}
+            {!narrative?.generated && <p className="r-analysis-note">AI interpretation unavailable for this snapshot. {narrative?.error ? 'Rewrite insights to retry.' : 'Generate insights to add performance interpretation.'} Recorded figures remain available.</p>}
             {!spec.derived && (!data || !data.n) && <p className="r-empty">No selected-month source records. This is unavailable data, not a result of zero.</p>}
-            {data && <MetricCards ids={metrics.slice(0,5)} total={data.total} prior={data.prior} priorYear={data.priorYear} history={data.history}/>}
+            {data && <MetricCards ids={metrics.slice(0,5)} total={data.total} prior={data.prior} priorYear={data.priorYear} history={options.showCharts ? data.history.slice(-options.historyMonths) : undefined} definitions={options.showDefinitions}/>}
             <div className="r-chapter-body">
               <div className="r-chapter-reading">
                 {spec.id === 'recommendations'
-                  ? <InsightPane title="Operating plan" variant="plan" narrative={narrative ? {...narrative,summary:'',cards:[...(statement ? [statement] : []),...lead]} : undefined}/>
+                  ? <InsightPane title="Evidence-led recommendations" variant="plan" adaptive={adaptive} confidence={options.showConfidence} narrative={narrative ? {...narrative,summary:'',cards:[...(statement ? [statement] : []),...lead]} : undefined}/>
                   : <>
-                    {statement && <InsightPane title="Chapter verdict" variant="verdict" hideHeadline narrative={narrative ? {...narrative,summary:'',cards:[statement]} : undefined}/>}
-                    {!!lead.length && <InsightPane title="Key findings" narrative={narrative ? {...narrative,summary:'',cards:lead} : undefined}/>}
+                    {statement && <InsightPane title="Chapter verdict" variant="verdict" hideHeadline adaptive={adaptive} confidence={options.showConfidence} narrative={narrative ? {...narrative,summary:'',cards:[statement]} : undefined}/>}
+                    {!!lead.length && <InsightPane title="Key findings" adaptive={adaptive} confidence={options.showConfidence} narrative={narrative ? {...narrative,summary:'',cards:lead} : undefined}/>}
                   </>}
                 {spec.id==='executive-summary' && !narrative?.cards.length && <FindingList title="Biggest signals across the report" findings={ranked.slice(0,6)}/>}
                 {!narrative?.cards.length && spec.id!=='executive-summary' && <FindingList findings={flags}/>}
               </div>
-              {!!keyGroups.length && <aside className="r-chapter-evidence" aria-label={`${spec.nav} supporting evidence`}>
-                {keyGroups.map(table=><EvidenceBlock full initialView="chart" key={table.id ?? table.field} table={table}/>)}
-              </aside>}
             </div>
-            {spec.id==='recommendations' && <ValueLedger findings={ranked}/>}
-            {data && <TrendEvidence history={data.history} ids={spec.history} title={`${spec.nav} monthly trajectory`}/>}
-            {(otherGroups.length > 0 || rankingGroups.length > 0) && <details className="r-supporting-detail r-data-appendix"><summary>Full chapter evidence <span>{otherGroups.length + (rankingGroups.length ? 1 : 0)} further breakdowns</span></summary>
-              <div className="r-evidence-grid">{otherGroups.map(table=><EvidenceBlock full={table.columns.length>5} key={table.id ?? table.field} table={table}/>)}
-                {!!rankingGroups.length && <CriterionEvidence tables={rankingGroups}/>}</div>
+            {!!keyGroups.length && <AdaptiveGrid className="r-key-evidence" enabled={adaptive}>
+              {keyGroups.map(table=><EvidenceBlock showCharts={options.showCharts} key={table.id ?? table.field} initialView={options.evidenceView === 'table' || !options.showCharts ? 'table' : options.evidenceView === 'chart' ? 'chart' : undefined} table={table}/>)}
+            </AdaptiveGrid>}
+            {data && options.showCharts && <TrendEvidence history={data.history.slice(-options.historyMonths)} ids={spec.history} title={`${spec.nav} monthly trajectory`}/>}
+            {options.showAppendix && (otherGroups.length > 0 || rankingGroups.length > 0) && <details className="r-supporting-detail r-data-appendix"><summary>Full chapter evidence <span>{otherGroups.length + (rankingGroups.length ? 1 : 0)} further breakdowns</span></summary>
+              <AdaptiveGrid className="r-evidence-grid" enabled={adaptive}>{otherGroups.map(table=><EvidenceBlock showCharts={options.showCharts} initialView={options.evidenceView === "table" || !options.showCharts ? "table" : options.evidenceView === "chart" ? "chart" : undefined} key={table.id ?? table.field} table={table}/>)}
+                {!!rankingGroups.length && <CriterionEvidence tables={rankingGroups} showCharts={options.showCharts} initialView={options.evidenceView === "auto" ? undefined : options.evidenceView}/>}</AdaptiveGrid>
             </details>}
-            {data && (metrics.length>5 || spec.history.length>0) && <details className="r-supporting-detail"><summary>Supporting measures & monthly history <span>Explore the source detail</span></summary>
+            {data && options.showAppendix && (metrics.length>5 || spec.history.length>0) && <details className="r-supporting-detail"><summary>Supporting measures & monthly history <span>Explore the source detail</span></summary>
               {metrics.length>5 && <div className="r-table-wrap"><table className="r-table"><thead><tr><th>Supporting measure</th><th>This month</th><th>MoM</th><th>YoY</th></tr></thead><tbody>{metrics.slice(5).map(id=><tr key={id}><td>{definition(id)?.label ?? id}</td><td>{fmt(id,data.total[id])}</td><td>{delta(id,data.total[id],data.prior[id])}</td><td>{delta(id,data.total[id],data.priorYear[id])}</td></tr>)}</tbody></table></div>}
-              {!!spec.history.length && <MonthlyHistory data={data} ids={spec.history} title={spec.nav}/>}</details>}
-            {data && <details className="r-method-detail"><summary>Source & interpretation limits</summary>{data.notes?.map((note,i)=><p key={i}>{note}</p>)}<p>Source: {spec.source} · {data.n.toLocaleString('en-IN')} contributing records. Rankings use eligible samples. Comparisons use the previous month and the same month last year; unavailable values are a dash. See each breakdown’s sample note.</p></details>}
+              {!!spec.history.length && <MonthlyHistory key={options.historyMonths} initialPeriods={options.historyMonths} data={data} ids={spec.history} title={spec.nav}/>}</details>}
+            {data && options.showSources && <details className="r-method-detail"><summary>Source & interpretation limits</summary>{data.notes?.map((note,i)=><p key={i}>{note}</p>)}<p>Source: {spec.source} · {data.n.toLocaleString('en-IN')} contributing records. Rankings use eligible samples. Comparisons use the previous month and the same month last year; unavailable values are a dash. See each breakdown’s sample note.</p></details>}
           </section>;
         })}
         <section className="r-source-basis"><h3>Reading the evidence</h3><p>Cash collections and attendance-attributed revenue have different bases. Renewal cohorts split each expiry month into renewed, lapsed and frozen memberships. Instructor economics use the configured rate, not actual salaries. Recorded lead stages are cohort positions, not historical stage transitions. Recent newcomer outcomes may still mature. Current membership snapshots describe the build date.</p><details className="r-method-detail"><summary>Source snapshot freshness</summary>{model.sources?.map(source=><p key={source.key}><strong>{source.title}</strong> · {source.status}{source.stale ? ' · stale snapshot' : ''} · {source.fetchedAt ? new Date(source.fetchedAt).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}) : 'Refresh time unavailable'}</p>)}</details></section>
-        <footer className="r-footer"><img src={logo} alt="Physique 57"/><div><strong>{model.scope.studio} / {monthLabel(model.scope.month)}</strong><p>Evidence → Interpretation → Action · Immutable report snapshot · Built {built}</p></div></footer>
+        <footer className="r-footer"><img src={logo} alt="Physique 57"/><div><strong>{model.scope.studio} / {monthLabel(model.scope.month)}</strong><p>Performance → Context → Interpretation · Immutable report snapshot · Built {built}</p></div></footer>
       </div>
     </article>;
   },

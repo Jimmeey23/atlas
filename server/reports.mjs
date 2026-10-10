@@ -37,7 +37,7 @@ export function reportRoutes(app, store, cloud) {
     for (const narrative of Object.values(report.narratives)) {
       if (!narrative || typeof narrative.summary !== "string" || typeof narrative.generated !== "boolean"
         || !Array.isArray(narrative.cards) || narrative.cards.some(card => !card ||
-          ["headline", "meaning", "evidence", "action"].some(field => typeof card[field] !== "string")))
+          ["headline", "meaning", "evidence", "action"].some(field => typeof card[field] !== "string") || ["monthContext","yearContext","reasoning","recommendation","layout"].some(field=>card[field]!=null && typeof card[field]!=="string")))
         throw Object.assign(new Error("Report analysis is malformed."), { status: 400 });
     }
     for (const chapter of Object.values(report.chapters)) {

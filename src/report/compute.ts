@@ -1,3 +1,5 @@
+import { ensureSource } from "../data/loader";
+import { websiteScope } from "../data/performance-marketing";
 import { query, fieldPresence, health, quote, type Row } from "../data/duckdb";
 import { metricSQL } from "../semantics/metrics";
 import { currentSnapshotMetrics } from "../semantics/evidence";
@@ -25,7 +27,7 @@ const tracked = new Set(['location','trainer','format','source','category','day'
 const carries = (source: string, field: string) => !tracked.has(field) || !fieldPresence[source] || fieldPresence[source].has(field);
 const factsFor = (spec: ChapterSpec, filters: Filters) => spec.renewal
   ? `(${renewalFactsSQL(where(filters, 'lapsed', []), today())})`
-  : metricFacts(filters, spec.source, []);
+  : metricFacts(filters, spec.source, [], spec.website ? websiteScope(where(filters, spec.source, [])) : undefined);
 const measuresFor = (spec: ChapterSpec, ids: string[], filters: Filters) => spec.renewal ? renewalMeasuresSQL(ids) : metricSQL(ids, context(filters, []));
 /** Memberships are dated by expiry, so their month comes from end_date. */
 const monthColumn = (source: string) =>
@@ -77,6 +79,7 @@ async function historyFor(spec: ChapterSpec, scope: ReportScope, ids: string[]) 
   const start = shiftMonth(scope.month, -(HISTORY_MONTHS - 1));
   const filters: Filters = {
     ...scopeFilters(scope),
+    ...(spec.network ? {location:[]} : {}),
     from: monthBounds(start).from,
     to: monthBounds(scope.month).to,
   };
@@ -99,18 +102,21 @@ async function historyFor(spec: ChapterSpec, scope: ReportScope, ids: string[]) 
 
 async function computeChapter(spec: ChapterSpec, scope: ReportScope): Promise<ChapterData> {
   const ids = usableMetrics(spec.metrics);
-  const current = scopeFilters(scope);
+  const scoped = (month = scope.month) => ({...scopeFilters(scope,month),...(spec.network ? {location:[]} : {})});
+  const current = scoped();
   // Snapshot metrics describe today across every date, so they are read with
   // the period cleared and never compared: asking for their prior value would
   // print a number that was never true.
   const comparable = ids.filter((id) => !currentSnapshotMetrics.has(id));
   const snapshot = ids.filter((id) => currentSnapshotMetrics.has(id));
-  const [total, snapshotTotal, prior, priorYear, history, ...groups] = await Promise.all([
+  const [total, snapshotTotal, prior, priorYear, history, ytd, priorYtd, ...groups] = await Promise.all([
     totalsFor(spec, current, comparable),
     totalsFor(spec, { ...current, from: "", to: "" }, snapshot),
-    totalsFor(spec, scopeFilters(scope, shiftMonth(scope.month, -1)), comparable),
-    totalsFor(spec, scopeFilters(scope, shiftMonth(scope.month, -12)), comparable),
+    totalsFor(spec, scoped(shiftMonth(scope.month, -1)), comparable),
+    totalsFor(spec, scoped(shiftMonth(scope.month, -12)), comparable),
     historyFor(spec, scope, [...new Set([...spec.history, ...ids])]),
+    totalsFor(spec,{...current,from:scope.month.slice(0,4)+"-01-01"},comparable),
+    totalsFor(spec,{...scoped(shiftMonth(scope.month,-12)),from:String(Number(scope.month.slice(0,4))-1)+"-01-01"},comparable),
     ...spec.groups.map((group) => groupTable(spec, group, current)),
   ]);
   return {
@@ -118,6 +124,7 @@ async function computeChapter(spec: ChapterSpec, scope: ReportScope): Promise<Ch
     total: { ...(total[0] ?? {}), ...(snapshotTotal[0] ?? {}) },
     prior: prior[0] ?? {},
     priorYear: priorYear[0] ?? {},
+    yearToDate:ytd[0] ?? {}, priorYearToDate:priorYtd[0] ?? {},
     n: Number(total[0]?.n ?? 0),
     groups: (groups as (GroupTable | null)[]).filter((g): g is GroupTable => !!g),
     notes: spec.groups.filter((_, index) => !groups[index]).map(g => `${g.title}: no eligible ranked rows or a grouping field is unavailable. This does not establish zero activity.`),
@@ -139,15 +146,33 @@ export async function computeReport(
   let done = 0;
   for (const spec of queryable) {
     onProgress?.(done, queryable.length, spec.title);
-    data[spec.id] = await computeChapter(spec, scope);
+    try {
+      if(spec.optional) await ensureSource(spec.source);
+      data[spec.id] = await computeChapter(spec, scope);
+    } catch(error) {
+      if(!spec.optional) throw error;
+      data[spec.id] = {id:spec.id,n:0,total:{},prior:{},priorYear:{},history:[],groups:[],notes:[`Source unavailable: ${String(error instanceof Error ? error.message : error)}. Do not infer zero performance.`]};
+    }
+    if(spec.network) (data[spec.id].notes ??= []).push('Account-level data across studios; no verified studio attribution.');
+    if(scope.month>=today().slice(0,7)) (data[spec.id].notes ??= []).push('This reporting month is open or future-dated. Recorded results may be incomplete; comparisons with closed periods are not like-for-like full months.');
     data[spec.id].diagnostics = diagnosticFacts(data[spec.id]);
     done++;
   }
   // Rule-engine signals for the same studio-month. A failing rule costs that signal, never the report.
   const signals = await evaluateRules(scopeFilters(scope)).catch(() => []);
+  const additionalContext: NonNullable<ReportModel['additionalContext']> = [];
+  try {
+    const response=await fetch('/api/kra/performance?imports=false',{signal:AbortSignal.timeout(8000)});
+    if(!response.ok) throw new Error('KRA context unavailable');
+    const result=await response.json();
+    const month=result.monthly?.find((row:{month:string})=>row.month===scope.month);
+    const keys=['month','closed','cutoff','revenue','baselineRevenue','previousRevenue','revenueYoY','revenueMoM','churnRate','baselineChurnRate','churnReduction','leads','scheduled','completed'];
+    additionalContext.push({title:'KRA performance',scope:'Network / role scorecard',status:month?'available':'outside selected-month coverage',data:month ? Object.fromEntries(keys.filter(k=>k in month).map(k=>[k,month[k]])) : undefined,limitations:`Source as of ${result.asOf ?? 'unknown'}. Network / role-level figures; do not attribute to ${scope.studio} or sum with studio revenue. Manual milestone evidence and different-period totals are excluded.`});
+  } catch {additionalContext.push({title:'KRA performance',scope:'Network / role scorecard',status:'unavailable',limitations:'No verified selected-month KRA snapshot was available; do not infer performance.'});}
   onProgress?.(done, queryable.length, "Figures complete");
   return {
-    schemaVersion: 5,
+    schemaVersion: 6,
+    additionalContext,
     sources: Object.values(health).filter(s => queryable.some(spec => spec.source === s.key)).map(s => ({ key: s.key, title: s.title, fetchedAt: s.fetchedAt, stale: !!s.stale, status: s.status })),
     rate: context(scopeFilters(scope), []).rate,
     scope,

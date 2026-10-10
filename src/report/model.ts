@@ -50,6 +50,8 @@ export interface ChapterData {
   prior: Row;
   /** Same figures for the same month a year earlier. */
   priorYear: Row;
+  yearToDate?: Row;
+  priorYearToDate?: Row;
   /** Contributing record count, for the sample-size note. */
   n: number;
   groups: GroupTable[];
@@ -59,6 +61,11 @@ export interface ChapterData {
   history: Row[];
 }
 export interface InsightCard {
+  layout?: 'comparison' | 'narrative' | 'full';
+  monthContext?: string;
+  yearContext?: string;
+  reasoning?: string;
+  recommendation?: string;
   headline: string;
   meaning: string;
   evidence: string;
@@ -88,6 +95,10 @@ export interface ReportCustomization {
   chapterIds: string[]; theme: "light" | "dark";
   /** Management targets by metric id, in the metric's own units (rates as 0–1). */
   targets?: Record<string, number>;
+  density?: 'compact' | 'comfortable'; layout?: 'adaptive' | 'full'; evidenceView?: 'auto' | 'chart' | 'table';
+  historyMonths?: 6 | 12 | 14; accent?: 'navy' | 'teal' | 'graphite'; focusAreas?: string[];
+  showCover?: boolean; showDefinitions?: boolean; showConfidence?: boolean; showSources?: boolean;
+  showAppendix?: boolean; showCharts?: boolean;
 }
 /** A rule-engine signal scoped to the report's studio and month. */
 export interface ReportSignal {
@@ -105,6 +116,7 @@ export interface ReportModel {
   savedAt?: string;
   schemaVersion?: number;
   sources?: { key: string; title: string; fetchedAt: number | null; stale: boolean; status: string }[];
+  additionalContext?: {title:string;scope:string;status:string;data?:unknown;limitations:string}[];
   rate?: number;
   scope: ReportScope;
   /** When the figures were computed, ISO. */

@@ -15,7 +15,7 @@ export interface GroupSpec {
 export interface ChapterSpec {
   id: string; nav: string; title: string; eyebrow: string; deck: string;
   source: string; metrics: string[]; groups: GroupSpec[]; history: string[]; derived?: boolean;
-  renewal?: boolean;
+  renewal?: boolean; network?: boolean; website?: boolean; optional?: boolean;
 }
 const group = (field: string, title: string, columns: string[], extra: Partial<GroupSpec> = {}): GroupSpec => ({
   field, title, deck: 'Selected-month results. Rankings use eligible samples; comparisons refer to the same group in the previous month and previous year.', columns, limit: 10, ...extra,
@@ -114,8 +114,14 @@ export const chapters: ChapterSpec[] = [
       group('trainer', 'Late cancellations by instructor', ['bookings', 'booking_late_cancelled', 'booking_late_rate'], { rankBy: 'booking_late_cancelled', compare: 'booking_late_cancelled', limit: 12 }),
       group('location', 'Late cancellations by location', ['bookings', 'booking_late_cancelled', 'booking_late_rate'], { compare: 'booking_late_cancelled' }),
     ] },
-  { id: 'recommendations', nav: 'Action plan', title: 'What to do next', eyebrow: 'Prioritised operating plan',
-    deck: 'The actions with the strongest supporting evidence, a responsible role, a timing proposal and a measurable success check.', source: 'sessions', metrics: [], groups: [], history: [], derived: true },
+  {id:'community-attendance',nav:'Attendance',title:'Community attendance & practice frequency',eyebrow:'Depth of engagement',deck:'Check-in records and practice frequency, distinct from session aggregates.',source:'checkins',optional:true,
+    metrics:['checkins','unique_attendees','visits_per_member','checkin_revenue','revenue_per_checkin','teaching_hours'],history:['checkins','unique_attendees','visits_per_member'],groups:[group('format','Practice frequency by format',['checkins','unique_attendees','visits_per_member'],{compare:'checkins'}),group('trainer','Check-in attendance by instructor',['checkins','unique_attendees','revenue_per_checkin'],{compare:'checkins'})]},
+  {id:'website-marketing',nav:'Website',title:'Website acquisition & cohort outcomes',eyebrow:'Recorded marketing outcomes',deck:'Exact Website-source leads, using recorded trial, conversion and retention outcomes for the creation cohort.',source:'leads',website:true,optional:true,
+    metrics:['leads','website_trials','website_members','website_win_rate','website_retained','website_contact_rate','website_untouched','response_time_hours'],history:['leads','website_members','website_win_rate'],groups:[group('associate','Website outcomes by associate',['leads','website_trials','website_members','website_win_rate'],{compare:'website_win_rate'})]},
+  {id:'meta-marketing',nav:'Meta',title:'Meta media efficiency · account context',eyebrow:'Account-level context',deck:'All available ad accounts in the selected month. These results are not attributed to this studio and cannot be joined to studio conversion without a verified mapping.',source:'meta',network:true,optional:true,
+    metrics:['meta_spend','meta_leads','meta_cpl','meta_purchases','meta_roas','meta_impressions','meta_clicks','meta_ctr'],history:['meta_spend','meta_leads','meta_cpl','meta_roas'],groups:[group('campaign_name','Media efficiency by campaign',['meta_spend','meta_leads','meta_cpl','meta_roas'],{compare:'meta_cpl',limit:8})]},
+  { id: 'recommendations', nav: 'Recommendations', title: 'Evidence-led recommendations', eyebrow: 'The rationale for leadership',
+    deck: 'Recommendations grounded in this month’s performance, the year’s pattern and the alternatives the evidence supports.', source: 'sessions', metrics: [], groups: [], history: [], derived: true },
   { id: 'predictions', nav: 'Outlook', title: 'What happens next: conditional scenarios', eyebrow: 'Assumptions made visible',
     deck: 'Transparent what-if calculations, with leading indicators and conditions that would change the outlook.', source: 'sessions', metrics: [], groups: [], history: [], derived: true },
 ];

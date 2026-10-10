@@ -17,10 +17,15 @@ export function kraRoutes(app,root,config,load,store=createStore({root})) {
   let writes=Promise.resolve();
   // Computing the scorecard means pulling five Google sheets and normalising ~300k rows. On a
   // serverless cold start that took ~60s, which the browser abandons. The finished payload is
-  // small, so it is cached durably and served immediately; a stale copy is returned while a
-  // refresh runs rather than making the reader wait for Google.
+  // cached durably; expired results are refreshed once per instance before responding.
   const resultKey=imports=>`.floor/kra-result-${imports?'imports':'direct'}.json`;
   const RESULT_TTL=30*60*1000;
+  const computations=new Map();
+  function computeOnce(imports,refresh) {
+    const key=String(imports);
+    if(!computations.has(key))computations.set(key,compute(imports,refresh).finally(()=>computations.delete(key)));
+    return computations.get(key);
+  }
   async function compute(imports,refresh) {
     const sources={};
     await Promise.all(['sales','leads','bookings','lapsed','new'].map(async key=>{
@@ -47,13 +52,12 @@ export function kraRoutes(app,root,config,load,store=createStore({root})) {
       const saved=await evidence();
       if(!refresh){
         const cached=await store.read(resultKey(imports)).catch(()=>null);
-        if(cached?.result){
+        if(cached?.result&&Date.now()-cached.computedAt<RESULT_TTL){
           res.json(decorate(cached.result,saved,cached.computedAt));
-          if(Date.now()-cached.computedAt>=RESULT_TTL)compute(imports,false).catch(()=>undefined);
           return;
         }
       }
-      res.json(decorate(await compute(imports,refresh),saved));
+      res.json(decorate(await computeOnce(imports,refresh),saved));
     } catch(error) {console.error('KRA performance failed:',error?.message??error);res.status(500).json({error:'KRA source analysis could not be completed. Retry or refresh the source snapshots.'});}
   });
   app.put('/api/kra/scorecard/:period/:id',auth,async(req,res)=>{

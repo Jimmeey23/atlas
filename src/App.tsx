@@ -122,6 +122,7 @@ import "./design/refinement.css";
 import "./design/acquisition.css";
 import "./design/report.css";
 import "./design/report-review.css";
+import "./design/report-builder.css";
 import "./design/chrome.css";
 import "./design/sales.css";
 import "./design/controls.css";
@@ -240,6 +241,7 @@ export default function App() {
   // again, so a check that finds nothing costs a few hundred bytes.
   const refresh = useCallback(
     async (minInterval = 10000) => {
+      if (document.visibilityState !== "visible") return;
       try {
         const changed = await revalidate(useStore.getState().tab, minInterval);
         if (changed.length)
@@ -255,7 +257,7 @@ export default function App() {
   useEffect(() => {
     // After the first paint, not before it.
     const idle = setTimeout(() => void refresh(0), 1500);
-    const timer = setInterval(() => void refresh(), 60000);
+    const timer = setInterval(() => void refresh(), 5 * 60000);
     const onVisible = () => {
       if (document.visibilityState === "visible") void refresh();
     };

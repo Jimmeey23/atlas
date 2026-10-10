@@ -130,7 +130,13 @@ export async function ensureSource(key: string, force = false, latest = false): 
       const data = await liveRead(async () => {
         const response = await fetch(
           `/api/sheets/${key}${force ? "?refresh=true" : ""}`,
+          { headers: usable(key) && health[key]?.hash ? { "If-None-Match": `"${health[key].hash}"` } : {} },
         );
+        if (response.status === 304) return {
+          status: "ok", hash: health[key].hash,
+          fetchedAt: Number(response.headers.get("X-Snapshot-Fetched-At")) || health[key].fetchedAt,
+          revision: response.headers.get("X-Snapshot-Revision") || health[key].revision,
+        };
         if (!response.ok)
           throw new Error(`Source request failed (${response.status}).`);
         return response.json();

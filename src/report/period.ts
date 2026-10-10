@@ -35,6 +35,8 @@ export function figuresHash(chapterData: Record<string, ChapterData>) {
       data.total,
       data.prior,
       data.priorYear,
+      data.yearToDate,
+      data.priorYearToDate,
       data.history,
       data.groups.map((g) => [g.id, g.field, g.rows, g.total, g.prior, g.priorYear, g.diagnostics]),
     ]);

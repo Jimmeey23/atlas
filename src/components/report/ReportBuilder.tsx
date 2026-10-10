@@ -1,8 +1,9 @@
+import {ReportSettings} from "./ReportSettings";
 import { definition } from "../../report/definitions";
 import { GenerationStats } from "./GenerationStats";
 import { DropdownField } from "../ui/DropdownField";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, Printer, Sparkles, FileText, RefreshCw, TriangleAlert, ExternalLink } from "lucide-react";
+import { Download, Printer, Sparkles, FileText, RefreshCw, TriangleAlert, ExternalLink, ChartNoAxesCombined, Clock3, Layers3, Database } from "lucide-react";
 import { query } from "../../data/duckdb";
 import { useStore } from "../../state/store";
 import { themeOptions } from "../../state/preferences";
@@ -23,7 +24,6 @@ type Stage = { label: string; done: number; total: number } | null;
  * opened last month appears without a code change.
  */
 /** Measures leadership most often sets a monthly target for. Rates are entered as percentages. */
-const TARGET_METRICS = ['gross_revenue', 'fill_rate', 'session_complimentary_rate', 'conversion_rate', 'retention_rate', 'lead_conversion_rate', 'renewal_rate', 'booking_late_rate'];
 const TARGETS_KEY = 'atlas-report-targets';
 function storedTargets(): Record<string, number> {
   try { const parsed = JSON.parse(localStorage.getItem(TARGETS_KEY) || '{}'); return parsed && typeof parsed === 'object' ? parsed : {}; }
@@ -35,7 +35,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
   const filters = useStore((s) => s.filters);
   const reportTheme =
     themeOptions.find((option) => option.id === theme)?.type.startsWith("Dark") ? "dark" : "light";
-  const [customization, setCustomization] = useState<ReportCustomization>({ title: 'Monthly performance report', subtitle: '', preparedFor: '', preparedBy: '', audience: 'Studio leadership', tone: 'Professional', detail: 'Comprehensive', instructions: '', chapterIds: chapters.map(c => c.id), theme: reportTheme, targets: storedTargets() });
+  const [customization, setCustomization] = useState<ReportCustomization>({ title: 'Monthly performance report', subtitle: '', preparedFor: '', preparedBy: '', audience: 'Studio leadership', tone: 'Professional', detail: 'Comprehensive', instructions: '', chapterIds: chapters.map(c => c.id), theme: reportTheme, targets: storedTargets(), density:'compact',layout:'adaptive',evidenceView:'auto',historyMonths:12,accent:'navy',focusAreas:[] });
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [estimatedSeconds, setEstimatedSeconds] = useState(0);
@@ -47,7 +47,11 @@ export function ReportBuilder({ version }: { version: string | number }) {
     return () => window.clearInterval(timer);
   }, [startedAt]);
   const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
-  const patch = (value: Partial<ReportCustomization>) => setCustomization(c => ({ ...c, ...value }));
+  const patch = (value: Partial<ReportCustomization>) => {
+    setCustomization(c=>({...c,...value}));
+    const appearance=['title','subtitle','preparedFor','preparedBy','theme','density','layout','evidenceView','historyMonths','accent','showCover','showCharts','showDefinitions','showConfidence','showSources','showAppendix','chapterIds'];
+    if(Object.keys(value).every(key=>appearance.includes(key))) setModel(m=>m?{...m,customization:{...customization,...m.customization,...value},id:undefined,savedAt:undefined}:m);
+  };
   const setTarget = (id: string, raw: string) => setCustomization(c => {
     const targets = { ...(c.targets ?? {}) };
     const value = Number(raw);
@@ -175,6 +179,8 @@ export function ReportBuilder({ version }: { version: string | number }) {
 
   const ready = !!studio && !!month && customization.chapterIds.length > 0;
   const busy = stage !== null || loadingSaved || exporting;
+  const analysisPreferences=(c?:ReportCustomization)=>JSON.stringify([c?.audience,c?.tone,c?.detail,c?.instructions,c?.focusAreas??[],c?.targets??{}]);
+  const needsRewrite=!!model && (analysisPreferences(model.customization)!==analysisPreferences(customization) || customization.chapterIds.some(id=>!model.narratives[id]));
 
   async function exportReport(kind: 'html' | 'pdf') {
     if (!model || !document_.current) return;
@@ -195,7 +201,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
     setStartedAt(Date.now()); setElapsed(0); setEstimatedSeconds(estimate);
     setStage({ label: "Reading the month", done: 0, total: 1 });
     try {
-      const snapshot = await computeReport({ studio, month }, (done, total, label) =>
+      const snapshot = regenerate && model?.schemaVersion === 6 && model.scope.studio === studio && model.scope.month === month && chapters.filter(c=>!c.derived).every(c=>model.chapters[c.id]) ? model : await computeReport({ studio, month }, (done, total, label) =>
         setStage({ label, done, total: total + 1 }),
       );
       if (controller.signal.aborted) return;
@@ -235,7 +241,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
 
   return (
     <div className="report-workspace" data-report-id={model?.id || ""}>
-      <header className="report-generator-heading" data-export="omit"><span className="eyebrow">Monthly reports</span><h2>Create your report</h2><p>Choose the scope, shape the report and set the questions your analysis should answer.</p></header>
+      <header className="report-generator-heading" data-export="omit"><div className="rb-heading-mark"><ChartNoAxesCombined size={24}/></div><div><span className="eyebrow">Monthly performance intelligence</span><h2>Turn the month into a clear story.</h2><p>Understand the drivers. Put the month in perspective. Give leadership the evidence behind the conclusion.</p></div><div className="rb-heading-tags"><span><Layers3 size={14}/>MoM · YoY · YTD</span><span><Database size={14}/>Source-backed analysis</span></div></header>
       <div className="report-controls" data-export="omit">
         <label>
           <span className="small">Studio</span>
@@ -303,22 +309,9 @@ export function ReportBuilder({ version }: { version: string | number }) {
         )}
       </div>
 
-      <fieldset className="report-customization" disabled={busy} data-export="omit"><legend>Personalise your report</legend>
-        <div className="report-customization-grid">
-          {(['title', 'subtitle', 'preparedFor', 'preparedBy'] as const).map(key => <label key={key}><span>{({title:'Report title',subtitle:'Subtitle',preparedFor:'Prepared for',preparedBy:'Prepared by'})[key]}</span><input value={customization[key]} maxLength={160} onChange={e => patch({[key]:e.target.value})}/></label>)}
-          {([{key:'audience',label:'Audience',options:['Studio leadership','Executive board','Operations team','Commercial team']},{key:'tone',label:'Writing style',options:['Professional','Direct and action-oriented','Plain language']},{key:'detail',label:'Narrative depth',options:['Comprehensive','Concise']},{key:'theme',label:'Report appearance',options:['light','dark']}] as const).map(field => <label key={field.key}><span>{field.label}</span><DropdownField value={customization[field.key]} onChange={e => patch({[field.key]:e.target.value})}>{field.options.map(option => <option key={option} value={option}>{option}</option>)}</DropdownField></label>)}
-        </div>
-        <label className="report-priorities"><span>Analysis priorities & editorial instructions</span><textarea rows={3} maxLength={3000} value={customization.instructions} onChange={e => patch({instructions:e.target.value})} placeholder="For example: focus on retention risks, compare format efficiency, and prioritise actions for studio managers."/></label>
-        <div className="report-targets"><span>Monthly targets (optional)</span><p className="small">Findings compare results with these and value any shortfall. Leave a target blank to use only the studio's own history as the benchmark.</p>
-          <div className="report-customization-grid">{TARGET_METRICS.filter(id => definition(id)).map(id => { const pct = definition(id)!.format === 'percent'; const value = customization.targets?.[id];
-            return <label key={id}><span>{definition(id)!.label}{pct ? ' (%)' : ' (₹)'}</span><input type="number" inputMode="decimal" step="any" min="0" aria-label={`${definition(id)!.label} target`} value={value == null ? '' : pct ? +(value * 100).toFixed(2) : value} onChange={e => setTarget(id, e.target.value)}/></label>; })}</div></div>
-        <p className="small">Select chapters and set their reading order. Source figures and metric definitions stay governed.</p>
-        <div className="report-chapter-options">{[...customization.chapterIds, ...chapters.map(c => c.id).filter(id => !customization.chapterIds.includes(id))].map(id => {
-          const chapter = chapters.find(c => c.id === id)!; const index = customization.chapterIds.indexOf(id);
-          return <div key={id}><label><input type="checkbox" checked={index >= 0} onChange={e => patch({chapterIds:e.target.checked ? [...customization.chapterIds,id] : customization.chapterIds.filter(c => c !== id)})}/>{chapter.title}</label>{index >= 0 && <span><button type="button" className="button" aria-label={`Move ${chapter.title} up`} disabled={busy || index === 0} onClick={() => moveChapter(id,-1)}>↑</button><button type="button" className="button" aria-label={`Move ${chapter.title} down`} disabled={busy || index === customization.chapterIds.length - 1} onClick={() => moveChapter(id,1)}>↓</button></span>}</div>;
-        })}</div>
-        <p className="small">Approximate wait: {clock(estimate)} for {customization.chapterIds.length} chapters. Cached insights may be faster; provider retries may take longer.</p>
-      </fieldset>
+      <ReportSettings value={customization} patch={patch} busy={busy} onTarget={setTarget} moveChapter={moveChapter}/>
+      {needsRewrite && <p className="rb-help" data-export="omit"><Sparkles size={14}/>Analysis preferences changed or chapters were added. Rewrite insights to apply them to the saved figures.</p>}
+      <div className="rb-generation-note" data-export="omit"><Clock3 size={15}/><span>Estimated generation <b>{clock(estimate)}</b></span><span>{customization.chapterIds.length} selected chapters · all available report sources used as context</span></div>
       <div className="report-history" data-export="omit">
         <label>
           <span className="small">Saved reports · latest 50 versions</span>
@@ -366,11 +359,9 @@ export function ReportBuilder({ version }: { version: string | number }) {
         !busy && (
           <div className="empty-state" data-export="omit">
             <FileText size={22} />
-            <h3>Build a board report</h3>
+            <h3>Your next review starts here.</h3>
             <p>
-              Choose a studio and a month, and the comprehensive report is built from that
-              studio's own figures — money, demand, the funnel, the membership base, then what
-              to do and what comes next. Download it as a single file to send on.
+              Choose a studio and month to review commercial performance, demand, the community journey and the year’s pattern. The report connects each conclusion to its evidence and reasoning.
             </p>
           </div>
         )

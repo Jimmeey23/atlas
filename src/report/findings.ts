@@ -350,7 +350,7 @@ function crossFindings(model: ReportModel, ctx: ValueContext): Finding[] {
     const gc = g / gp - 1, ac = a / ap - 1;
     if (Math.sign(gc) !== Math.sign(ac) || Math.abs(gc - ac) >= 0.1)
       out.push({ chapter: "executive-summary", focus: "cross", kind: "cross", tone: gc < ac ? "risk" : "context",
-        text: `Cash collections (${(gc * 100).toFixed(1)}%) and studio attendance (${(ac * 100).toFixed(1)}%) moved ${Math.sign(gc) !== Math.sign(ac) ? "in opposite directions" : `${Math.abs((gc - ac) * 100).toFixed(0)} points apart`} on last month. ${gc < ac ? "Members are using packages bought earlier faster than new money comes in, which drains the prepaid balance and can mean lower cash next month." : "New money is running ahead of usage, which builds unused prepaid balances to protect with engagement."}` });
+        text: `Cash collections (${(gc * 100).toFixed(1)}%) and studio attendance (${(ac * 100).toFixed(1)}%) moved ${Math.sign(gc) !== Math.sign(ac) ? "in opposite directions" : `${Math.abs((gc - ac) * 100).toFixed(0)} points apart`} on last month. ${gc < ac ? "Studio usage grew faster than collections, so attendance strength is not matched by the same movement in cash." : "Collections outpaced studio usage, so cash strength is not matched by the same movement in attendance."} Purchase timing and package mix may explain the divergence; these different populations do not establish a change in prepaid balances.}` });
   }
   // Newcomer demand versus conversion.
   const funnel = model.chapters["conversion-funnel"];

@@ -117,7 +117,9 @@ test('fallback copy leads with engine findings when the model is unavailable', (
   assert.equal(narrative.generated, false);
   assert.equal(narrative.cards[0].headline, 'Twelve sessions ran empty');
   assert.equal(narrative.cards[0].category, 'red_flag');
-  assert.match(narrative.cards[0].impact!, /at stake/);
+  assert.equal(narrative.cards[0].impact, '');
+  assert.equal(narrative.cards[0].action, '');
+  assert.ok(narrative.cards[0].reasoning);
 });
 
 test('the chapter prompt is built on findings and no longer asks for one passage per table', async () => {
@@ -134,7 +136,7 @@ test('the chapter prompt is built on findings and no longer asks for one passage
     assert.match(messages[0], /Analyst findings/);
     assert.match(messages[0], /lowest in 6 months/);
     assert.doesNotMatch(messages[0], /one passage with its matching focus ID for EACH/);
-    assert.match(messages[1], /operating plan/);
+    assert.match(messages[1], /evidence-led recommendations with reasoning/);
     assert.equal(out['executive-summary'].cards[0].focus, 'kpis', 'a missing verdict is promoted from the first card');
   } finally { globalThis.fetch = originalFetch; (globalThis as any).localStorage = originalStorage; }
 });
@@ -168,6 +170,8 @@ test('failed recommendation generation retains calculated proposals and labels t
   assert.equal(fallback.generated,false);
   assert.ok(fallback.cards.length);
   assert.match(fallback.summary,/must not be added/);
-  assert.match(fallback.cards[0].action,/Proposed: Finance/);
+  assert.equal(fallback.cards[0].action,'');
+  assert.ok(fallback.cards[0].recommendation);
+  assert.ok(fallback.cards[0].reasoning);
   assert.equal(fallback.cards[0].focus,'kpis');
 });
