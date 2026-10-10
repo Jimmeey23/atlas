@@ -2,17 +2,20 @@ import { chapters, type ChapterSpec } from "./chapters";
 import { definition, reportFmt as fmt, reportDelta as delta } from "./definitions";
 import { monthLabel } from "./period";
 import type { ChapterData, InsightCard, ReportModel, SpeakerNotes } from "./model";
+import { decisionOf, extremes, movers, questionBank, rankPerformers, scenariosFor, yearPosition } from "./brief";
 
-/** The pages a report is presented as: an overview tab, then one tab per chapter with its own sections. */
-export type DeckSection = "cover" | "glance" | "summary" | "insights" | "plan" | "trends" | "evidence" | "data";
+/** The pages a report is presented as: an overview tab (cover + executive brief), then one tab per chapter. */
+export type DeckSection = "cover" | "summary" | "insights" | "plan" | "performers" | "outlook" | "trends" | "tables" | "data";
 export const SECTION_LABEL: Record<DeckSection, string> = {
-  cover: "Cover", glance: "At a glance", summary: "Verdict & KPIs", insights: "Insights", plan: "Action plan",
-  trends: "Month on month", evidence: "Breakdowns", data: "Explore data",
+  cover: "Cover", summary: "Briefing", insights: "Insights", plan: "Action plan", performers: "Leaders & laggards",
+  outlook: "Outlook", trends: "Month on month", tables: "Key tables", data: "Explore data",
 };
-export interface DeckTab { id: string; label: string; title: string; spec?: ChapterSpec; sections: DeckSection[] }
+/** `chapter` is the narrative/figures key: the overview tab reads the executive brief. */
+export interface DeckTab { id: string; label: string; title: string; chapter: string; spec?: ChapterSpec; sections: DeckSection[] }
 
 const label = (id: string) => definition(id)?.label ?? id;
 export const pageKey = (tab: string, section: DeckSection) => `${tab}:${section}`;
+export const EXECUTIVE = "executive-summary";
 
 /** Lead measures per chapter: the report's priority list, then the chapter's own. */
 export const PRIORITY_METRICS: Record<string, string[]> = {
@@ -36,15 +39,19 @@ export const verdictOf = (model: ReportModel, id: string): InsightCard | undefin
 export function deckTabs(model: ReportModel): DeckTab[] {
   const ordered = model.customization ? model.customization.chapterIds.flatMap(id => chapters.find(c => c.id === id) ?? []) : chapters;
   const available = ordered.filter(spec => model.chapters[spec.id] || model.narratives[spec.id]);
+  const exec = available.find(spec => spec.id === EXECUTIVE);
+  const execCards = (model.narratives[EXECUTIVE]?.cards.length ?? 0) > 1;
   return [
-    { id: "overview", label: "Cover", title: model.customization?.title || `${model.scope.studio} monthly review`, sections: ["cover", "glance"] },
-    ...available.map(spec => {
+    { id: "overview", label: "Overview", chapter: exec ? EXECUTIVE : "overview", spec: exec, title: model.customization?.title || `${model.scope.studio} monthly review`, sections: exec && execCards ? ["cover", "insights"] : ["cover"] },
+    ...available.filter(spec => spec !== exec).map(spec => {
       const data = model.chapters[spec.id];
       const sections: DeckSection[] = spec.id === "recommendations" ? ["summary", "plan", "insights"] : ["summary", "insights"];
+      if (data?.groups.length) sections.push("performers");
+      if (data?.history.length && !spec.derived) sections.push("outlook");
       if (data?.history.length) sections.push("trends");
-      if (data?.groups.length) sections.push("evidence");
+      if (data?.groups.length) sections.push("tables");
       if (!spec.derived && data) sections.push("data");
-      return { id: spec.id, label: spec.nav, title: spec.title, spec, sections };
+      return { id: spec.id, label: spec.nav, title: spec.title, chapter: spec.id, spec, sections };
     }),
   ];
 }
@@ -52,85 +59,118 @@ export function deckTabs(model: ReportModel): DeckTab[] {
 /** Linear order for presenting: every section of every tab. */
 export const deckPages = (tabs: DeckTab[]) => tabs.flatMap(tab => tab.sections.map(section => ({ tab: tab.id, section })));
 
-const sentence = (text?: string) => (text ?? "").split(/(?<=[.!?])\s+(?=[A-Z₹0-9])/)[0]?.trim() ?? "";
-function topMovers(data: ChapterData | undefined, ids: string[], count = 3) {
-  if (!data) return [];
-  return ids.filter(id => data.total[id] != null && data.prior[id] != null && Number(data.prior[id]) !== 0)
-    .map(id => ({ id, change: Math.abs(Number(data.total[id]) / Number(data.prior[id]) - 1) }))
-    .sort((a, b) => b.change - a.change).slice(0, count).map(m => m.id);
-}
-const say = (id: string, data: ChapterData) => `${label(id)} ${fmt(id, data.total[id])} (MoM ${delta(id, data.total[id], data.prior[id])}, YoY ${delta(id, data.total[id], data.priorYear[id])})`;
+/** A figure as a presenter would say it. */
+const spoken = (id: string, data: ChapterData) => {
+  const mom = data.prior[id] != null ? delta(id, data.total[id], data.prior[id]) : "";
+  const yoy = data.priorYear[id] != null ? delta(id, data.total[id], data.priorYear[id]) : "";
+  return `${label(id)} landed at ${fmt(id, data.total[id])}${mom ? ` — ${mom} on last month` : ""}${yoy ? `${mom ? " and" : " —"} ${yoy} on last year` : ""}.`;
+};
+const direction = (id: string, change: number) => (change >= 0) === (definition(id)?.higherIsBetter ?? true) ? "in our favour" : "against us";
 
 /**
- * A talk track built from the frozen report: always available, no AI call.
- * AI-written notes saved on the report take precedence when present.
+ * The presenter's private script for a page: framing, stage directions, numbers
+ * phrased for speech and a bank of likely questions with answers. It never
+ * repeats the on-screen briefing or card text. AI-written notes saved on the
+ * report take precedence and are topped up from the question bank.
  */
 export function liveNotes(model: ReportModel, tabs: DeckTab[], tabId: string, section: DeckSection): SpeakerNotes {
+  const tab = tabs.find(t => t.id === tabId);
+  const cid = tab?.chapter ?? tabId;
+  const spec = tab?.spec ?? chapters.find(c => c.id === cid);
+  const data = model.chapters[cid];
+  const ids = spec ? chapterMetrics(spec, data) : [];
+  const bank = questionBank(model, cid, ids).map(({ q, a }) => ({ q, a }));
   const saved = model.speakerNotes?.[pageKey(tabId, section)];
-  if (saved) return saved;
+  if (saved) return { ...saved, questions: [...saved.questions, ...bank.filter(b => !saved.questions.some(q => q.q === b.q))].slice(0, 10) };
   const pages = deckPages(tabs);
   const index = pages.findIndex(p => p.tab === tabId && p.section === section);
   const next = pages[index + 1];
   const nextTab = next && tabs.find(t => t.id === next.tab);
-  const transition = next ? `Next, ${next.tab === tabId ? SECTION_LABEL[next.section].toLowerCase() : `${nextTab?.label} — ${nextTab?.title.toLowerCase()}`}.` : "That closes the review; open the floor for decisions.";
-  const period = `${model.scope.studio}, ${monthLabel(model.scope.month)}`;
-  if (tabId === "overview") {
-    const brief = verdictOf(model, "executive-summary");
-    const areas = tabs.filter(t => t.spec && !t.spec.derived && model.chapters[t.id]?.n);
-    const moves = (model.narratives.recommendations?.cards ?? []).slice(0, 3);
-    return {
-      opener: section === "cover" ? `This is the ${period} performance review.` : brief?.headline ?? `Here is the month at a glance for ${period}.`,
-      points: section === "cover"
-        ? [`${areas.length} areas reviewed, each with a verdict, its evidence and the move it suggests.`, brief?.headline ?? "", sentence(model.narratives["executive-summary"]?.summary)].filter(Boolean)
-        : [sentence(model.narratives["executive-summary"]?.summary), ...moves.map(c => `Decision: ${c.action || c.headline}`)].filter(Boolean),
-      numbers: areas.slice(0, 4).flatMap(t => { const data = model.chapters[t.id]; const id = chapterMetrics(t.spec!, data)[0]; return id ? [say(id, data)] : []; }),
-      questions: [{ q: "What is the single biggest issue this month?", a: brief?.driver || brief?.meaning || "See the risks column on the scorecard." }],
-      transition,
-    };
+  const transition = next ? (next.tab === tabId ? `"Let's look at ${SECTION_LABEL[next.section].toLowerCase()} for ${tab?.label.toLowerCase()}."` : `"That's ${tab?.label.toLowerCase()}. Moving to ${nextTab?.label.toLowerCase()}."`) : `"That's the review. Let's take the decisions one by one."`;
+  const moving = data ? movers(data, ids, 3) : [];
+  const numbers = data ? [...new Set([ids[0], ...moving.map(m => m.id)].filter(Boolean))].slice(0, 4).map(id => spoken(id, data)) : [];
+  const base = { numbers, questions: bank.slice(0, 10), transition };
+  const lead = ids[0];
+  const pos = lead && data ? yearPosition(lead, data, model.scope.month) : null;
+  if (tabId === "overview" && section === "cover") {
+    const areas = tabs.filter(t => t.id !== "overview" && t.spec && !t.spec.derived && model.chapters[t.id]?.n);
+    const decisions = (model.narratives.recommendations?.cards ?? []).length;
+    return { ...base, opener: `"Thank you for the time. This is ${model.scope.studio}'s ${monthLabel(model.scope.month)} review — one month, one studio, every figure frozen when the report was built."`,
+      points: [
+        `"We'll cover ${areas.length} areas. Each one gets a briefing, the evidence behind it and one decision we need from this room."`,
+        "[Point to the scorecard] Green means the lead measures improved on last month; red means they slipped. We will spend our time on the reds.",
+        "[Pause on the headline verdict] Let it land before you add anything — the room will read it.",
+        decisions ? `"There are ${decisions} recommendations at the end; the decision panel below previews the most important one."` : "",
+        "Ask the room to hold detailed questions for the chapter pages — the drill-downs answer most of them live.",
+      ].filter(Boolean), transition };
   }
-  const tab = tabs.find(t => t.id === tabId);
-  const data = model.chapters[tabId];
-  const verdict = verdictOf(model, tabId);
-  const cards = (model.narratives[tabId]?.cards ?? []).filter(c => c !== verdict);
-  const ids = tab?.spec ? chapterMetrics(tab.spec, data) : [];
-  const numbers = data ? topMovers(data, ids).map(id => say(id, data)) : [];
-  const questions = [
-    verdict?.driver && { q: "What drove this?", a: verdict.driver },
-    verdict?.trend && { q: "Is it going to last?", a: verdict.trend },
-    verdict?.impact && { q: "What is it worth?", a: verdict.impact },
-    verdict?.action && { q: "What are we doing about it?", a: verdict.action },
-  ].filter(Boolean) as { q: string; a: string }[];
-  const base = { numbers, questions: questions.slice(0, 3), transition };
   switch (section) {
-    case "summary": return { ...base, opener: verdict?.headline ?? tab?.title ?? "", points: [sentence(model.narratives[tabId]?.summary), verdict?.driver && `Driver: ${sentence(verdict.driver)}`, verdict?.concentration && `Concentrated in: ${sentence(verdict.concentration)}`, verdict?.offset && `Holding up: ${sentence(verdict.offset)}`, verdict?.impact && `At stake: ${verdict.impact}`].filter(Boolean) as string[] };
-    case "insights": case "plan": return { ...base, opener: `${cards.length} ${section === "plan" ? "moves" : "insights"} for ${tab?.label.toLowerCase()} — the headline first, then the evidence beside it.`, points: cards.slice(0, 5).map(c => c.action ? `${c.headline} → ${c.action}` : c.headline) };
-    case "trends": {
-      const history = data?.history ?? [];
-      const lead = tab?.spec?.history.find(id => history.filter(r => r[id] != null).length > 2);
-      const values = lead ? history.filter(r => r[lead] != null).map(r => ({ month: String(r.month), v: Number(r[lead]) })) : [];
-      const best = values.reduce<typeof values[number] | undefined>((a, b) => !a || b.v > a.v ? b : a, undefined);
-      const worst = values.reduce<typeof values[number] | undefined>((a, b) => !a || b.v < a.v ? b : a, undefined);
-      return { ...base, opener: `Fourteen months of ${tab?.label.toLowerCase()} — read the shape, not just the last point.`, points: [
-        lead && best && `${label(lead)} peaked in ${monthLabel(best.month)} at ${fmt(lead, best.v)}.`,
-        lead && worst && `Its low was ${monthLabel(worst.month)} at ${fmt(lead, worst.v)}.`,
-        verdict?.trend && `Durability: ${sentence(verdict.trend)}`,
-        "Switch MoM / YoY on the table to show the direction of each month.",
-      ].filter(Boolean) as string[] };
-    }
-    case "evidence": {
-      const analysis = data?.groups.find(g => g.analysis?.decliners?.length || g.analysis?.gainers?.length)?.analysis;
-      return { ...base, opener: "Where the movement sits — the breakdowns behind the verdict.", points: [
-        ...(analysis?.decliners ?? []).slice(0, 2).map(m => `${m.g} fell by ${fmt(analysis!.metric ?? "", Math.abs(m.change))} on ${label(analysis!.metric ?? "")}.`),
-        ...(analysis?.gainers ?? []).slice(0, 2).map(m => `${m.g} added ${fmt(analysis!.metric ?? "", m.change)}.`),
-        verdict?.concentration ?? "",
+    case "summary": case "cover": {
+      const decision = decisionOf(model, cid);
+      return { ...base, opener: `"${tab?.label}: here's where we stand and what we need from you."`, points: [
+        lead && data ? `[Point to the first card] Anchor on ${label(lead).toLowerCase()} before anything else — it frames the rest of the page.` : "",
+        moving[0] && data ? `Call out ${label(moving[0].id).toLowerCase()} as the biggest move: ${delta(moving[0].id, data.total[moving[0].id], data.prior[moving[0].id])} on last month, ${direction(moving[0].id, moving[0].change)}.` : "",
+        pos ? `"By this year's standards that's month ${pos.rank} of ${pos.of}" — say it, it pre-empts the 'is this normal?' question.` : "",
+        "[Walk the briefing left to right] Spend the most time on 'Why it moved' — that's where challenge will come.",
+        decision ? "[Stop at the decision panel] Read the call aloud, then point to the evidence row. Ask for agreement or objections before moving on." : "",
+        decision?.alternative ? "If someone proposes another route, the alternative we considered is on the panel — acknowledge it, then return to the evidence." : "",
       ].filter(Boolean) };
     }
-    default: return { ...base, opener: "Open the underlying records to answer questions live.", points: ["Search or filter the source rows for this studio and month.", "Export the filtered view if a follow-up is needed.", `${data?.n.toLocaleString("en-IN") ?? 0} contributing records sit behind this chapter.`] };
+    case "insights": case "plan": {
+      const cards = (model.narratives[cid]?.cards ?? []).filter(c => c.focus !== "kpis");
+      const high = cards.filter(c => c.priority === "high").length;
+      return { ...base, opener: section === "plan" ? `"These are the moves, in priority order. Let's agree owners as we go."` : `"${cards.length} findings sit behind that briefing. I'll take the ${high || "most important"} ${high === 1 ? "one" : "ones"} first."`, points: [
+        "[Select each item in the left rail] Read only the headline; let the evidence column on the right do the convincing.",
+        high ? `Prioritise the ${high} high-priority ${high === 1 ? "item" : "items"}; offer to skip the low-priority ones if time is short.` : "",
+        "When someone challenges a number, open 'Explore records' on the item — it pulls the source rows live.",
+        section === "plan" ? "For each move, confirm the owner area and the review month before going to the next one." : "Close the section by asking which finding the room wants owned this month.",
+      ].filter(Boolean) };
+    }
+    case "performers": {
+      const table = data?.groups[0];
+      const metric = table?.compare ?? table?.columns[0];
+      const ranked = table && metric ? rankPerformers(table, metric) : [];
+      return { ...base, opener: `"Who's carrying the month, and who needs support."`, points: [
+        table && metric ? `[Point to the criterion chips] The default ranking is ${label(metric).toLowerCase()} — switch criteria if the room asks.` : "",
+        ranked.length > 1 && metric ? `"${ranked[0].g} leads at ${fmt(metric, ranked[0].value)}; ${ranked.at(-1)!.g} trails at ${fmt(metric, ranked.at(-1)!.value)}."` : "",
+        "Remind the room that thin samples are flagged — don't judge a row on a handful of records.",
+        "If asked 'which ones exactly?', use the row's records button to open the source items.",
+      ].filter(Boolean) };
+    }
+    case "outlook": {
+      const sc = spec && data ? scenariosFor(spec, data, model.scope.month)[0] : undefined;
+      return { ...base, opener: `"A word on next month — and these are scenarios, not forecasts."`, points: [
+        "Say 'conditional' before showing any number on this page; it protects the conversation.",
+        sc?.run != null ? `"If the three-month pace holds, ${label(sc.id).toLowerCase()} sits around ${fmt(sc.id, sc.run)}."` : "",
+        sc?.seasonal != null ? `"Last year's seasonality alone would put it near ${fmt(sc.id, sc.seasonal)}."` : "",
+        "Agree the one signal we'll check at next month's review before leaving the page.",
+      ].filter(Boolean) };
+    }
+    case "trends": {
+      const ex = lead && data ? extremes(lead, data) : null;
+      return { ...base, opener: `"Step back — fourteen months, so we read the shape, not just the last point."`, points: [
+        ex && lead ? `"The high was ${monthLabel(ex.hi.month)} at ${fmt(lead, ex.hi.v)}; the low ${monthLabel(ex.lo.month)} at ${fmt(lead, ex.lo.v)}."` : "",
+        "[Tick 'Last year'] Show the overlay before anyone asks whether this is seasonal.",
+        "[Click any month] It pins on the chart and opens that month's source records.",
+      ].filter(Boolean) };
+    }
+    case "tables": return { ...base, opener: `"The working tables, if we need to settle a detail."`, points: [
+      "Sort any column to answer a ranking question on the spot.",
+      "The totals row reconciles to the cards on the briefing page.",
+      "Expand a table only when asked — keep the room on the decision.",
+    ] };
+    default: return { ...base, opener: `"If we need to check a specific item, the source rows are here."`, points: [
+      "Use this page only to answer a concrete question.",
+      "Group by a column to show sub-totals, then expand a group to see its rows.",
+      `${data?.n.toLocaleString("en-IN") ?? 0} records sit behind this chapter; the live source may have moved since the report was frozen.`,
+    ] };
   }
 }
 
 /** Compact JSON of one section, for AI component replacement and talk tracks. */
 export function sectionContext(model: ReportModel, tabId: string, section: DeckSection, component?: { id: string; describe: string }) {
+  const overview = tabId === "overview";
+  if (overview && model.narratives[EXECUTIVE]) tabId = EXECUTIVE;
   const spec = chapters.find(c => c.id === tabId);
   const data = model.chapters[tabId];
   const ids = spec ? chapterMetrics(spec, data).slice(0, 14) : [];
@@ -143,7 +183,8 @@ export function sectionContext(model: ReportModel, tabId: string, section: DeckS
     metrics: ids.map(metric),
     history: data?.history.slice(-14).map(row => ({ month: row.month, ...Object.fromEntries((spec?.history.length ? spec.history : ids.slice(0, 4)).map(id => [label(id), row[id] ?? null])) })),
     breakdowns: data?.groups.slice(0, 4).map(g => ({ title: g.title, columns: g.columns.map(label), rows: g.rows.slice(0, 12).map(r => [String(r.g ?? ""), ...g.columns.map(c => r[c] == null ? null : fmt(c, r[c]))]) })),
-    narrative: narrative && { summary: narrative.summary, cards: narrative.cards.slice(0, 8).map(c => ({ headline: c.headline, meaning: c.meaning, driver: c.driver, trend: c.trend, impact: c.impact, action: c.action, evidence: c.evidence })) },
-    overview: tabId === "overview" ? Object.entries(model.narratives).map(([id, n]) => ({ chapter: chapters.find(c => c.id === id)?.title ?? id, verdict: verdictOf(model, id)?.headline, summary: n.summary })) : undefined,
+    onScreen: "Everything under narrative is already visible on the page. Speaker notes must not repeat it.",
+    narrative: narrative && { summary: narrative.summary, briefing: narrative.briefing, decision: narrative.decision, cards: narrative.cards.slice(0, 8).map(c => ({ headline: c.headline, meaning: c.meaning, driver: c.driver, trend: c.trend, impact: c.impact, action: c.action, evidence: c.evidence })) },
+    overview: overview ? Object.entries(model.narratives).map(([id, n]) => ({ chapter: chapters.find(c => c.id === id)?.title ?? id, verdict: verdictOf(model, id)?.headline, summary: n.summary })) : undefined,
   }).slice(0, 58000);
 }

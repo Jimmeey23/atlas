@@ -76,14 +76,17 @@ test('deck pages and live speaker notes come from the frozen report', () => {
   const model = { ...snapshot(), narratives: { 'executive-summary': { summary: 'September softened. Fill fell.', generated: true, cards: [{ headline: 'Attendance fell 15%', meaning: 'm', evidence: 'e', action: 'Call dormant members', driver: 'Barre slots', focus: 'kpis' }] } },
     customization: { chapterIds: ['executive-summary'] } } as any;
   const tabs = deckTabs(model);
-  assert.deepEqual(tabs.map(t => t.id), ['overview', 'executive-summary']);
+  // The executive brief folds into the overview tab: one consolidated cover.
+  assert.deepEqual(tabs.map(t => t.id), ['overview']);
+  assert.equal(tabs[0].chapter, 'executive-summary');
   const pages = deckPages(tabs);
   assert.deepEqual(pages[0], { tab: 'overview', section: 'cover' });
-  const notes = liveNotes(model, tabs, 'executive-summary', 'summary');
-  assert.equal(notes.opener, 'Attendance fell 15%');
-  assert.ok(notes.points.some(p => p.includes('Barre slots')));
-  assert.equal(liveNotes({ ...model, speakerNotes: { 'executive-summary:summary': { opener: 'Saved', points: [], numbers: [], questions: [], transition: '' } } }, tabs, 'executive-summary', 'summary').opener, 'Saved');
-  assert.ok(JSON.parse(sectionContext(model, 'executive-summary', 'summary')).narrative.summary.startsWith('September'));
+  // The script never repeats on-screen copy, and leadership questions are answered from the report.
+  const notes = liveNotes(model, tabs, 'overview', 'cover');
+  assert.ok(!notes.points.some(p => p.includes('Attendance fell 15%')) && notes.opener !== 'Attendance fell 15%');
+  assert.ok(notes.questions.some(q => q.a.includes('Barre slots')));
+  assert.equal(liveNotes({ ...model, speakerNotes: { 'overview:cover': { opener: 'Saved', points: [], numbers: [], questions: [], transition: '' } } }, tabs, 'overview', 'cover').opener, 'Saved');
+  assert.ok(JSON.parse(sectionContext(model, 'overview', 'cover')).narrative.summary.startsWith('September'));
   assert.deepEqual(setIn({ a: [{ b: 1 }] }, ['a', 0, 'b'], 2), { a: [{ b: 2 }] });
 });
 
@@ -108,4 +111,44 @@ test('AI component replacement sends a strict JSON schema and requires admin', a
     assert.ok(call.text.format.schema?.properties?.kind, 'schema is sent');
     assert.equal((await response.json()).component.title, 'T');
   } finally { await api.close(); delete process.env.ATLAS_ADMIN_PASSCODE; }
+});
+
+test('v3 chapter analysis sends a strict schema with the briefing, decision, performers and questions', async () => {
+  const { intelligenceRoutes } = await import('../server/intelligence.mjs');
+  const { mkdtemp } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const path = await import('node:path');
+  let call: any;
+  const answer = { summary: 'S', briefing: { takeaways: ['t'], whatChanged: '', whyItMoved: '', whereItSits: '', whatHeldUp: '', outlook: '', soWhat: '' },
+    decision: { call: 'C', rationale: '', evidence: [], expectedImpact: '', successMeasure: '', risks: '', alternative: '', owner: 'Finance', horizon: 'Monitor' },
+    performers: { leaders: '', laggards: '', pattern: '' }, questions: [{ q: 'Q', a: 'A' }],
+    cards: [{ headline: 'H', meaning: 'M', evidence: 'E', action: '', lens: 'risk', focus: 'kpis', confidence: 'high' }] };
+  const ai = { responses: { create: async (request: any) => { call = request; return { status: 'completed', output_text: JSON.stringify(answer), usage: {} }; } } };
+  const app = express(); app.use(express.json()); intelligenceRoutes(app, await mkdtemp(path.join(tmpdir(), 'atlas-v3-')), [], undefined, { ai });
+  const api = await serve(app);
+  try {
+    const response = await post(api.url + '/api/reports/narrative', { message: 'Chapter', focusIds: ['format'], editorial: true, insightVersion: 3, metricIds: ['attendance'] });
+    assert.equal(response.status, 200);
+    const schema = call.text.format.schema;
+    for (const key of ['briefing', 'decision', 'performers', 'questions']) assert.ok(schema.required.includes(key), `${key} is required`);
+    // Strict mode: every object lists every property as required and forbids extras.
+    const walk = (node: any) => { if (node?.type === 'object') { assert.equal(node.additionalProperties, false); assert.deepEqual([...node.required].sort(), Object.keys(node.properties).sort()); Object.values(node.properties).forEach(walk); } if (node?.items) walk(node.items); };
+    walk(schema);
+  } finally { await api.close(); }
+});
+
+test('an empty OpenAI account is reported as a billing problem, not throttling', async () => {
+  const { isQuotaError, reportProviderError } = await import('../server/report-errors.mjs');
+  const empty = { status: 429, code: 'credit_balance_exhausted', type: 'insufficient_quota', message: '429 You have no credits remaining.' };
+  assert.equal(isQuotaError(empty), true);
+  assert.equal(reportProviderError(empty).retryable, false);
+  assert.equal(isQuotaError({ status: 429, code: 'rate_limit_exceeded', message: 'Rate limit reached for requests' }), false);
+});
+
+test('a clicked figure narrows to the records that make it up', async () => {
+  const { metricRecordFocus } = await import('../src/report/source-records.ts');
+  assert.equal(metricRecordFocus('booking_late_cancelled')?.where, 'late_cancelled>0');
+  const fill = metricRecordFocus('fill_rate')!;
+  assert.ok(fill.rate && fill.where?.includes('capacity') && fill.flag?.includes('checked_in'), 'rates keep the denominator and flag the numerator');
+  assert.equal(metricRecordFocus('not_a_metric'), null);
 });

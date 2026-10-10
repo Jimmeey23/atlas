@@ -7,7 +7,7 @@ import { INSIGHT_LENSES, type ChapterData, type ChapterNarrative, type InsightCa
 import { reportOptions } from "./options";
 import { addCall, type CallUsage, type ChapterUsage } from "./usage";
 
-const CACHE_PREFIX = "atlas-report-narrative:v12:";
+const CACHE_PREFIX = "atlas-report-narrative:v13:";
 /** Exact evidence and request identity, independent of presentation settings. */
 async function analysisKey(value: unknown) {
   const bytes = new TextEncoder().encode(JSON.stringify(value));
@@ -195,8 +195,32 @@ function insightRules(model: ReportModel, spec: ChapterSpec) {
     "confidence: high, medium or low, justified by source coverage, sample size and consistency across comparisons.",
     "summary: 90–140 words — the chapter's verdict: what happened, the largest quantified driver, the offset, whether it is durable, and the one thing leadership should take from it.",
     "Exactly one card has focus kpis: the chapter verdict.",
+    ...CHAPTER_RULES,
   ].join("\n");
 }
+
+/** v3: the chapter-level briefing, decision, performer commentary and question bank. Shown on screen except questions. */
+const CHAPTER_RULES = [
+  "BRIEFING (the chapter's first page; each field answers one leadership question and must add something the cards do not):",
+  "briefing.takeaways: 3–5 takeaways of at most 18 words each, every one carrying a specific supplied number and its comparison. No two about the same movement.",
+  "briefing.whatChanged: 35–60 words — the size and direction of the month's movement across the lead measures, against the previous month, the same month last year and the year's run.",
+  "briefing.whyItMoved: 45–80 words — the quantified decomposition (volume vs rate vs mix, which rows added or removed how much) and the leading hypothesis, labelled as such, with the check that would confirm it.",
+  "briefing.whereItSits: 30–50 words — the specific segments, slots, products, channels or people that carry the movement, with shares or contributions. Say 'broad-based' with evidence when it is.",
+  "briefing.whatHeldUp: 25–45 words — the strongest counter-signal and why it matters for the reading.",
+  "briefing.outlook: 35–60 words — durability verdict (new, persistent, reversing, seasonal, one-off) and what the supplied run-rate or seasonal arithmetic implies for next month, as conditional scenarios only.",
+  "briefing.soWhat: 35–60 words — the business consequence for members, revenue, capacity or brand if nothing changes, valued where the evidence allows.",
+  "DECISION FOR LEADERSHIP (one decision for this chapter, written for a CEO who will ask 'why should I agree?'):",
+  "decision.call: at most 22 words — the specific decision to take: what changes, where and for whom.",
+  "decision.rationale: 50–90 words — why this decision follows from the evidence and beats doing nothing.",
+  "decision.evidence: 3–5 data points of at most 22 words each, every one an exact supplied figure with its comparison period or breakdown row.",
+  "decision.expectedImpact: 25–50 words — the indicative value at stake with its arithmetic shown, labelled indicative; never a promised uplift.",
+  "decision.successMeasure: at most 30 words — the metric, threshold and review month that would show the decision is working.",
+  "decision.risks: 25–45 words — what could go wrong or be misread, and the guardrail.",
+  "decision.alternative: 25–45 words — the most credible alternative and why the evidence prefers the call.",
+  "decision.owner: the team best placed to own it. decision.horizon: when to act.",
+  "PERFORMERS (commentary beside the ranked top and bottom lists of the breakdowns): performers.leaders 35–60 words on what the top-ranked rows share and how far ahead they are, with numbers; performers.laggards 35–60 words on the bottom rows, sample-size caveats and what lifting them to the median would be worth where supplied; performers.pattern 25–45 words on the pattern across breakdowns (time, format, instructor, product) the presenter should point to. For chapters without breakdowns use empty strings.",
+  "QUESTIONS (for the presenter's private notes, not shown on screen): 6–8 hard questions senior leadership is likely to ask about this chapter — cause, durability, comparison with last year, money at stake, ownership, data coverage, what the data cannot show — each with a 25–60 word evidence-based answer. Say plainly when the supplied data cannot answer and what would.",
+];
 
 const ACCURACY_RULES = [
   'Accuracy rules (these override style):',
@@ -221,7 +245,24 @@ const DERIVED_RULES: Record<string, (model: ReportModel) => string> = {
   predictions: () => 'Explain only the supplied conditional scenarios, assumptions and their connection to selected-month performance. These are not forecasts. No probabilities, deadlines or task lists.',
 };
 
-function parseJson(answer: string): { summary?: string; cards?: InsightCard[] } | null {
+type ParsedChapter = { summary?: string; cards?: InsightCard[] } & Partial<Pick<ChapterNarrative, "briefing" | "decision" | "performers" | "questions">>;
+/** Keeps only well-formed v3 sections; a malformed one is dropped and the page falls back to the verdict card. */
+function chapterExtras(parsed: ParsedChapter): Partial<ChapterNarrative> {
+  const text = (v: unknown) => typeof v === "string" ? v.trim() : "";
+  const list = (v: unknown) => Array.isArray(v) ? v.map(text).filter(Boolean) : [];
+  const out: Partial<ChapterNarrative> = {};
+  const b = parsed.briefing;
+  if (b && list(b.takeaways).length) out.briefing = { takeaways: list(b.takeaways), whatChanged: text(b.whatChanged), whyItMoved: text(b.whyItMoved), whereItSits: text(b.whereItSits), whatHeldUp: text(b.whatHeldUp), outlook: text(b.outlook), soWhat: text(b.soWhat) };
+  const d = parsed.decision;
+  if (d && text(d.call)) out.decision = { call: text(d.call), rationale: text(d.rationale), evidence: list(d.evidence), expectedImpact: text(d.expectedImpact), successMeasure: text(d.successMeasure), risks: text(d.risks), alternative: text(d.alternative), owner: text(d.owner) || undefined, horizon: text(d.horizon) || undefined };
+  const p = parsed.performers;
+  if (p && [p.leaders, p.laggards, p.pattern].some(text)) out.performers = { leaders: text(p.leaders), laggards: text(p.laggards), pattern: text(p.pattern) };
+  const q = Array.isArray(parsed.questions) ? parsed.questions.filter(x => x && text(x.q) && text(x.a)).map(x => ({ q: text(x.q), a: text(x.a) })) : [];
+  if (q.length) out.questions = q;
+  return out;
+}
+
+function parseJson(answer: string): ParsedChapter | null {
   const fenced = answer.match(/```(?:json)?\s*([\s\S]*?)```/);
   const candidate = fenced ? fenced[1] : answer.slice(answer.indexOf("{"), answer.lastIndexOf("}") + 1);
   try {
@@ -442,9 +483,9 @@ export async function generateNarratives(
           ...(!spec.derived ? [{ label: "Figures:", text: figures }] : []),
           { label: "All-tab performance context (independent of visible chapter selection):", text: portfolio },
         ]);
-        const extra = { insightVersion: 2, metricIds, lenses: spec.id === "recommendations" ? ["next_step"] : o.lenses.filter(l => l !== "next_step") };
+        const extra = { insightVersion: 3, metricIds, lenses: spec.id === "recommendations" ? ["next_step"] : o.lenses.filter(l => l !== "next_step") };
         // Include complete pre-budget evidence: changes to omitted records must invalidate reuse too.
-        const fingerprint = await analysisKey({ version: 12, providerModel, providerPolicy, message, focusIds, extra,
+        const fingerprint = await analysisKey({ version: 13, providerModel, providerPolicy, message, focusIds, extra,
           figures, portfolio, preferences, scenarios: spec.id === "predictions" ? forwardScenarios(model) : "" });
         const key = `${CACHE_PREFIX}${model.scope.studio}:${model.scope.month}:${spec.id}:${fingerprint}`;
         const previous = model.narratives[spec.id];
@@ -470,7 +511,8 @@ export async function generateNarratives(
             throw new Error("The model returned no complete chapter analysis. Retry writing insights.");
           // The verdict leads; a model that forgot to mark one has its first card promoted.
           if (!cards.some(c => c.focus === "kpis")) cards[0] = { ...cards[0], focus: "kpis" };
-          const narrative: ChapterNarrative = { summary: parsed.summary.trim(), cards, generated: true, usage, analysisKey: fingerprint };
+          const narrative: ChapterNarrative = { summary: parsed.summary.trim(), cards, generated: true, usage, analysisKey: fingerprint,
+            ...chapterExtras(parsed) };
           if (providerModel) writeCache(key, narrative);
           finish(spec, narrative);
         } catch (error) {

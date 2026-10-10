@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TrendingUp, TriangleAlert, GitBranch, Lightbulb, Radar, ArrowRightCircle, Plus, Trash2, ListFilter } from "lucide-react";
+import { TrendingUp, TriangleAlert, GitBranch, Lightbulb, Radar, ArrowRightCircle, Plus, Trash2, ListFilter, PanelLeft, Rows3 } from "lucide-react";
 import { lensOf, lensLabel } from "../Insight";
 import { DeckInsightCard } from "./InsightCard";
 import { reportOptions } from "../../../report/options";
@@ -26,28 +26,47 @@ function InsightEditor({ card, path, onRemove }: { card: InsightCard; path: (str
   </article>;
 }
 
-/** Insight cards with a lens filter; admins in edit mode rewrite, add or delete them. */
+/** Insights as a focus board: a numbered rail of findings and one finding at a time, full width; or the whole list. */
 export function InsightsSection({ model, tab, plan = false }: { model: ReportModel; tab: string; plan?: boolean }) {
   const edit = useEdit();
   const [lens, setLens] = useState<InsightLens | "all">("all");
+  const [view, setView] = useState<"focus" | "list">("focus");
+  const [active, setActive] = useState(0);
   const options = reportOptions(model.customization);
   const cards = model.narratives[tab]?.cards ?? [];
   const verdictIndex = cards.findIndex(c => c.focus === "kpis");
-  const indexed = cards.map((card, index) => ({ card, index })).filter(({ index }) => index !== verdictIndex || cards.length === 1);
+  const order = { high: 0, medium: 1, low: 2 } as const;
+  const indexed = cards.map((card, index) => ({ card, index })).filter(({ index }) => index !== verdictIndex || cards.length === 1)
+    .sort((a, b) => order[a.card.priority ?? "medium"] - order[b.card.priority ?? "medium"]);
   const lenses = [...new Set(indexed.map(({ card }) => lensOf(card)))];
   const shown = indexed.filter(({ card }) => lens === "all" || lensOf(card) === lens);
+  const current = Math.min(active, Math.max(0, shown.length - 1));
   const path = (i: number) => ["narratives", tab, "cards", i];
   if (edit?.editing) return <div className="deck-insights">
     {indexed.map(({ card, index }) => <InsightEditor key={index} card={card} path={path(index)} onRemove={() => edit.set(["narratives", tab, "cards"], cards.filter((_, i) => i !== index))}/>)}
     <button className="button deck-add" onClick={() => edit.set(["narratives", tab, "cards"], [...cards, { headline: "New insight", meaning: "", evidence: "", action: "", lens: plan ? "next_step" : "driver", focus: "cross", priority: "medium", confidence: "medium" } satisfies InsightCard])}><Plus size={14}/>Add insight</button>
   </div>;
-  if (!indexed.length) return <p className="empty-state">No written insights for this chapter. The verdict and evidence tabs carry the figures.</p>;
-  return <div className="deck-insights">
-    {lenses.length > 1 && <div className="deck-lens-filter" role="group" aria-label="Filter insights by lens">
-      <ListFilter size={14}/>
-      <button aria-pressed={lens === "all"} onClick={() => setLens("all")}>All <b>{indexed.length}</b></button>
-      {lenses.map(id => { const Icon = LENS_ICON[id]; return <button key={id} data-lens={id} aria-pressed={lens === id} onClick={() => setLens(id)}><Icon size={13}/>{lensLabel(id)} <b>{indexed.filter(({ card }) => lensOf(card) === id).length}</b></button>; })}
-    </div>}
-    <div className="deck-insight-list">{shown.map(({ card, index }, i) => <DeckInsightCard key={index} card={card} model={model} chapterId={tab} index={i} plan={plan} confidence={options.showConfidence} />)}</div>
+  if (!indexed.length) return <p className="empty-state">No written insights for this chapter. The briefing and evidence pages carry the figures.</p>;
+  const card = (item: typeof shown[number], i: number) => <DeckInsightCard key={item.index} card={item.card} model={model} chapterId={tab} index={i} total={shown.length} plan={plan} confidence={options.showConfidence}
+    onStep={view === "focus" ? step => setActive(Math.max(0, Math.min(shown.length - 1, i + step))) : undefined} />;
+  return <div className="deck-insights dk-insights">
+    <div className="dk-insights-bar">
+      {lenses.length > 1 && <div className="deck-lens-filter" role="group" aria-label="Filter insights by lens">
+        <ListFilter size={14}/>
+        <button aria-pressed={lens === "all"} onClick={() => { setLens("all"); setActive(0); }}>All <b>{indexed.length}</b></button>
+        {lenses.map(id => { const Icon = LENS_ICON[id]; return <button key={id} data-lens={id} aria-pressed={lens === id} onClick={() => { setLens(id); setActive(0); }}><Icon size={13}/>{lensLabel(id)} <b>{indexed.filter(({ card }) => lensOf(card) === id).length}</b></button>; })}
+      </div>}
+      <div className="segmented dk-view-toggle" role="group" aria-label="Insight layout">
+        <button className={view === "focus" ? "active" : ""} aria-pressed={view === "focus"} onClick={() => setView("focus")}><PanelLeft size={13}/>Focus</button>
+        <button className={view === "list" ? "active" : ""} aria-pressed={view === "list"} onClick={() => setView("list")}><Rows3 size={13}/>All</button>
+      </div>
+    </div>
+    {view === "focus" ? <div className="dk-insight-board">
+      <nav className="dk-rail" aria-label="Insights in this chapter">{shown.map(({ card, index }, i) => <button key={index} type="button" aria-current={i === current || undefined} data-lens={lensOf(card)} onClick={() => setActive(i)}>
+        <span className="dk-rail-no">{String(i + 1).padStart(2, "0")}</span>
+        <span className="dk-rail-text"><small>{lensLabel(lensOf(card))}{card.priority === "high" ? " · High priority" : ""}</small><b>{card.headline}</b>{card.impact && <em>{card.impact}</em>}</span>
+      </button>)}</nav>
+      {shown[current] && card(shown[current], current)}
+    </div> : <div className="deck-insight-list">{shown.map(card)}</div>}
   </div>;
 }

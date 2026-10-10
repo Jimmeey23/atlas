@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { TrendingUp, TriangleAlert, GitBranch, Lightbulb, Radar, ArrowRightCircle, Crosshair, IndianRupee, ShieldCheck, Users, CalendarClock, ChevronRight, ChartNoAxesColumn, Eye, Activity } from "lucide-react";
+import { TrendingUp, TriangleAlert, GitBranch, Lightbulb, Radar, ArrowRightCircle, Crosshair, IndianRupee, ShieldCheck, Users, CalendarClock, ChevronRight, ChevronLeft, ChartNoAxesColumn, Eye, Activity, Database } from "lucide-react";
 import { EvidenceBlock } from "../ReportEvidence";
 import { InsightDrilldown } from "../InsightDrilldown";
-import { FocusTrend, lensLabel, lensOf, metricSource } from "../Insight";
+import { FocusTrend, lensLabel, lensOf, metricSource, Spark } from "../Insight";
+import { useRecordDrilldown } from "./RecordDrilldown";
 import { chapters } from "../../../report/chapters";
 import { definition, reportFmt as fmt, reportDelta as delta } from "../../../report/definitions";
 import type { ChapterData, InsightCard, InsightLens, ReportModel } from "../../../report/model";
@@ -15,7 +16,8 @@ const tone = (id: string, value: unknown, prior: unknown) => value == null || pr
  * An insight read top to bottom as an argument: the claim, the causal chain
  * (cause → where → worth), the move, and the proof beside it.
  */
-export function DeckInsightCard({ card, model, chapterId, index, plan = false, confidence = true }: { card: InsightCard; model: ReportModel; chapterId: string; index: number; plan?: boolean; confidence?: boolean }) {
+export function DeckInsightCard({ card, model, chapterId, index, total, plan = false, confidence = true, onStep }: { card: InsightCard; model: ReportModel; chapterId: string; index: number; total?: number; plan?: boolean; confidence?: boolean; onStep?: (step: number) => void }) {
+  const drill = useRecordDrilldown();
   const claim = useRef<HTMLDivElement>(null);
   const [claimHeight, setClaimHeight] = useState(0);
   useEffect(() => { const el = claim.current; if (!el) return; const observer = new ResizeObserver(([entry]) => setClaimHeight(entry.contentRect.height)); observer.observe(el); return () => observer.disconnect(); }, []);
@@ -42,7 +44,9 @@ export function DeckInsightCard({ card, model, chapterId, index, plan = false, c
         {card.priority && <b>{card.priority} priority</b>}
         {confidence && card.confidence && <span className="deck-insight-confidence" aria-label={`${card.confidence} confidence`}>{[1, 2, 3].map(n => <i key={n} data-on={n <= levels[card.confidence!]} />)}</span>}
       </span>}
-      <span className="deck-insight-no">{String(index + 1).padStart(2, "0")}</span>
+      <span className="deck-insight-no">{String(index + 1).padStart(2, "0")}{total ? <small> of {String(total).padStart(2, "0")}</small> : null}</span>
+      {onStep && <span className="dk-stepper"><button type="button" className="icon-button" aria-label="Previous insight" disabled={index === 0} onClick={() => onStep(-1)}><ChevronLeft size={15}/></button>
+        <button type="button" className="icon-button" aria-label="Next insight" disabled={!!total && index >= total - 1} onClick={() => onStep(1)}><ChevronRight size={15}/></button></span>}
     </header>
     <div className="deck-insight-body">
       <div className="deck-insight-claim"><div ref={claim} className="deck-claim-content">
@@ -68,9 +72,13 @@ export function DeckInsightCard({ card, model, chapterId, index, plan = false, c
         {card.evidence && <p className="deck-insight-evidence">{card.evidence}</p>}
         {cited.map(({ id, data }) => <div className="deck-proof-metric" key={id} data-tone={tone(id, data.total[id], data.prior[id])}>
           <span>{definition(id)?.label ?? id}</span><strong>{fmt(id, data.total[id])}</strong>
+          <Spark id={id} history={data.history.slice(-12)} width={120} height={24} />
           <small>Previous month {fmt(id, data.prior[id])} · Last year {fmt(id, data.priorYear[id])}</small><em>MoM {delta(id, data.total[id], data.prior[id])}</em><em>YoY {delta(id, data.total[id], data.priorYear[id])}</em>
         </div>)}
+        <div className="dk-proof-actions">
+        {cited[0] && drill && <button type="button" className="deck-proof-toggle" onClick={() => drill({ metric: cited[0].id, chapterId: chapterId, table, group: card.highlight?.[0] })}><Database size={13}/>Explore records</button>}
         {(table || cited[0]) && <button type="button" className="deck-proof-toggle" aria-expanded={chart} onClick={() => setChart(c => !c)}><ChartNoAxesColumn size={13}/>{chart ? "Hide chart" : table ? `Show ${table.title.toLowerCase()}` : "Show trend"}</button>}
+        </div>
         {!!cited.length && <details className="deck-proof-definitions"><summary>Definitions & source coverage</summary>{cited.map(({ id, data }) => <p key={id}><b>{definition(id)?.label}</b> · {definition(id)?.description}<br/>{data.n.toLocaleString('en-IN')} contributing records · {data.history.length} months. {data.notes?.join(' ')}</p>)}</details>}
         {!fullVisual && visual}
       </aside>}

@@ -19,6 +19,12 @@ api.post('/api/reports/component', (req, res) => {
     chart: { type: 'bar', unit: '', categories: ['Jul', 'Aug', 'Sep'], series: [{ name: 'Attendance', values: [940, 880, 747] }] }, prompt: req.body.prompt, generatedAt: new Date().toISOString() } });
 });
 api.post('/api/reports/speaker-notes', (_req, res) => res.json({ notes: { opener: 'AI opener for this page.', points: ['AI point one', 'AI point two'], numbers: ['Attendance 747'], questions: [{ q: 'Why?', a: 'Barre slots.' }], transition: 'Now to sales.', generated: true } }));
+// A small Sessions sheet so Explore data renders real grouped rows; every other source is unavailable.
+const formats = ['Barre 57', 'PowerCycle', 'Strength Lab'], trainers = ['Asha', 'Rohan', 'Meera', 'Kabir'], times = ['07:00', '09:00', '18:30'];
+const sheetRows = Array.from({ length: 72 }, (_, i) => [`2026-09-${String(1 + i % 28).padStart(2, '0')} ${times[i % 3]}:00`, 'Kenkere House', trainers[i % 4], formats[i % 3], times[i % 3], 14, 9 + i % 5, 6 + i % 7, i % 3 ? 0 : 1, i % 4 ? 0 : 1, 2400 + (i % 6) * 650]);
+api.get('/api/sheets/:key', (req, res) => req.params.key === 'sessions'
+  ? res.json({ key: 'sessions', title: 'Sessions', id: 'fixture', status: 'ok', fetchedAt: Date.now(), hash: 'fixture-sessions', columns: ['Date', 'Location', 'Trainer', 'Class', 'Time', 'Capacity', 'Booked', 'CheckedIn', 'LateCancelled', 'Complimentary', 'Revenue'], rows: sheetRows })
+  : res.status(404).json({ status: 'error', error: 'Not in the fixture' }));
 reportRoutes(api, store, cloud, env); presentationRoutes(api, store); stickyNoteRoutes(api, store, cloud);
 const http = api.listen(0, '127.0.0.1'); await new Promise(r => http.once('listening', r));
 const vite = await createServer({ logLevel: 'error', server: { host: '127.0.0.1', port: 5198, strictPort: true, proxy: { '/api': `http://127.0.0.1:${http.address().port}` } } });
@@ -43,7 +49,21 @@ const model = { scope: { studio: 'Kenkere House', month: months.at(-1) }, builtA
   },
   narratives: {
     'executive-summary': { generated: true, summary: 'September softened across demand. Attendance fell 15.1% and fill rate slipped 7.7pp. Value at stake is ≈₹3.7L a month.', cards: [verdict('September is the weakest month of 2026 by volume and utilisation'), { headline: 'Revenue held despite lower visits', meaning: 'Collections were steady.', evidence: '₹14.6L vs ₹14.2L', action: 'Protect membership renewals.', focus: 'cross', lens: 'win', priority: 'medium', confidence: 'high', driver: 'Membership renewals', concentration: '', offset: '', trend: 'Persistent for 3 months', impact: '', watch: '' }] },
-    sessions: { generated: true, summary: 'Demand fell while supply held. Fill rate dropped to 63%. Saturday Barre carried most of the decline.', cards: [verdict('Attendance down 15.1% MoM as Barre and Saturday slots slipped'), { headline: 'Barre attendance fell 84 visits', meaning: 'Barre carries most of the decline.', evidence: '420 vs 504', action: 'Rebalance Saturday Barre slots.', focus: 'format', lens: 'risk', metrics: ['attendance'], highlight: ['Barre'], priority: 'high', confidence: 'medium', driver: 'Fewer repeat visits', concentration: 'Saturday 9–11am', offset: 'PowerCycle flat', trend: 'New', impact: '₹60k', watch: 'Saturday fill' }, { headline: 'PowerCycle held its fill rate', meaning: 'Evening demand is resilient.', evidence: '72% vs 71%', action: '', focus: 'format', lens: 'win', metrics: ['fill_rate'], priority: 'low', confidence: 'high' }] },
+    sessions: { generated: true, summary: 'Demand fell while supply held. Fill rate dropped to 63%. Saturday Barre carried most of the decline.',
+      briefing: { takeaways: ['Attendance 747, down 15.1% on August and the lowest month of 2026', 'Fill rate 63%, down 7.7pp as sessions held at 98', 'Barre lost 84 visits; Saturday mornings carry 70% of the drop', 'PowerCycle held fill at 72% with evening class sizes up'],
+        whatChanged: 'Visits fell 133 to 747 while supply held at 98 sessions, so fill slipped 7.7pp to 63%. Against September last year attendance is 4% lower; year to date it is still 6% ahead.',
+        whyItMoved: 'Volume, not rate: Barre lost 84 visits and Strength Lab 51, while PowerCycle was flat. Repeat visits per member fell from 3.1 to 2.6. Leading hypothesis: one Saturday Barre instructor change reduced repeat bookings; check week-by-week bookings for those slots.',
+        whereItSits: 'Barre (−84) and Saturday 9–11am (−104) carry 70% of the decline; weekday evenings are broadly flat.',
+        whatHeldUp: 'PowerCycle fill held at 72% and evening average class size rose, so demand loss is slot-specific rather than studio-wide.',
+        outlook: 'New reversal after gains March–July. The three-month pace implies about 830 visits in October; last year\'s seasonality implies about 790.',
+        soWhat: 'If Saturday Barre stays at this level, the studio forgoes roughly 524 visits a month, indicatively ₹3.7L at ₹714 per visit.' },
+      decision: { call: 'Rotate the Saturday 9–11am Barre instructors and re-open two trial spots per class for October', rationale: 'The decline is concentrated in a few Saturday slots rather than across the timetable, so a targeted schedule change addresses most of the loss without disrupting slots that held up. Doing nothing leaves the largest single gap in the month unaddressed.',
+        evidence: ['Saturday 9–11am attendance −104 visits vs August', 'Barre −84 visits; PowerCycle +2', 'Fill rate 63% vs 70.7% in August', 'Repeat visits per member 2.6 vs 3.1'],
+        expectedImpact: 'Indicative ≈₹3.7L/month if Saturday Barre recovers August levels (524 visits × ₹714 average revenue per visit).', successMeasure: 'Saturday Barre fill above 70% by the October review.',
+        risks: 'Instructor rotation can unsettle loyal regulars; keep the most-booked instructor on one of the two slots as a guardrail.', alternative: 'Cutting Saturday capacity would lift fill on paper but lose revenue; the evidence points to demand, not oversupply.', owner: 'Studio operations', horizon: 'Next 30 days' },
+      performers: { leaders: 'PowerCycle leads on fill at 72%, ten points above Barre, and held its level against August.', laggards: 'Strength Lab trails at 55% fill on fewer sessions; its sample is thin, so treat it as a signal.', pattern: 'The gap is about Saturday morning Barre, not format quality overall.' },
+      questions: [{ q: 'Is this seasonal?', a: 'Partly: September dipped last year too, but by 4%, not 15%.' }, { q: 'Did we lose members or visits?', a: 'Visits: active member count is flat; frequency fell.' }],
+      cards: [verdict('Attendance down 15.1% MoM as Barre and Saturday slots slipped'), { headline: 'Barre attendance fell 84 visits', meaning: 'Barre carries most of the decline.', evidence: '420 vs 504', action: 'Rebalance Saturday Barre slots.', focus: 'format', lens: 'risk', metrics: ['attendance'], highlight: ['Barre'], priority: 'high', confidence: 'medium', driver: 'Fewer repeat visits', concentration: 'Saturday 9–11am', offset: 'PowerCycle flat', trend: 'New', impact: '₹60k', watch: 'Saturday fill' }, { headline: 'PowerCycle held its fill rate', meaning: 'Evening demand is resilient.', evidence: '72% vs 71%', action: '', focus: 'format', lens: 'win', metrics: ['fill_rate'], priority: 'low', confidence: 'high' }] },
     'revenue-performance': { generated: true, summary: 'Collections were stable. Average order value rose.', cards: [verdict('Gross collections steady at ₹14.6L', { lens: 'win' })] },
     recommendations: { generated: true, summary: 'Three moves for October.', cards: [{ headline: 'Win back dormant members', meaning: 'Largest recoverable value.', evidence: '524 visits gap', action: 'Call dormant members with a class pack offer.', recommendation: 'Cheaper than acquisition.', focus: 'kpis', lens: 'next_step', priority: 'high', ownerArea: 'Sales & front desk', horizon: 'Immediate', impact: '≈₹3.7L/month', watch: 'Reactivations' }, { headline: 'Fix Saturday Barre', meaning: 'Concentrated decline.', evidence: '−104 visits', action: 'Rotate instructors on Saturday Barre.', recommendation: 'Targets the drop directly.', focus: 'cross', lens: 'next_step', priority: 'medium', ownerArea: 'Instructor management', horizon: 'Next 30 days', impact: '', watch: 'Saturday fill' }] },
   },
@@ -67,13 +87,18 @@ try {
   const nav = await page.locator('.deck-nav').boundingBox(); assert.equal(Math.round(nav.y), 0);
   assert.equal(await page.locator('.deck-nav').evaluate(el => getComputedStyle(el).position), 'fixed');
   await page.waitForTimeout(500); await page.screenshot({ path: `${shots}/deck-cover.png` });
+  assert.ok(await page.locator('.dk-score').count() >= 2, 'cover carries the chapter scorecard');
+  await page.locator('.dk-scorecard').scrollIntoViewIfNeeded(); await page.waitForTimeout(300); await page.screenshot({ path: `${shots}/deck-cover-2.png` });
+  await page.locator('#main').evaluate(el => el.scrollTo({ top: 0 }));
   // Chapter tab → verdict with the new categories and flip cards.
   await page.getByRole('navigation', { name: 'Report chapters' }).getByRole('button', { name: 'Schedule' }).or(page.locator('.deck-tabs button', { hasText: /Sessions|Schedule|Classes/ })).first().click();
-  await page.locator('.deck-verdict').waitFor();
-  for (const label of ['Root cause', 'Where it concentrates', 'What held up', 'Structural or one-off?', 'Value at stake', 'Watch next month', 'Decision for leadership']) assert.ok(await page.locator('.deck-verdict').getByText(label).count(), `verdict shows ${label}`);
-  assert.ok((await page.locator('.deck-metric-grid').boundingBox()).y < (await page.locator('.deck-verdict').boundingBox()).y, 'metric cards sit above the verdict');
-  assert.ok(await page.locator('.deck-bullets li').count() >= 3, 'summary renders as bullets'); await page.waitForTimeout(500);
+  await page.locator('.dk-brief').waitFor();
+  for (const label of ['What changed', 'Why it moved', 'Where it sits', 'What held up', 'Outlook', 'So what']) assert.ok(await page.locator('.dk-brief').getByText(label, { exact: true }).count(), `briefing shows ${label}`);
+  for (const label of ['Decision for leadership', 'Why this call', 'What the data says', 'Expected impact', 'Success measure', 'Risks & guardrail', 'Alternative considered']) assert.ok(await page.locator('.dk-decision').getByText(label, { exact: true }).count(), `decision shows ${label}`);
+  assert.ok((await page.locator('.deck-metric-grid').boundingBox()).y < (await page.locator('.dk-brief').boundingBox()).y, 'metric cards sit above the briefing');
+  assert.ok(await page.locator('.dk-takeaways li').count() >= 3, 'briefing lists takeaways'); await page.waitForTimeout(500);
   await page.screenshot({ path: `${shots}/deck-verdict.png`, fullPage: false });
+  await page.locator('.dk-decision').scrollIntoViewIfNeeded(); await page.waitForTimeout(300); await page.screenshot({ path: `${shots}/deck-decision.png` });
   const card = page.locator('.deck-flip').first();
   await card.locator('.deck-flip-front').click();
   assert.equal(await card.getAttribute('data-flipped'), 'true');
@@ -81,21 +106,37 @@ try {
   await second.locator('.deck-flip-front').click(); await page.waitForTimeout(700);
   assert.equal(await card.getAttribute('data-flipped'), 'false', 'flipping another card unflips the first');
   assert.equal(await page.locator('.deck-flip[data-flipped=true]').count(), 1, 'only one card flipped');
-  await second.locator('.deck-flip-back').click(); await page.waitForTimeout(700);
+  await second.getByRole('button', { name: 'Flip back' }).click(); await page.waitForTimeout(700);
   assert.equal(await second.getAttribute('data-flipped'), 'false', 'clicking again flips back');
   await card.locator('.deck-flip-front').click();
   await page.waitForTimeout(700);
   assert.ok(await card.locator('.deck-flip-chart svg').count(), 'flipped card draws its 14-month chart');
   await card.scrollIntoViewIfNeeded(); await page.screenshot({ path: `${shots}/deck-flip.png` });
-  // Speaker notes start closed and follow the page once opened.
+  // Speaker notes start closed and follow the page once opened; they never repeat on-screen text.
   assert.equal(await page.locator('.deck-drawer').getAttribute('data-open'), 'false', 'notes start closed');
   await page.getByRole('button', { name: 'Notes' }).click();
   assert.equal(await page.locator('.deck-drawer').getAttribute('data-open'), 'true');
   const opener = await page.locator('.deck-notes-opener').innerText();
   await page.locator('.deck-sections').getByRole('tab', { name: /Insights/ }).click();
   await page.waitForFunction(previous => document.querySelector('.deck-notes-opener')?.textContent !== previous, opener);
-  assert.ok(await page.locator('.deck-insight').count() >= 2); await page.waitForTimeout(500);
+  assert.ok(await page.locator('.dk-rail button').count() >= 2, 'insight rail lists every finding');
+  await page.locator('.dk-rail button').nth(1).click(); await page.waitForTimeout(400);
+  assert.ok((await page.locator('.deck-insight-headline h3').first().innerText()).length > 0);
+  assert.ok(await page.locator('.deck-notes-qa').count() >= 5, 'notes carry a question bank');
   await page.screenshot({ path: `${shots}/deck-insights.png` });
+  await page.locator('.dk-rail button').first().click();
+  await page.keyboard.press('ArrowRight');
+  await page.locator('.dk-performers').waitFor(); await page.locator('.dk-criteria button').nth(1).click();
+  await page.locator('.dk-perf-name').first().click(); await page.waitForTimeout(300);
+  assert.ok(await page.locator('.dk-perf-detail').count(), 'a performer row expands to every measure');
+  await page.screenshot({ path: `${shots}/deck-performers.png` });
+  await page.keyboard.press('ArrowRight'); await page.locator('.dk-outlook').waitFor();
+  await page.locator('.dk-scenario-bar button', { hasText: 'Last year' }).click();
+  assert.equal(await page.locator('.dk-scenario-bar button[aria-pressed=true]').innerText(), "Last year's season", 'scenario switches');
+  await page.locator('.dk-scenario footer button', { hasText: "Last year's pattern" }).first().click();
+  assert.ok(await page.locator('.dk-scenario-ly').count(), 'last-year pattern opens');
+  assert.ok(await page.locator('.dk-scenario-read').count(), 'each measure has a written reading');
+  await page.waitForTimeout(300); await page.screenshot({ path: `${shots}/deck-outlook.png` });
   await page.keyboard.press('ArrowRight');
   await page.locator('.deck-register').waitFor();
   assert.ok(await page.locator('.monthly-table table tbody tr').count() >= 3, 'MoM table renders');
@@ -103,10 +144,20 @@ try {
   await page.locator('.monthly-table tbody tr').first().locator('td button').nth(3).click();
   assert.ok(await page.locator('.deck-selected-month').count() > 0, 'clicking a month pins it');
   await page.locator('.deck-record-dialog').waitFor();
+  // The dialog shows the clicked cell's records, with its context, not the whole month.
+  await page.locator('.deck-record-dialog .dk-x-context').waitFor();
+  assert.match(await page.locator('.deck-record-dialog .dk-x-context').innerText(), /Showing/);
+  await page.waitForTimeout(600); await page.screenshot({ path: `${shots}/deck-drill.png` });
   await page.getByRole('button', { name: 'Close source records' }).click();
   await page.waitForTimeout(600); await page.screenshot({ path: `${shots}/deck-trends.png` });
-  await page.keyboard.press('ArrowRight'); await page.locator('.deck-evidence').waitFor(); await page.waitForTimeout(500);
+  await page.keyboard.press('ArrowRight'); await page.locator('.dk-tables').waitFor(); await page.waitForTimeout(500);
   await page.screenshot({ path: `${shots}/deck-evidence.png` });
+  await page.keyboard.press('ArrowRight'); await page.locator('.dk-explorer').waitFor();
+  await page.locator('.dk-x-group-row').first().waitFor({ timeout: 20000 });
+  assert.ok(await page.locator('.dk-x-group-row').count() >= 2, 'records group by the chapter breakdown');
+  await page.locator('.dk-x-group-row button').first().click();
+  assert.ok(await page.locator('.dk-x-group-body[data-open=true] tr').count() > 1, 'a group expands to its rows');
+  await page.waitForTimeout(300); await page.screenshot({ path: `${shots}/deck-data.png` });
   // AI talk track.
   await page.getByRole('button', { name: /Write talk track with AI/ }).click();
   await page.getByText('AI opener for this page.').waitFor();
@@ -116,14 +167,14 @@ try {
   await page.locator('.deck-edit-banner').waitFor();
   await page.locator('.deck-tabs button').first().click();
   await page.locator('.deck-tabs button').nth(2).click();
-  const headline = page.locator('.deck-verdict h2.deck-editable');
+  const headline = page.locator('.dk-brief h2.deck-editable');
   await headline.click(); await page.keyboard.press('ControlOrMeta+a'); await page.keyboard.type('Edited verdict headline'); await page.locator('.deck-page-head h1').click();
   await page.locator('[data-slot$=":summary:metrics"] .deck-ai').click();
   await page.locator('.deck-ai-panel textarea').fill('Bar chart of attendance');
   await page.getByRole('button', { name: 'Generate' }).click();
   await page.getByRole('button', { name: 'Use this' }).click();
   assert.ok(await page.locator('[data-slot$=":summary:metrics"][data-replaced=true] .deck-spec').count(), 'only that component is replaced');
-  assert.ok(await page.locator('.deck-verdict').count(), 'the rest of the page is untouched');
+  assert.ok(await page.locator('.dk-brief').count(), 'the rest of the page is untouched');
   await page.screenshot({ path: `${shots}/deck-admin.png` });
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByText('Changes saved to the database.').waitFor();
@@ -134,6 +185,11 @@ try {
   await page.reload(); await page.locator('[data-replaced=true]').waitFor();
   // Pin.
   await page.getByRole('button', { name: 'Pin report' }).click(); await page.getByText(/Pinned/).first().waitFor();
+  // Dark theme: the same page reads correctly on the app's dark surfaces.
+  await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'midnight'));
+  await page.locator('.deck-tabs button', { hasText: 'Schedule' }).click(); await page.locator('.dk-decision').scrollIntoViewIfNeeded(); await page.waitForTimeout(400);
+  await page.screenshot({ path: `${shots}/deck-dark.png` });
+  await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'gloss'));
   // Mobile.
   await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(300);
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'no horizontal overflow on mobile');

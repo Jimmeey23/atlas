@@ -23,6 +23,8 @@ export interface GroupTable {
   deck: string;
   columns: string[];
   rows: Row[];
+  /** Every eligible group, ranked, so performers can be re-ranked on any column. Absent on older reports. */
+  eligible?: Row[];
   /** Rollup row across every group, or null when the query returned nothing. */
   total: Row | null;
 }
@@ -111,10 +113,41 @@ export interface InsightCard {
   /** What held up or offset the headline, so the verdict is not one-sided. */
   offset?: string;
 }
+/** The chapter briefing a leadership team reads first: each field answers one question. */
+export interface ChapterBriefing {
+  /** 3–5 one-line takeaways, each carrying its number. */
+  takeaways: string[];
+  whatChanged: string;
+  whyItMoved: string;
+  whereItSits: string;
+  whatHeldUp: string;
+  outlook: string;
+  soWhat: string;
+}
+/** The one decision the chapter asks leadership for, with the case for it. */
+export interface LeadershipDecision {
+  call: string;
+  rationale: string;
+  /** Data points the decision rests on, each with its figure and comparison. */
+  evidence: string[];
+  expectedImpact: string;
+  successMeasure: string;
+  risks: string;
+  alternative: string;
+  owner?: string;
+  horizon?: string;
+}
 export interface ChapterNarrative {
   /** Prose under the chapter header. Empty when no provider answered. */
   summary: string;
   cards: InsightCard[];
+  /** v3 analysis; absent on reports written before it, which fall back to the verdict card. */
+  briefing?: ChapterBriefing;
+  decision?: LeadershipDecision;
+  /** Commentary on the leaders and laggards in the chapter's breakdowns. */
+  performers?: { leaders: string; laggards: string; pattern: string };
+  /** Questions leadership is likely to ask, with evidence-based answers, for the presenter. */
+  questions?: { q: string; a: string }[];
   /** Rule-based copy is labelled so nobody reads it as analysis. */
   generated: boolean;
   error?: string;

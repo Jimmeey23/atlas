@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { ArrowDownRight, ArrowUpRight, Minus, RotateCcw, Target, ChartColumnBig } from "lucide-react";
 import { Sparkline } from "../../MetricCard";
 import { definition, reportFmt as fmt, reportDelta as delta } from "../../../report/definitions";
@@ -5,6 +6,7 @@ import { monthLabel, monthShort } from "../../../report/period";
 import { currentSnapshotMetrics } from "../../../semantics/evidence";
 import type { ChapterData } from "../../../report/model";
 import { axisStyle, chartPalette, tooltipStyle, useChart } from "./useChart";
+import { useRecordDrilldown } from "./RecordDrilldown";
 
 const direction = (id: string, value: unknown, prior: unknown) => {
   if (value == null || prior == null || Number(value) === Number(prior)) return "flat";
@@ -12,8 +14,10 @@ const direction = (id: string, value: unknown, prior: unknown) => {
 };
 
 /** Fourteen months of one measure, the selected month highlighted, with a 3-month rolling line. */
-function MetricHistoryChart({ id, data, active }: { id: string; data: ChapterData; active: boolean }) {
+/** Clicking a bar opens that month's records; `onDrill` lets the card skip its own flip for that click. */
+function MetricHistoryChart({ id, data, active, onDrill }: { id: string; data: ChapterData; active: boolean; onDrill: () => void }) {
   const history = data.history.slice(-14);
+  const drill = useRecordDrilldown();
   const { ref } = useChart(() => {
     if (!active) return null;
     const c = chartPalette(), axis = axisStyle();
@@ -31,7 +35,7 @@ function MetricHistoryChart({ id, data, active }: { id: string; data: ChapterDat
         { type: "line", name: "3-month average", data: rolling, smooth: true, symbol: "none", lineStyle: { width: 1.25, color: c.text3 } },
       ],
     };
-  }, [id, active, history.length]);
+  }, [id, active, history.length], params => { const month = String(history[params.dataIndex]?.month ?? ""); if (month && drill) { onDrill(); drill({ month, metric: id, chapterId: data.id }); } });
   return <div className="deck-flip-chart" ref={ref} role="img" aria-label={`${definition(id)?.label} over ${history.length} months`} />;
 }
 
@@ -45,6 +49,7 @@ export function FlipMetricCard({ id, data, target, flipped, onToggle }: { id: st
   const hit = target == null || value == null ? null : (Number(value) >= target) === (m?.higherIsBetter ?? true);
   const Arrow = mom === "flat" ? Minus : Number(value) >= Number(prior) ? ArrowUpRight : ArrowDownRight;
   const toggle = onToggle;
+  const drilled = useRef(false);
   return <div className="deck-flip" data-flipped={flipped}>
     <div className="deck-flip-inner">
       <article className="deck-kpi deck-flip-face deck-flip-front" role="button" tabIndex={0} aria-pressed={flipped} aria-label={`${m?.label}: ${fmt(id, value)}. Show 14-month history`}
@@ -61,10 +66,10 @@ export function FlipMetricCard({ id, data, target, flipped, onToggle }: { id: st
             : <span>{currentSnapshotMetrics.has(id) ? "Snapshot" : m?.aggregation === "sum" ? "Total" : "Weighted"}</span>}
         </div>
       </article>
-      <article className="deck-kpi deck-flip-face deck-flip-back" aria-hidden={!flipped} title="Click to flip back" onClick={toggle}>
+      <article className="deck-kpi deck-flip-face deck-flip-back" aria-hidden={!flipped} title="Click a bar for its records; click elsewhere to flip back" onClick={() => { if (drilled.current) drilled.current = false; else toggle(); }}>
         <div className="deck-kpi-label"><span>{m?.label ?? id} · 14 months</span>
           <button className="icon-button" aria-label="Flip back" tabIndex={flipped ? 0 : -1} onClick={e => { e.stopPropagation(); toggle(); }}><RotateCcw size={13}/></button></div>
-        <MetricHistoryChart id={id} data={data} active={flipped} />
+        <MetricHistoryChart id={id} data={data} active={flipped} onDrill={() => { drilled.current = true; }} />
         {finite.length > 1 && <dl className="deck-flip-stats">
           <div><dt>Low</dt><dd>{fmt(id, Math.min(...finite))}</dd></div>
           <div><dt>High</dt><dd>{fmt(id, Math.max(...finite))}</dd></div>

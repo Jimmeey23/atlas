@@ -24,6 +24,7 @@ export function DeckRegister({ index, title, subtitle, actions, children }: { in
 
 /** Interactive monthly trend: pick measures, chart type and last-year overlay; click a month to pin it. */
 export function TrendChartPanel({ history, ids, selected, onSelect, title }: { history: Row[]; ids: string[]; selected: string; onSelect: (month: string) => void; title: string }) {
+  const drill = useRecordDrilldown();
   const usable = ids.filter(id => history.filter(r => r[id] != null).length > 1);
   const [shown, setShown] = useState<string[]>(usable.slice(0, 1));
   const [type, setType] = useState<"line" | "bar" | "area">("line");
@@ -64,7 +65,15 @@ export function TrendChartPanel({ history, ids, selected, onSelect, title }: { h
       dataZoom: [{ type: "inside" }, { type: "slider", height: 16, bottom: 6, borderColor: "transparent", fillerColor: "rgba(127,127,127,.12)", handleSize: "80%", moveHandleSize: 0, textStyle: { color: c.text3, fontSize: 9 } }],
       series,
     } as never;
-  }, [active.join(), type, overlay, selected, history.length], params => { const month = months[params.dataIndex]; if (month) onSelect(month); });
+  }, [active.join(), type, overlay, selected, history.length], params => {
+    const month = months[params.dataIndex];
+    if (!month) return;
+    onSelect(month);
+    // The clicked point: its month and its measure (a last-year overlay point opens that earlier month).
+    const id = active.find(a => params.seriesName?.startsWith(label(a)));
+    const lastYear = params.seriesName?.endsWith("· last year");
+    if (id) drill?.({ month: lastYear ? shift(month, 12) : month, metric: id });
+  });
   if (!usable.length) return null;
   const rows = history.map(r => ({ Month: String(r.month), ...Object.fromEntries(active.map(id => [label(id), fmt(id, r[id])])) }));
   return <div className="chart-surface deck-chart-surface">
@@ -79,7 +88,7 @@ export function TrendChartPanel({ history, ids, selected, onSelect, title }: { h
       <label className="monthly-check"><input type="checkbox" checked={overlay} onChange={e => setOverlay(e.target.checked)}/>Last year</label>
     </div>
     <div className="chart deck-trend-chart" ref={ref} role="img" aria-label={`${title}: ${active.map(label).join(", ")}`} />
-    <div className="chart-caption"><span>{history.length} months · up to 3 measures · rates on the right axis</span><span>Hover for values / Click a month to pin it</span></div>
+    <div className="chart-caption"><span>{history.length} months · up to 3 measures · rates on the right axis</span><span>Hover for values · click a point to pin it and open its records</span></div>
   </div>;
 }
 

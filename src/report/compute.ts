@@ -70,6 +70,8 @@ async function groupTable(spec: ChapterSpec, group: GroupSpec, filters: Filters)
   const analysis = analyseGroup(group, columns, current.filter(r => Number(r.is_total)!==1), prior, eligible, total);
   return { id: group.id ?? group.field, field: group.field, fields: group.fields, title: group.title, deck: group.deck,
     columns, rows, total, prior, priorYear, compare: group.compare, omitted, diagnostics, analysis,
+    // Kept lean: the grouping label, sample size and the table's own measures, capped for the saved report.
+    eligible: eligible.slice(0, 60).map(r => Object.fromEntries(['g', 'n', ...columns].map(k => [k, r[k] ?? null]))),
     minimum: group.minMetric ? `Minimum ${group.minValue ?? 3} ${definition(group.minMetric)?.label.toLowerCase()}` : 'Minimum 3 source records' };
 }
 

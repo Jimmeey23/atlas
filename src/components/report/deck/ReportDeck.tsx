@@ -1,41 +1,42 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Mic, Lock, LockOpen, PencilLine, Save, Undo2, Pin, PinOff, Download, Printer, Maximize, Minimize, Palette, Loader2, KeyRound, X, TriangleAlert, LayoutDashboard, Gauge, Lightbulb, ChartLine, Layers, Database, ListChecks, BookOpen, CircleDot } from "lucide-react";
+import { ChevronLeft, ChevronRight, Mic, Lock, LockOpen, PencilLine, Save, Undo2, Pin, PinOff, Download, Printer, Maximize, Minimize, Palette, Loader2, KeyRound, X, TriangleAlert, Gauge, Lightbulb, ChartLine, Database, ListChecks, BookOpen, CircleDot, Medal, Telescope, Table2 } from "lucide-react";
 import logo from "../../../assets/report/logo.png";
-import { ReferenceHero } from "../ReportChrome";
-import { AtAGlance, ActionPlan } from "../Glance";
-import { EvidenceBlock, CriterionEvidence } from "../ReportEvidence";
+import { ActionPlan } from "../Glance";
 import { ReportDocument } from "../ReportDocument";
 import { ReportViewControls } from "../ReportViewControls";
 import { FloatingReviewTools } from "../../FloatingReviewTools";
 import { PresentationTools } from "../../PresentationTools";
 import { StickyNotes } from "../../StickyNotes";
-import { chapters } from "../../../report/chapters";
 import { definition } from "../../../report/definitions";
 import { findingsFor, ledger } from "../../../report/findings";
 import { builtLabel, monthLabel } from "../../../report/period";
 import { reportOptions } from "../../../report/options";
-import { chapterMetrics, deckPages, deckTabs, SECTION_LABEL, verdictOf, type DeckSection } from "../../../report/deck";
+import { chapterMetrics, deckPages, deckTabs, SECTION_LABEL, verdictOf, type DeckSection, type DeckTab } from "../../../report/deck";
 import { downloadReport, printReport } from "../../../report/export";
 import { adminStatus, adminToken, lockAdmin, pinReport, saveReport, unlockAdmin, updateReport } from "../../../report/storage";
 import type { ReportComponentSpec, ReportModel } from "../../../report/model";
 import { EditContext, setIn, Slot, type DeckEdit } from "./editing";
 import { FlipMetricCard } from "./FlipMetricCard";
-import { VerdictPanel } from "./Verdict";
+import { BriefingPanel, DecisionPanel } from "./Briefing";
+import { CoverPage } from "./CoverPage";
+import { Performers } from "./Performers";
+import { KeyTables } from "./KeyTables";
+import { Outlook } from "./Outlook";
 import { InsightsSection } from "./Insights";
 import { DeckRegister, ReportMoMTable, TrendChartPanel } from "./ReportTrends";
 import { DataExplorer } from "./DataExplorer";
-import { AdaptiveGrid } from "../AdaptiveGrid";
 import { CompleteMetricGrid } from "./CompleteMetricGrid";
 import { RecordDrilldownProvider } from "./RecordDrilldown";
 import { SpeakerDrawer } from "./SpeakerDrawer";
 import "../../../design/report-deck.css";
 
 const DRAWER_KEY = "atlas-deck-drawer-v2";
-const SECTION_ICON: Record<DeckSection, typeof Gauge> = { cover: BookOpen, glance: LayoutDashboard, summary: Gauge, insights: Lightbulb, plan: ListChecks, trends: ChartLine, evidence: Layers, data: Database };
+const SECTION_ICON: Record<DeckSection, typeof Gauge> = { cover: BookOpen, summary: Gauge, insights: Lightbulb, plan: ListChecks, performers: Medal, outlook: Telescope, trends: ChartLine, tables: Table2, data: Database };
 
-function tone(model: ReportModel, tab: string) {
-  const data = model.chapters[tab];
-  const spec = chapters.find(c => c.id === tab);
+function tone(model: ReportModel, tab: DeckTab) {
+  if (tab.id === "overview") return undefined;
+  const data = model.chapters[tab.chapter];
+  const spec = tab.spec;
   if (!data || !spec) return undefined;
   const ids = chapterMetrics(spec, data).slice(0, 3).filter(id => data.prior[id] != null);
   if (!ids.length) return undefined;
@@ -141,25 +142,27 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
   const options = reportOptions(model.customization);
   const findings = useMemo(() => findingsFor(model), [model.chapters]);
   const ranked = useMemo(() => ledger(findings), [findings]);
-  const specs = tabs.flatMap(t => t.spec ? [t.spec] : []);
-  const data = model.chapters[tab.id];
+  const cid = tab.chapter;
+  const data = model.chapters[cid];
   const ids = tab.spec ? chapterMetrics(tab.spec, data) : [];
   const slot = (name: string) => `${tab.id}:${page.section}:${name}`;
+  const open = (id: string) => { const t = tabs.find(x => x.id === id || x.chapter === id); if (t) setPage({ tab: t.id, section: t.sections[0] }); };
 
   function body() {
     const s = page.section;
-    if (s === "cover") return <ReferenceHero studio={model.scope.studio} period={monthLabel(model.scope.month)} built={builtLabel(model.builtAt)}
-      aiCount={Object.values(model.narratives).filter(n => n.generated).length} total={specs.length} title={model.customization?.title} subtitle={model.customization?.subtitle} preparedFor={model.customization?.preparedFor} preparedBy={model.customization?.preparedBy} />;
-    if (s === "glance") return <Slot id={slot("glance")} tab={tab.id} section={s} kind="glance" describe="month-at-a-glance scorecard"><AtAGlance model={model} specs={specs} ranked={ranked} targets={model.customization?.targets} /></Slot>;
+    if (s === "cover") return <Slot id={slot("cover")} tab={tab.id} section={s} kind="glance" describe="cover scorecard"><CoverPage model={model} tabs={tabs} ranked={ranked} onNavigate={open} /></Slot>;
     if (s === "summary") return <>
       {!!ids.length && data && <Slot id={slot("metrics")} tab={tab.id} section={s} kind="metrics" describe="key metric cards">
         <CompleteMetricGrid items={ids} render={id => <FlipMetricCard key={id} id={id} data={data} target={model.customization?.targets?.[id]}
           flipped={flipped === id} onToggle={() => setFlipped(current => current === id ? "" : id)} />}/>
       </Slot>}
-      <Slot id={slot("verdict")} tab={tab.id} section={s} kind="verdict" describe="chapter verdict"><VerdictPanel model={model} tab={tab.id} ids={ids} /></Slot>
+      <Slot id={slot("verdict")} tab={tab.id} section={s} kind="verdict" describe="chapter briefing"><BriefingPanel model={model} chapter={cid} ids={ids} /></Slot>
+      <Slot id={slot("decision")} tab={tab.id} section={s} kind="verdict" describe="leadership decision"><DecisionPanel model={model} chapter={cid} ids={ids} /></Slot>
     </>;
-    if (s === "insights") return <Slot id={slot("insights")} tab={tab.id} section={s} kind="insights" describe="insight list"><InsightsSection model={model} tab={tab.id} plan={tab.id === "recommendations"} /></Slot>;
-    if (s === "plan") return <Slot id={slot("plan")} tab={tab.id} section={s} kind="plan" describe="action plan"><ActionPlan cards={model.narratives[tab.id]?.cards ?? []} /></Slot>;
+    if (s === "insights") return <Slot id={slot("insights")} tab={tab.id} section={s} kind="insights" describe="insight list"><InsightsSection model={model} tab={cid} plan={cid === "recommendations"} /></Slot>;
+    if (s === "plan") return <Slot id={slot("plan")} tab={tab.id} section={s} kind="plan" describe="action plan"><ActionPlan cards={model.narratives[cid]?.cards ?? []} /></Slot>;
+    if (s === "performers") return <Slot id={slot("performers")} tab={tab.id} section={s} kind="evidence" describe="leaders and laggards"><Performers model={model} chapter={cid} /></Slot>;
+    if (s === "outlook" && tab.spec) return <Slot id={slot("outlook")} tab={tab.id} section={s} kind="trends" describe="outlook scenarios"><Outlook model={model} spec={tab.spec} ids={ids} /></Slot>;
     if (s === "trends" && data) {
       const historyIds = [...new Set([...(tab.spec?.history ?? []), ...ids])];
       return <DeckRegister index="MoM" title="Month by month" subtitle={`${data.history.length} months frozen at report build · ${tab.label}`}>
@@ -167,19 +170,12 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
         <Slot id={slot("table")} tab={tab.id} section={s} kind="trends" describe="month-on-month table"><ReportMoMTable history={data.history.slice(-14)} ids={historyIds} selected={selectedMonth} onSelect={setSelectedMonth} title={tab.label} /></Slot>
       </DeckRegister>;
     }
-    if (s === "evidence" && data) {
-      const ranking = tab.id === "instructors" ? data.groups.filter(g => g.id?.startsWith("trainer-")) : [];
-      return <AdaptiveGrid className="deck-evidence">
-        {data.groups.filter(g => !ranking.includes(g)).map((g, i) => <Slot key={`${g.id ?? g.field}-${i}`} id={slot(`group-${g.id ?? g.field}`)} tab={tab.id} section={s} kind="evidence" describe={`${g.title} breakdown`}>
-          <EvidenceBlock table={g} showCharts={options.showCharts} initialView={options.evidenceView === "auto" ? undefined : options.evidenceView} /></Slot>)}
-        {!!ranking.length && <Slot id={slot("ranking")} tab={tab.id} section={s} kind="evidence" describe="instructor ranking"><CriterionEvidence tables={ranking} showCharts={options.showCharts} /></Slot>}
-      </AdaptiveGrid>;
-    }
-    if (s === "data" && tab.spec) return <DeckRegister index="Data" title="Explore underlying data" subtitle="Live source records for this studio and month"><DataExplorer model={model} spec={tab.spec} /></DeckRegister>;
+    if (s === "tables") return <Slot id={slot("tables")} tab={tab.id} section={s} kind="evidence" describe="key tables"><KeyTables model={model} chapter={cid} /></Slot>;
+    if (s === "data" && tab.spec) return <DataExplorer model={model} spec={tab.spec} />;
     return <p className="empty-state">Nothing recorded for this page.</p>;
   }
 
-  return <EditContext.Provider value={edit}><RecordDrilldownProvider model={model} chapterId={tab.id}>
+  return <EditContext.Provider value={edit}><RecordDrilldownProvider model={model} chapterId={cid}>
     <div className="report-page deck" data-report-id={model.id || ""} data-drawer={drawer} data-editing={edit.editing} data-full={full}>
       <header className="deck-nav" data-export="omit">
           <a className="deck-brand" href="#overview/cover" onClick={e => { e.preventDefault(); setPage({ tab: "overview", section: "cover" }); }}><img src={logo} alt="Physique 57"/><span><b>{model.customization?.title || "Monthly performance report"}</b><small>{model.scope.studio} · {monthLabel(model.scope.month)}{model.editedAt ? " · edited" : ""}</small></span></a>
@@ -199,7 +195,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
             <button className="button deck-notes-toggle" aria-pressed={drawer} title="Speaker notes (N)" onClick={() => setDrawer(d => !d)}><Mic size={14}/>Notes</button>
           </div>
         <nav className="deck-tabs" aria-label="Report chapters">
-          {tabs.map(t => <button key={t.id} type="button" aria-current={t.id === tab.id ? "page" : undefined} data-tone={tone(model, t.id)} onClick={() => setPage({ tab: t.id, section: t.sections[0] })} title={verdictOf(model, t.id)?.headline ?? t.title}>
+          {tabs.map(t => <button key={t.id} type="button" aria-current={t.id === tab.id ? "page" : undefined} data-tone={tone(model, t)} onClick={() => setPage({ tab: t.id, section: t.sections[0] })} title={verdictOf(model, t.chapter)?.headline ?? t.title}>
             <i aria-hidden="true"/>{t.label}</button>)}
         </nav>
       </header>
@@ -207,7 +203,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
         <main className="deck-main" ref={main} id="main">
           <div className="deck-page-head" data-export="omit">
             {page.section === "cover" ? <span className="deck-eyebrow">Report overview</span>
-              : <div><span className="deck-eyebrow">{tab.spec?.eyebrow ?? "Report overview"}</span><h1>{tab.title}</h1>{tab.spec?.deck && <p>{tab.spec.deck}</p>}</div>}
+              : <div><span className="deck-eyebrow">{tab.spec?.eyebrow ?? "Report overview"} · {SECTION_LABEL[page.section]}</span><h1>{tab.id === "overview" ? tab.spec?.title ?? tab.title : tab.title}</h1>{tab.spec?.deck && <p>{tab.spec.deck}</p>}</div>}
             <div className="deck-sections segmented" role="tablist" aria-label="Sections">
               {tab.sections.map(s => { const Icon = SECTION_ICON[s]; return <button key={s} role="tab" aria-selected={s === page.section} className={s === page.section ? "active" : ""} onClick={() => setPage({ tab: tab.id, section: s })}><Icon size={13}/>{SECTION_LABEL[s]}</button>; })}
             </div>

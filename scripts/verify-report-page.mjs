@@ -56,11 +56,12 @@ try {
  await insight.locator('.r-insight-drilldown').getByRole('button',{name:'Detail',exact:true}).first().click();
  assert.ok((await insight.innerText()).includes('Previous month'));assert.ok((await insight.innerText()).includes('Mat'));assert.ok((await insight.innerText()).includes('stored in this snapshot'));
  await insight.scrollIntoViewIfNeeded();await review.screenshot({path:'/tmp/atlas-report-cards-desktop.png'});
+ await review.getByRole('button',{name:'Close insight evidence'}).click();
  // The navbar stays fixed at the very top while pages scroll.
  await review.locator('#main').evaluate(el=>el.scrollTop=700);await review.waitForTimeout(100);
  assert.equal(Math.round((await review.locator('.deck-nav').boundingBox()).y),0,'navbar pinned at the top');
  // Metric cards flip to their history.
- await review.locator('.deck-sections').getByRole('tab',{name:/Verdict/}).click();
+ await review.locator('.deck-sections').getByRole('tab',{name:/Briefing/}).click();
  const flip=review.locator('.deck-flip').first();await flip.locator('.deck-flip-front').click();assert.equal(await flip.getAttribute('data-flipped'),'true');
  // Exported HTML keeps native drilldowns and the headline shortcut without React.
  const downloadPromise=review.waitForEvent('download');await review.getByRole('button',{name:'Download HTML',exact:true}).click();
