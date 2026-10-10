@@ -1,7 +1,7 @@
 import { ArrowDownRight, ArrowUpRight, Minus, RotateCcw, Target, ChartColumnBig } from "lucide-react";
 import { Sparkline } from "../../MetricCard";
 import { definition, reportFmt as fmt, reportDelta as delta } from "../../../report/definitions";
-import { monthLabel } from "../../../report/period";
+import { monthLabel, monthShort } from "../../../report/period";
 import { currentSnapshotMetrics } from "../../../semantics/evidence";
 import type { ChapterData } from "../../../report/model";
 import { axisStyle, chartPalette, tooltipStyle, useChart } from "./useChart";
@@ -20,13 +20,15 @@ function MetricHistoryChart({ id, data, active }: { id: string; data: ChapterDat
     const values = history.map(r => r[id] == null ? null : Number(r[id]));
     const rolling = values.map((_, i) => { const w = values.slice(Math.max(0, i - 2), i + 1).filter((v): v is number => v != null); return w.length === 3 ? w.reduce((a, b) => a + b, 0) / 3 : null; });
     return {
-      grid: { left: 8, right: 8, top: 18, bottom: 4, containLabel: true },
+      grid: { left: 4, right: 4, top: 12, bottom: 2, containLabel: true },
       tooltip: { trigger: "axis", ...tooltipStyle(), valueFormatter: (v: unknown) => fmt(id, v) },
-      xAxis: { type: "category", data: history.map(r => String(r.month).slice(2)), ...axis, splitLine: { show: false } },
-      yAxis: { type: "value", ...axis, axisLabel: { ...axis.axisLabel, formatter: (v: number) => fmt(id, v) }, splitNumber: 3 },
+      xAxis: { type: "category", data: history.map(r => monthShort(String(r.month))), ...axis, axisLabel: { ...axis.axisLabel, interval: "auto", hideOverlap: true } },
+      yAxis: { type: "value", ...axis, axisLine: { show: false }, axisLabel: { ...axis.axisLabel, formatter: (v: number) => fmt(id, v) }, splitNumber: 2 },
       series: [
-        { type: "bar", name: definition(id)?.label ?? id, barMaxWidth: 18, data: values.map((v, i) => ({ value: v, itemStyle: { color: c.accent, opacity: i === values.length - 1 ? 1 : .38, borderRadius: [4, 4, 0, 0] } })) },
-        { type: "line", name: "3-month average", data: rolling, smooth: true, symbol: "none", lineStyle: { width: 2, color: c.text2, type: "dashed" } },
+        // Past months recede; the report month carries the accent and a direct label.
+        { type: "bar", name: definition(id)?.label ?? id, barMaxWidth: 14, data: values.map((v, i) => { const last = i === values.length - 1; return { value: v, itemStyle: { color: last ? c.accent : c.hairline, borderRadius: [3, 3, 0, 0] },
+          label: last ? { show: true, position: "top", color: c.text1, fontSize: 10, fontWeight: 600, formatter: () => fmt(id, v) } : undefined }; }) },
+        { type: "line", name: "3-month average", data: rolling, smooth: true, symbol: "none", lineStyle: { width: 1.25, color: c.text3 } },
       ],
     };
   }, [id, active, history.length]);
@@ -45,22 +47,22 @@ export function FlipMetricCard({ id, data, target, flipped, onToggle }: { id: st
   const toggle = onToggle;
   return <div className="deck-flip" data-flipped={flipped}>
     <div className="deck-flip-inner">
-      <article className="metric-card deck-flip-face deck-flip-front" role="button" tabIndex={0} aria-pressed={flipped} aria-label={`${m?.label}: ${fmt(id, value)}. Show 14-month history`}
-        onClick={toggle} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } }}>
-        <div className="metric-label"><span title={m?.label}>{m?.label ?? id}</span><ChartColumnBig size={14} aria-hidden="true" className="deck-flip-hint"/></div>
-        <div className="metric-reading">
-          <span className="metric-value number">{fmt(id, value)}</span>
-          <Sparkline values={values} color="var(--accent)" />
+      <article className="deck-kpi deck-flip-face deck-flip-front" role="button" tabIndex={0} aria-pressed={flipped} aria-label={`${m?.label}: ${fmt(id, value)}. Show 14-month history`}
+        title="Click for 14 months of history" onClick={toggle} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } }}>
+        <div className="deck-kpi-label"><span title={m?.label}>{m?.label ?? id}</span><ChartColumnBig size={13} aria-hidden="true" className="deck-flip-hint"/></div>
+        <div className="deck-kpi-reading">
+          <span className="deck-kpi-value">{fmt(id, value)}</span>
+          <span className={`deck-kpi-delta metric-delta ${mom === "flat" ? "muted" : mom}`} title="Month on month"><Arrow size={12}/>{delta(id, value, prior)}<small>MoM</small></span>
         </div>
-        <div className={`metric-delta ${mom === "flat" ? "muted" : mom}`}><Arrow size={12}/>MoM {delta(id, value, prior)}</div>
-        <div className="metric-footer">
+        <Sparkline values={values} color="var(--accent)" />
+        <div className="deck-kpi-foot">
           <span className={`deck-yoy ${yoy}`}>YoY {delta(id, value, lastYear)}</span>
           {hit != null ? <span className={`deck-target ${hit ? "positive" : "negative"}`}><Target size={11}/>{hit ? "On target" : "Below"} {fmt(id, target)}</span>
             : <span>{currentSnapshotMetrics.has(id) ? "Snapshot" : m?.aggregation === "sum" ? "Total" : "Weighted"}</span>}
         </div>
       </article>
-      <article className="metric-card deck-flip-face deck-flip-back" aria-hidden={!flipped} title="Click to flip back" onClick={toggle}>
-        <div className="metric-label"><span>{m?.label ?? id} · 14 months</span>
+      <article className="deck-kpi deck-flip-face deck-flip-back" aria-hidden={!flipped} title="Click to flip back" onClick={toggle}>
+        <div className="deck-kpi-label"><span>{m?.label ?? id} · 14 months</span>
           <button className="icon-button" aria-label="Flip back" tabIndex={flipped ? 0 : -1} onClick={e => { e.stopPropagation(); toggle(); }}><RotateCcw size={13}/></button></div>
         <MetricHistoryChart id={id} data={data} active={flipped} />
         {finite.length > 1 && <dl className="deck-flip-stats">

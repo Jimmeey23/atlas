@@ -12,7 +12,7 @@ import { StickyNotes } from "../../StickyNotes";
 import { chapters } from "../../../report/chapters";
 import { definition } from "../../../report/definitions";
 import { findingsFor, ledger } from "../../../report/findings";
-import { monthLabel } from "../../../report/period";
+import { builtLabel, monthLabel } from "../../../report/period";
 import { reportOptions } from "../../../report/options";
 import { chapterMetrics, deckPages, deckTabs, SECTION_LABEL, verdictOf, type DeckSection } from "../../../report/deck";
 import { downloadReport, printReport } from "../../../report/export";
@@ -30,6 +30,7 @@ import { RecordDrilldownProvider } from "./RecordDrilldown";
 import { SpeakerDrawer } from "./SpeakerDrawer";
 import "../../../design/report-deck.css";
 
+const DRAWER_KEY = "atlas-deck-drawer-v2";
 const SECTION_ICON: Record<DeckSection, typeof Gauge> = { cover: BookOpen, glance: LayoutDashboard, summary: Gauge, insights: Lightbulb, plan: ListChecks, trends: ChartLine, evidence: Layers, data: Database };
 
 function tone(model: ReportModel, tab: string) {
@@ -62,7 +63,8 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
   const pages = deckPages(tabs);
   const fromHash = () => { const [t, s] = decodeURIComponent(location.hash.slice(1)).split("/"); const found = tabs.find(x => x.id === t); return found ? { tab: found.id, section: (found.sections.includes(s as DeckSection) ? s : found.sections[0]) as DeckSection } : { tab: tabs[0].id, section: tabs[0].sections[0] }; };
   const [page, setPage] = useState(fromHash);
-  const [drawer, setDrawer] = useState(() => { try { return innerWidth > 820 && localStorage.getItem("atlas-deck-drawer") !== "closed"; } catch { return innerWidth > 820; } });
+  // Notes stay closed until the presenter asks for them, so the report gets the full width.
+  const [drawer, setDrawer] = useState(() => { try { return innerWidth > 820 && localStorage.getItem(DRAWER_KEY) === "open"; } catch { return false; } });
   const [admin, setAdmin] = useState(!!adminToken());
   const [adminConfigured, setAdminConfigured] = useState(true);
   const [unlocking, setUnlocking] = useState(false);
@@ -88,7 +90,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
     const follow = (event: Event) => { const id = (event as CustomEvent<string>).detail || "overview"; setPage(current => current.tab === id ? current : (() => { const t = tabs.find(x => x.id === id); return t ? { tab: t.id, section: t.sections[0] } : current; })()); };
     window.addEventListener("p57-report-chapter", follow); return () => window.removeEventListener("p57-report-chapter", follow);
   }, [tabs]);
-  useEffect(() => { if (innerWidth > 820) try { localStorage.setItem("atlas-deck-drawer", drawer ? "open" : "closed"); } catch { /* per session */ } }, [drawer]);
+  useEffect(() => { if (innerWidth > 820) try { localStorage.setItem(DRAWER_KEY, drawer ? "open" : "closed"); } catch { /* per session */ } }, [drawer]);
   useEffect(() => { const handler = () => setFull(!!document.fullscreenElement); document.addEventListener("fullscreenchange", handler); return () => document.removeEventListener("fullscreenchange", handler); }, []);
   useEffect(() => { if (!dirty) return; const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); }; window.addEventListener("beforeunload", warn); return () => window.removeEventListener("beforeunload", warn); }, [dirty]);
   useEffect(() => { document.title = `${model.customization?.title || "Monthly report"} · ${model.scope.studio} · ${monthLabel(model.scope.month)}`; }, [model.customization?.title, model.scope]);
@@ -146,12 +148,11 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
 
   function body() {
     const s = page.section;
-    if (s === "cover") return <ReferenceHero studio={model.scope.studio} period={monthLabel(model.scope.month)} built={new Date(model.builtAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}
+    if (s === "cover") return <ReferenceHero studio={model.scope.studio} period={monthLabel(model.scope.month)} built={builtLabel(model.builtAt)}
       aiCount={Object.values(model.narratives).filter(n => n.generated).length} total={specs.length} title={model.customization?.title} subtitle={model.customization?.subtitle} preparedFor={model.customization?.preparedFor} preparedBy={model.customization?.preparedBy} />;
     if (s === "glance") return <Slot id={slot("glance")} tab={tab.id} section={s} kind="glance" describe="month-at-a-glance scorecard"><AtAGlance model={model} specs={specs} ranked={ranked} targets={model.customization?.targets} /></Slot>;
     if (s === "summary") return <>
       {!!ids.length && data && <Slot id={slot("metrics")} tab={tab.id} section={s} kind="metrics" describe="key metric cards">
-        <div className="deck-metrics-head"><span className="deck-eyebrow"><Gauge size={12}/>Key measures</span><small>Click a card to flip it to 14 months of history · click again to flip back</small></div>
         <CompleteMetricGrid items={ids} render={id => <FlipMetricCard key={id} id={id} data={data} target={model.customization?.targets?.[id]}
           flipped={flipped === id} onToggle={() => setFlipped(current => current === id ? "" : id)} />}/>
       </Slot>}
@@ -181,7 +182,6 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
   return <EditContext.Provider value={edit}><RecordDrilldownProvider model={model} chapterId={tab.id}>
     <div className="report-page deck" data-report-id={model.id || ""} data-drawer={drawer} data-editing={edit.editing} data-full={full}>
       <header className="deck-nav" data-export="omit">
-        <div className="deck-nav-top">
           <a className="deck-brand" href="#overview/cover" onClick={e => { e.preventDefault(); setPage({ tab: "overview", section: "cover" }); }}><img src={logo} alt="Physique 57"/><span><b>{model.customization?.title || "Monthly performance report"}</b><small>{model.scope.studio} · {monthLabel(model.scope.month)}{model.editedAt ? " · edited" : ""}</small></span></a>
           <div className="deck-nav-actions">
             {dirty && <span className="deck-unsaved"><CircleDot size={11}/>Unsaved changes</span>}
@@ -198,7 +198,6 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
             <button className="icon-button" title="Fullscreen (F)" aria-label="Toggle fullscreen" onClick={() => void toggleFull()}>{full ? <Minimize size={16}/> : <Maximize size={16}/>}</button>
             <button className="button deck-notes-toggle" aria-pressed={drawer} title="Speaker notes (N)" onClick={() => setDrawer(d => !d)}><Mic size={14}/>Notes</button>
           </div>
-        </div>
         <nav className="deck-tabs" aria-label="Report chapters">
           {tabs.map(t => <button key={t.id} type="button" aria-current={t.id === tab.id ? "page" : undefined} data-tone={tone(model, t.id)} onClick={() => setPage({ tab: t.id, section: t.sections[0] })} title={verdictOf(model, t.id)?.headline ?? t.title}>
             <i aria-hidden="true"/>{t.label}</button>)}
@@ -207,7 +206,8 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
       <div className="deck-body">
         <main className="deck-main" ref={main} id="main">
           <div className="deck-page-head" data-export="omit">
-            <div><span className="deck-eyebrow">{tab.spec?.eyebrow ?? "Report overview"}</span><h1>{tab.title}</h1>{tab.spec?.deck && <p>{tab.spec.deck}</p>}</div>
+            {page.section === "cover" ? <span className="deck-eyebrow">Report overview</span>
+              : <div><span className="deck-eyebrow">{tab.spec?.eyebrow ?? "Report overview"}</span><h1>{tab.title}</h1>{tab.spec?.deck && <p>{tab.spec.deck}</p>}</div>}
             <div className="deck-sections segmented" role="tablist" aria-label="Sections">
               {tab.sections.map(s => { const Icon = SECTION_ICON[s]; return <button key={s} role="tab" aria-selected={s === page.section} className={s === page.section ? "active" : ""} onClick={() => setPage({ tab: tab.id, section: s })}><Icon size={13}/>{SECTION_LABEL[s]}</button>; })}
             </div>
@@ -220,7 +220,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
           <div className="deck-chapter-markers" hidden>{tabs.filter(t => t.spec).map(t => <section key={t.id} className="r-section" id={t.id}><span className="r-section-topic">{t.label}</span></section>)}</div>
           <footer className="deck-pager-bar" data-export="omit">
             <button className="button" disabled={index <= 0} onClick={() => go(-1)}><ChevronLeft size={15}/>Previous</button>
-            <span>{index + 1} / {pages.length} · ← → to move · N for notes</span>
+            <span className="deck-progress" title="← → to move · N for notes · F for fullscreen"><b>{index + 1}</b> of {pages.length}<i aria-hidden="true"><i style={{ width: `${(index + 1) / pages.length * 100}%` }}/></i></span>
             <button className="button" disabled={index >= pages.length - 1} onClick={() => go(1)}>Next<ChevronRight size={15}/></button>
           </footer>
         </main>

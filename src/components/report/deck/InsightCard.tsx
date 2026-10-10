@@ -37,9 +37,11 @@ export function DeckInsightCard({ card, model, chapterId, index, plan = false, c
   return <article className="deck-insight" data-lens={lens} data-priority={card.priority ?? "medium"}>
     <header className="deck-insight-top">
       <span className="deck-insight-lens"><Icon size={14}/>{lensLabel(lens)}</span>
-      {card.priority && <span className="deck-insight-priority" data-priority={card.priority}>{card.priority} priority</span>}
-      {confidence && card.confidence && <span className="deck-insight-confidence" title={`${card.confidence} confidence`} aria-label={`${card.confidence} confidence`}>
-        {[1, 2, 3].map(n => <i key={n} data-on={n <= levels[card.confidence!]} />)}<small>{card.confidence} confidence</small></span>}
+      {(card.priority || (confidence && card.confidence)) && <span className="deck-insight-rating" data-priority={card.priority}
+        title={[card.priority && `${card.priority} priority`, confidence && card.confidence && `${card.confidence} confidence`].filter(Boolean).join(" · ")}>
+        {card.priority && <b>{card.priority} priority</b>}
+        {confidence && card.confidence && <span className="deck-insight-confidence" aria-label={`${card.confidence} confidence`}>{[1, 2, 3].map(n => <i key={n} data-on={n <= levels[card.confidence!]} />)}</span>}
+      </span>}
       <span className="deck-insight-no">{String(index + 1).padStart(2, "0")}</span>
     </header>
     <div className="deck-insight-body">

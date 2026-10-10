@@ -20,6 +20,14 @@ export const monthLabel = (month: string) =>
     year: "numeric",
     timeZone: "UTC",
   });
+/** "Aug '25" for chart axes. */
+export const monthShort = (month: string) => {
+  const d = new Date(month + "-01T00:00:00Z");
+  return `${d.toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" })} '${String(d.getUTCFullYear()).slice(2)}`;
+};
+/** "10 Oct 2026" for a build timestamp, in studio time. */
+export const builtLabel = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" });
 
 /**
  * Stable over re-runs whose figures have not moved, so a regenerated report

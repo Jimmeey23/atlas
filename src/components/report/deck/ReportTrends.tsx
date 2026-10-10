@@ -5,13 +5,12 @@ import { MonthlyTableControls, type MonthlyTableState } from "../../MonthlyTable
 import { ChartControls } from "../../ChartControls";
 import { exportCSV } from "../../exports";
 import { definition, reportFmt as fmt, reportDelta as delta } from "../../../report/definitions";
-import { monthLabel } from "../../../report/period";
+import { monthLabel, monthShort } from "../../../report/period";
 import type { Row } from "../../../data/duckdb";
 import { axisStyle, chartPalette, tooltipStyle, useChart } from "./useChart";
 
 import { useRecordDrilldown } from "./RecordDrilldown";
 const label = (id: string) => definition(id)?.label ?? id;
-const shortMonth = (key: string) => new Date(`${key}-01T00:00:00Z`).toLocaleDateString("en-IN", { month: "short", year: "2-digit", timeZone: "UTC" });
 const shift = (key: string, months: number) => { const d = new Date(`${key}-01T00:00:00Z`); return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - months, 1)).toISOString().slice(0, 7); };
 
 /** The dashboard's register chrome, without the live-data actions a frozen report cannot run. */
@@ -41,9 +40,12 @@ export function TrendChartPanel({ history, ids, selected, onSelect, title }: { h
       const color = c.series[n % c.series.length];
       const values = history.map(r => r[id] == null ? null : Number(r[id]));
       const yAxisIndex = axes.length > 1 && percent(id) ? 1 : 0;
-      const main = { name: label(id), type: type === "bar" ? "bar" : "line", yAxisIndex, data: values, smooth: true, symbolSize: 7, barMaxWidth: 22, itemStyle: { color, borderRadius: type === "bar" ? [4, 4, 0, 0] : 0 },
-        lineStyle: { width: 2.4, color }, areaStyle: type === "area" ? { color, opacity: .14 } : undefined,
-        markPoint: selected ? { symbol: "pin", symbolSize: 34, itemStyle: { color }, label: { fontSize: 9, formatter: () => "" }, data: [{ coord: [months.indexOf(selected), values[months.indexOf(selected)]] }].filter(d => d.coord[0]! >= 0 && d.coord[1] != null) } : undefined };
+      // Thin lines, no markers except the pinned month, which gets a ringed dot and its value.
+      const pinned = months.indexOf(selected);
+      const main = { name: label(id), type: type === "bar" ? "bar" : "line", yAxisIndex, data: values, smooth: .25, showSymbol: false, symbol: "circle", symbolSize: 6, barMaxWidth: 18, itemStyle: { color, borderRadius: type === "bar" ? [3, 3, 0, 0] : 0 },
+        lineStyle: { width: 1.75, color }, areaStyle: type === "area" ? { color, opacity: .08 } : undefined,
+        markPoint: pinned >= 0 && values[pinned] != null ? { symbol: "circle", symbolSize: 9, itemStyle: { color, borderColor: c.surface, borderWidth: 2 },
+          label: { show: true, position: "top", distance: 8, color: c.text1, fontSize: 11, fontWeight: 600, formatter: () => fmt(id, values[pinned]) }, data: [{ coord: [pinned, values[pinned]] }] } : undefined };
       const lastYear = overlay ? [{ name: `${label(id)} · last year`, type: "line", yAxisIndex, smooth: true, symbol: "none", lineStyle: { width: 1.6, type: "dashed", color, opacity: .55 },
         data: months.map(m => { const row = history.find(r => r.month === shift(m, 12)); return row?.[id] == null ? null : Number(row[id]); }) }] : [];
       return [main, ...lastYear];
@@ -51,15 +53,15 @@ export function TrendChartPanel({ history, ids, selected, onSelect, title }: { h
     const yAxis = axes.map((kind, i) => { const id = active.find(a => (percent(a) ? "rate" : "value") === kind)!; return { type: "value", position: i ? "right" : "left", ...axis, ...(i ? { splitLine: { show: false } } : {}), axisLabel: { ...axis.axisLabel, formatter: (v: number) => fmt(id, v) } }; });
     return {
       color: c.series, grid: { left: 10, right: 10, top: 34, bottom: 46, containLabel: true },
-      legend: { top: 0, textStyle: { color: c.text2, fontSize: 11 }, icon: "roundRect", itemWidth: 10, itemHeight: 10 },
+      legend: { top: 0, left: 0, textStyle: { color: c.text2, fontSize: 11.5 }, icon: "circle", itemWidth: 8, itemHeight: 8, itemGap: 16 },
       tooltip: { trigger: "axis", ...tooltipStyle(), formatter: (params: unknown) => {
         const list = params as { dataIndex: number; seriesName: string; value: unknown; marker: string }[];
         return `<b>${monthLabel(months[list[0]?.dataIndex ?? 0] ?? "")}</b><br/>` +
           list.map(p => { const id = active.find(a => p.seriesName.startsWith(label(a))) ?? active[0]; return `${p.marker}${p.seriesName}: <b>${fmt(id, p.value)}</b>`; }).join("<br/>");
       } },
-      xAxis: { type: "category", data: months.map(shortMonth), ...axis, splitLine: { show: false } },
+      xAxis: { type: "category", data: months.map(monthShort), ...axis, splitLine: { show: false } },
       yAxis,
-      dataZoom: [{ type: "inside" }, { type: "slider", height: 16, bottom: 6, borderColor: "transparent", fillerColor: "rgba(127,127,127,.15)", textStyle: { color: c.text3, fontSize: 9 } }],
+      dataZoom: [{ type: "inside" }, { type: "slider", height: 16, bottom: 6, borderColor: "transparent", fillerColor: "rgba(127,127,127,.12)", handleSize: "80%", moveHandleSize: 0, textStyle: { color: c.text3, fontSize: 9 } }],
       series,
     } as never;
   }, [active.join(), type, overlay, selected, history.length], params => { const month = months[params.dataIndex]; if (month) onSelect(month); });
@@ -111,7 +113,7 @@ export function ReportMoMTable({ history, ids, selected, onSelect, title }: { hi
     </MonthlyTableControls>
     <div className={`table-scroll mom monthly-table${controls.dense ? " compact" : " comfortable"}`} tabIndex={0} aria-label="Monthly comparison table; scroll for more periods">
       <table>
-        <thead><tr><th>Performance measure</th>{months.map(m => <th key={m} className={[m === latest && "latest-month", m === selected && "deck-selected-month"].filter(Boolean).join(" ") || undefined}>{shortMonth(m)}{m === latest && <small>Report month</small>}</th>)}</tr></thead>
+        <thead><tr><th>Performance measure</th>{months.map(m => <th key={m} className={[m === latest && "latest-month", m === selected && "deck-selected-month"].filter(Boolean).join(" ") || undefined}>{monthShort(m)}{m === latest && <small>Report month</small>}</th>)}</tr></thead>
         <tbody>{visible.map(id => <tr key={id}>
           <th scope="row" title={definition(id)?.description}>{label(id)}</th>
           {months.map(m => {

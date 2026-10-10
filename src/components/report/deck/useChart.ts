@@ -11,14 +11,15 @@ export function chartPalette() {
 export function axisStyle() {
   const c = chartPalette();
   return {
+    // Baseline only; gridlines barely there so the data carries the ink.
     axisLine: { lineStyle: { color: c.hairline } }, axisTick: { show: false },
-    axisLabel: { color: c.text3, fontFamily: "Instrument Sans", fontSize: 10 },
-    splitLine: { lineStyle: { color: c.hairline, type: "dashed" as const } },
+    axisLabel: { color: c.text3, fontFamily: "Instrument Sans", fontSize: 10.5, margin: 10 },
+    splitLine: { lineStyle: { color: c.hairline, opacity: .45 } },
   };
 }
 export function tooltipStyle() {
   const c = chartPalette();
-  return { backgroundColor: c.surface, borderColor: c.hairline, textStyle: { color: c.text1, fontSize: 12 }, extraCssText: "border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.18)" };
+  return { backgroundColor: c.surface, borderColor: c.hairline, textStyle: { color: c.text1, fontSize: 12 }, padding: [8, 12], extraCssText: "border-radius:12px;box-shadow:0 12px 32px -8px rgba(15,23,42,.22)" };
 }
 
 /** Mounts one ECharts instance on the returned ref; re-applies the option whenever `deps` change. */

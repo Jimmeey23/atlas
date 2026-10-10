@@ -5,6 +5,7 @@ import { forwardRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import { chapters, chapterNumber } from '../../report/chapters';
 import { monthLabel } from '../../report/compute';
+import { builtLabel } from '../../report/period';
 import { definition, reportFmt as fmt, reportDelta as delta } from '../../report/definitions';
 import type { ReportModel } from '../../report/model';
 import { FindingList, MetricCards, SectionHeader, MonthlyHistory } from './kit';
@@ -34,7 +35,7 @@ export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; them
   function ReportDocument({ model, theme, pending }, ref) {
     const options = reportOptions(model.customization);
     const adaptive = options.layout === "adaptive";
-    const built = new Date(model.builtAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+    const built = builtLabel(model.builtAt);
     const ordered = model.customization ? model.customization.chapterIds.flatMap(id => chapters.find(c => c.id === id) ?? []) : chapters;
     const available = ordered.filter(spec => model.chapters[spec.id] || model.narratives[spec.id] || pending?.includes(spec.id));
     const aiCount = Object.values(model.narratives).filter(n => n.generated).length;

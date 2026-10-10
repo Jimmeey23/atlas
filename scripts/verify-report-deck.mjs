@@ -66,7 +66,7 @@ try {
   // Fixed navbar at the very top.
   const nav = await page.locator('.deck-nav').boundingBox(); assert.equal(Math.round(nav.y), 0);
   assert.equal(await page.locator('.deck-nav').evaluate(el => getComputedStyle(el).position), 'fixed');
-  await page.screenshot({ path: `${shots}/deck-cover.png` });
+  await page.waitForTimeout(500); await page.screenshot({ path: `${shots}/deck-cover.png` });
   // Chapter tab → verdict with the new categories and flip cards.
   await page.getByRole('navigation', { name: 'Report chapters' }).getByRole('button', { name: 'Schedule' }).or(page.locator('.deck-tabs button', { hasText: /Sessions|Schedule|Classes/ })).first().click();
   await page.locator('.deck-verdict').waitFor();
@@ -87,7 +87,9 @@ try {
   await page.waitForTimeout(700);
   assert.ok(await card.locator('.deck-flip-chart svg').count(), 'flipped card draws its 14-month chart');
   await card.scrollIntoViewIfNeeded(); await page.screenshot({ path: `${shots}/deck-flip.png` });
-  // Speaker notes follow the page.
+  // Speaker notes start closed and follow the page once opened.
+  assert.equal(await page.locator('.deck-drawer').getAttribute('data-open'), 'false', 'notes start closed');
+  await page.getByRole('button', { name: 'Notes' }).click();
   assert.equal(await page.locator('.deck-drawer').getAttribute('data-open'), 'true');
   const opener = await page.locator('.deck-notes-opener').innerText();
   await page.locator('.deck-sections').getByRole('tab', { name: /Insights/ }).click();
@@ -100,6 +102,8 @@ try {
   await page.locator('.monthly-table-controls .segmented button', { hasText: 'MoM Δ' }).click();
   await page.locator('.monthly-table tbody tr').first().locator('td button').nth(3).click();
   assert.ok(await page.locator('.deck-selected-month').count() > 0, 'clicking a month pins it');
+  await page.locator('.deck-record-dialog').waitFor();
+  await page.getByRole('button', { name: 'Close source records' }).click();
   await page.waitForTimeout(600); await page.screenshot({ path: `${shots}/deck-trends.png` });
   await page.keyboard.press('ArrowRight'); await page.locator('.deck-evidence').waitFor(); await page.waitForTimeout(500);
   await page.screenshot({ path: `${shots}/deck-evidence.png` });

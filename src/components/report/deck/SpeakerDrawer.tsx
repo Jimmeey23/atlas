@@ -106,6 +106,8 @@ export function SpeakerDrawer({ model, tabs, tab, section, open, onClose, onNote
       <button className={view === "script" ? "active" : ""} aria-pressed={view === "script"} onClick={() => setView("script")}><ScrollText size={13}/>Talk track</button>
       <button className={view === "mine" ? "active" : ""} aria-pressed={view === "mine"} onClick={() => setView("mine")}><NotebookPen size={13}/>My notes{mine ? " •" : ""}</button>
     </div>
+    <details className="deck-presenter-tools">
+      <summary><ChevronRight size={13}/>Presenter tools<small>{speech.listening ? "Listening" : teleprompter ? "Teleprompter on" : "Text size, teleprompter, voice follow"}</small></summary>
     <div className="deck-drawer-tools">
       <button className="icon-button" aria-label="Smaller text" onClick={() => setFontScale(s => Math.max(.8, +(s - .1).toFixed(1)))}><AArrowDown size={15}/></button>
       <button className="icon-button" aria-label="Larger text" onClick={() => setFontScale(s => Math.min(1.8, +(s + .1).toFixed(1)))}><AArrowUp size={15}/></button>
@@ -119,6 +121,7 @@ export function SpeakerDrawer({ model, tabs, tab, section, open, onClose, onNote
       <small>{speech.listening ? 'Script follows matching speech; automatic scrolling pauses.' : 'Start the microphone to follow your speech. Browser recognition may use its speech service. Transcript stays in this window.'}</small>
       {(speech.transcript || speech.interim) && <details className="deck-transcript"><summary>Captured speaker voice</summary><p>{speech.transcript}<em>{speech.interim}</em></p><button className="button" disabled={!speech.sectionTranscript} onClick={() => { typeMine([mine, `Speaker voice · ${tabLabel} / ${SECTION_LABEL[section]}\n${speech.sectionTranscript}`].filter(Boolean).join("\n\n")); setView("mine"); }}>Save this section’s voice to my notes</button><button className="button" onClick={speech.clear}>Clear transcript</button></details>}
     </section>
+    </details>
     {view === "script" ? <>
       <SpeakerNotesView notes={notes} fontScale={fontScale} teleprompter={teleprompter} speed={speed} voice={speech.listening} activeLine={speech.activeLine} />
       <div className="deck-drawer-ai">
