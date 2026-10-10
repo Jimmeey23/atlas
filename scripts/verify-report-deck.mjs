@@ -125,6 +125,33 @@ try {
   assert.ok(await page.locator('.deck-notes-qa').count() >= 5, 'notes carry a question bank');
   await page.screenshot({ path: `${shots}/deck-insights.png` });
   await page.locator('.dk-rail button').first().click();
+  // Notes change the available report width without changing the viewport breakpoint.
+  for (const width of [1440, 1280, 390]) {
+    if (width === 390) await page.getByRole('button', { name: 'Notes', exact: true }).click();
+    await page.setViewportSize({ width, height: 920 });
+    await page.waitForTimeout(350);
+    const layout = await page.locator('.dk-insights').evaluate(root => {
+      const rail = root.querySelector('.dk-rail').getBoundingClientRect();
+      const card = root.querySelector('.deck-insight').getBoundingClientRect();
+      const claim = root.querySelector('.deck-insight-claim').getBoundingClientRect();
+      return { width: root.clientWidth, overflow: root.scrollWidth - root.clientWidth,
+        railBottom: rail.bottom, cardTop: card.top, cardWidth: card.width, claimWidth: claim.width };
+    });
+    assert.ok(layout.overflow <= 1, `insights fit their reading panel at ${width}px`);
+    if (layout.width <= 1100) assert.ok(layout.railBottom <= layout.cardTop + 1, 'finding rail sits above the card in a reduced reading panel');
+    assert.ok(layout.claimWidth >= Math.min(360, layout.cardWidth - 2), 'the finding remains readable with notes or on mobile');
+    const metricOverlap = await page.locator('.deck-proof-metric').evaluateAll(metrics => metrics.some(metric => {
+      const value = metric.querySelector('strong')?.getBoundingClientRect();
+      const spark = metric.querySelector('.r2-spark')?.getBoundingClientRect();
+      return value && spark && Math.min(value.right, spark.right) > Math.max(value.left, spark.left)
+        && Math.min(value.bottom, spark.bottom) > Math.max(value.top, spark.top);
+    }));
+    assert.equal(metricOverlap, false, 'metric values and sparklines never overlap');
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `page fits at ${width}px`);
+    await page.screenshot({ path: `${shots}/deck-insights-${width}.png` });
+  }
+  await page.setViewportSize({ width: 1440, height: 920 });
+  await page.getByRole('button', { name: 'Notes', exact: true }).click();
   await page.keyboard.press('ArrowRight');
   await page.locator('.dk-performers').waitFor(); await page.locator('.dk-criteria button').nth(1).click();
   await page.locator('.dk-perf-name').first().click(); await page.waitForTimeout(300);
