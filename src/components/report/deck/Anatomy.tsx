@@ -77,10 +77,12 @@ export function QualityScorecard({ quality, data }: { quality: Quality; data: Ch
  * chapter's product, channel or format breakdown, with the actions each position implies.
  */
 export function PortfolioBlocks({ map, data }: { map: PortfolioMap; data: ChapterData }) {
+  const own = map.contribution === map.metric;
+  const unit = definition(map.contribution)?.label.toLowerCase() ?? map.contribution;
   return <section className="dk-portfolio" aria-label={map.title ? `Portfolio map · ${map.title}` : "Portfolio map"}>
     <div className="dk-quality-head">
       <span className="deck-eyebrow"><Sparkles size={12}/>Where it came from</span>
-      <span className="dk-portfolio-axis">contribution against momentum, on {map.latest.toLowerCase()}</span>
+      <span className="dk-portfolio-axis">{own ? `contribution against momentum, on ${map.latest.toLowerCase()}` : `share of ${unit} against the move in ${map.latest.toLowerCase()}`}</span>
     </div>
     <div className="dk-portfolio-grid">
       {map.groups.map(group => <div className="dk-quad" key={group.quadrant} data-quadrant={group.quadrant}>
@@ -89,9 +91,9 @@ export function PortfolioBlocks({ map, data }: { map: PortfolioMap; data: Chapte
           <small>{group.question}</small>
         </header>
         <ul>{group.rows.map(row => <li key={row.name}>
-          <span className="dk-quad-name"><b>{row.name}</b><small>{(row.share * 100).toFixed(1)}% of the total</small></span>
+          <span className="dk-quad-name"><b>{row.name}</b><small>{(row.share * 100).toFixed(1)}% of {own ? "the total" : unit}</small></span>
           <span className="dk-quad-move" data-tone={row.change > 0 ? "up" : row.change < 0 ? "down" : "flat"}>
-            <b>{money(map.metric, row.change)}</b>
+            <b>{fmt(map.metric, row.value)}</b>
             <small><Arrow change={row.growth}/>{delta(map.metric, row.value, row.prior)}</small>
           </span>
         </li>)}</ul>

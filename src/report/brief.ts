@@ -254,56 +254,70 @@ export function revenueQuality(data: ChapterData | undefined, ids: string[]): Qu
 
 const pct = (value: number) => `${value > 0 ? "+" : "−"}${(Math.abs(value) * 100).toFixed(1)}%`;
 
-export interface PortfolioRow { name: string; value: number; prior: number; change: number; growth: number; share: number }
-export interface Portfolio {
-  title: string; metric: string; rows: PortfolioRow[];
-  quadrant: "growth" | "protect" | "emerging" | "under"; name: string; question: string; action: string;
-  medianShare: number;
+export interface PortfolioRow {
+  name: string;
+  /** The value the chapter ranks on, and its movement. */
+  value: number; prior: number; change: number; growth: number;
+  /** The additive measure the row contributes to, and its share of that total. */
+  contribution: number; share: number;
 }
-export interface PortfolioMap { metric: string; field: string; title: string; latest: string; groups: { quadrant: Portfolio["quadrant"]; name: string; question: string; action: string; rows: PortfolioRow[] }[] }
+export interface PortfolioGroup { quadrant: "growth" | "protect" | "emerging" | "under"; name: string; question: string; action: string; rows: PortfolioRow[] }
+export interface PortfolioMap {
+  /** The criterion the positions are read on; contribution is a share of an additive measure. */
+  metric: string; contribution: string; field: string; title: string; latest: string; groups: PortfolioGroup[];
+}
 
 /** Which products, formats or channels deserve attention, read on contribution against momentum. */
-const QUADRANTS: { quadrant: Portfolio["quadrant"]; name: string; question: string; action: string }[] = [
+const QUADRANTS: { quadrant: PortfolioGroup["quadrant"]; name: string; question: string; action: string }[] = [
   { quadrant: "growth", name: "Growth engines", question: "Large and improving", action: "Protect the conditions that produced this." },
   { quadrant: "protect", name: "Protect & optimise", question: "Large but losing ground", action: "Work the specific mechanism behind the fall." },
   { quadrant: "emerging", name: "Emerging opportunities", question: "Small but improving fast", action: "Decide whether to fund the next step." },
   { quadrant: "under", name: "Underperformers", question: "Small and losing ground", action: "Fix, fold or stop — decide with a date." },
 ];
 const PORTFOLIO_FIELDS = ["product", "category", "format_group", "source", "entry_type", "format", "status"];
+const additive = (id: string) => definition(id)?.aggregation === "sum";
 
 /**
  * Contribution against momentum for the chapter's product, format or channel breakdown.
- * Contribution is the row's share of the recorded total, momentum its change on last
- * month; the split is at the median share so the line between large and small follows
- * this month's own distribution rather than a threshold someone chose by hand.
+ * Contribution is the row's share of an additive measure — a share of a rate would be
+ * meaningless, so a breakdown ranked on fill rate or conversion is placed on the volume it
+ * carries and read on that rate's movement. The large/small line is the median share of this
+ * month's own total rather than a threshold somebody chose by hand.
  */
 export function portfolioMap(data: ChapterData | undefined, ids: string[]): PortfolioMap | null {
   if (!data?.groups?.length) return null;
-  const table = [...data.groups].filter(t => t.prior && t.rows.length >= 3)
-    .sort((a, b) => PORTFOLIO_FIELDS.indexOf(a.field) - PORTFOLIO_FIELDS.indexOf(b.field) || b.rows.length - a.rows.length)
-    .find(t => PORTFOLIO_FIELDS.includes(t.field) && (t.compare ? t.columns.includes(t.compare) : false));
-  if (!table?.compare) return null;
-  const metric = table.compare;
-  const total = num(table.total?.[metric]);
-  const rows = table.rows.map(row => {
-    const now = num(row[metric]), was = num(table.prior?.[String(row.g)]?.[metric]);
-    if (now == null || was == null || !was) return null;
-    return { name: String(row.g ?? "Unspecified"), value: now, prior: was, change: now - was, growth: (now - was) / Math.abs(was), share: total ? now / total : 0 };
-  }).filter((row): row is PortfolioRow => !!row);
-  if (rows.length < 3 || !total) return null;
-  const shares = [...rows.map(r => r.share)].sort((a, b) => a - b);
-  const medianShare = shares[Math.floor(shares.length / 2)];
-  const band = 0.02;
-  const groups = QUADRANTS.map(q => ({ ...q, rows: rows.filter(row => {
-    const big = row.share >= medianShare;
-    if (Math.abs(row.growth) < band && row.share < medianShare) return false;
-    return q.quadrant === "growth" ? big && row.growth >= band
-      : q.quadrant === "protect" ? big && row.growth <= -band
-      : q.quadrant === "emerging" ? !big && row.growth >= band
-      : !big && row.growth <= -band;
-  }).sort((a, b) => b.value - a.value) })).filter(group => group.rows.length);
-  if (groups.length < 2) return null;
-  return { metric, field: table.field, title: table.title, latest: label(metric), groups };
+  const tables = [...data.groups].filter(t => t.prior && t.rows.length >= 3 && t.compare)
+    .sort((a, b) => PORTFOLIO_FIELDS.indexOf(a.field) - PORTFOLIO_FIELDS.indexOf(b.field) || b.rows.length - a.rows.length);
+  for (const table of tables) {
+    if (!PORTFOLIO_FIELDS.includes(table.field)) continue;
+    const metric = table.compare!;
+    /* Ranked on a total: the row's share of that same total. Ranked on a rate: the volume it carries. */
+    const contribution = additive(metric) && num(table.total?.[metric]) != null ? metric
+      : table.columns.find(column => column !== metric && additive(column) && num(table.total?.[column]) != null);
+    if (!contribution) continue;
+    const total = num(table.total?.[contribution]);
+    const rows = table.rows.map(row => {
+      const now = num(row[metric]), was = num(table.prior?.[String(row.g)]?.[metric]);
+      const units = num(row[contribution]);
+      if (now == null || was == null || !was || units == null) return null;
+      return { name: String(row.g ?? "Unspecified"), value: now, prior: was, change: now - was, growth: (now - was) / Math.abs(was), contribution: units, share: total ? units / total : 0 };
+    }).filter((row): row is PortfolioRow => !!row);
+    if (rows.length < 3 || !total) continue;
+    const shares = [...rows.map(r => r.share)].sort((a, b) => a - b);
+    const medianShare = shares[Math.floor(shares.length / 2)];
+    const band = 0.02;
+    const groups = QUADRANTS.map(q => ({ ...q, rows: rows.filter(row => {
+      const big = row.share >= medianShare;
+      if (Math.abs(row.growth) < band && !big) return false;
+      return q.quadrant === "growth" ? big && row.growth >= band
+        : q.quadrant === "protect" ? big && row.growth <= -band
+        : q.quadrant === "emerging" ? !big && row.growth >= band
+        : !big && row.growth <= -band;
+    }).sort((a, b) => b.contribution - a.contribution) })).filter(group => group.rows.length);
+    if (groups.length < 2) continue;
+    return { metric, contribution, field: table.field, title: table.title, latest: label(metric), groups };
+  }
+  return null;
 }
 
 /** Metrics a decision rests on: those the verdict cites, else the chapter's largest movers. */
