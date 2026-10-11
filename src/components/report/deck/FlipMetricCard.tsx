@@ -52,7 +52,7 @@ export function FlipMetricCard({ id, data, target, flipped, onToggle }: { id: st
   const drilled = useRef(false);
   return <div className="deck-flip" data-flipped={flipped}>
     <div className="deck-flip-inner">
-      <article className="deck-kpi deck-flip-face deck-flip-front" role="button" tabIndex={0} aria-pressed={flipped} aria-label={`${m?.label}: ${fmt(id, value)}. Show 14-month history`}
+      <article className="deck-kpi deck-flip-face deck-flip-front" data-tone={mom} role="button" tabIndex={0} aria-pressed={flipped} aria-label={`${m?.label}: ${fmt(id, value)}. Show 14-month history`}
         title="Click for 14 months of history" onClick={toggle} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } }}>
         <div className="deck-kpi-label"><span title={m?.label}>{m?.label ?? id}</span><ChartColumnBig size={13} aria-hidden="true" className="deck-flip-hint"/></div>
         <div className="deck-kpi-reading">

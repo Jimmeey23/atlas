@@ -203,6 +203,102 @@
 @media(max-width:800px){.report-doc.r2[data-report-layout=grid] .r2-insights{grid-template-columns:minmax(0,1fr)}.report-doc.r2[data-report-layout=full] .r2-evidence{display:flex}.report-doc.r2 .r-topbar{gap:8px;padding:12px 16px}.report-doc.r2 .r-topbar nav{margin:0;width:100%}.report-doc.r2 .r2-insight-main{padding:20px}.report-doc.r2 .r2-insight h3{font-size:19px}.report-doc.r2 .r2-classification{display:none}}
 @media print{.report-doc.r2 .r-topbar{display:none!important}.report-doc.r2[data-report-layout=grid] .r2-insights{display:block}.report-doc .r-insight-drilldown:not([open]),.report-doc .r-metric-drilldown:not([open]){display:none}.report-doc .r-insight-title svg{display:none}}
 
+/* ==========================================================================
+   v5 screen refresh — the document in the same language as the live deck
+
+   The deck and this document are two renderings of one report, so they share a
+   palette, a type hierarchy and a card treatment. Everything here is screen-only:
+   the print block above already sizes every element for A4, and paper keeps it.
+   ========================================================================== */
+@media screen{
+  /* Tokens the v5 refresh layers on top of the document's own ramp; print never sees them. */
+  .report-doc.r2{--r-radius:16px;--r-shadow:0 1px 1px #0b12200a,0 12px 32px -22px #0b122033;--r-line:color-mix(in srgb,var(--r-border) 80%,transparent);--r-display:'Archivo','Inter','Helvetica Neue',Arial,sans-serif}
+  .report-doc.r2[data-card-style=elevated]{--r-shadow:0 1px 2px #0b12200d,0 22px 46px -28px #0b122040}
+  .report-doc.r2[data-card-style=minimal]{--r-radius:10px}
+  .report-doc.r2{font-size:14.5px;line-height:1.62}
+  .report-doc.r2 h1,.report-doc.r2 h2,.report-doc.r2 h3{letter-spacing:-.03em}
+  .report-doc.r2 .r-container{max-width:1280px;padding:0 40px}
+  .report-doc.r2 .r-section{padding:44px 0 30px}
+  .report-doc.r2 .r-eyebrow{font-size:10px;font-weight:700;letter-spacing:.15em;color:var(--r-subtle)}
+  .report-doc.r2 .r-section-head{padding-left:0;border-left:0;position:relative;padding-bottom:16px;border-bottom:1px solid var(--r-line)}
+  .report-doc.r2 .r-section-head:after{content:"";position:absolute;left:0;bottom:-1px;width:104px;height:2px;background:var(--r-primary-3)}
+  .report-doc.r2 .r-section-topline{margin-bottom:14px}
+  .report-doc.r2 .r-section-counter{color:var(--r-subtle);font-variant-numeric:tabular-nums}
+  .report-doc.r2 .r-section-title h2{font-size:clamp(26px,2.6vw,38px);font-weight:650;line-height:1.1;margin:0 0 12px;text-wrap:balance}
+  .report-doc.r2 .r-section-title p{font-size:14.5px;line-height:1.65;color:var(--r-muted);max-width:96ch}
+
+  /* Metric cards: hairline tiles with the direction carried by a top rule. */
+  .report-doc.r2 .r-card{position:relative;padding:18px 20px 16px;background:var(--r-card);border:1px solid var(--r-line);border-radius:var(--r-radius);box-shadow:var(--r-shadow);overflow:hidden}
+  .report-doc.r2 .r-card:before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg,var(--r-subtle),transparent 78%)}
+  .report-doc.r2 .r-card.r-up:before{background:linear-gradient(90deg,var(--r-good),transparent 78%)}
+  .report-doc.r2 .r-card.r-down:before{background:linear-gradient(90deg,var(--r-bad),transparent 78%)}
+  .report-doc.r2 .r-card-label{font-size:10.5px;font-weight:650;letter-spacing:.11em;text-transform:uppercase;color:var(--r-subtle);min-height:26px}
+  .report-doc.r2 .r-card-value{font-family:var(--r-display);font-size:clamp(26px,2.4vw,34px);font-weight:600;letter-spacing:-.04em;margin:6px 0 12px}
+  .report-doc.r2 .r-card-deltas{display:flex;flex-wrap:wrap;gap:8px;font-size:11px}
+  .report-doc.r2 .r-card-deltas>span{padding:4px 11px;border-radius:999px;background:var(--r-bg-soft);border:1px solid var(--r-line)}
+  .report-doc.r2 .r-card-deltas .r-up{color:var(--r-good);background:color-mix(in srgb,var(--r-good) 10%,transparent);border-color:transparent}
+  .report-doc.r2 .r-card-deltas .r-down{color:var(--r-bad);background:color-mix(in srgb,var(--r-bad) 10%,transparent);border-color:transparent}
+
+  /* At a glance: scorecard tiles read like the deck's. */
+  .report-doc.r2 .r2-glance{padding-top:44px;padding-bottom:34px}
+  .report-doc.r2 .r2-glance-head h2{font-size:clamp(28px,3vw,42px);font-weight:650;letter-spacing:-.035em}
+  .report-doc.r2 .r2-score{gap:10px;padding:18px 20px 16px;border-radius:var(--r-radius);box-shadow:var(--r-shadow)}
+  .report-doc.r2 .r2-score:before{width:2px;inset:0 auto auto 0;height:100%}
+  .report-doc.r2 .r2-score:hover{transform:translateY(-2px);box-shadow:0 22px 46px -30px #0b122045}
+  .report-doc.r2 .r2-score-head{font-size:10.5px;font-weight:700;letter-spacing:.13em}
+  .report-doc.r2 .r2-score-metric strong{font-size:26px;font-weight:600;letter-spacing:-.04em}
+  .report-doc.r2 .r2-score-metric small{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--r-subtle)}
+  .report-doc.r2 .r2-score-verdict{font-size:12px;line-height:1.5;color:var(--r-muted)}
+  .report-doc.r2 .r2-glance-list{border:1px solid var(--r-line);border-radius:var(--r-radius);border-top-width:2px;padding:18px 20px;box-shadow:var(--r-shadow)}
+  .report-doc.r2 .r2-glance-list h3{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--r-muted)}
+  .report-doc.r2 .r2-glance-list li:before{font-family:var(--r-display);font-weight:650;color:var(--r-primary-3)}
+
+  /* Contents: the same index cards as the deck. */
+  .report-doc.r2 .r2-contents{gap:12px;padding-block:30px}
+  .report-doc.r2 .r2-contents a{gap:14px;padding:16px 18px;border-radius:var(--r-radius);box-shadow:var(--r-shadow);transition:transform .18s,box-shadow .18s,border-color .18s}
+  .report-doc.r2 .r2-contents a:hover{transform:translateY(-2px);border-color:var(--r-primary-3);box-shadow:0 22px 46px -30px #0b122045}
+  .report-doc.r2 .r2-contents a>span{font-family:var(--r-display);font-size:22px;font-weight:650;letter-spacing:-.03em}
+  .report-doc.r2 .r2-contents b{font-size:14px;font-weight:650}
+  .report-doc.r2 .r2-contents small{font-size:11.5px;line-height:1.5}
+
+  /* Chapter verdict and insights: lens rule on top, evidence on a sunk panel. */
+  .report-doc.r2 .r2-verdict{border-radius:var(--r-radius);border-left:0;border-top:2px solid var(--r-primary-3);padding:22px 26px;box-shadow:var(--r-shadow)}
+  .report-doc.r2 .r2-verdict>p{font-size:16px;line-height:1.7}
+  .report-doc.r2 .r2-insight{border-radius:var(--r-radius);border-color:var(--r-line);box-shadow:var(--r-shadow)}
+  .report-doc.r2 .r2-insight:before{width:100%;height:2px;inset:0 0 auto 0}
+  .report-doc.r2 .r2-insight h3{font-size:21px;font-weight:600;line-height:1.34}
+  .report-doc.r2 .r2-lens{border-radius:999px;padding:5px 12px;letter-spacing:.1em}
+  .report-doc.r2 .r2-tag{border-radius:999px;padding:4px 10px;letter-spacing:.02em}
+  .report-doc.r2 .r2-facet h4,.report-doc.r2 .r2-move h4{font-size:10.5px;font-weight:700;letter-spacing:.13em;color:var(--r-subtle)}
+  .report-doc.r2 .r2-move{border-radius:14px;background:var(--r-bg-soft)}
+  .report-doc.r2 .r2-evidence{background:var(--r-bg-soft);gap:14px;padding:20px 22px}
+  .report-doc.r2 .r2-chip{border-radius:14px;padding:12px 14px}
+  .report-doc.r2 .r2-chip-value{font-family:var(--r-display);font-size:23px;font-weight:600;letter-spacing:-.035em}
+  .report-doc.r2 .r2-chip-label{font-size:10.5px;font-weight:600;letter-spacing:.04em;color:var(--r-subtle)}
+
+  /* Evidence blocks and working tables. */
+  .report-doc.r2 .r-evidence-block,.report-doc.r2 .r-trend-module{border-radius:var(--r-radius);border-color:var(--r-line);padding:24px;box-shadow:var(--r-shadow)}
+  .report-doc.r2 .r-block-head h3{font-size:21px;font-weight:600;letter-spacing:-.025em;margin:6px 0 4px}
+  .report-doc.r2 .r-switches{border-radius:999px;padding:4px;gap:3px}
+  .report-doc.r2 .r-switches button{border-radius:999px;padding:7px 13px;font-size:11px;font-weight:600}
+  .report-doc.r2 .r-switches button[aria-pressed=true]{background:var(--r-primary);box-shadow:none}
+  .report-doc.r2 .r-table-wrap{border-radius:14px;border-color:var(--r-line)}
+  .report-doc.r2 .r-table th{background:var(--r-bg-soft);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--r-subtle)}
+  .report-doc.r2 .r-table :is(th,td){padding:11px 14px;border-bottom:1px solid var(--r-line)}
+  .report-doc.r2 .r-table tbody tr:nth-child(even){background:transparent}
+  .report-doc.r2 .r-table tbody tr:hover{background:color-mix(in srgb,var(--r-primary-3) 4%,transparent)}
+  .report-doc.r2 .r-table tfoot{background:var(--r-bg-soft)}
+  .report-doc.r2 .r-live-analytics{border-radius:14px;background:var(--r-bg-soft)}
+  .report-doc.r2 .r-supporting-detail>summary{padding:14px 0;font-size:12.5px}
+
+  /* The editorial cover and its numbered banner keep the reference's shape. */
+  .report-doc.r2 .r-reference-hero{padding:clamp(40px,5vw,72px) 0 30px}
+  .report-doc.r2 .r-hero-badge{background:transparent;font-weight:650}
+  .report-doc.r2 .r-reference-hero h1{font-weight:600;letter-spacing:-.045em}
+  .report-doc.r2 .r-hero-media-card{border-radius:var(--r-radius)}
+  .report-doc.r2 .r-hero-meta{border-top:1px solid var(--r-line);padding-top:20px}
+}
+
 /* ---------- Builder (app chrome, app tokens) ---------- */
 .button.rb2-stop{border-color:color-mix(in srgb,#c2410c 45%,transparent);color:#c2410c}
 .button.rb2-stop:hover{background:color-mix(in srgb,#c2410c 10%,transparent)}

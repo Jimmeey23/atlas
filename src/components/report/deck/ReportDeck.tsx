@@ -77,6 +77,8 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
   const [exportMounted, setExportMounted] = useState(false);
   // One flipped metric card at a time; leaving the page resets it.
   const [flipped, setFlipped] = useState("");
+  // How far through the current page the reader is, shown as a hairline in the masthead.
+  const [read, setRead] = useState(0);
   const exportRef = useRef<HTMLElement>(null);
   const main = useRef<HTMLElement>(null);
   const dirty = JSON.stringify([model.narratives, model.replacements ?? {}]) !== JSON.stringify([saved.narratives, saved.replacements ?? {}]);
@@ -84,7 +86,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
   const index = pages.findIndex(p => p.tab === page.tab && p.section === page.section);
 
   useEffect(() => { void adminStatus().then(s => { setAdminConfigured(s.configured); if (!s.unlocked && adminToken()) { lockAdmin(); setAdmin(false); } }).catch(() => undefined); }, []);
-  useEffect(() => { history.replaceState(null, "", `#${page.tab}/${page.section}`); main.current?.scrollTo({ top: 0 }); setFlipped(""); }, [page.tab, page.section]);
+  useEffect(() => { history.replaceState(null, "", `#${page.tab}/${page.section}`); main.current?.scrollTo({ top: 0 }); setFlipped(""); setRead(0); }, [page.tab, page.section]);
   // Shared review sessions: the presenter toolkit follows and drives the chapter tab.
   useEffect(() => { window.dispatchEvent(new CustomEvent("p57-report-navigate", { detail: page.tab === "overview" ? "" : page.tab })); }, [page.tab]);
   useEffect(() => {
@@ -178,7 +180,9 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
   return <EditContext.Provider value={edit}><RecordDrilldownProvider model={model} chapterId={cid}>
     <div className="report-page deck" data-report-id={model.id || ""} data-drawer={drawer} data-editing={edit.editing} data-full={full}>
       <header className="deck-nav" data-export="omit">
+        <div className="deck-masthead">
           <a className="deck-brand" href="#overview/cover" onClick={e => { e.preventDefault(); setPage({ tab: "overview", section: "cover" }); }}><img src={logo} alt="Physique 57"/><span><b>{model.customization?.title || "Monthly performance report"}</b><small>{model.scope.studio} · {monthLabel(model.scope.month)}{model.editedAt ? " · edited" : ""}</small></span></a>
+          {options.confidentiality ? <span className="deck-nav-chip"><Lock size={11}/>{options.confidentiality}</span> : <span className="deck-nav-chip">{model.narratives ? `${Object.values(model.narratives).filter(n => n?.generated).length}/${Object.keys(model.narratives).length} chapters AI-written` : "Frozen snapshot"}</span>}
           <div className="deck-nav-actions">
             {dirty && <span className="deck-unsaved"><CircleDot size={11}/>Unsaved changes</span>}
             {admin && dirty && <button className="button" onClick={() => setModel(saved)} disabled={!!busy}><Undo2 size={14}/>Discard</button>}
@@ -194,16 +198,23 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
             <button className="icon-button" title="Fullscreen (F)" aria-label="Toggle fullscreen" onClick={() => void toggleFull()}>{full ? <Minimize size={16}/> : <Maximize size={16}/>}</button>
             <button className="button deck-notes-toggle" aria-pressed={drawer} title="Speaker notes (N)" onClick={() => setDrawer(d => !d)}><Mic size={14}/>Notes</button>
           </div>
+        </div>
         <nav className="deck-tabs" aria-label="Report chapters">
-          {tabs.map(t => <button key={t.id} type="button" aria-current={t.id === tab.id ? "page" : undefined} data-tone={tone(model, t)} onClick={() => setPage({ tab: t.id, section: t.sections[0] })} title={verdictOf(model, t.chapter)?.headline ?? t.title}>
-            <i aria-hidden="true"/>{t.label}</button>)}
+          {tabs.map((t, i) => <button key={t.id} type="button" aria-current={t.id === tab.id ? "page" : undefined} data-tone={tone(model, t)} onClick={() => setPage({ tab: t.id, section: t.sections[0] })} title={verdictOf(model, t.chapter)?.headline ?? t.title}>
+            <i aria-hidden="true"/><s aria-hidden="true">{String(i + 1).padStart(2, "0")}</s>{t.label}</button>)}
         </nav>
+        <span className="deck-read-bar" style={{ width: `${read}%` }} aria-hidden="true"/>
       </header>
       <div className="deck-body">
-        <main className="deck-main" ref={main} id="main">
+        <main className="deck-main" ref={main} id="main" onScroll={event => { const el = event.currentTarget; const span = el.scrollHeight - el.clientHeight; setRead(span > 24 ? Math.min(100, Math.max(0, el.scrollTop / span * 100)) : 0); }}>
           <div className="deck-page-head" data-export="omit">
-            {page.section === "cover" ? <span className="deck-eyebrow">Report overview</span>
-              : <div><span className="deck-eyebrow">{tab.spec?.eyebrow ?? "Report overview"} · {SECTION_LABEL[page.section]}</span><h1>{tab.id === "overview" ? tab.spec?.title ?? tab.title : tab.title}</h1>{tab.spec?.deck && <p>{tab.spec.deck}</p>}</div>}
+            {page.section === "cover" ? <div className="deck-page-title"><span className="deck-eyebrow"><BookOpen size={13}/>Report overview</span><h1>{tab.title}</h1><p>{model.customization?.subtitle || "Commercial performance, the community journey and the decisions for the month ahead."}</p></div>
+              : <div className="deck-page-title">
+                <span className="deck-eyebrow">{tab.spec?.eyebrow ?? "Report overview"} · {SECTION_LABEL[page.section]}</span>
+                <h1>{tab.id === "overview" ? tab.spec?.title ?? tab.title : tab.title}</h1>
+                {tab.spec?.deck && <p>{tab.spec.deck}</p>}
+                <span className="deck-page-ordinal"><b>{String(index + 1).padStart(2, "0")}</b><span className="deck-page-dot">/</span>{String(pages.length).padStart(2, "0")} · {tab.id === "overview" ? "Overview" : `Chapter ${String(tabs.findIndex(t => t.id === tab.id)).padStart(2, "0")} of ${String(tabs.length - 1).padStart(2, "0")}`}</span>
+              </div>}
             <div className="deck-sections segmented" role="tablist" aria-label="Sections">
               {tab.sections.map(s => { const Icon = SECTION_ICON[s]; return <button key={s} role="tab" aria-selected={s === page.section} className={s === page.section ? "active" : ""} onClick={() => setPage({ tab: tab.id, section: s })}><Icon size={13}/>{SECTION_LABEL[s]}</button>; })}
             </div>

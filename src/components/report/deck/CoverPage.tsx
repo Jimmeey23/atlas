@@ -1,4 +1,4 @@
-import { ArrowDownRight, ArrowRight, ArrowRightCircle, ArrowUpRight, Coins, Database, Flag, Minus, ShieldAlert, Sparkles, TrendingUp, TriangleAlert } from "lucide-react";
+import { ArrowDownRight, ArrowRight, ArrowRightCircle, ArrowUpRight, BookOpen, Coins, Database, Flag, Minus, ShieldAlert, Sparkles, TrendingUp, TriangleAlert } from "lucide-react";
 import logo from "../../../assets/report/logo.png";
 import hero from "../../../assets/report/method.jpg";
 import { HEADLINE } from "../Glance";
@@ -105,7 +105,8 @@ export function CoverPage({ model, tabs, ranked, onNavigate }: { model: ReportMo
         <dl className="dk-cover-facts">{facts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       </div>
       <figure className="dk-cover-image"><img src={hero} alt="Physique 57 Method photography"/>
-        {heroStats[0] && execData && <figcaption><span>Headline</span><strong>{fmt(heroStats[0], execData.total[heroStats[0]])}</strong><small>{definition(heroStats[0])?.label} · {delta(heroStats[0], execData.total[heroStats[0]], execData.prior[heroStats[0]])} MoM</small></figcaption>}
+        <span className="dk-cover-stamp"><Database size={12}/>Frozen snapshot · {period}</span>
+        {heroStats[0] && execData && <figcaption><span>Headline measure</span><strong>{fmt(heroStats[0], execData.total[heroStats[0]])}</strong><small>{definition(heroStats[0])?.label} · {delta(heroStats[0], execData.total[heroStats[0]], execData.prior[heroStats[0]])} MoM · {records.toLocaleString("en-IN")} source records behind this review</small></figcaption>}
       </figure>
     </header>
 
@@ -132,6 +133,23 @@ export function CoverPage({ model, tabs, ranked, onNavigate }: { model: ReportMo
     {!!tiles.length && <section aria-label="Scorecard">
       <div className="dk-section-head"><span className="deck-eyebrow">Scorecard</span><h3>Every area at a glance</h3><small>Select an area to open it</small></div>
       <FillGrid className="dk-scorecard" items={tiles} fillers={fillers as JSX.Element[]} min={250} max={4} />
+    </section>}
+
+    {!!areas.length && <section className="dk-index" aria-label="Report contents">
+      <div className="dk-section-head"><span className="deck-eyebrow"><BookOpen size={12}/>Contents</span><h3>The document, chapter by chapter</h3><small>{areas.length + 1} areas · each one carries its verdict, the evidence behind it and a decision</small></div>
+      <div className="dk-index-grid">{areas.map((area, i) => {
+        const data = model.chapters[area.id];
+        const ids = headlineIds(area, data);
+        const tones = ids.map(id => tone(id, data.total[id], data.prior[id]));
+        const status = tones.length ? (tones.every(t => t === "up") ? "good" : tones.every(t => t === "down") ? "bad" : "mixed") : "mixed";
+        const v = verdictCard(model, area.id);
+        const lead = ids[0];
+        return <button type="button" key={area.id} className="dk-index-card" data-status={status} onClick={() => onNavigate(area.id)}>
+          <span className="dk-index-no">{String(i + 2).padStart(2, "0")}</span>
+          <span className="dk-index-body"><b>{area.label}</b><small>{v?.headline || area.spec?.title || "Open the chapter"}</small></span>
+          {lead && data && <span className="dk-index-foot"><em>{definition(lead)?.label} {fmt(lead, data.total[lead])}</em><span data-tone={tone(lead, data.total[lead], data.prior[lead])}>{delta(lead, data.total[lead], data.prior[lead])} MoM</span><ArrowRight size={13}/></span>}
+        </button>;
+      })}</div>
     </section>}
 
     {!!columns.length && <section className="dk-cover-columns" aria-label="What to act on">

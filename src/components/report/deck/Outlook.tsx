@@ -106,6 +106,7 @@ export function Outlook({ model, spec, ids }: { model: ReportModel; spec: Chapte
           </header>
           <Projection id={s.id} history={data.history.slice(-12)} next={target ?? null} chosen />
           <p className="dk-scenario-read"><Emphasis text={readScenario(s, next.split(" ")[0])}/></p>
+          {rows.length > 1 && <p className="dk-scenario-range">Across the three readings this measure lands between <b>{fmt(s.id, lo)}</b> and <b>{fmt(s.id, hi)}</b>.</p>}
           <ul>{rows.map(r => <li key={r.key} data-chosen={r.key === chosen || undefined}>
             <button type="button" onClick={() => setChosen(r.key)} title={r.why}>{r.name}</button>
             <i aria-hidden="true"><i style={{ left: `${(r.v - lo) / span * 100}%` }}/></i>
