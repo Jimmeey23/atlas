@@ -1,8 +1,15 @@
 import baseCSS from "../design/report.css?raw";
 import reviewCSS from "../design/report-review.css?raw";
 import v2CSS from "../design/report-v2.css?raw";
+import chapterCSS from "../design/report-chapter.css?raw";
 // The builder rules in v2 are app chrome and are removed with it; the document rules travel.
-const reportCSS = baseCSS + "\n" + reviewCSS + "\n" + v2CSS.split("/* ---------- Builder")[0];
+const reportCSS = baseCSS + "\n" + reviewCSS + "\n" + v2CSS.split("/* ---------- Builder")[0] + "\n" + chapterCSS;
+/** The app tokens the chapter documents are styled with, read from the live theme so the file matches the screen. */
+const TOKENS = ["--font-display", "--font-ui", "--accent", "--text-1", "--text-2", "--text-3", "--text-inverse", "--surface-1", "--surface-2", "--hairline", "--pos", "--neg", "--d-line", "--d-card"];
+const tokenBlock = (element: Element) => {
+  const style = getComputedStyle(element);
+  return `.cr-export{${TOKENS.map(t => [t, style.getPropertyValue(t).trim()] as const).filter(([, v]) => v).map(([t, v]) => `${t}:${v}`).join(";")}}`;
+};
 import { monthLabel } from "./compute";
 import type { ReportModel } from "./model";
 
@@ -66,6 +73,8 @@ export async function serialiseReport(element: HTMLElement, model: ReportModel) 
     "@media(max-width:768px){body{padding:0}}",
     "@media print{body{padding:0;background:#fff}}",
     safeInStyle(reportCSS),
+    safeInStyle(tokenBlock(element)),
+    ".cr-export{display:block;max-width:1060px;margin:0 auto;padding:24px 32px 64px;background:var(--surface-1);color:var(--text-1)}.cr-export>.cr+.cr{margin-top:96px;padding-top:24px;border-top:2px solid var(--text-1)}@media print{.cr-export>.cr+.cr{break-before:page;border-top:0}.cr-export .cr-ev{break-inside:auto}}@media(max-width:768px){.cr-export{padding:16px}}",
     "</style>",
     "</head>",
     "<body>",

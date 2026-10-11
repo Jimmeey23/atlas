@@ -62,6 +62,40 @@ const model = { scope: { studio: 'Kenkere House', month: months.at(-1) }, builtA
         expectedImpact: 'Indicative ≈₹3.7L/month if Saturday Barre recovers August levels (524 visits × ₹714 average revenue per visit).', successMeasure: 'Saturday Barre fill above 70% by the October review.',
         risks: 'Instructor rotation can unsettle loyal regulars; keep the most-booked instructor on one of the two slots as a guardrail.', alternative: 'Cutting Saturday capacity would lift fill on paper but lose revenue; the evidence points to demand, not oversupply.', owner: 'Studio operations', horizon: 'Next 30 days' },
       performers: { leaders: 'PowerCycle leads on fill at 72%, ten points above Barre, and held its level against August.', laggards: 'Strength Lab trails at 55% fill on fewer sessions; its sample is thin, so treat it as a signal.', pattern: 'The gap is about Saturday morning Barre, not format quality overall.' },
+      document: {
+        sections: [
+          { title: 'Start here', sub: 'Demand fell while supply held. The month lost visits, not members.', lens: 'risk', priority: 'high',
+            paragraphs: ['September delivered **747 visits across 98 sessions**, down 133 on August and the lowest month of 2026. Supply did not move: the studio ran the same timetable it ran all summer, so the fall in volume went straight into fill, which slipped **7.7 points to 63%**.',
+              'Against September last year the picture is milder. Attendance is 4% lower than a year ago and the year to date is still 6% ahead, so this is a reversal of a strong summer rather than a collapse.',
+              '**First, the loss is concentrated.** Barre lost 84 visits and Saturday mornings carry most of it; weekday evenings are broadly flat. **Second, the members are still here.** Active members held level while visits per member fell from 3.1 to 2.6.'],
+            callout: { title: 'The one-line version, if you read nothing else', body: 'If Saturday Barre stays where it is, the studio forgoes roughly **524 visits a month**, indicatively ₹3.7L at ₹714 a visit. Everything else in the timetable held up, so this is one problem with one owner rather than a studio-wide slowdown.' },
+            exhibits: [{ ref: 'sessions/trend/attendance', view: 'chart', caption: 'Attendance by month — September undid the summer gains', note: 'September at 747 is the lowest point since March; the same month last year sits 4% higher.', highlight: [] }],
+            evidence: { title: 'Evidence — the month against every comparison', ref: 'sessions/kpis', note: 'Rates move in percentage points. Year to date compares the same elapsed months.' } },
+          { title: 'Saturday Barre carried the fall', sub: 'Barre attendance fell 84 visits, and almost all of it sits in two Saturday morning slots.', lens: 'risk', priority: 'high',
+            paragraphs: ['**Barre fell from 504 visits to 420**, while PowerCycle was flat at 230 and Strength Lab lost 51 on a thin base. Barre is the studio\'s largest format, so a fall there moves the whole month.',
+              'The leading hypothesis is the Saturday instructor change: repeat bookings in those slots dropped first. That is a hypothesis, and week-by-week bookings for the two slots would confirm or reject it.'],
+            callout: null,
+            exhibits: [{ ref: 'sessions/group/format', view: 'chart', caption: 'Attendance by format — Barre carried the decline', note: 'Barre is down 84 visits on August; PowerCycle is up 2.', highlight: ['Barre'] }],
+            evidence: { title: 'Evidence — every format, against August and last year', ref: 'sessions/group/format', note: 'Formats with fewer than three sessions are excluded from the ranking.' } },
+          { title: 'Evenings held up', sub: 'PowerCycle held its fill at 72%, so the problem is a slot, not the studio.', lens: 'win', priority: 'medium',
+            paragraphs: ['PowerCycle fill held at **72% against 71% in August**, and evening class sizes rose. Demand for the studio has not gone anywhere; it has stopped coming on Saturday mornings.',
+              'That matters for the response. A studio-wide promotion would spend money on members who are already booking; the evidence points to one slot.'],
+            callout: { title: 'A flat evening is the strongest evidence that this is fixable', body: 'If the whole timetable had softened, the answer would be acquisition. It did not: the evening book held while the weekend morning thinned, which points at the slot and the instructor rather than at the market.' },
+            exhibits: [{ ref: 'sessions/trend/fill_rate', view: 'chart', caption: 'Fill rate by month — the slide began in August', note: 'Fill reached its 2026 high in July before falling for two months.', highlight: [] }],
+            evidence: null },
+          { title: 'What next month looks like', sub: 'Conditional arithmetic, not a forecast: October lands between 790 and 830 visits on recent patterns.', lens: 'watch', priority: 'low',
+            paragraphs: ['If the three-month pace holds, attendance sits around 830 in October; last year\'s seasonality alone would put it nearer 790. Neither is a forecast.'],
+            callout: null,
+            exhibits: [{ ref: 'sessions/scenarios', view: 'table', caption: 'Next month under four conditional scenarios', note: 'Each column applies one assumption to this month.', highlight: [] }],
+            evidence: null },
+        ],
+        recommendations: [
+          { title: 'Rotate the Saturday 9–11am Barre instructors for October', owner: 'Instructor management', horizon: 'Next 30 days', reasoning: 'Saturday 9–11am lost **104 visits** against August and Barre lost 84; the rest of the timetable was flat.', impact: 'Recovering August levels on those slots is worth roughly 524 visits a month, indicatively ₹3.7L at ₹714 a visit.' },
+          { title: 'Call members whose visits halved this month', owner: 'Member experience', horizon: 'Immediate', reasoning: 'Visits per member fell from **3.1 to 2.6** while active members held flat.', impact: 'The members are still contactable; a call costs nothing and protects renewals.' },
+          { title: 'Hold evening capacity as it is', owner: 'Studio operations', horizon: 'Monitor', reasoning: 'PowerCycle fill held at **72%** and evening class sizes rose.', impact: 'Avoids moving supply away from the slots that are working.' },
+        ],
+        method: ['Figures come from the Sessions sheet for Kenkere House, frozen when the report was built. Fill is attendance over capacity across all sessions, weighted by capacity.', 'Instructor effects are hypotheses: the data records who taught, not why members came.'],
+      },
       questions: [{ q: 'Is this seasonal?', a: 'Partly: September dipped last year too, but by 4%, not 15%.' }, { q: 'Did we lose members or visits?', a: 'Visits: active member count is flat; frequency fell.' }],
       cards: [verdict('Attendance down 15.1% MoM as Barre and Saturday slots slipped'), { section: 'Saturday Barre carried the fall', headline: 'Barre attendance fell 84 visits', meaning: 'Barre carries most of the decline.', evidence: '420 vs 504', action: 'Rebalance Saturday Barre slots.', focus: 'format', lens: 'risk', metrics: ['attendance'], highlight: ['Barre'], priority: 'high', confidence: 'medium', driver: 'Fewer repeat visits', concentration: 'Saturday 9–11am', offset: 'PowerCycle flat', trend: 'New', impact: '₹60k', watch: 'Saturday fill' }, { section: 'Evenings held up', headline: 'PowerCycle held its fill rate', meaning: 'Evening demand is resilient.', evidence: '72% vs 71%', action: '', focus: 'format', lens: 'win', metrics: ['fill_rate'], priority: 'low', confidence: 'high' }] },
     'revenue-performance': { generated: true, summary: 'Collections were stable. Average order value rose.', cards: [verdict('Gross collections steady at ₹14.6L', { lens: 'win' })] },
@@ -98,36 +132,57 @@ try {
   assert.match(await page.locator('.cr-lede').innerText(), /Demand fell while supply held/);
   assert.ok(await page.locator('.cr-meta span').count() >= 4, 'meta line under the lede');
   const toc = await page.locator('.cr-toc a').allInnerTexts();
-  for (const title of ['Start here', 'Saturday Barre carried the fall', 'Evenings held up', 'Leaders and laggards', 'Month by month', 'What comes next', 'The breakdowns', 'Recommendations', 'Method and limitations'])
+  for (const title of ['Start here', 'Saturday Barre carried the fall', 'Evenings held up', 'What next month looks like', 'Recommendations', 'Method and limitations'])
     assert.ok(toc.some(t => t.includes(title)), `contents list ${title}`);
+  for (const gone of ['Leaders and laggards', 'Month by month', 'The breakdowns']) assert.ok(!toc.some(t => t.includes(gone)), `no ${gone} appendix`);
   assert.equal(await page.locator('.cr-section').count(), toc.length, 'every contents entry is a section');
   assert.ok(await page.locator('.cr-kpis .cr-figure').count() >= 4, 'key figures strip');
   assert.ok((await page.locator('.cr-kpis').boundingBox()).y > (await page.locator('.cr-toc').boundingBox()).y, 'figures follow the contents');
   await page.waitForTimeout(400); await page.screenshot({ path: `${shots}/deck-chapter-head.png` });
-  // Start here: the verdict as subheading, the briefing as prose, the one-line version and the decision.
+  // Start here: thesis, argued paragraphs with bold claims, its chart, the one-line version, the evidence fold.
   const start = page.locator('.cr-section').first();
-  assert.match(await start.locator('.cr-sub').innerText(), /Attendance down 15\.1%/);
-  for (const lead of ['What changed.', 'Why it moved.', 'Where it concentrates.', 'What held up.', 'What to watch.']) assert.ok(await start.getByText(lead, { exact: true }).count(), `briefing reads ${lead}`);
-  assert.ok(await start.getByText('The one-line version, if you read nothing else').count());
-  for (const lead of ['Expected impact.', 'How we will know.', 'Risk and guardrail.', 'Alternative considered.']) assert.ok(await start.locator('[data-tone=decision]').getByText(lead, { exact: true }).count(), `decision reads ${lead}`);
-  await start.locator('[data-tone=decision]').scrollIntoViewIfNeeded(); await page.waitForTimeout(300); await page.screenshot({ path: `${shots}/deck-start-here.png` });
-  // A finding section: written title, headline as subheading, chart and the evidence fold.
+  assert.match(await start.locator('.cr-sub').innerText(), /Demand fell while supply held/);
+  assert.equal(await start.locator('.cr-body > p').count(), 3, 'Start here argues in paragraphs');
+  assert.ok(await start.locator('.cr-body > p strong', { hasText: '747 visits across 98 sessions' }).count(), 'the claim a paragraph turns on is bold');
+  assert.match(await start.locator('.cr-call-title').innerText(), /The one-line version/);
+  assert.ok(await start.locator('.cr-fig[data-ref="sessions/trend/attendance"] svg.cr-line').count(), 'trend exhibit drawn from the frozen history');
+  assert.match(await start.locator('.cr-fig figcaption').innerText(), /September undid the summer gains/);
+  await start.locator('.cr-ev summary').click();
+  assert.ok(await start.locator('.cr-ev .cr-table tbody tr').count() >= 4, 'evidence fold lists the headline measures');
+  await start.locator('.cr-call').scrollIntoViewIfNeeded(); await page.waitForTimeout(300); await page.screenshot({ path: `${shots}/deck-start-here.png` });
+  await start.locator('.cr-fig').screenshot({ path: `${shots}/deck-trend.png` });
+  // The month's point on the trend opens its records.
+  await start.locator('.cr-pt[data-key=now] circle:not(.cr-hit)').click();
+  await page.locator('.deck-record-dialog[open]').waitFor();
+  await page.getByRole('button', { name: 'Close source records' }).click();
+  // An argued section: thesis as subheading, breakdown chart with the named row drawn in the accent, the full table folded.
   await page.locator('.cr-toc a', { hasText: 'Saturday Barre carried the fall' }).click(); await page.waitForTimeout(700);
   const finding = page.locator('.cr-section', { has: page.locator('h2', { hasText: 'Saturday Barre carried the fall' }) });
   assert.match(await finding.locator('.cr-sub').innerText(), /Barre attendance fell 84 visits/);
-  assert.ok(await finding.locator('.r-evidence-block').count(), 'the finding carries its breakdown chart');
+  assert.equal(await finding.locator('.cr-fig .cr-bar').count(), 3, 'the breakdown chart draws every format');
+  assert.equal(await finding.locator('.cr-fig .cr-bar[data-named=true]').innerText().then(t => t.split('\n')[0]), 'Barre');
   await finding.locator('.cr-ev summary').click();
-  assert.ok(await finding.locator('.cr-table tbody tr').count() >= 1, 'evidence fold lists the cited figures');
+  assert.equal(await finding.locator('.cr-ev .cr-table tbody tr').count(), 3, 'evidence fold lists every row');
+  assert.ok(await finding.locator('.cr-ev .cr-table tbody tr[data-named=true]').count(), 'the named row is marked in the table');
   await page.screenshot({ path: `${shots}/deck-finding.png` });
+  await finding.locator('.cr-fig .cr-bar').first().click();
+  await page.locator('.deck-record-dialog[open]').waitFor();
+  await page.waitForTimeout(500); await page.screenshot({ path: `${shots}/deck-drill.png` });
+  await page.getByRole('button', { name: 'Close source records' }).click();
+  // A callout and a second chart further down; the scenario table is drawn from the figures.
+  const evenings = page.locator('.cr-section', { has: page.locator('h2', { hasText: 'Evenings held up' }) });
+  assert.match(await evenings.locator('.cr-call-title').innerText(), /fixable/);
+  const next = page.locator('.cr-section', { has: page.locator('h2', { hasText: 'What next month looks like' }) });
+  assert.ok(await next.locator('.cr-fig .cr-table tbody tr').count() >= 2, 'scenario table renders');
   // Speaker notes follow the section scrolled into view.
   assert.equal(await page.locator('.deck-drawer').getAttribute('data-open'), 'false', 'notes start closed');
   await page.getByRole('button', { name: 'Notes' }).click();
   assert.equal(await page.locator('.deck-drawer').getAttribute('data-open'), 'true');
   const opener = await page.locator('.deck-notes-opener').innerText();
-  await page.locator('.cr-toc a', { hasText: 'Leaders and laggards' }).click();
-  await page.waitForURL(/#sessions\/performers$/); // the address follows the section in view
+  await page.locator('.cr-toc a', { hasText: 'Recommendations' }).click();
+  await page.waitForURL(/#sessions\/plan$/); // the address follows the section in view
   await page.waitForFunction(previous => document.querySelector('.deck-notes-opener')?.textContent !== previous, opener);
-  assert.ok(await page.locator('.deck-notes-qa').count() >= 5, 'notes carry a question bank');
+  assert.ok(await page.locator('.deck-notes-qa').count() >= 2, 'notes carry a question bank');
   await page.screenshot({ path: `${shots}/deck-notes.png` });
   // Reading width with notes open, narrower and on a phone.
   for (const width of [1440, 1280, 390]) {
@@ -139,39 +194,35 @@ try {
     await page.screenshot({ path: `${shots}/deck-chapter-${width}.png` });
   }
   await page.setViewportSize({ width: 1440, height: 920 });
-  // Leaders and laggards keep their controls inside the document.
-  await page.locator('.dk-criteria button').nth(1).click();
-  await page.locator('.dk-perf-name').first().click(); await page.waitForTimeout(300);
-  assert.ok(await page.locator('.dk-perf-detail').count(), 'a performer row expands to every measure');
-  await page.screenshot({ path: `${shots}/deck-performers.png` });
-  await page.locator('.dk-outlook').scrollIntoViewIfNeeded();
-  await page.locator('.dk-scenario-bar button', { hasText: 'Last year' }).click();
-  assert.equal(await page.locator('.dk-scenario-bar button[aria-pressed=true]').innerText(), "Last year's season", 'scenario switches');
-  await page.locator('.dk-scenario footer button', { hasText: "Last year's pattern" }).first().click();
-  assert.ok(await page.locator('.dk-scenario-ly').count(), 'last-year pattern opens');
-  await page.waitForTimeout(300); await page.screenshot({ path: `${shots}/deck-outlook.png` });
-  // Month by month: chart in the page, the MoM table behind a fold, cells open their records.
-  const months = page.locator('.cr-section', { has: page.locator('h2', { hasText: 'Month by month' }) });
-  await months.locator('.cr-ev summary').click();
-  assert.ok(await months.locator('.monthly-table table tbody tr').count() >= 3, 'MoM table renders');
-  await months.locator('.monthly-table-controls .segmented button', { hasText: 'MoM Δ' }).click();
-  await months.locator('.monthly-table tbody tr').first().locator('td button').nth(3).click();
-  await page.locator('.deck-record-dialog .dk-x-context').waitFor();
-  assert.match(await page.locator('.deck-record-dialog .dk-x-context').innerText(), /Showing/);
-  await page.waitForTimeout(600); await page.screenshot({ path: `${shots}/deck-drill.png` });
-  await page.getByRole('button', { name: 'Close source records' }).click();
-  await page.locator('.dk-tables').first().scrollIntoViewIfNeeded(); await page.waitForTimeout(400); await page.screenshot({ path: `${shots}/deck-evidence.png` });
   // Recommendations: numbered, owned, reasoning and expected impact.
   const recs = page.locator('.cr-rec');
-  assert.ok(await recs.count() >= 1, 'chapter closes with recommendations');
+  assert.equal(await recs.count(), 3, 'chapter closes with its recommendations');
   assert.ok(await recs.first().getByText('Reasoning', { exact: true }).count());
+  assert.ok(await recs.first().getByText('Expected impact', { exact: true }).count());
+  assert.match(await recs.first().locator('.cr-ro').innerText(), /Instructor management/i);
   await recs.first().scrollIntoViewIfNeeded(); await page.waitForTimeout(300); await page.screenshot({ path: `${shots}/deck-recommendations.png` });
-  // Method and limitations, with the source rows loading only when opened.
+  // Method and limitations: the written note, definitions, and the source rows loading only when opened.
   const method = page.locator('.cr-section', { has: page.locator('h2', { hasText: 'Method and limitations' }) });
+  assert.match(await method.locator('.cr-body > p').first().innerText(), /frozen when the report was built/);
   await method.locator('.cr-ev summary', { hasText: 'source records' }).click();
   await page.locator('.dk-x-group-row').first().waitFor({ timeout: 20000 });
   assert.ok(await page.locator('.dk-x-group-row').count() >= 2, 'records group by the chapter breakdown');
   await page.waitForTimeout(300); await page.screenshot({ path: `${shots}/deck-method.png` });
+  // A report written before documents existed reads in the same shape.
+  await page.locator('.deck-tabs button', { hasText: 'Sales' }).first().click();
+  await page.locator('.cr-head h1', { hasText: /Sales/ }).waitFor();
+  assert.equal(await page.locator('.cr-section h2').first().innerText().then(t => t.toLowerCase()), 'start here');
+  assert.match(await page.locator('.cr-section .cr-sub').first().innerText(), /Gross collections steady/);
+  await page.locator('.deck-tabs button', { hasText: /Sessions|Schedule|Classes/ }).first().click();
+  await page.locator('.cr-head h1', { hasText: /Schedule|Session|Class/ }).waitFor();
+  // The downloaded report is the same documents, self-contained.
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download HTML' }).click()]);
+  const file = await (await import('node:fs/promises')).readFile(await download.path(), 'utf8');
+  assert.match(file, /class="cr-export"/); assert.match(file, /--accent:/, 'theme tokens travel with the file');
+  assert.equal((file.match(/class="cr-head"/g) ?? []).length, 4, 'every chapter is in the file');
+  assert.ok(file.includes('Saturday Barre carried the fall') && file.includes('cr-line') && file.includes('cr-rec'), 'sections, charts and recommendations exported');
+  assert.ok(!file.includes('source records behind this chapter'), 'live-only explorers are left out');
+  await (await import('node:fs/promises')).writeFile(`${shots}/deck-export.html`, file);
   // Arrow keys move between chapters.
   await page.locator('.cr-head h1').click();
   const title = await page.locator('.cr-head h1').innerText();
@@ -198,7 +249,8 @@ try {
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByText('Changes saved to the database.').waitFor();
   const stored = await (await fetch(`${url}/api/reports/${saved.id}`)).json();
-  assert.ok(Object.values(stored.narratives).some(n => n.cards.some(c => c.headline === 'Edited verdict headline')), 'edit persisted');
+  assert.equal(stored.narratives.sessions.document.sections[0].sub, 'Edited verdict headline', 'edit persisted to the document');
+  assert.equal(stored.narratives.sessions.document.sections.length, 4, 'the rest of the document is intact');
   assert.ok(Object.keys(stored.replacements).some(k => k.endsWith(':summary:metrics')), 'replacement persisted');
   assert.ok(Object.keys(stored.speakerNotes ?? {}).length === 1, 'AI talk track persisted');
   await page.reload(); await page.locator('[data-replaced=true]').waitFor();
@@ -214,5 +266,5 @@ try {
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'no horizontal overflow on mobile');
   await page.screenshot({ path: `${shots}/deck-mobile.png` });
   assert.deepEqual(errors, []);
-  console.log('PASS: fixed navbar, one document per chapter (kicker, lede, contents, figures, numbered sections, recommendations, method), scroll-following speaker notes, MoM fold + record drill, outlook, AI talk track, admin edit, AI component swap, DB persistence, pinning, retention, mobile.');
+  console.log('PASS: fixed navbar, one document per chapter (kicker, lede, contents, figures, argued sections with exhibits and evidence folds, recommendations, method), legacy reports in the same shape, scroll-following speaker notes, record drills from charts, AI talk track, admin edit, AI component swap, DB persistence, pinning, retention, mobile.');
 } finally { await browser?.close(); await vite.close(); http.closeAllConnections(); await new Promise(r => http.close(r)); }

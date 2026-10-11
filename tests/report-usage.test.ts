@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { docAnswer } from './support/doc-answer';
 import assert from 'node:assert/strict';
 import express from 'express';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -48,16 +49,16 @@ test('run summary bills only fresh calls and flags incomplete costs', () => {
 
 test('the narrative endpoint returns billed usage, including on a rejected answer', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'atlas-usage-'));
-  let output = JSON.stringify({ summary: 'S', cards: [{ headline: 'H', meaning: 'M', evidence: 'E', action: 'A' }] });
+  let output = JSON.stringify(docAnswer('S'));
   const usage = { input_tokens: 1200, input_tokens_details: { cached_tokens: 200 }, output_tokens: 900, output_tokens_details: { reasoning_tokens: 600 } };
   const ai = { responses: { create: async () => ({ status: 'completed', model: 'gpt-5-2025-08-07', output_text: output, usage }) } };
   const app = express(); app.use(express.json()); intelligenceRoutes(app, root, [], undefined, { ai });
   const server = app.listen(0); const url = `http://127.0.0.1:${(server.address() as any).port}`;
-  const post = () => fetch(url + '/api/reports/narrative', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: 'Write.' }) });
+  const post = () => fetch(url + '/api/reports/narrative', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: 'Write.', insightVersion: 4 }) });
   try {
     const ok = await (await post()).json();
     assert.deepEqual({ ...ok.usage, durationMs: 0 }, { model: 'gpt-5-2025-08-07', inputTokens: 1200, cachedInputTokens: 200, outputTokens: 900, reasoningTokens: 600, durationMs: 0 });
-    output = JSON.stringify({ summary: '', cards: [] });
+    output = JSON.stringify(docAnswer(''));
     const rejected = await post();
     assert.equal(rejected.status, 400);
     assert.equal((await rejected.json()).usage.outputTokens, 900, 'a rejected answer was still billed');
@@ -69,13 +70,12 @@ test('chapters carry usage, rejected calls count, and cache hits bill nothing', 
   const cache = new Map<string, string>();
   (globalThis as any).localStorage = { getItem: (k: string) => cache.get(k) ?? null, setItem: (k: string, v: string) => cache.set(k, v) };
   const used = { model: 'gpt-4.1', inputTokens: 1000, cachedInputTokens: 0, outputTokens: 500, reasoningTokens: 0, durationMs: 2000 };
-  const card = { headline: 'H', meaning: 'M', evidence: 'E', action: 'A', plainLanguage: 'P', impact: 'I', watch: 'W', focus: 'kpis', category: 'meaning', confidence: 'high' };
   let calls = 0;
   globalThis.fetch = async (_url, init) => {
     if (!init?.body) return new Response(JSON.stringify({openai:true,model:'gpt-4.1',reportNarrativeVersion:'1'}));
     calls++;
     // The first answer is malformed and rejected client-side; it was still billed.
-    return new Response(JSON.stringify({ answer: JSON.stringify({ summary: calls === 1 ? '' : 'Verdict.', cards: [card] }), usage: used }));
+    return new Response(JSON.stringify({ answer: JSON.stringify(docAnswer(calls === 1 ? '' : 'Verdict.')), usage: used }));
   };
   const model: any = { scope: { studio: 'S', month: '2026-09' }, builtAt: '2026-10-01T00:00:00Z', figuresHash: 'x', narratives: {},
     customization: { title: '', subtitle: '', preparedFor: '', preparedBy: '', audience: '', tone: '', detail: 'Concise', instructions: '', chapterIds: ['recommendations'], theme: 'light' },

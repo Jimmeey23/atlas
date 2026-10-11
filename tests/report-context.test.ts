@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { docAnswer } from './support/doc-answer';
 import assert from 'node:assert/strict';
 import {chapters} from '../src/report/chapters';
 import {yearContextPayload,generateNarratives,portfolioPayload} from '../src/report/narrative';
@@ -18,7 +19,7 @@ test('ordinary chapter gets all-tab context even when those chapters are hidden'
  (globalThis as any).localStorage={getItem:()=>null,setItem:()=>{}};
  globalThis.fetch=async(_url,init)=>{if(!init?.body)return new Response(JSON.stringify({openai:true,model:'gpt-4.1',reportNarrativeVersion:'1'}));requests.push(JSON.parse(String(init?.body)).message);return new Response(JSON.stringify({error:'Test provider unavailable'}),{status:400});};
  const model:ReportModel={scope:{studio:'Kenkere House',month:'2026-09'},builtAt:'2026-10-10T00:00:00Z',figuresHash:'test',narratives:{},chapters:{'revenue-performance':data('revenue-performance',{total:{gross_revenue:1000},prior:{gross_revenue:800}}),'website-marketing':data('website-marketing',{total:{leads:1234,website_members:30}}),'meta-marketing':data('meta-marketing',{total:{meta_spend:4567}})},customization:{title:'',subtitle:'',preparedFor:'',preparedBy:'',audience:'Executive board',tone:'Professional',detail:'Comprehensive',instructions:'Explain efficiency',chapterIds:['revenue-performance'],theme:'light'}};
- try{await generateNarratives(model);assert.match(requests[0],/website-marketing/);assert.match(requests[0],/1234/);assert.match(requests[0],/meta-marketing/);assert.match(requests[0],/account \/ network; not studio-attributed/);assert.match(requests[0],/Every card answers exactly one leadership question/);assert.match(requests[0],/AVAILABLE METRIC IDS \(id: label\): .*gross_revenue/);assert.ok(requests[0].length<90000);}finally{globalThis.fetch=original;(globalThis as any).localStorage=storage;}
+ try{await generateNarratives(model);assert.match(requests[0],/website-marketing/);assert.match(requests[0],/1234/);assert.match(requests[0],/meta-marketing/);assert.match(requests[0],/account \/ network; not studio-attributed/);assert.match(requests[0],/long-form monthly studio report/);assert.match(requests[0],/EXHIBITS \(ref: what it shows\):\nrevenue-performance\/kpis/);assert.match(requests[0],/AVAILABLE METRIC IDS \(id: label\): .*gross_revenue/);assert.ok(requests[0].length<90000);}finally{globalThis.fetch=original;(globalThis as any).localStorage=storage;}
 });
 test('default display is compact and adaptive, and all core dashboard sources have report chapters',()=>{
  assert.equal(reportOptions().density,'compact');assert.equal(reportOptions().layout,'adaptive');
@@ -35,7 +36,7 @@ test('large reports fit the API prompt limit without duplicating portfolio conte
   if(!init?.body)return new Response(JSON.stringify({openai:true,model:'gpt-4.1',reportNarrativeVersion:'1'}));
   const message=JSON.parse(String(init?.body)).message;requests.push(message);
   if(message.length>90000)return new Response(JSON.stringify({error:'A report chapter prompt up to 90,000 characters is required.'}),{status:400});
-  return new Response(JSON.stringify({answer:JSON.stringify({summary:'Recorded evidence.',cards:[{headline:'Recorded movement',meaning:'Conditional analysis.',evidence:'Supplied figures.',focus:'kpis',lens:'driver',confidence:'medium'}]})}));
+  return new Response(JSON.stringify({answer:JSON.stringify(docAnswer())}));
  };
  const model:ReportModel={scope:{studio:'Kenkere House',month:'2026-09'},builtAt:'',figuresHash:'large',narratives:{},
   chapters:{'executive-summary':data('executive-summary',{total:{attendance:120},prior:{attendance:100}}),sessions:data('sessions',{total:{attendance:120,sessions:10},prior:{attendance:100,sessions:8},groups:[{id:'formats',field:'format',title:'Format evidence',columns:['attendance'],minimum:'3 contributing records',rows:Array.from({length:4000},(_,i)=>({g:`Format ${i} with a detailed community session description`,attendance:i+3}))}]})},

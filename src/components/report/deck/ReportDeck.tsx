@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Mic, Lock, LockOpen, PencilLine, Save, Undo2, Pin, PinOff, Download, Printer, Maximize, Minimize, Palette, Loader2, KeyRound, X, TriangleAlert, CircleDot } from "lucide-react";
 import logo from "../../../assets/report/logo.png";
-import { ReportDocument } from "../ReportDocument";
+import { ChapterExport } from "./ChapterExport";
 import { ReportViewControls } from "../ReportViewControls";
 import { FloatingReviewTools } from "../../FloatingReviewTools";
 import { PresentationTools } from "../../PresentationTools";
@@ -144,7 +144,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
     setExportMounted(true);
     // The full document mounts only for export; wait for it to commit and paint.
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    try { if (!exportRef.current) throw new Error("The export view is not ready. Retry."); await (print ? printReport : downloadReport)(exportRef.current, model); } catch (e) { setMessage((e as Error).message); } finally { setBusy(""); }
+    try { if (!exportRef.current) throw new Error("The export view is not ready. Retry."); await (print ? printReport : downloadReport)(exportRef.current, model); } catch (e) { setMessage((e as Error).message); } finally { setBusy(""); setExportMounted(false); }
   }
 
   const options = reportOptions(model.customization);
@@ -205,7 +205,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
       <FloatingReviewTools><PresentationTools standalone beforeHost={async () => { if (!model.id) throw new Error(storageError || "Save the report before hosting a shared review."); }} />
         <StickyNotes key={model.id ?? model.figuresHash} reportId={model.id ?? `draft-${model.figuresHash}`} /></FloatingReviewTools>
       {unlocking && <AdminDialog onClose={() => setUnlocking(false)} onUnlocked={() => { setAdmin(true); setUnlocking(false); setEditing(true); setMessage("Admin editing unlocked for 12 hours on this browser."); }} />}
-      {exportMounted && <div className="deck-export-source" aria-hidden="true"><ReportDocument ref={exportRef} model={model} theme={model.customization?.theme || "light"} /></div>}
+      {exportMounted && <div className="deck-export-source" aria-hidden="true"><ChapterExport ref={exportRef} model={model} /></div>}
       {busy === "export" && <div className="deck-toast" role="status"><Loader2 size={14} className="rb2-spin"/>Preparing export…</div>}
     </div>
   </RecordDrilldownProvider></EditContext.Provider>;

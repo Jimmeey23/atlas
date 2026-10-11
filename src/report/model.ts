@@ -1,5 +1,6 @@
 import type { Row } from "../data/duckdb";
 import type { ChapterUsage } from "./usage";
+import type { ChapterDocument } from "./document";
 /** Studio and month a report is built for. Everything else is derived. */
 export interface ReportScope {
   /** Canonical location name, as it appears in the data. */
@@ -148,6 +149,8 @@ export interface ChapterNarrative {
   decision?: LeadershipDecision;
   /** Commentary on the leaders and laggards in the chapter's breakdowns. */
   performers?: { leaders: string; laggards: string; pattern: string };
+  /** v4: the chapter written as a long-form report; absent on older reports, which are re-read from their cards. */
+  document?: ChapterDocument;
   /** Questions leadership is likely to ask, with evidence-based answers, for the presenter. */
   questions?: { q: string; a: string }[];
   /** Rule-based copy is labelled so nobody reads it as analysis. */

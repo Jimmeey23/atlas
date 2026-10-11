@@ -63,11 +63,13 @@ try {
  await review.locator('#main').evaluate(el=>el.scrollTop=0);
  await review.locator('.cr-kpis .cr-figure').first().click();await review.locator('.deck-record-dialog[open]').first().waitFor();
  await review.getByRole('button',{name:'Close source records'}).click();
- // Exported HTML keeps native drilldowns and the headline shortcut without React.
+ // Exported HTML is the chapter documents, with evidence folds that open without React.
  const downloadPromise=review.waitForEvent('download');await review.getByRole('button',{name:'Download HTML',exact:true}).click();
  const exported=await (await import('node:fs/promises')).readFile(await (await downloadPromise).path(),'utf8');
- const file=await hostContext.newPage();await file.setContent(exported);await file.locator('.r-insight-title').first().click();
- assert.equal(await file.locator('.r-insight-drilldown').first().getAttribute('open'),'');await file.close();
+ const file=await hostContext.newPage();await file.setContent(exported);
+ assert.ok(await file.locator('.cr-export .cr-section').count()>=4,'chapters export as documents');
+ await file.locator('.cr-ev summary').first().click();
+ assert.equal(await file.locator('.cr-ev').first().getAttribute('open'),'');await file.close();
  await review.locator('.deck-tabs button').first().click();
  if(await tools.getAttribute('aria-expanded')==='false')await tools.click();
  assert.equal(await review.locator('[aria-label="Presenter toolkit"]').isVisible(),true);
@@ -136,5 +138,5 @@ try {
  await review.reload();await review.locator('[data-note-id]').waitFor();
  assert.equal(await review.locator('[data-note-id] textarea').inputValue(),'Owner confirmed by guest.');
  assert.deepEqual(errors,[]);
- console.log('PASS: deck tabs, saved-snapshot drilldowns, appearance, fixed navbar, key-figure drilldowns, floating toolkit auto-collapse, new-tab snapshot, full toolkit, host/join, chapter/ink sharing, independent navigation, pause/resume, raised hands, shared notes, isolation, reload and mobile overflow.');
+ console.log('PASS: deck tabs, saved-snapshot drilldowns, appearance, fixed navbar, key-figure drilldowns, document export, floating toolkit auto-collapse, new-tab snapshot, full toolkit, host/join, chapter/ink sharing, independent navigation, pause/resume, raised hands, shared notes, isolation, reload and mobile overflow.');
 } finally {await browser?.close();await vite.close();http.closeAllConnections();await new Promise(resolve=>http.close(resolve));}

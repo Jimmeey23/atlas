@@ -12,13 +12,14 @@ import { chapters } from '../src/report/chapters';
 import { saveReport, loadReport } from '../src/report/storage';
 import { addCall, summariseUsage } from '../src/report/usage';
 import type { ChapterData, ReportModel } from '../src/report/model';
+import { docAnswer } from './support/doc-answer';
 
 const chapter = (id: string, extra: Partial<ChapterData> = {}): ChapterData => ({ id, n: 20, total: {}, prior: {}, priorYear: {}, history: [], groups: [], ...extra });
 const fixture = (): ReportModel => ({ scope: { studio: 'Kenkere House', month: '2026-09' }, builtAt: '2026-10-10T00:00:00Z', figuresHash: 'test', schemaVersion: 6, narratives: {},
   customization: { title: 'Monthly review', subtitle: '', preparedFor: '', preparedBy: '', audience: 'Leadership', tone: 'Professional', detail: 'Comprehensive', instructions: '', chapterIds: ['sessions', 'predictions'], theme: 'light' },
   chapters: { sessions: chapter('sessions', { total: { sessions: 10, attendance: 120, fill_rate: .7123456789 }, prior: { sessions: 8, attendance: 100, fill_rate: .6 }, priorYear: { attendance: 90 }, history: [{ month: '2026-08', attendance: 100, fill_rate: .6 }, { month: '2026-09', attendance: 120, fill_rate: .7123456789 }] }) },
 });
-const answer = JSON.stringify({ summary: 'Recorded demand increased; this is conditional analysis.', cards: [{ headline: 'More recorded visits', meaning: 'Evidence informs capacity decisions.', evidence: '120 visits versus 100.', action: 'Review capacity.', lens: 'driver', focus: 'kpis', confidence: 'high', metrics: ['attendance'] }] });
+const answer = JSON.stringify(docAnswer('Recorded demand increased; this is conditional analysis.', { headline: 'More recorded visits', meaning: 'Evidence informs capacity decisions.', confidence: 'high', metrics: ['attendance'] }));
 const usage = { input_tokens: 1200, input_tokens_details: { cached_tokens: 200 }, output_tokens: 900, output_tokens_details: { reasoning_tokens: 600 } };
 
 test('retry preserves successful chapters; durable reuse survives fresh browser and server sessions', async () => {
@@ -34,7 +35,7 @@ test('retry preserves successful chapters; durable reuse survives fresh browser 
   const ai = { responses: { create: async (request: any) => {
     requests.push(request);
     if (rejectOutlook && request.input.includes('"What happens next: conditional scenarios"'))
-      return { status: 'completed', output_text: JSON.stringify({ summary: '', cards: [] }), usage };
+      return { status: 'completed', output_text: JSON.stringify({ ...docAnswer(''), document: { sections: [], recommendations: [], method: [] } }), usage };
     return { status: 'completed', output_text: answer, usage };
   } } };
   const start = async () => {
@@ -88,7 +89,7 @@ test('retry preserves successful chapters; durable reuse survives fresh browser 
     await api.close(); process.env.OPENAI_MODEL = 'gpt-5-mini'; api = await start(); freshBrowser();
     await generateNarratives({ ...model, narratives: rebuilt });
     assert.equal(requests.length, 15, 'changing the configured model invalidates local, saved and durable reuse');
-    assert.ok(requests.every(request => request.reasoning.effort === 'high' && request.max_output_tokens === 20000));
+    assert.ok(requests.every(request => request.reasoning.effort === 'medium' && request.max_output_tokens === 48000 && request.text.format.schema.properties.document));
   } finally {
     globalThis.fetch = originalFetch; (globalThis as any).localStorage = originalStorage;
     if (originalModel === undefined) delete process.env.OPENAI_MODEL; else process.env.OPENAI_MODEL = originalModel;
@@ -131,7 +132,7 @@ test('cache storage failures leave complete analysis usable and never claim a ca
   const url = `http://127.0.0.1:${(server.address() as any).port}/api/reports/narrative`;
   try {
     for (let i = 0; i < 2; i++) {
-      const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: 'Review recorded demand.' }) });
+      const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: 'Review recorded demand.', insightVersion: 4 }) });
       assert.equal(response.status, 200);
       const body = await response.json(); assert.equal(body.answer, answer); assert.equal(body.cacheStatus, 'unavailable'); assert.equal(body.usage.fromCache, undefined);
     }

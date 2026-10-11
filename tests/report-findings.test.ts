@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { docAnswer } from './support/doc-answer';
 import assert from 'node:assert/strict';
 import { analyseGroup, findingsFor, findingsPayload, ledger, seasonalScenario } from '../src/report/findings.ts';
 import { chapters } from '../src/report/chapters.ts';
@@ -129,7 +130,7 @@ test('the chapter prompt is built on findings and no longer asks for one passage
   globalThis.fetch = async (_url, init) => {
     if (!init?.body) return new Response(JSON.stringify({openai:true,model:'gpt-4.1',reportNarrativeVersion:'1'}));
     messages.push(JSON.parse(String(init?.body)).message);
-    return new Response(JSON.stringify({ answer: JSON.stringify({ summary: 'Verdict.', cards: [{ headline: 'H', meaning: 'M', evidence: 'E', action: 'A', plainLanguage: 'P', impact: 'I', watch: 'W', focus: 'cross', category: 'meaning', confidence: 'medium' }] }) }));
+    return new Response(JSON.stringify({ answer: JSON.stringify(docAnswer('Verdict.')) }));
   };
   try {
     const exec = chapter('executive-summary', { total: { fill_rate: 0.55, attendance: 1100, revenue: 550000 }, history: months([0.7, 0.72, 0.71, 0.73, 0.7, 0.55], 'fill_rate') });
@@ -137,9 +138,12 @@ test('the chapter prompt is built on findings and no longer asks for one passage
     assert.match(messages[0], /Analyst findings/);
     assert.match(messages[0], /lowest in 6 months/);
     assert.doesNotMatch(messages[0], /one passage with its matching focus ID for EACH/);
-    assert.match(messages[1], /evidence-led recommendations, ordered by priority/);
-    assert.match(messages[1], /Every card uses lens next_step/);
-    assert.equal(out['executive-summary'].cards[0].focus, 'kpis', 'a missing verdict is promoted from the first card');
+    assert.match(messages[0], /This is the studio overview/);
+    assert.match(messages[1], /This chapter is the action plan/);
+    assert.match(messages[1], /13–17 numbered actions ordered by expected value/);
+    assert.equal(out['executive-summary'].cards[0].focus, 'kpis', 'the verdict leads the derived cards');
+    assert.equal(out['executive-summary'].document?.sections[0].title, 'Start here');
+    assert.equal(out.recommendations.cards[1].headline, 'Review capacity', 'recommendation cards are read off the document');
   } finally { globalThis.fetch = originalFetch; (globalThis as any).localStorage = originalStorage; }
 });
 
@@ -178,23 +182,27 @@ test('failed recommendation generation retains calculated proposals and labels t
   assert.equal(fallback.cards[0].focus,'kpis');
 });
 
-test('v3 insights request lenses and metric ids, and drop cited metrics the chapter cannot show', async () => {
+test('v4 documents request lenses, metric ids and exhibit refs, and drop citations and exhibits the chapter cannot show', async () => {
   const originalFetch = globalThis.fetch, originalStorage = (globalThis as any).localStorage;
   (globalThis as any).localStorage = { getItem: () => null, setItem: () => {} };
   const bodies: any[] = [];
   globalThis.fetch = async (_url, init) => {
     if (!init?.body) return new Response(JSON.stringify({openai:true,model:'gpt-4.1',reportNarrativeVersion:'1'}));
     bodies.push(JSON.parse(String(init?.body)));
-    return new Response(JSON.stringify({ answer: JSON.stringify({ summary: 'Verdict.', cards: [{ headline: 'H', meaning: 'M', evidence: 'E', action: 'A', driver: 'D', trend: 'T', impact: '', watch: 'W', recommendation: '', lens: 'risk', focus: 'kpis', metrics: ['gross_revenue', 'not_a_metric', 'fill_rate'], highlight: [], priority: 'high', ownerArea: 'Finance', horizon: 'Monitor', confidence: 'medium' }] }) }));
+    const answer = docAnswer('Verdict.', { lens: 'risk', metrics: ['gross_revenue', 'not_a_metric', 'fill_rate'] });
+    answer.document.sections[0].exhibits = [{ ref: 'revenue-performance/kpis', view: 'table', caption: 'C', note: 'N', highlight: [] }, { ref: 'sessions/trend/fill_rate', view: 'chart', caption: 'C', note: 'N', highlight: [] }] as never;
+    return new Response(JSON.stringify({ answer: JSON.stringify(answer) }));
   };
   try {
     const sales = chapter('revenue-performance', { total: { gross_revenue: 1000, aov: 50 }, prior: { gross_revenue: 900 } });
     const out = await generateNarratives({ ...model({ 'revenue-performance': sales }), customization: { title: '', subtitle: '', preparedFor: '', preparedBy: '', audience: 'Executive board', tone: 'Professional', detail: 'Comprehensive', instructions: '', chapterIds: ['revenue-performance'], theme: 'light', lenses: ['risk', 'win'] } });
-    assert.equal(bodies[0].insightVersion, 3);
+    assert.equal(bodies[0].insightVersion, 4);
+    assert.ok(bodies[0].exhibitRefs.includes('revenue-performance/kpis'));
     assert.ok(bodies[0].metricIds.includes('gross_revenue'));
     assert.ok(!bodies[0].metricIds.includes('fill_rate'), 'only metrics this chapter holds are citable');
     assert.deepEqual(bodies[0].lenses, ['risk', 'win']);
     assert.deepEqual(out['revenue-performance'].cards[0].metrics, ['gross_revenue']);
+    assert.deepEqual(out['revenue-performance'].document?.sections[0].exhibits.map(e => e.ref), ['revenue-performance/kpis'], 'refs outside the catalogue are dropped');
     assert.equal(out['revenue-performance'].cards[0].lens, 'risk');
   } finally { globalThis.fetch = originalFetch; (globalThis as any).localStorage = originalStorage; }
 });

@@ -92,10 +92,11 @@ test('deck pages and live speaker notes come from the frozen report', () => {
 });
 
 test('reader labels improve without changing durable section ids', () => {
-  assert.equal(SECTION_META.summary.label, 'Performance brief');
-  assert.equal(SECTION_META.insights.label, 'What changed & why');
-  assert.equal(SECTION_META.tables.label, 'Evidence tables');
-  assert.equal(SECTION_META.data.label, 'Source data explorer');
+  // Chapter pages are named for the parts of the written document they map to.
+  assert.equal(SECTION_META.summary.label, 'Start here');
+  assert.equal(SECTION_META.insights.label, 'The analysis');
+  assert.equal(SECTION_META.plan.label, 'Recommendations');
+  assert.equal(SECTION_META.data.label, 'Method and limitations');
   assert.deepEqual(Object.keys(SECTION_META), ['cover', 'summary', 'insights', 'plan', 'performers', 'outlook', 'trends', 'tables', 'data']);
 });
 

@@ -3,20 +3,21 @@ import { definition, reportFmt as fmt, reportDelta as delta } from "./definition
 import { monthLabel } from "./period";
 import type { ChapterData, InsightCard, ReportModel, SpeakerNotes } from "./model";
 import { decisionOf, extremes, movers, questionBank, rankPerformers, scenariosFor, yearPosition } from "./brief";
+import { documentFor } from "./document";
 
 /** The pages a report is presented as: an overview tab (cover + executive brief), then one tab per chapter. */
 export type DeckSection = "cover" | "summary" | "insights" | "plan" | "performers" | "outlook" | "trends" | "tables" | "data";
 export type DeckSectionGroup = "overview" | "analysis" | "evidence" | "action";
 export const SECTION_META: Record<DeckSection, { label: string; short: string; group: DeckSectionGroup }> = {
   cover: { label: "Report overview", short: "Overview", group: "overview" },
-  summary: { label: "Performance brief", short: "Brief", group: "overview" },
-  insights: { label: "What changed & why", short: "Drivers", group: "analysis" },
-  plan: { label: "Decisions & owners", short: "Decisions", group: "action" },
+  summary: { label: "Start here", short: "Start here", group: "overview" },
+  insights: { label: "The analysis", short: "Analysis", group: "analysis" },
+  plan: { label: "Recommendations", short: "Actions", group: "action" },
   performers: { label: "Ranked evidence", short: "Rankings", group: "evidence" },
   outlook: { label: "Forward scenarios", short: "Scenarios", group: "analysis" },
   trends: { label: "14-month trend", short: "Trends", group: "analysis" },
   tables: { label: "Evidence tables", short: "Tables", group: "evidence" },
-  data: { label: "Source data explorer", short: "Source data", group: "evidence" },
+  data: { label: "Method and limitations", short: "Method", group: "evidence" },
 };
 /** Kept for export/presenter compatibility; section ids and saved page keys remain unchanged. */
 export const SECTION_LABEL = Object.fromEntries(Object.entries(SECTION_META).map(([id, meta]) => [id, meta.label])) as Record<DeckSection, string>;
@@ -53,15 +54,14 @@ export function deckTabs(model: ReportModel): DeckTab[] {
   const exec = available.find(spec => spec.id === EXECUTIVE);
   const execCards = (model.narratives[EXECUTIVE]?.cards.length ?? 0) > 1;
   return [
-    { id: "overview", label: "Overview", chapter: exec ? EXECUTIVE : "overview", spec: exec, title: model.customization?.title || `${model.scope.studio} monthly review`, sections: exec && execCards ? ["cover", "insights"] : ["cover"] },
+    { id: "overview", label: "Overview", chapter: exec ? EXECUTIVE : "overview", spec: exec, title: model.customization?.title || `${model.scope.studio} monthly review`, sections: exec && (execCards || model.narratives[EXECUTIVE]?.document) ? ["cover", "insights"] : ["cover"] },
+    // Each chapter reads as one document: Start here, the argued sections, recommendations, method.
     ...available.filter(spec => spec !== exec).map(spec => {
-      const data = model.chapters[spec.id];
-      const sections: DeckSection[] = spec.id === "recommendations" ? ["summary", "plan", "insights"] : ["summary", "insights"];
-      if (data?.groups.length) sections.push("performers");
-      if (data?.history.length && !spec.derived) sections.push("outlook");
-      if (data?.history.length) sections.push("trends");
-      if (data?.groups.length) sections.push("tables");
-      if (!spec.derived && data) sections.push("data");
+      const doc = documentFor(model, spec.id);
+      const sections: DeckSection[] = ["summary"];
+      if ((doc?.sections.length ?? 0) > 1) sections.push("insights");
+      if (doc?.recommendations.length) sections.push("plan");
+      sections.push("data");
       return { id: spec.id, label: spec.nav, title: spec.title, chapter: spec.id, spec, sections };
     }),
   ];

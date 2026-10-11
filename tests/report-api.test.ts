@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { docAnswer } from './support/doc-answer';
 import assert from 'node:assert/strict';
 import express from 'express';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -103,7 +104,7 @@ test('custom report chapters, editorial preferences and narrative cache remain i
   globalThis.fetch = async (_url,init) => {
     if (!init?.body) return new Response(JSON.stringify({openai:true,model:'gpt-4.1',reportNarrativeVersion:'1'}));
     messages.push(JSON.parse(String(init?.body)).message);
-    return new Response(JSON.stringify({answer:JSON.stringify({summary:'A grounded decision brief.',cards:[{headline:'Review studio demand',meaning:'Check the mix.',evidence:'Recorded figures.',action:'Manager to review.',plainLanguage:'Review demand.',focus:'kpis',category:'meaning',confidence:'medium'}]})}));
+    return new Response(JSON.stringify({answer:JSON.stringify(docAnswer('A grounded decision brief.'))}));
   };
   const customization = {title:'Board pack',subtitle:'September',preparedFor:'Leadership',preparedBy:'Operations',audience:'Executive board',tone:'Plain language',detail:'Concise',instructions:'Prioritise retention',chapterIds:['recommendations','executive-summary'],theme:'dark' as const};
   const model = {...snapshot(),customization,chapters:{'executive-summary':{id:'executive-summary',n:5,total:{revenue:100},prior:{revenue:80},priorYear:{},history:[],groups:[]}}};

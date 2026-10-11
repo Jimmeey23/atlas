@@ -6,8 +6,9 @@ import { findingsFor, findingsPayload, ledger, seasonalScenario, type Finding } 
 import { INSIGHT_LENSES, type ChapterData, type ChapterNarrative, type InsightCard, type ReportModel } from "./model";
 import { reportOptions } from "./options";
 import { addCall, type CallUsage, type ChapterUsage } from "./usage";
+import { cardsFromDocument, cleanDocument, exhibitCatalog } from "./document";
 
-const CACHE_PREFIX = "atlas-report-narrative:v13:";
+const CACHE_PREFIX = "atlas-report-narrative:v14:";
 /** Exact evidence and request identity, independent of presentation settings. */
 async function analysisKey(value: unknown) {
   const bytes = new TextEncoder().encode(JSON.stringify(value));
@@ -162,67 +163,46 @@ const COMPARISON_FOCUS: Record<string, string> = {
   ytd: "Lead with the governed year-to-date position against the same elapsed period last year; treat the single month as one observation in that run.",
 };
 
-/** The v2 editorial contract: each card answers one leadership question and names the evidence that proves it. */
-function insightRules(model: ReportModel, spec: ChapterSpec) {
+/** Section counts per chapter kind; a thin chapter writes fewer sections rather than padding. */
+const SHAPE: Record<string, { sections: string; recs: string; words: string }> = {
+  "executive-summary": { sections: "9–13", recs: "10–13", words: "4,000–6,000" },
+  recommendations: { sections: "3–4", recs: "13–17", words: "3,000–4,500" },
+  predictions: { sections: "5–8", recs: "4–6", words: "2,000–3,000" },
+};
+
+/**
+ * v4: the chapter is written as a long-form analyst report, in the shape of
+ * the studio's hand-written monthly reviews: a lede, numbered sections that
+ * each argue one point in prose with their exhibits and evidence, numbered
+ * recommendations with reasoning and expected impact, and a method note.
+ */
+function documentRules(model: ReportModel, spec: ChapterSpec) {
   const o = reportOptions(model.customization);
-  const recs = spec.id === "recommendations";
-  const lenses = INSIGHT_LENSES.filter(l => recs ? l.id === "next_step" : l.id !== "next_step" && o.lenses.includes(l.id));
+  const shape = SHAPE[spec.id] ?? { sections: "9–13", recs: "9–13", words: "3,500–5,500" };
+  const catalog = exhibitCatalog(model, spec);
   return [
-    "Return JSON with summary and cards. Every card has section, headline, meaning, evidence, driver, trend, impact, action, watch, concentration, offset, recommendation, lens, focus, metrics, highlight, priority, ownerArea, horizon and confidence.",
-    "PURPOSE: a practical, decision-led review of the SELECTED MONTH. Every card answers exactly one leadership question, named by its lens. Do not repeat the same movement across cards, and do not write cards that merely restate a table.",
-    "Lenses allowed in this chapter:\n" + lenses.map(l => `- ${l.id} (${l.label}): ${l.question}`).join("\n"),
-    recs ? "Every card uses lens next_step." : "Use a mix of lenses where the evidence supports it; skip a lens rather than force it. The kpis verdict card may use any lens.",
-    "section: the chapter heading this card is printed under — 2 to 6 words naming the topic in plain language, sentence case, no figures (e.g. 'The base is widening', 'The commitment-length problem', 'Who sold it'). Unique within the chapter.",
-    "headline: the verdict in at most 16 words, including the key number. It is printed as the section's subheading, so write it as a complete declarative sentence, not a label.",
-    "Write meaning, driver, concentration and offset as connected report prose a reader moves through paragraph by paragraph: full sentences, figures inline, no bullet fragments.",
-    "meaning (shown as 'Why it matters'): 45–80 words on the business consequence for members, revenue, capacity or the brand. Do not restate the figure.",
-    "evidence: at most 40 words of exact supplied figures with their comparison periods.",
-    "driver (shown as 'Root cause'): 30–60 words decomposing the movement: which breakdown rows or mix shifts contributed how much, and the offsetting force. Decompositions are arithmetic; label a causal idea as a hypothesis and name the check that would confirm it.",
-    "concentration (shown as 'Where it concentrates'): at most 30 words naming the specific segments, formats, slots, channels or instructors that carry most of the movement, with their share or contribution. Empty string when the movement is broad-based or no breakdown supports it.",
-    "offset (shown as 'What held up'): at most 25 words on the strongest counter-signal: the metric or segment moving the other way, so the reading stays balanced. Empty string when nothing material offsets it.",
-    `trend (shown as 'Structural or one-off?'): at most 35 words giving one verdict — new, persistent for n months, reversing, seasonal or one-off. ${COMPARISON_FOCUS[o.comparisonFocus]}`,
-    o.quantifyImpact
-      ? "impact (shown as 'Value at stake'): at most 30 words quantifying rupees, members, seats or sessions at stake with the arithmetic shown, labelled indicative where it rests on an average. Empty string when the evidence cannot be valued."
-      : "impact: empty string.",
-    o.includeActions || recs
-      ? "action (shown as 'Recommended move'): at most 40 words — one concrete, practical move that follows from this evidence: what to change, where and for whom. No invented deadlines, named people, policies or promised uplift. watch (shown as 'Signal to watch'): at most 25 words naming the leading indicator and the threshold that would confirm or reject the reading next month."
-      : "action and watch: empty strings.",
-    recs
-      ? "recommendation: 40–70 words — why this move is preferred to the obvious alternative, the trade-off, and the guardrail that limits it."
-      : "recommendation: empty string.",
-    `metrics: 1–4 ids from AVAILABLE METRIC IDS that prove the claim. The page shows each one's value, MoM, YoY and monthly trend beside the card, so choose the ids a sceptical reader would check.`,
-    "focus: kpis for the single chapter verdict card, trend when the claim rests on the monthly history, cross for cross-chapter context, otherwise the breakdown ID whose chart proves the claim.",
-    "highlight: up to 4 exact group labels, copied character-for-character from the focus breakdown table, that the claim names. Empty array when none.",
-    "priority: high when the item is material to the month's result or its value at stake; medium otherwise; low for context. ownerArea: the team best placed to act. horizon: when to act or review.",
-    "confidence: high, medium or low, justified by source coverage, sample size and consistency across comparisons.",
-    "summary: 90–140 words, printed as the chapter's opening lede under its title — the chapter's verdict: what happened, the largest quantified driver, the offset, whether it is durable, and the one thing leadership should take from it.",
-    "Exactly one card has focus kpis: the chapter verdict.",
-    ...CHAPTER_RULES,
+    "FORMAT: You are writing one chapter of a long-form monthly studio report, read top to bottom like a written analyst review — not slides, not cards, not bullet points. The text carries the argument; charts and tables prove it. Aim for " + shape.words + " words in total, with roughly one exhibit for every 250–350 words of prose.",
+    "Return JSON with summary, verdict, document and questions.",
+    "summary: the chapter's lede printed under its title, 80–140 words: the headline figure with its comparison, what sits underneath it, and the two findings that matter most, each with its number. Plain declarative sentences.",
+    "verdict: the chapter's single conclusion for the report cover — headline at most 16 words with the key number; meaning 30–60 words; lens; priority; impact (value at stake with arithmetic, or empty string); metrics 1–4 ids from AVAILABLE METRIC IDS; confidence.",
+    `document.sections: ${shape.sections} sections in reading order. Never pad: a chapter with little evidence writes fewer, and no two sections may argue the same movement. The first section is titled exactly "Start here".`,
+    "Each section:",
+    "- title: 2–6 words, sentence case, naming the topic or stating the finding plainly (e.g. 'The base is widening', 'Where the money came from', 'The commitment-length problem', 'Who sold it', 'Discounting'). No figures. Unique.",
+    "- sub: one sentence of 10–30 words printed under the heading — the section's thesis as a claim, not a label (e.g. 'Half the churn is people who never engaged. Half is people who engaged and then withdrew.').",
+    "- paragraphs: 2–4 paragraphs of 70–150 words. Argue, do not list: state the figure with its comparison, decompose it (which rows, mix or rate moved it and by how much), then say what it means for the business and what the obvious reading misses. Put the single most important claim of each paragraph in **double asterisks**, as a whole phrase with its number (one or two bold spans per paragraph). *Single asterisks* italicise a word for stress, sparingly. No bullets, headings, lists or 'In conclusion'.",
+    "- Start here has 3–5 paragraphs: the top line and whether it can be taken at face value; then the findings underneath it, each opening with a bold lead sentence such as **First, the month was funded by people the studio already had.** Its callout is titled 'The one-line version, if you read nothing else' (60–100 words).",
+    "- callout: null, or { title: the reframe as a full sentence of at most 18 words, body: 50–110 words }. Use one in at most a third of sections, for what a leader must not miss: what a figure means commercially, a misleading comparison, a definitional trap.",
+    "- exhibits: 1–2 per section (every section except Start here needs at least one). ref must come from EXHIBITS below; view chart or table; caption: a sentence-case title of what it shows (at most 14 words, e.g. 'Visits per active member, by month — sliding since mid-2025'); note: 15–45 words telling the reader what to see in it, with a number; highlight: up to 4 row labels copied exactly from that breakdown, else [].",
+    "- evidence: the full table behind the argument, folded under the section — { title starting 'Evidence — ', ref (a group or kpis ref), note: 20–50 words on how to read it or its caveat } — or null. Give roughly half of the sections an evidence fold, preferring those that rest on a breakdown. Use each breakdown somewhere in the chapter where it informs the argument; reuse an exhibit only in a different view.",
+    "- lens: which leadership question it answers (" + INSIGHT_LENSES.map(l => l.id).join(", ") + "); priority high, medium or low.",
+    `document.recommendations: ${shape.recs} numbered actions ordered by expected value, each following from a section. title: an imperative of at most 14 words (e.g. 'Book the second visit before the member leaves the building'); owner: the team best placed to act; horizon; reasoning: 40–90 words citing the exact supplied figures that justify the action, the key figure in **double asterisks**; impact: 40–90 words on what changes and its indicative size, with the arithmetic when it rests on an average, labelled indicative — never a promised uplift.`,
+    "document.method: 2–4 paragraphs of 40–100 words for 'Method and limitations': what was read (sources, record counts, scope and period), how the key terms are defined, and what the data cannot show or which comparisons are unsafe.",
+    `Comparison emphasis: ${COMPARISON_FOCUS[o.comparisonFocus]}`,
+    o.quantifyImpact ? "Value what is at stake in rupees, members, seats or sessions wherever the figures allow, with the arithmetic." : "Do not value impact in rupees unless a supplied figure states it.",
+    "questions: 6–8 hard questions senior leadership is likely to ask about this chapter, each with a 25–60 word evidence-based answer; say plainly when the data cannot answer.",
+    "EXHIBITS (ref: what it shows):\n" + (catalog.length ? catalog.map(e => `${e.ref}: ${e.describe}`).join("\n") : "none — sections carry prose only"),
   ].join("\n");
 }
-
-/** v3: the chapter-level briefing, decision, performer commentary and question bank. Shown on screen except questions. */
-const CHAPTER_RULES = [
-  "BRIEFING (the chapter's first page; each field answers one leadership question and must add something the cards do not):",
-  "briefing.takeaways: 3–5 takeaways of at most 18 words each, every one carrying a specific supplied number and its comparison. No two about the same movement.",
-  "briefing.whatChanged: 35–60 words — the size and direction of the month's movement across the lead measures, against the previous month, the same month last year and the year's run.",
-  "briefing.whyItMoved: 45–80 words — the quantified decomposition (volume vs rate vs mix, which rows added or removed how much) and the leading hypothesis, labelled as such, with the check that would confirm it.",
-  "briefing.whereItSits: 30–50 words — the specific segments, slots, products, channels or people that carry the movement, with shares or contributions. Say 'broad-based' with evidence when it is.",
-  "briefing.whatHeldUp: 25–45 words — the strongest counter-signal and why it matters for the reading.",
-  "briefing.outlook: 35–60 words — durability verdict (new, persistent, reversing, seasonal, one-off) and what the supplied run-rate or seasonal arithmetic implies for next month, as conditional scenarios only.",
-  "briefing.soWhat: 35–60 words — the business consequence for members, revenue, capacity or brand if nothing changes, valued where the evidence allows.",
-  "DECISION FOR LEADERSHIP (one decision for this chapter, written for a CEO who will ask 'why should I agree?'):",
-  "decision.call: at most 22 words — the specific decision to take: what changes, where and for whom.",
-  "decision.rationale: 50–90 words — why this decision follows from the evidence and beats doing nothing.",
-  "decision.evidence: 3–5 data points of at most 22 words each, every one an exact supplied figure with its comparison period or breakdown row.",
-  "decision.expectedImpact: 25–50 words — the indicative value at stake with its arithmetic shown, labelled indicative; never a promised uplift.",
-  "decision.successMeasure: at most 30 words — the metric, threshold and review month that would show the decision is working.",
-  "decision.risks: 25–45 words — what could go wrong or be misread, and the guardrail.",
-  "decision.alternative: 25–45 words — the most credible alternative and why the evidence prefers the call.",
-  "decision.owner: the team best placed to own it. decision.horizon: when to act.",
-  "PERFORMERS (commentary beside the ranked top and bottom lists of the breakdowns): performers.leaders 35–60 words on what the top-ranked rows share and how far ahead they are, with numbers; performers.laggards 35–60 words on the bottom rows, sample-size caveats and what lifting them to the median would be worth where supplied; performers.pattern 25–45 words on the pattern across breakdowns (time, format, instructor, product) the presenter should point to. For chapters without breakdowns use empty strings.",
-  "QUESTIONS (for the presenter's private notes, not shown on screen): 6–8 hard questions senior leadership is likely to ask about this chapter — cause, durability, comparison with last year, money at stake, ownership, data coverage, what the data cannot show — each with a 25–60 word evidence-based answer. Say plainly when the supplied data cannot answer and what would.",
-];
 
 const ACCURACY_RULES = [
   'Accuracy rules (these override style):',
@@ -236,15 +216,11 @@ const ACCURACY_RULES = [
   'Future figures may use only the supplied conditional scenario arithmetic. Never call scenarios likely outcomes or add probabilities or ranges.',
 ].join('\n');
 
-const cardCount = (model: ReportModel, derived = false) => {
-  const n = reportOptions(model.customization).insightsPerChapter;
-  return derived ? `${n}–${n + 2}` : `${Math.max(2, n - 1)}–${n + 1}`;
-};
-
-const DERIVED_RULES: Record<string, (model: ReportModel) => string> = {
-  'executive-summary': model => `Write the executive brief across all tabs. Return one kpis verdict card and ${cardCount(model,true)} cross-report insights, ranked by materiality: the biggest wins, the biggest risks, the movement that best explains the month and the largest opportunity. Connect chapters (cash versus attendance, acquisition quality versus volume, member continuity, instructor and schedule mix) where the evidence supports it. Do not treat historical LTV as future revenue at risk.`,
-  recommendations: model => `Return ${cardCount(model,true)} evidence-led recommendations, ordered by priority. Each must follow from a material selected-month finding and its year context. action is the move; recommendation explains why it beats the alternative, the trade-off and its guardrail; watch is how leadership will know it is working. ownerArea is a team, never a person. Do not promise uplift. Keep valuations conditional and distinct from actual cash.`,
-  predictions: () => 'Explain only the supplied conditional scenarios, assumptions and their connection to selected-month performance. These are not forecasts. No probabilities, deadlines or task lists.',
+/** What each derived chapter is about, for the long-form document. */
+const DERIVED_DOCUMENT: Record<string, string> = {
+  'executive-summary': 'This is the studio overview: the whole month across every chapter in one reading. Its sections connect the chapters — cash against attendance, acquisition volume against quality, continuity, instructors and the timetable — and each section names the chapter whose figures it rests on. Do not treat historical LTV as future revenue at risk. Recommendations are the cross-report priorities.',
+  recommendations: 'This chapter is the action plan. Its few sections explain how the actions were chosen and ranked and what they share; the weight is in the recommendations, each following from a material selected-month finding named in its reasoning, with the trade-off and guardrail in its impact. Owners are teams, never people. Keep valuations conditional and distinct from actual cash.',
+  predictions: 'This chapter explains only the supplied conditional scenarios: what next month looks like if the month repeats, if last month\'s movement repeats, at the three-month run rate and with last year\'s seasonality, and which leading signals would tell them apart. These are not forecasts: no probabilities, ranges or invented numbers. Its recommendations are the signals to watch and the review to hold.',
 };
 
 type ParsedChapter = { summary?: string; cards?: InsightCard[] } & Partial<Pick<ChapterNarrative, "briefing" | "decision" | "performers" | "questions">>;
@@ -474,9 +450,9 @@ export async function generateNarratives(
         const message = chapterPrompt([
           ANALYST_ROLE,
           ACCURACY_RULES,
-          insightRules(model, spec),
+          documentRules(model, spec),
           `You are writing the "${spec.title}" chapter of the monthly management report for ${model.scope.studio}, ${monthLabel(model.scope.month)}.`,
-          DERIVED_RULES[spec.id]?.(model) ?? `Return ${cardCount(model)} cards: one "kpis" verdict card, ${data?.history.length ? "at most one \"trend\" card if the history shows something the findings do not, " : ""}and the rest as ranked insights built from the analyst findings. Breakdown IDs available for focus: ${focusIds.join(", ") || "none"}. Most breakdowns should not get their own card.`,
+          DERIVED_DOCUMENT[spec.id] ?? `Build the sections from the analyst findings, the breakdowns and the monthly history: the findings say what matters, the breakdowns and trends are the exhibits that prove it.`,
           "AVAILABLE METRIC IDS (id: label): " + metricIds.map(id => `${id}: ${definition(id)?.label ?? id}`).join("; "),
           preferences ? `Editorial preferences (subject to the evidence and accuracy rules above): ${preferences.slice(0, 8000)}${preferences.length > 8000 ? " [Long editorial preferences shortened.]" : ""} Do not invent figures or change metric definitions to satisfy preferences.` : "",
         ], [
@@ -485,9 +461,10 @@ export async function generateNarratives(
           ...(!spec.derived ? [{ label: "Figures:", text: figures }] : []),
           { label: "All-tab performance context (independent of visible chapter selection):", text: portfolio },
         ]);
-        const extra = { insightVersion: 3, metricIds, lenses: spec.id === "recommendations" ? ["next_step"] : o.lenses.filter(l => l !== "next_step") };
+        const refs = exhibitCatalog(model, spec).map(e => e.ref);
+        const extra = { insightVersion: 4, metricIds, exhibitRefs: refs, lenses: o.lenses };
         // Include complete pre-budget evidence: changes to omitted records must invalidate reuse too.
-        const fingerprint = await analysisKey({ version: 13, providerModel, providerPolicy, message, focusIds, extra,
+        const fingerprint = await analysisKey({ version: 14, providerModel, providerPolicy, message, focusIds, extra,
           figures, portfolio, preferences, scenarios: spec.id === "predictions" ? forwardScenarios(model) : "" });
         const key = `${CACHE_PREFIX}${model.scope.studio}:${model.scope.month}:${spec.id}:${fingerprint}`;
         const previous = model.narratives[spec.id];
@@ -499,22 +476,15 @@ export async function generateNarratives(
         let usage: ChapterUsage | undefined;
         try {
           const parsed = parseJson(await askModel(message, focusIds, signal, (call) => { usage = addCall(usage, call); },
-            { ...extra, analysisKey: fingerprint }));
-          const cards = Array.isArray(parsed?.cards)
-            ? parsed!.cards.filter(
-                (c): c is InsightCard =>
-                  !!c && typeof c.headline === "string" && !!c.headline.trim(),
-              )
-            : [];
-          const valid = cards.every(c => [c.meaning,c.evidence].every(v => typeof v === "string" && !!v.trim()) && !!c.focus && !!(c.lens || c.category) && !!c.confidence);
-          // Cited ids outside this chapter's figures would render as blank evidence.
-          for (const c of cards) c.metrics = (Array.isArray(c.metrics) ? c.metrics : []).filter(id => metricIds.includes(id)).slice(0, 4);
-          if (!valid || !cards.length || typeof parsed?.summary !== "string" || !parsed.summary.trim())
+            { ...extra, analysisKey: fingerprint })) as (ParsedChapter & { verdict?: InsightCard; document?: unknown }) | null;
+          const document = cleanDocument(parsed?.document, refs);
+          const v = parsed?.verdict;
+          if (!document || !v || typeof v.headline !== "string" || !v.headline.trim() || typeof parsed?.summary !== "string" || !parsed.summary.trim())
             throw new Error("The model returned no complete chapter analysis. Retry writing insights.");
-          // The verdict leads; a model that forgot to mark one has its first card promoted.
-          if (!cards.some(c => c.focus === "kpis")) cards[0] = { ...cards[0], focus: "kpis" };
-          const narrative: ChapterNarrative = { summary: parsed.summary.trim(), cards, generated: true, usage, analysisKey: fingerprint,
-            ...chapterExtras(parsed) };
+          // Cited ids outside this chapter's figures would render as blank evidence.
+          const verdict: InsightCard = { ...v, evidence: v.evidence || v.meaning, action: v.action ?? "", focus: "kpis", metrics: (Array.isArray(v.metrics) ? v.metrics : []).filter(id => metricIds.includes(id)).slice(0, 4) };
+          const narrative: ChapterNarrative = { summary: parsed.summary.trim(), document, cards: cardsFromDocument(document, verdict, spec.id === "recommendations"),
+            generated: true, usage, analysisKey: fingerprint, ...chapterExtras(parsed) };
           if (providerModel) writeCache(key, narrative);
           finish(spec, narrative);
         } catch (error) {
