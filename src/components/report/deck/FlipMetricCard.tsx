@@ -7,7 +7,6 @@ import { currentSnapshotMetrics } from "../../../semantics/evidence";
 import type { ChapterData } from "../../../report/model";
 import { axisStyle, chartPalette, tooltipStyle, useChart } from "./useChart";
 import { useRecordDrilldown } from "./RecordDrilldown";
-import { MetricNotes } from "./MetricNotes";
 
 const direction = (id: string, value: unknown, prior: unknown) => {
   if (value == null || prior == null || Number(value) === Number(prior)) return "flat";
@@ -53,7 +52,7 @@ export function FlipMetricCard({ id, data, target, flipped, onToggle }: { id: st
   const drilled = useRef(false);
   return <div className="deck-flip" data-flipped={flipped}>
     <div className="deck-flip-inner">
-      <article className="deck-kpi deck-flip-face deck-flip-front" data-tone={mom} role="button" tabIndex={0} aria-pressed={flipped} aria-label={`${m?.label}: ${fmt(id, value)}. Show 14-month history`}
+      <article className="deck-kpi deck-flip-face deck-flip-front" role="button" tabIndex={0} aria-pressed={flipped} aria-label={`${m?.label}: ${fmt(id, value)}. Show 14-month history`}
         title="Click for 14 months of history" onClick={toggle} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } }}>
         <div className="deck-kpi-label"><span title={m?.label}>{m?.label ?? id}</span><ChartColumnBig size={13} aria-hidden="true" className="deck-flip-hint"/></div>
         <div className="deck-kpi-reading">
@@ -77,7 +76,6 @@ export function FlipMetricCard({ id, data, target, flipped, onToggle }: { id: st
           <div><dt>Avg</dt><dd>{fmt(id, finite.reduce((a, b) => a + b, 0) / finite.length)}</dd></div>
           <div><dt>{monthLabel(String(data.history.at(-1)?.month ?? "")).split(" ")[0] || "Latest"}</dt><dd>{fmt(id, value)}</dd></div>
         </dl>}
-        <MetricNotes id={id} data={data} compact />
       </article>
     </div>
   </div>;
