@@ -11,6 +11,8 @@ npm run dev
 
 Development starts the frontend on port 5173 and the Sheets gateway on port 8787. If either port is occupied, the server selects the next available port and prints its URL. The frontend API proxy automatically follows the selected gateway port. Set `PORT` for the preferred gateway port and `VITE_PORT` (or `npm run dev -- --port 5175`) for the preferred frontend port. Node 20 or newer is required.
 
+To review the monthly report's design without sheet or model credentials, `npm run preview:report` serves the real `/report` route against one clearly-labelled synthetic snapshot and prints a ready `/report?id=…` link. It is a design harness only; the application never imports it and contains no demo records.
+
 ```bash
 npm run build
 npm run start
