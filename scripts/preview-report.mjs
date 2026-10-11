@@ -24,6 +24,12 @@ import { stickyNoteRoutes } from "../server/sticky-notes.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PREFERRED_PORT = Number(process.env.PREVIEW_PORT || 5179);
+/**
+ * The snapshot is mirrored under a fixed id. The save route always assigns its own uuid,
+ * but a design preview is reloaded and restarted many times during a review, and the link
+ * has to keep working across both.
+ */
+const PREVIEW_REPORT_ID = "6f1c0d94-3a7b-4e52-9d18-5c8ab7e2f340";
 
 /* ------------------------------------------------------------------ server ---
    The report store is in memory; a minimal cloud double satisfies the listing
@@ -77,8 +83,28 @@ const api = createHttpServer(app);
 await new Promise((resolve, reject) => { api.once("error", reject); api.listen(0, "127.0.0.1", resolve); });
 const apiPort = api.address().port;
 
+// The preview panel opens the port root. Send that to the report page rather than the
+// dashboard shell, which has no snapshot to show without credentials. A plugin's
+// `configureServer` runs before Vite installs its own HTML middleware, so this wins.
+const preview = { reportPath: "" };
+const reportPreviewPlugin = {
+  name: "report-design-preview",
+  configureServer(server) {
+    server.middlewares.use((req, res, next) => {
+      const pathname = (req.url || "/").split("?")[0];
+      if (preview.reportPath && (pathname === "/" || pathname === "/index.html")) {
+        res.writeHead(302, { Location: preview.reportPath, "Cache-Control": "no-store" });
+        res.end();
+        return;
+      }
+      next();
+    });
+  },
+};
+
 const vite = await createViteServer({
   configFile: path.join(root, "vite.config.ts"),
+  plugins: [reportPreviewPlugin],
   server: {
     host: "0.0.0.0",
     port: PREFERRED_PORT,
@@ -95,9 +121,14 @@ const port = vite.config.server.port;
 const published = await fetch(`http://127.0.0.1:${apiPort}/api/reports`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(FIXTURE) });
 const saved = published.ok ? await published.json() : null;
 if (!saved) console.error(`Could not publish the preview snapshot: ${published.status} ${await published.text()}`);
-const url = `http://localhost:${port}/report?id=${saved?.id ?? ""}`;
+// Mirror the validated snapshot so the preview link is the same on every restart.
+if (saved) await store.write(`.floor/reports/${PREVIEW_REPORT_ID}.json`, { ...saved, id: PREVIEW_REPORT_ID });
+preview.reportPath = `/report?id=${PREVIEW_REPORT_ID}`;
+const url = `http://localhost:${port}${preview.reportPath}`;
 
-console.log(`\n  Report design preview  →  ${url}\n  Synthetic figures for layout review only (14 months, ${MONTHS[0]}…${MONTHS.at(-1)}, ${STUDIO}).`);
+console.log(`\n  Report design preview  →  ${url}`);
+console.log(`  The port root opens this page, and the link stays valid across restarts.`);
+console.log(`  Synthetic figures for layout review only (14 months, ${MONTHS[0]}…${MONTHS.at(-1)}, ${STUDIO}).`);
 console.log(`  API on 127.0.0.1:${apiPort} · frontend on 0.0.0.0:${port} · Ctrl+C to stop\n`);
 
 const shutdown = async () => { await vite.close(); api.closeAllConnections(); api.close(); process.exit(0); };
