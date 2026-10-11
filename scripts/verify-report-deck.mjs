@@ -85,7 +85,12 @@ try {
   await page.locator('.deck-nav').waitFor();
   // Fixed navbar at the very top.
   const nav = await page.locator('.deck-nav').boundingBox(); assert.equal(Math.round(nav.y), 0);
-  assert.equal(await page.locator('.deck-nav').evaluate(el => getComputedStyle(el).position), 'fixed');
+  assert.ok(['fixed', 'sticky'].includes(await page.locator('.deck-nav').evaluate(el => getComputedStyle(el).position)), 'the chapter nav is pinned above the scroll area');
+  // The report must actually scroll: the deck is a viewport-height column and .deck-main is its scroll area.
+  assert.ok(['auto', 'scroll'].includes(await page.locator('#main').evaluate(el => getComputedStyle(el).overflowY)), '.deck-main is the scroll container');
+  assert.ok(await page.locator('#main').evaluate(el => { el.scrollTop = 400; return el.scrollTop; }) > 0, 'the report body scrolls vertically');
+  assert.equal(Math.round((await page.locator('.deck-nav').boundingBox()).y), 0, 'the nav does not scroll away with the page');
+  await page.locator('#main').evaluate(el => el.scrollTo({ top: 0 }));
   await page.waitForTimeout(500); await page.screenshot({ path: `${shots}/deck-cover.png` });
   assert.ok(await page.locator('.dk-score').count() >= 2, 'cover carries the chapter scorecard');
   await page.locator('.dk-scorecard').scrollIntoViewIfNeeded(); await page.waitForTimeout(300); await page.screenshot({ path: `${shots}/deck-cover-2.png` });

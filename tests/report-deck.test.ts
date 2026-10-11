@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import express from 'express';
 import { reportRoutes } from '../server/reports.mjs';
 import { deckTabs, deckPages, liveNotes, sectionContext } from '../src/report/deck.ts';
@@ -151,4 +152,76 @@ test('a clicked figure narrows to the records that make it up', async () => {
   const fill = metricRecordFocus('fill_rate')!;
   assert.ok(fill.rate && fill.where?.includes('capacity') && fill.flag?.includes('checked_in'), 'rates keep the denominator and flag the numerator');
   assert.equal(metricRecordFocus('not_a_metric'), null);
+});
+
+/**
+ * The report is its own viewport: `.deck` is a fixed-height column and `.deck-main` is the
+ * only thing that scrolls. A stylesheet edit once left the deck with a height and no scroll
+ * container, which clipped the whole report to a single screen — nothing else in the suite
+ * noticed, because every other check renders markup without laying it out. This resolves the
+ * chain from the stylesheet itself, at the widths the deck is read at.
+ */
+function cssRules(source: string, media: string | null = null, out: { selectors: string[]; decls: Map<string, string>; media: string | null }[] = []) {
+  const css = source.replace(/\/\*[\s\S]*?\*\//g, "");
+  let i = 0;
+  while (i < css.length) {
+    const brace = css.indexOf("{", i);
+    if (brace < 0) break;
+    const semi = css.indexOf(";", i);
+    if (semi >= 0 && semi < brace) { i = semi + 1; continue; }
+    const prelude = css.slice(i, brace).trim();
+    let depth = 1, j = brace + 1;
+    while (j < css.length && depth > 0) { if (css[j] === "{") depth++; else if (css[j] === "}") depth--; j++; }
+    const body = css.slice(brace + 1, j - 1);
+    if (prelude.startsWith("@")) {
+      if (/^@(media|supports|container|layer)/.test(prelude)) cssRules(body, prelude.startsWith("@media") ? prelude : media, out);
+    } else {
+      const decls = new Map<string, string>();
+      for (const part of body.split(";")) {
+        const colon = part.indexOf(":");
+        if (colon > 0) decls.set(part.slice(0, colon).trim(), part.slice(colon + 1).trim());
+      }
+      out.push({ selectors: prelude.split(",").map(s => s.trim()), decls, media });
+    }
+    i = j;
+  }
+  return out;
+}
+const mediaApplies = (params: string | null, width: number, mode: "screen" | "print") => {
+  if (!params) return true;
+  if (/print/i.test(params)) return mode === "print";
+  if (/prefers-reduced-motion/i.test(params)) return false;
+  if (mode === "print") return false;
+  const max = params.match(/max-width:\s*(\d+)px/), min = params.match(/min-width:\s*(\d+)px/);
+  return (!max || width <= Number(max[1])) && (!min || width >= Number(min[1]));
+};
+function effective(css: string, selector: string, width: number, mode: "screen" | "print" = "screen") {
+  const props = new Map<string, string>();
+  for (const rule of cssRules(css)) {
+    if (!mediaApplies(rule.media, width, mode)) continue;
+    if (!rule.selectors.includes(selector)) continue;
+    for (const [prop, value] of rule.decls) props.set(prop, value);
+  }
+  return props;
+}
+
+test('the deck scrolls its own body, at every width it is read at', () => {
+  const css = readFileSync(new URL("../src/design/report-deck.css", import.meta.url), "utf8");
+  for (const width of [1600, 1440, 1280, 1024, 760, 390]) {
+    const deck = effective(css, ".report-page.deck", width);
+    const body = effective(css, ".deck-body", width);
+    const main = effective(css, ".deck-main", width);
+    assert.equal(deck.get("display"), "flex", `deck is a column at ${width}px`);
+    assert.equal(deck.get("flex-direction"), "column", `deck is a column at ${width}px`);
+    assert.match(deck.get("height") ?? "", /100(d)?vh/, `deck is viewport height at ${width}px`);
+    assert.equal(deck.get("overflow"), "hidden", `deck does not scroll as a document at ${width}px`);
+    assert.equal(body.get("flex"), "1", `body takes the height left by the nav at ${width}px`);
+    assert.equal(body.get("min-height"), "0", `body may shrink below its content at ${width}px`);
+    assert.equal(main.get("overflow-y"), "auto", `the report body scrolls at ${width}px`);
+    assert.equal(main.get("flex"), "1", `the report body takes the width left by the drawer at ${width}px`);
+  }
+  // Printing lays the whole document out: nothing may stay locked to a viewport height.
+  const printDeck = effective(css, ".deck-main", 1024, "print");
+  assert.equal(printDeck.get("overflow"), "visible", "print shows the report in full");
+  assert.equal(printDeck.get("height"), "auto", "print sets no viewport height");
 });

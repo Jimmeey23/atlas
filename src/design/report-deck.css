@@ -156,8 +156,15 @@
 /* ==========================================================================
    3. Page: title block, section tabs, pager
    ========================================================================== */
-.deck-body{max-width:1320px;margin:0 auto}
-.deck-main{padding:0 34px 96px}
+/* The scroll chain. The deck is a fixed-height column: the chapter nav sits above the
+   scroll area, .deck-body is the flex track that fills what is left, and .deck-main is the
+   one thing that scrolls. If .deck-main loses its overflow, the report is clipped to a
+   single screen and no gesture brings the rest back, so these rules belong together.
+   Content is centred by padding rather than by a max-width so the scrollbar stays at the
+   window edge; the 1,252px cap is 1,320px of column less the 34px gutters. */
+.deck-nav{flex:0 0 auto}
+.deck-body{flex:1;min-height:0;display:flex;width:100%}
+.deck-main{flex:1;min-width:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable;padding:0 max(34px,calc((100% - 1252px) / 2)) 96px}
 .deck-page-head{display:grid;gap:14px;padding:var(--d-s5) 0 var(--d-s4)}
 .deck-page-title{display:grid;gap:8px}
 .deck-page-title .deck-eyebrow{color:var(--dk-ink-3)}
@@ -913,7 +920,11 @@
 .deck-loading-page h1{font-family:var(--font-display);font-size:var(--d-fs-5);font-weight:600;letter-spacing:-.02em;margin:0}
 .deck-loading-page p{margin:0;font-size:var(--d-fs-3);color:var(--text-3);max-width:52ch;line-height:1.6}
 .deck-loading-page svg{color:var(--accent)}
-.report-page.deck{display:block;height:100dvh;overflow:hidden}
+/* The report is its own viewport: a column of nav + body, the page scrolls inside the
+   body rather than the document, so the chapter nav and the read bar never scroll away.
+   Keep the height here and the overflow on .deck-main together — with a height but no
+   scroller the report is clipped to one screen and no gesture brings the rest back. */
+.report-page.deck{display:flex;flex-direction:column;height:100vh;height:100dvh;max-height:100vh;max-height:100dvh;overflow:hidden}
 
 /* ==========================================================================
    17. Container queries and breakpoints
