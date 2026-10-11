@@ -4,6 +4,7 @@ import { EvidenceBlock } from "../ReportEvidence";
 import { InsightDrilldown } from "../InsightDrilldown";
 import { FocusTrend, lensLabel, lensOf, metricSource, Spark } from "../Insight";
 import { useRecordDrilldown } from "./RecordDrilldown";
+import { MetricNotes } from "./MetricNotes";
 import { chapters } from "../../../report/chapters";
 import { definition, reportFmt as fmt, reportDelta as delta } from "../../../report/definitions";
 import type { ChapterData, InsightCard, InsightLens, ReportModel } from "../../../report/model";
@@ -84,7 +85,10 @@ export function DeckInsightCard({ card, model, chapterId, index, total, plan = f
         {cited[0] && drill && <button type="button" className="deck-proof-toggle" onClick={() => drill({ metric: cited[0].id, chapterId: chapterId, table, group: card.highlight?.[0] })}><Database size={13}/>Explore records</button>}
         {(table || cited[0]) && <button type="button" className="deck-proof-toggle" aria-expanded={chart} onClick={() => setChart(c => !c)}><ChartNoAxesColumn size={13}/>{chart ? "Hide chart" : table ? `Show ${table.title.toLowerCase()}` : "Show trend"}</button>}
         </div>
-        {!!cited.length && <details className="deck-proof-definitions"><summary>Definitions & source coverage</summary>{cited.map(({ id, data }) => <p key={id}><b>{definition(id)?.label}</b> · {definition(id)?.description}<br/>{data.n.toLocaleString('en-IN')} contributing records · {data.history.length} months. {data.notes?.join(' ')}</p>)}</details>}
+        {!!cited.length && <details className="deck-proof-definitions"><summary>Definitions &amp; source coverage</summary>{cited.map(({ id, data }) => <div className="deck-proof-definition" key={id}>
+          <b>{definition(id)?.label ?? id}</b>
+          <MetricNotes id={id} data={data} />
+        </div>)}</details>}
         {!fullVisual && visual}
       </aside>}
       {fullVisual && visual}

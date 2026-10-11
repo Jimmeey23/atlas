@@ -7,6 +7,7 @@ import { currentSnapshotMetrics } from "../../../semantics/evidence";
 import type { ChapterData } from "../../../report/model";
 import { axisStyle, chartPalette, tooltipStyle, useChart } from "./useChart";
 import { useRecordDrilldown } from "./RecordDrilldown";
+import { MetricNotes } from "./MetricNotes";
 
 const direction = (id: string, value: unknown, prior: unknown) => {
   if (value == null || prior == null || Number(value) === Number(prior)) return "flat";
@@ -76,6 +77,7 @@ export function FlipMetricCard({ id, data, target, flipped, onToggle }: { id: st
           <div><dt>Avg</dt><dd>{fmt(id, finite.reduce((a, b) => a + b, 0) / finite.length)}</dd></div>
           <div><dt>{monthLabel(String(data.history.at(-1)?.month ?? "")).split(" ")[0] || "Latest"}</dt><dd>{fmt(id, value)}</dd></div>
         </dl>}
+        <MetricNotes id={id} data={data} compact />
       </article>
     </div>
   </div>;

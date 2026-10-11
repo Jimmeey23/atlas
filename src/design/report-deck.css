@@ -1089,3 +1089,15 @@
 .dk-x-loading-note b{font-weight:650;color:var(--dk-ink-2)}
 .dk-x-skeleton{margin-top:14px;display:grid;gap:9px}
 .dk-x-skeleton span{display:block;height:9px;border-radius:var(--d-r-1);background:color-mix(in srgb,var(--dk-ink) 7%,transparent)}
+
+/* What a figure counts, how it is combined, where it comes from: available on demand, out of the reading path. */
+.deck-def{margin:10px 0 2px;display:grid;gap:5px}
+.deck-def>div{display:grid;grid-template-columns:minmax(96px,132px) minmax(0,1fr);gap:10px;align-items:baseline}
+.deck-def dt{font-size:var(--d-fs-1);text-transform:uppercase;letter-spacing:.06em;color:var(--dk-ink-3)}
+.deck-def dd{margin:0;font-size:var(--d-fs-2);line-height:1.5;color:var(--dk-ink-2)}
+.deck-def code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:var(--d-fs-1);color:var(--dk-ink-2);background:color-mix(in srgb,var(--dk-ink) 4%,transparent);padding:1px 5px;border-radius:var(--d-r-1);word-break:break-word}
+.deck-proof-definition{display:grid;gap:2px;padding-top:10px}
+.deck-proof-definition + .deck-proof-definition{border-top:1px solid var(--dk-line);margin-top:10px}
+.deck-proof-definition>b{font-size:var(--d-fs-2);color:var(--dk-ink)}
+.deck-def-compact{margin:8px 0 0;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;font-size:var(--d-fs-1);color:var(--dk-ink-3)}
+.deck-def-compact code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dk-ink-3);opacity:.85;overflow-wrap:anywhere}
