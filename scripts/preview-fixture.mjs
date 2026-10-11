@@ -355,6 +355,16 @@ export const FIXTURE_NARRATIVES = {
   recommendations: {
     generated: true,
     summary: "Three moves for October, in priority order, each with the evidence that justifies it and the signal that would show it worked.",
+    decision: {
+      call: "Call every dormant member with a class-pack offer before 15 October, then review whether the offer or the pricing is the constraint",
+      rationale: "Dormant balances are the largest recoverable value in the month, and a call costs a fraction of acquiring the same member. The offer is deliberately narrow: it targets members who have already paid and stopped attending, without discounting the price of new memberships.",
+      evidence: ["96 dormant memberships, the year's high", "524 visits of recoverable frequency", "₹4.4L of balance expires within 30 days", "Members on the offer return at 38% against 54% for expiring memberships"],
+      expectedImpact: "Indicative ≈₹1.1L a month if one extra visit a month is recovered across dormant members; overlaps with the pricing move below.",
+      successMeasure: "Reactivations above 20% of called members by the October review.",
+      risks: "Calling load falls on the front desk in the same fortnight as renewals; cap the list at dormant members only, and script the call so pricing is not discounted by word of mouth.",
+      alternative: "Discounting new memberships would bring volume back faster, but it spends the order value that is currently holding collections up.",
+      owner: "Sales & front desk", horizon: "Immediate",
+    },
     cards: [
       { headline: "Win back dormant members", focus: "kpis", lens: "next_step", priority: "high", confidence: "high", meaning: "The largest recoverable value in the month.", evidence: "524 visits of recoverable frequency; 96 dormant memberships.", action: "Call every dormant member with a class-pack offer before 15 October.", recommendation: "Cheaper than acquisition at the current cost per member.", ownerArea: "Sales & front desk", horizon: "Immediate", impact: "≈₹1.1L a month", watch: "Reactivations above 20%." },
       { headline: "Fix Saturday Barre", focus: "cross", lens: "next_step", priority: "high", meaning: "The decline is concentrated enough for a single scheduling change to address.", evidence: "−104 visits on Saturdays, 70% of the studio decline.", action: "Rotate the 09:30–11:00 Barre instructors and re-open two trial places per class.", recommendation: "Targets the drop directly without disturbing slots that held.", ownerArea: "Instructor management", horizon: "Next 30 days", impact: "≈₹3.7L a month", watch: "Saturday fill above 70%." },

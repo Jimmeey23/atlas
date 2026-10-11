@@ -88,6 +88,8 @@ export function DataExplorer({ model, spec, selection }: { model: ReportModel; s
     return [...map].map(([name, rows]) => ({ name, rows })).sort((a, b) => sort && numeric.includes(sort.key) ? (sort.desc ? -1 : 1) * (sum(a.rows, sort.key) - sum(b.rows, sort.key)) : b.rows.length - a.rows.length);
   }, [filtered, group, sort, numeric]);
   const pages = Math.max(1, Math.ceil((group ? groups.length : filtered.length) / PAGE));
+  // The chapter's frozen record count orients the reader while the live rows load.
+  const floor = model.chapters[spec.id]?.n ?? 0;
   const at = Math.min(page, pages - 1);
   const shown = filtered.slice(at * PAGE, (at + 1) * PAGE);
   const shownGroups = groups.slice(at * PAGE, (at + 1) * PAGE);
@@ -100,9 +102,9 @@ export function DataExplorer({ model, spec, selection }: { model: ReportModel; s
       <span className="deck-explorer-title"><Database size={14}/>{spec.nav} source · {model.scope.studio}{spec.network ? " (account level)" : ""} · {selection?.month ?? model.scope.month}{selection?.group ? ` · ${selection.group}` : ""}</span>
       <label className="deck-search"><Search size={13}/><input type="search" placeholder="Search these records…" aria-label="Search records" value={search} onChange={e => setSearch(e.target.value)} />{search && <button type="button" className="icon-button" aria-label="Clear search" onClick={() => setSearch("")}><X size={12}/></button>}</label>
       <label className="dk-x-group"><Layers size={13}/>Group by<DropdownField aria-label="Group records by" value={group} onChange={e => setGroup(e.target.value)}><option value="">No grouping</option>{available.filter(k => !isNumber(state.rows, k)).map(k => <option key={k} value={k}>{title(k)}</option>)}</DropdownField></label>
-      <details className="deck-columns"><summary className="button"><Columns3 size={12}/>Columns · {columns.length}</summary><div>
+      {!!columns.length && <details className="deck-columns"><summary className="button"><Columns3 size={12}/>Columns · {columns.length}</summary><div>
         <button type="button" className="button" onClick={() => setColumns(available)}>Show all {available.length}</button>
-        {available.map(k => <label key={k}><input type="checkbox" checked={columns.includes(k)} onChange={e => setColumns(c => e.target.checked ? [...c, k] : c.filter(x => x !== k))}/>{title(k)}</label>)}</div></details>
+        {available.map(k => <label key={k}><input type="checkbox" checked={columns.includes(k)} onChange={e => setColumns(c => e.target.checked ? [...c, k] : c.filter(x => x !== k))}/>{title(k)}</label>)}</div></details>}
       <button className="button" disabled={!filtered.length} onClick={() => exportCSV(`${spec.id}-${selection?.month ?? model.scope.month}-records`, filtered.map(r => Object.fromEntries(columns.map(c => [title(c), r[c]]))))}><Download size={12}/>CSV</button>
     </div>
     {selection && <div className="dk-x-context" role="status">
@@ -113,7 +115,11 @@ export function DataExplorer({ model, spec, selection }: { model: ReportModel; s
       {focus?.flag && <small>Rows marked “yes” count toward the numerator.</small>}
       {selection.metric && metricRecordFocus(selection.metric)?.where != null && <button type="button" className="button" onClick={() => setWiden(w => !w)}>{widen ? `Back to ${metricRecordFocus(selection.metric)!.label.toLowerCase()} records` : "Show every record"}</button>}
     </div>}
-    {state.loading && <p className="deck-loading" role="status"><Loader2 size={15} className="rb2-spin"/>Loading live source records…</p>}
+    {state.loading && <div className="dk-x-loading" role="status">
+      <p className="deck-loading"><Loader2 size={15} className="rb2-spin"/>Loading the live source records behind this chapter…</p>
+      <p className="dk-x-loading-note">{floor ? <>The frozen report counts <b>{floor.toLocaleString("en-IN")}</b> records for {monthLabel(selection?.month ?? model.scope.month)}. </> : null}These rows are the current source, not the frozen figures: group a column to check a sub-total, sort a column to settle a ranking, or open an item to see every field.</p>
+      <div className="dk-x-skeleton" aria-hidden="true">{[0, 1, 2, 3].map(i => <span key={i} style={{ width: `${[92, 78, 85, 64][i]}%` }}/>)}</div>
+    </div>}
     {state.error && <p className="notice" role="alert"><TriangleAlert size={13}/>Source records unavailable: {state.error}</p>}
     {!state.loading && !state.error && (!state.rows.length ? <p className="empty-state dk-x-empty">No source records match {selection?.group ? `“${selection.group}” in ` : ""}{selection?.month ?? model.scope.month}. The report's frozen figures may cover rows the live source no longer holds.</p> : <>
       <dl className="dk-x-summary">

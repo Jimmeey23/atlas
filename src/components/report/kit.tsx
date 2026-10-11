@@ -155,7 +155,7 @@ export function TrendChart({ history, ids, title, note }: { history: Row[]; ids:
       return <div className="r-small-chart" key={id}><b>{label(id)}</b><svg viewBox="0 0 690 165" role="img" aria-label={`${label(id)} monthly trend with actual units`}>
         {[floor, (peak + floor)/2, peak].map((v, i) => <g key={i}><line className="r-grid" x1="75" x2="665" y1={y(v)} y2={y(v)} /><text className="r-axis" x="68" y={y(v)+4} textAnchor="end">{fmt(id, v)}</text></g>)}
         <path d={path} fill="none" stroke="var(--r-primary-3)" strokeWidth="2.5" />
-        {values.map((v,i) => v == null ? null : <circle key={i} cx={x(i)} cy={y(v)} r="3" fill="var(--r-primary-3)"><title>{String(history[i].month)}: {fmt(id,v)}</title></circle>)}
+        {values.map((v,i) => v == null ? null : <circle key={i} cx={x(i)} cy={y(v)} r="3" fill="var(--r-primary-3)"><title>{`${String(history[i].month)}: ${fmt(id, v)}`}</title></circle>)}
         {history.map((row,i) => i % 3 === 0 || i === history.length-1 ? <text className="r-axis" key={i} x={x(i)} y="158" textAnchor="middle">{String(row.month).slice(2)}</text> : null)}
       </svg></div>;
     })}

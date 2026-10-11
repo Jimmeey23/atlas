@@ -111,7 +111,7 @@ export function FocusTrend({ id, history }: { id: string; history: Row[] }) {
     <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${label(id)} monthly trend`}>
       {[floor, peak].map((v, i) => <g key={i}><line className="r2-grid" x1="34" x2={W - 10} y1={y(v)} y2={y(v)} /><text className="r2-axis" x="30" y={y(v) + 3} textAnchor="end">{fmt(id, v)}</text></g>)}
       <path d={d} className="r2-trend-line" />
-      {values.map((v, i) => v == null ? null : <circle key={i} cx={x(i)} cy={y(v)} r={i === values.length - 1 ? 4 : 2.2} className={i === values.length - 1 ? 'r2-trend-now' : 'r2-trend-dot'}><title>{String(history[i].month)}: {fmt(id, v)}</title></circle>)}
+      {values.map((v, i) => v == null ? null : <circle key={i} cx={x(i)} cy={y(v)} r={i === values.length - 1 ? 4 : 2.2} className={i === values.length - 1 ? 'r2-trend-now' : 'r2-trend-dot'}><title>{`${String(history[i].month)}: ${fmt(id, v)}`}</title></circle>)}
       {history.map((row, i) => i % 3 === 0 || i === history.length - 1 ? <text key={i} className="r2-axis" x={x(i)} y={H - 4} textAnchor="middle">{String(row.month).slice(2)}</text> : null)}
     </svg></figure>;
 }
