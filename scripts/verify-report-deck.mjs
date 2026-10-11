@@ -63,7 +63,7 @@ const model = { scope: { studio: 'Kenkere House', month: months.at(-1) }, builtA
         risks: 'Instructor rotation can unsettle loyal regulars; keep the most-booked instructor on one of the two slots as a guardrail.', alternative: 'Cutting Saturday capacity would lift fill on paper but lose revenue; the evidence points to demand, not oversupply.', owner: 'Studio operations', horizon: 'Next 30 days' },
       performers: { leaders: 'PowerCycle leads on fill at 72%, ten points above Barre, and held its level against August.', laggards: 'Strength Lab trails at 55% fill on fewer sessions; its sample is thin, so treat it as a signal.', pattern: 'The gap is about Saturday morning Barre, not format quality overall.' },
       questions: [{ q: 'Is this seasonal?', a: 'Partly: September dipped last year too, but by 4%, not 15%.' }, { q: 'Did we lose members or visits?', a: 'Visits: active member count is flat; frequency fell.' }],
-      cards: [verdict('Attendance down 15.1% MoM as Barre and Saturday slots slipped'), { headline: 'Barre attendance fell 84 visits', meaning: 'Barre carries most of the decline.', evidence: '420 vs 504', action: 'Rebalance Saturday Barre slots.', focus: 'format', lens: 'risk', metrics: ['attendance'], highlight: ['Barre'], priority: 'high', confidence: 'medium', driver: 'Fewer repeat visits', concentration: 'Saturday 9–11am', offset: 'PowerCycle flat', trend: 'New', impact: '₹60k', watch: 'Saturday fill' }, { headline: 'PowerCycle held its fill rate', meaning: 'Evening demand is resilient.', evidence: '72% vs 71%', action: '', focus: 'format', lens: 'win', metrics: ['fill_rate'], priority: 'low', confidence: 'high' }] },
+      cards: [verdict('Attendance down 15.1% MoM as Barre and Saturday slots slipped'), { section: 'Saturday Barre carried the fall', headline: 'Barre attendance fell 84 visits', meaning: 'Barre carries most of the decline.', evidence: '420 vs 504', action: 'Rebalance Saturday Barre slots.', focus: 'format', lens: 'risk', metrics: ['attendance'], highlight: ['Barre'], priority: 'high', confidence: 'medium', driver: 'Fewer repeat visits', concentration: 'Saturday 9–11am', offset: 'PowerCycle flat', trend: 'New', impact: '₹60k', watch: 'Saturday fill' }, { section: 'Evenings held up', headline: 'PowerCycle held its fill rate', meaning: 'Evening demand is resilient.', evidence: '72% vs 71%', action: '', focus: 'format', lens: 'win', metrics: ['fill_rate'], priority: 'low', confidence: 'high' }] },
     'revenue-performance': { generated: true, summary: 'Collections were stable. Average order value rose.', cards: [verdict('Gross collections steady at ₹14.6L', { lens: 'win' })] },
     recommendations: { generated: true, summary: 'Three moves for October.', cards: [{ headline: 'Win back dormant members', meaning: 'Largest recoverable value.', evidence: '524 visits gap', action: 'Call dormant members with a class pack offer.', recommendation: 'Cheaper than acquisition.', focus: 'kpis', lens: 'next_step', priority: 'high', ownerArea: 'Sales & front desk', horizon: 'Immediate', impact: '≈₹3.7L/month', watch: 'Reactivations' }, { headline: 'Fix Saturday Barre', meaning: 'Concentrated decline.', evidence: '−104 visits', action: 'Rotate instructors on Saturday Barre.', recommendation: 'Targets the drop directly.', focus: 'cross', lens: 'next_step', priority: 'medium', ownerArea: 'Instructor management', horizon: 'Next 30 days', impact: '', watch: 'Saturday fill' }] },
   },
@@ -83,125 +83,117 @@ try {
   const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message)); page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|favicon/.test(m.text())) errors.push(m.text()); });
   await page.goto(`${url}/report?id=${saved.id}`);
   await page.locator('.deck-nav').waitFor();
-  // Fixed navbar at the very top.
+  // Fixed navbar at the very top, chapters only: no section tabs.
   const nav = await page.locator('.deck-nav').boundingBox(); assert.equal(Math.round(nav.y), 0);
   assert.equal(await page.locator('.deck-nav').evaluate(el => getComputedStyle(el).position), 'fixed');
+  assert.equal(await page.locator('.deck-sections').count(), 0, 'chapters are not split into section tabs');
   await page.waitForTimeout(500); await page.screenshot({ path: `${shots}/deck-cover.png` });
   assert.ok(await page.locator('.dk-score').count() >= 2, 'cover carries the chapter scorecard');
-  await page.locator('.dk-scorecard').scrollIntoViewIfNeeded(); await page.waitForTimeout(300); await page.screenshot({ path: `${shots}/deck-cover-2.png` });
-  await page.locator('#main').evaluate(el => el.scrollTo({ top: 0 }));
-  // Chapter tab → verdict with the new categories and flip cards.
-  await page.getByRole('navigation', { name: 'Report chapters' }).getByRole('button', { name: 'Schedule' }).or(page.locator('.deck-tabs button', { hasText: /Sessions|Schedule|Classes/ })).first().click();
-  await page.locator('.dk-brief').waitFor();
-  for (const label of ['What changed', 'Why it moved', 'Where it sits', 'What held up', 'Outlook', 'So what']) assert.ok(await page.locator('.dk-brief').getByText(label, { exact: true }).count(), `briefing shows ${label}`);
-  for (const label of ['Decision for leadership', 'Why this call', 'What the data says', 'Expected impact', 'Success measure', 'Risks & guardrail', 'Alternative considered']) assert.ok(await page.locator('.dk-decision').getByText(label, { exact: true }).count(), `decision shows ${label}`);
-  assert.ok((await page.locator('.deck-metric-grid').boundingBox()).y < (await page.locator('.dk-brief').boundingBox()).y, 'metric cards sit above the briefing');
-  assert.ok(await page.locator('.dk-takeaways li').count() >= 3, 'briefing lists takeaways'); await page.waitForTimeout(500);
-  await page.screenshot({ path: `${shots}/deck-verdict.png`, fullPage: false });
-  await page.locator('.dk-decision').scrollIntoViewIfNeeded(); await page.waitForTimeout(300); await page.screenshot({ path: `${shots}/deck-decision.png` });
-  const card = page.locator('.deck-flip').first();
-  await card.locator('.deck-flip-front').click();
-  assert.equal(await card.getAttribute('data-flipped'), 'true');
-  const second = page.locator('.deck-flip').nth(1);
-  await second.locator('.deck-flip-front').click(); await page.waitForTimeout(700);
-  assert.equal(await card.getAttribute('data-flipped'), 'false', 'flipping another card unflips the first');
-  assert.equal(await page.locator('.deck-flip[data-flipped=true]').count(), 1, 'only one card flipped');
-  await second.getByRole('button', { name: 'Flip back' }).click(); await page.waitForTimeout(700);
-  assert.equal(await second.getAttribute('data-flipped'), 'false', 'clicking again flips back');
-  await card.locator('.deck-flip-front').click();
-  await page.waitForTimeout(700);
-  assert.ok(await card.locator('.deck-flip-chart svg').count(), 'flipped card draws its 14-month chart');
-  await card.scrollIntoViewIfNeeded(); await page.screenshot({ path: `${shots}/deck-flip.png` });
-  // Speaker notes start closed and follow the page once opened; they never repeat on-screen text.
+  // The overview reads on from the cover as the executive document.
+  await page.locator('.cr-toc').first().scrollIntoViewIfNeeded(); await page.waitForTimeout(300); await page.screenshot({ path: `${shots}/deck-overview-doc.png` });
+  // A chapter is one document: kicker, title, lede, meta, contents, figures, numbered sections.
+  await page.locator('.deck-tabs button', { hasText: /Sessions|Schedule|Classes/ }).first().click();
+  await page.locator('.cr-head h1').waitFor();
+  assert.match(await page.locator('.cr-kick').innerText(), /Chapter \d+ of \d+/i);
+  assert.match(await page.locator('.cr-lede').innerText(), /Demand fell while supply held/);
+  assert.ok(await page.locator('.cr-meta span').count() >= 4, 'meta line under the lede');
+  const toc = await page.locator('.cr-toc a').allInnerTexts();
+  for (const title of ['Start here', 'Saturday Barre carried the fall', 'Evenings held up', 'Leaders and laggards', 'Month by month', 'What comes next', 'The breakdowns', 'Recommendations', 'Method and limitations'])
+    assert.ok(toc.some(t => t.includes(title)), `contents list ${title}`);
+  assert.equal(await page.locator('.cr-section').count(), toc.length, 'every contents entry is a section');
+  assert.ok(await page.locator('.cr-kpis .cr-figure').count() >= 4, 'key figures strip');
+  assert.ok((await page.locator('.cr-kpis').boundingBox()).y > (await page.locator('.cr-toc').boundingBox()).y, 'figures follow the contents');
+  await page.waitForTimeout(400); await page.screenshot({ path: `${shots}/deck-chapter-head.png` });
+  // Start here: the verdict as subheading, the briefing as prose, the one-line version and the decision.
+  const start = page.locator('.cr-section').first();
+  assert.match(await start.locator('.cr-sub').innerText(), /Attendance down 15\.1%/);
+  for (const lead of ['What changed.', 'Why it moved.', 'Where it concentrates.', 'What held up.', 'What to watch.']) assert.ok(await start.getByText(lead, { exact: true }).count(), `briefing reads ${lead}`);
+  assert.ok(await start.getByText('The one-line version, if you read nothing else').count());
+  for (const lead of ['Expected impact.', 'How we will know.', 'Risk and guardrail.', 'Alternative considered.']) assert.ok(await start.locator('[data-tone=decision]').getByText(lead, { exact: true }).count(), `decision reads ${lead}`);
+  await start.locator('[data-tone=decision]').scrollIntoViewIfNeeded(); await page.waitForTimeout(300); await page.screenshot({ path: `${shots}/deck-start-here.png` });
+  // A finding section: written title, headline as subheading, chart and the evidence fold.
+  await page.locator('.cr-toc a', { hasText: 'Saturday Barre carried the fall' }).click(); await page.waitForTimeout(700);
+  const finding = page.locator('.cr-section', { has: page.locator('h2', { hasText: 'Saturday Barre carried the fall' }) });
+  assert.match(await finding.locator('.cr-sub').innerText(), /Barre attendance fell 84 visits/);
+  assert.ok(await finding.locator('.r-evidence-block').count(), 'the finding carries its breakdown chart');
+  await finding.locator('.cr-ev summary').click();
+  assert.ok(await finding.locator('.cr-table tbody tr').count() >= 1, 'evidence fold lists the cited figures');
+  await page.screenshot({ path: `${shots}/deck-finding.png` });
+  // Speaker notes follow the section scrolled into view.
   assert.equal(await page.locator('.deck-drawer').getAttribute('data-open'), 'false', 'notes start closed');
   await page.getByRole('button', { name: 'Notes' }).click();
   assert.equal(await page.locator('.deck-drawer').getAttribute('data-open'), 'true');
   const opener = await page.locator('.deck-notes-opener').innerText();
-  await page.locator('.deck-sections').getByRole('tab', { name: /Insights/ }).click();
+  await page.locator('.cr-toc a', { hasText: 'Leaders and laggards' }).click();
+  await page.waitForURL(/#sessions\/performers$/); // the address follows the section in view
   await page.waitForFunction(previous => document.querySelector('.deck-notes-opener')?.textContent !== previous, opener);
-  assert.ok(await page.locator('.dk-rail button').count() >= 2, 'insight rail lists every finding');
-  await page.locator('.dk-rail button').nth(1).click(); await page.waitForTimeout(400);
-  assert.ok((await page.locator('.deck-insight-headline h3').first().innerText()).length > 0);
   assert.ok(await page.locator('.deck-notes-qa').count() >= 5, 'notes carry a question bank');
-  await page.screenshot({ path: `${shots}/deck-insights.png` });
-  await page.locator('.dk-rail button').first().click();
-  // Notes change the available report width without changing the viewport breakpoint.
+  await page.screenshot({ path: `${shots}/deck-notes.png` });
+  // Reading width with notes open, narrower and on a phone.
   for (const width of [1440, 1280, 390]) {
     if (width === 390) await page.getByRole('button', { name: 'Notes', exact: true }).click();
-    await page.setViewportSize({ width, height: 920 });
-    await page.waitForTimeout(350);
-    const layout = await page.locator('.dk-insights').evaluate(root => {
-      const rail = root.querySelector('.dk-rail').getBoundingClientRect();
-      const card = root.querySelector('.deck-insight').getBoundingClientRect();
-      const claim = root.querySelector('.deck-insight-claim').getBoundingClientRect();
-      return { width: root.clientWidth, overflow: root.scrollWidth - root.clientWidth,
-        railBottom: rail.bottom, cardTop: card.top, cardWidth: card.width, claimWidth: claim.width };
-    });
-    assert.ok(layout.overflow <= 1, `insights fit their reading panel at ${width}px`);
-    if (layout.width <= 1100) assert.ok(layout.railBottom <= layout.cardTop + 1, 'finding rail sits above the card in a reduced reading panel');
-    assert.ok(layout.claimWidth >= Math.min(360, layout.cardWidth - 2), 'the finding remains readable with notes or on mobile');
-    const metricOverlap = await page.locator('.deck-proof-metric').evaluateAll(metrics => metrics.some(metric => {
-      const value = metric.querySelector('strong')?.getBoundingClientRect();
-      const spark = metric.querySelector('.r2-spark')?.getBoundingClientRect();
-      return value && spark && Math.min(value.right, spark.right) > Math.max(value.left, spark.left)
-        && Math.min(value.bottom, spark.bottom) > Math.max(value.top, spark.top);
-    }));
-    assert.equal(metricOverlap, false, 'metric values and sparklines never overlap');
+    await page.setViewportSize({ width, height: 920 }); await page.waitForTimeout(350);
+    const overflow = await page.locator('.cr').evaluate(root => root.scrollWidth - root.clientWidth);
+    assert.ok(overflow <= 1, `chapter fits its reading panel at ${width}px`);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `page fits at ${width}px`);
-    await page.screenshot({ path: `${shots}/deck-insights-${width}.png` });
+    await page.screenshot({ path: `${shots}/deck-chapter-${width}.png` });
   }
   await page.setViewportSize({ width: 1440, height: 920 });
-  await page.getByRole('button', { name: 'Notes', exact: true }).click();
-  await page.keyboard.press('ArrowRight');
-  await page.locator('.dk-performers').waitFor(); await page.locator('.dk-criteria button').nth(1).click();
+  // Leaders and laggards keep their controls inside the document.
+  await page.locator('.dk-criteria button').nth(1).click();
   await page.locator('.dk-perf-name').first().click(); await page.waitForTimeout(300);
   assert.ok(await page.locator('.dk-perf-detail').count(), 'a performer row expands to every measure');
   await page.screenshot({ path: `${shots}/deck-performers.png` });
-  await page.keyboard.press('ArrowRight'); await page.locator('.dk-outlook').waitFor();
+  await page.locator('.dk-outlook').scrollIntoViewIfNeeded();
   await page.locator('.dk-scenario-bar button', { hasText: 'Last year' }).click();
   assert.equal(await page.locator('.dk-scenario-bar button[aria-pressed=true]').innerText(), "Last year's season", 'scenario switches');
   await page.locator('.dk-scenario footer button', { hasText: "Last year's pattern" }).first().click();
   assert.ok(await page.locator('.dk-scenario-ly').count(), 'last-year pattern opens');
-  assert.ok(await page.locator('.dk-scenario-read').count(), 'each measure has a written reading');
   await page.waitForTimeout(300); await page.screenshot({ path: `${shots}/deck-outlook.png` });
-  await page.keyboard.press('ArrowRight');
-  await page.locator('.deck-register').waitFor();
-  assert.ok(await page.locator('.monthly-table table tbody tr').count() >= 3, 'MoM table renders');
-  await page.locator('.monthly-table-controls .segmented button', { hasText: 'MoM Δ' }).click();
-  await page.locator('.monthly-table tbody tr').first().locator('td button').nth(3).click();
-  assert.ok(await page.locator('.deck-selected-month').count() > 0, 'clicking a month pins it');
-  await page.locator('.deck-record-dialog').waitFor();
-  // The dialog shows the clicked cell's records, with its context, not the whole month.
+  // Month by month: chart in the page, the MoM table behind a fold, cells open their records.
+  const months = page.locator('.cr-section', { has: page.locator('h2', { hasText: 'Month by month' }) });
+  await months.locator('.cr-ev summary').click();
+  assert.ok(await months.locator('.monthly-table table tbody tr').count() >= 3, 'MoM table renders');
+  await months.locator('.monthly-table-controls .segmented button', { hasText: 'MoM Δ' }).click();
+  await months.locator('.monthly-table tbody tr').first().locator('td button').nth(3).click();
   await page.locator('.deck-record-dialog .dk-x-context').waitFor();
   assert.match(await page.locator('.deck-record-dialog .dk-x-context').innerText(), /Showing/);
   await page.waitForTimeout(600); await page.screenshot({ path: `${shots}/deck-drill.png` });
   await page.getByRole('button', { name: 'Close source records' }).click();
-  await page.waitForTimeout(600); await page.screenshot({ path: `${shots}/deck-trends.png` });
-  await page.keyboard.press('ArrowRight'); await page.locator('.dk-tables').waitFor(); await page.waitForTimeout(500);
-  await page.screenshot({ path: `${shots}/deck-evidence.png` });
-  await page.keyboard.press('ArrowRight'); await page.locator('.dk-explorer').waitFor();
+  await page.locator('.dk-tables').first().scrollIntoViewIfNeeded(); await page.waitForTimeout(400); await page.screenshot({ path: `${shots}/deck-evidence.png` });
+  // Recommendations: numbered, owned, reasoning and expected impact.
+  const recs = page.locator('.cr-rec');
+  assert.ok(await recs.count() >= 1, 'chapter closes with recommendations');
+  assert.ok(await recs.first().getByText('Reasoning', { exact: true }).count());
+  await recs.first().scrollIntoViewIfNeeded(); await page.waitForTimeout(300); await page.screenshot({ path: `${shots}/deck-recommendations.png` });
+  // Method and limitations, with the source rows loading only when opened.
+  const method = page.locator('.cr-section', { has: page.locator('h2', { hasText: 'Method and limitations' }) });
+  await method.locator('.cr-ev summary', { hasText: 'source records' }).click();
   await page.locator('.dk-x-group-row').first().waitFor({ timeout: 20000 });
   assert.ok(await page.locator('.dk-x-group-row').count() >= 2, 'records group by the chapter breakdown');
-  await page.locator('.dk-x-group-row button').first().click();
-  assert.ok(await page.locator('.dk-x-group-body[data-open=true] tr').count() > 1, 'a group expands to its rows');
-  await page.waitForTimeout(300); await page.screenshot({ path: `${shots}/deck-data.png` });
+  await page.waitForTimeout(300); await page.screenshot({ path: `${shots}/deck-method.png` });
+  // Arrow keys move between chapters.
+  await page.locator('.cr-head h1').click();
+  const title = await page.locator('.cr-head h1').innerText();
+  await page.keyboard.press('ArrowRight'); await page.waitForFunction(t => document.querySelector('.cr-head h1')?.textContent !== t, title);
+  assert.equal(await page.locator('#main').evaluate(el => el.scrollTop), 0, 'a new chapter opens at its top');
+  await page.keyboard.press('ArrowLeft'); await page.waitForFunction(t => document.querySelector('.cr-head h1')?.textContent === t, title);
   // AI talk track.
+  await page.getByRole('button', { name: 'Notes', exact: true }).click();
   await page.getByRole('button', { name: /Write talk track with AI/ }).click();
   await page.getByText('AI opener for this page.').waitFor();
-  // Admin: unlock, edit text, AI-replace one component, save to the database.
+  // Admin: unlock, edit a subheading, AI-replace one component, save to the database.
   await page.getByRole('button', { name: 'Unlock admin editing' }).click();
   await page.getByLabel('Admin passcode').fill('verify-admin'); await page.getByRole('button', { name: 'Unlock', exact: true }).click();
   await page.locator('.deck-edit-banner').waitFor();
-  await page.locator('.deck-tabs button').first().click();
-  await page.locator('.deck-tabs button').nth(2).click();
-  const headline = page.locator('.dk-brief h2.deck-editable');
-  await headline.click(); await page.keyboard.press('ControlOrMeta+a'); await page.keyboard.type('Edited verdict headline'); await page.locator('.deck-page-head h1').click();
+  const headline = page.locator('.cr-section').first().locator('.cr-sub.deck-editable');
+  await headline.click(); await page.keyboard.press('ControlOrMeta+a'); await page.keyboard.type('Edited verdict headline'); await page.locator('.cr-head h1').click();
   await page.locator('[data-slot$=":summary:metrics"] .deck-ai').click();
   await page.locator('.deck-ai-panel textarea').fill('Bar chart of attendance');
-  await page.getByRole('button', { name: 'Generate' }).click();
+  await page.getByRole('button', { name: 'Generate', exact: true }).click();
   await page.getByRole('button', { name: 'Use this' }).click();
   assert.ok(await page.locator('[data-slot$=":summary:metrics"][data-replaced=true] .deck-spec').count(), 'only that component is replaced');
-  assert.ok(await page.locator('.dk-brief').count(), 'the rest of the page is untouched');
+  assert.ok(await page.locator('.cr-section').count() >= 5, 'the rest of the chapter is untouched');
   await page.screenshot({ path: `${shots}/deck-admin.png` });
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByText('Changes saved to the database.').waitFor();
@@ -212,9 +204,9 @@ try {
   await page.reload(); await page.locator('[data-replaced=true]').waitFor();
   // Pin.
   await page.getByRole('button', { name: 'Pin report' }).click(); await page.getByText(/Pinned/).first().waitFor();
-  // Dark theme: the same page reads correctly on the app's dark surfaces.
+  // Dark theme: the same document reads correctly on the app's dark surfaces.
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'midnight'));
-  await page.locator('.deck-tabs button', { hasText: 'Schedule' }).click(); await page.locator('.dk-decision').scrollIntoViewIfNeeded(); await page.waitForTimeout(400);
+  await page.locator('#main').evaluate(el => el.scrollTo({ top: 0 })); await page.waitForTimeout(400);
   await page.screenshot({ path: `${shots}/deck-dark.png` });
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'gloss'));
   // Mobile.
@@ -222,5 +214,5 @@ try {
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'no horizontal overflow on mobile');
   await page.screenshot({ path: `${shots}/deck-mobile.png` });
   assert.deepEqual(errors, []);
-  console.log('PASS: fixed navbar, chapter/section tabs, verdict categories, flip cards, MoM table + chart, evidence, live + AI speaker notes, admin edit, AI component swap, DB persistence, pinning, retention, mobile.');
+  console.log('PASS: fixed navbar, one document per chapter (kicker, lede, contents, figures, numbered sections, recommendations, method), scroll-following speaker notes, MoM fold + record drill, outlook, AI talk track, admin edit, AI component swap, DB persistence, pinning, retention, mobile.');
 } finally { await browser?.close(); await vite.close(); http.closeAllConnections(); await new Promise(r => http.close(r)); }

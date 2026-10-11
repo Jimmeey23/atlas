@@ -168,11 +168,13 @@ function insightRules(model: ReportModel, spec: ChapterSpec) {
   const recs = spec.id === "recommendations";
   const lenses = INSIGHT_LENSES.filter(l => recs ? l.id === "next_step" : l.id !== "next_step" && o.lenses.includes(l.id));
   return [
-    "Return JSON with summary and cards. Every card has headline, meaning, evidence, driver, trend, impact, action, watch, concentration, offset, recommendation, lens, focus, metrics, highlight, priority, ownerArea, horizon and confidence.",
+    "Return JSON with summary and cards. Every card has section, headline, meaning, evidence, driver, trend, impact, action, watch, concentration, offset, recommendation, lens, focus, metrics, highlight, priority, ownerArea, horizon and confidence.",
     "PURPOSE: a practical, decision-led review of the SELECTED MONTH. Every card answers exactly one leadership question, named by its lens. Do not repeat the same movement across cards, and do not write cards that merely restate a table.",
     "Lenses allowed in this chapter:\n" + lenses.map(l => `- ${l.id} (${l.label}): ${l.question}`).join("\n"),
     recs ? "Every card uses lens next_step." : "Use a mix of lenses where the evidence supports it; skip a lens rather than force it. The kpis verdict card may use any lens.",
-    "headline: the verdict in at most 16 words, including the key number.",
+    "section: the chapter heading this card is printed under — 2 to 6 words naming the topic in plain language, sentence case, no figures (e.g. 'The base is widening', 'The commitment-length problem', 'Who sold it'). Unique within the chapter.",
+    "headline: the verdict in at most 16 words, including the key number. It is printed as the section's subheading, so write it as a complete declarative sentence, not a label.",
+    "Write meaning, driver, concentration and offset as connected report prose a reader moves through paragraph by paragraph: full sentences, figures inline, no bullet fragments.",
     "meaning (shown as 'Why it matters'): 45–80 words on the business consequence for members, revenue, capacity or the brand. Do not restate the figure.",
     "evidence: at most 40 words of exact supplied figures with their comparison periods.",
     "driver (shown as 'Root cause'): 30–60 words decomposing the movement: which breakdown rows or mix shifts contributed how much, and the offsetting force. Decompositions are arithmetic; label a causal idea as a hypothesis and name the check that would confirm it.",
@@ -193,7 +195,7 @@ function insightRules(model: ReportModel, spec: ChapterSpec) {
     "highlight: up to 4 exact group labels, copied character-for-character from the focus breakdown table, that the claim names. Empty array when none.",
     "priority: high when the item is material to the month's result or its value at stake; medium otherwise; low for context. ownerArea: the team best placed to act. horizon: when to act or review.",
     "confidence: high, medium or low, justified by source coverage, sample size and consistency across comparisons.",
-    "summary: 90–140 words — the chapter's verdict: what happened, the largest quantified driver, the offset, whether it is durable, and the one thing leadership should take from it.",
+    "summary: 90–140 words, printed as the chapter's opening lede under its title — the chapter's verdict: what happened, the largest quantified driver, the offset, whether it is durable, and the one thing leadership should take from it.",
     "Exactly one card has focus kpis: the chapter verdict.",
     ...CHAPTER_RULES,
   ].join("\n");

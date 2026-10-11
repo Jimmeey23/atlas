@@ -76,6 +76,8 @@ export const INSIGHT_LENSES: { id: InsightLens; label: string; question: string 
   { id: 'next_step', label: 'Recommended move', question: 'What should leadership decide or change next?' },
 ];
 export interface InsightCard {
+  /** Short topic heading the card is printed under in the chapter document; absent on older reports. */
+  section?: string;
   /** v2 framing; cards written before lenses existed carry `category` instead. */
   lens?: InsightLens;
   /** Why it happened: the quantified driver and the offsetting force. */

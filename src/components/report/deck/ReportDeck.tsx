@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Mic, Lock, LockOpen, PencilLine, Save, Undo2, Pin, PinOff, Download, Printer, Maximize, Minimize, Palette, Loader2, KeyRound, X, TriangleAlert, Gauge, Lightbulb, ChartLine, Database, ListChecks, BookOpen, CircleDot, Medal, Telescope, Table2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Mic, Lock, LockOpen, PencilLine, Save, Undo2, Pin, PinOff, Download, Printer, Maximize, Minimize, Palette, Loader2, KeyRound, X, TriangleAlert, CircleDot } from "lucide-react";
 import logo from "../../../assets/report/logo.png";
-import { ActionPlan } from "../Glance";
 import { ReportDocument } from "../ReportDocument";
 import { ReportViewControls } from "../ReportViewControls";
 import { FloatingReviewTools } from "../../FloatingReviewTools";
@@ -9,29 +8,21 @@ import { PresentationTools } from "../../PresentationTools";
 import { StickyNotes } from "../../StickyNotes";
 import { definition } from "../../../report/definitions";
 import { findingsFor, ledger } from "../../../report/findings";
-import { builtLabel, monthLabel } from "../../../report/period";
+import { monthLabel } from "../../../report/period";
 import { reportOptions } from "../../../report/options";
-import { chapterMetrics, deckPages, deckTabs, SECTION_META, sectionMeta, verdictOf, type DeckSection, type DeckTab } from "../../../report/deck";
+import { chapterMetrics, deckTabs, verdictOf, type DeckSection, type DeckTab } from "../../../report/deck";
 import { downloadReport, printReport } from "../../../report/export";
 import { adminStatus, adminToken, lockAdmin, pinReport, saveReport, unlockAdmin, updateReport } from "../../../report/storage";
 import type { ReportComponentSpec, ReportModel } from "../../../report/model";
 import { EditContext, setIn, Slot, type DeckEdit } from "./editing";
-import { FlipMetricCard } from "./FlipMetricCard";
-import { BriefingPanel, DecisionPanel } from "./Briefing";
 import { CoverPage } from "./CoverPage";
-import { Performers } from "./Performers";
-import { KeyTables } from "./KeyTables";
-import { Outlook } from "./Outlook";
-import { InsightsSection } from "./Insights";
-import { DeckRegister, ReportMoMTable, TrendChartPanel } from "./ReportTrends";
-import { DataExplorer } from "./DataExplorer";
-import { CompleteMetricGrid } from "./CompleteMetricGrid";
+import { ChapterReport } from "./ChapterReport";
 import { RecordDrilldownProvider } from "./RecordDrilldown";
 import { SpeakerDrawer } from "./SpeakerDrawer";
 import "../../../design/report-deck.css";
+import "../../../design/report-chapter.css";
 
 const DRAWER_KEY = "atlas-deck-drawer-v2";
-const SECTION_ICON: Record<DeckSection, typeof Gauge> = { cover: BookOpen, summary: Gauge, insights: Lightbulb, plan: ListChecks, performers: Medal, outlook: Telescope, trends: ChartLine, tables: Table2, data: Database };
 
 function tone(model: ReportModel, tab: DeckTab) {
   if (tab.id === "overview") return undefined;
@@ -56,12 +47,11 @@ function AdminDialog({ onClose, onUnlocked }: { onClose: () => void; onUnlocked:
   </div>;
 }
 
-/** A saved report presented as tabbed pages with live speaker notes, admin editing and AI component replacement. */
+/** A saved report presented chapter by chapter, each chapter one long document, with live speaker notes, admin editing and AI component replacement. */
 export function ReportDeck({ initial, storageError }: { initial: ReportModel; storageError?: string }) {
   const [model, setModel] = useState(initial);
   const [saved, setSaved] = useState(initial);
   const tabs = useMemo(() => deckTabs(model), [model.chapters, model.narratives, model.customization?.chapterIds]);
-  const pages = deckPages(tabs);
   const fromHash = () => { const [t, s] = decodeURIComponent(location.hash.slice(1)).split("/"); const found = tabs.find(x => x.id === t); return found ? { tab: found.id, section: (found.sections.includes(s as DeckSection) ? s : found.sections[0]) as DeckSection } : { tab: tabs[0].id, section: tabs[0].sections[0] }; };
   const [page, setPage] = useState(fromHash);
   // Notes stay closed until the presenter asks for them, so the report gets the full width.
@@ -71,20 +61,25 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
   const [unlocking, setUnlocking] = useState(false);
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(""), [message, setMessage] = useState(storageError ? `Opened locally. ${storageError}` : "");
-  const [selectedMonth, setSelectedMonth] = useState(model.scope.month);
   const [full, setFull] = useState(false);
   const [appearance, setAppearance] = useState(false);
   const [exportMounted, setExportMounted] = useState(false);
-  // One flipped metric card at a time; leaving the page resets it.
-  const [flipped, setFlipped] = useState("");
+  // A section to bring into view once the chapter has rendered (contents, notes drawer, deep link).
+  const pendingScroll = useRef<DeckSection | null>(page.section !== tabs.find(t => t.id === page.tab)?.sections[0] ? page.section : null);
   const exportRef = useRef<HTMLElement>(null);
   const main = useRef<HTMLElement>(null);
   const dirty = JSON.stringify([model.narratives, model.replacements ?? {}]) !== JSON.stringify([saved.narratives, saved.replacements ?? {}]);
   const tab = tabs.find(t => t.id === page.tab) ?? tabs[0];
-  const index = pages.findIndex(p => p.tab === page.tab && p.section === page.section);
+  const index = tabs.findIndex(t => t.id === tab.id);
 
   useEffect(() => { void adminStatus().then(s => { setAdminConfigured(s.configured); if (!s.unlocked && adminToken()) { lockAdmin(); setAdmin(false); } }).catch(() => undefined); }, []);
-  useEffect(() => { history.replaceState(null, "", `#${page.tab}/${page.section}`); main.current?.scrollTo({ top: 0 }); setFlipped(""); }, [page.tab, page.section]);
+  useEffect(() => { history.replaceState(null, "", `#${page.tab}/${page.section}`); }, [page.tab, page.section]);
+  useEffect(() => {
+    const target = pendingScroll.current;
+    pendingScroll.current = null;
+    const el = target && main.current?.querySelector(`[data-deck-section="${target}"]`);
+    if (el) el.scrollIntoView({ block: "start" }); else main.current?.scrollTo({ top: 0 });
+  }, [page.tab]);
   // Shared review sessions: the presenter toolkit follows and drives the chapter tab.
   useEffect(() => { window.dispatchEvent(new CustomEvent("p57-report-navigate", { detail: page.tab === "overview" ? "" : page.tab })); }, [page.tab]);
   useEffect(() => {
@@ -96,7 +91,20 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
   useEffect(() => { if (!dirty) return; const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); }; window.addEventListener("beforeunload", warn); return () => window.removeEventListener("beforeunload", warn); }, [dirty]);
   useEffect(() => { document.title = `${model.customization?.title || "Monthly report"} · ${model.scope.studio} · ${monthLabel(model.scope.month)}`; }, [model.customization?.title, model.scope]);
 
-  const go = useCallback((step: number) => { const next = pages[Math.max(0, Math.min(pages.length - 1, index + step))]; if (next) setPage(next); }, [pages, index]);
+  /** Move to a chapter, and optionally to one of its sections. */
+  const navigate = useCallback((next: { tab: string; section: DeckSection }) => {
+    // A chapter's first section is its top: open there rather than below the header.
+    pendingScroll.current = tabs.find(t => t.id === next.tab)?.sections[0] === next.section ? null : next.section;
+    if (next.tab === page.tab) {
+      const el = pendingScroll.current && main.current?.querySelector(`[data-deck-section="${next.section}"]`);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); else main.current?.scrollTo({ top: 0, behavior: "smooth" });
+      pendingScroll.current = null;
+    }
+    setPage(next);
+  }, [page.tab, tabs]);
+  // The section scrolled into view; it moves the notes and the address bar, never the scroll position.
+  const onSection = useCallback((section: DeckSection) => setPage(current => current.section === section ? current : { ...current, section }), []);
+  const go = useCallback((step: number) => { const next = tabs[Math.max(0, Math.min(tabs.length - 1, index + step))]; if (next && next.id !== tab.id) { pendingScroll.current = null; setPage({ tab: next.id, section: next.sections[0] }); } }, [tabs, index, tab.id]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).closest("input,textarea,select,[contenteditable=true]") || e.metaKey || e.ctrlKey || e.altKey) return;
@@ -143,45 +151,20 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
   const findings = useMemo(() => findingsFor(model), [model.chapters]);
   const ranked = useMemo(() => ledger(findings), [findings]);
   const cid = tab.chapter;
-  const data = model.chapters[cid];
-  const ids = tab.spec ? chapterMetrics(tab.spec, data) : [];
-  const slot = (name: string) => `${tab.id}:${page.section}:${name}`;
-  const open = (id: string) => { const t = tabs.find(x => x.id === id || x.chapter === id); if (t) setPage({ tab: t.id, section: t.sections[0] }); };
+  const open = (id: string) => { const t = tabs.find(x => x.id === id || x.chapter === id); if (t) navigate({ tab: t.id, section: t.sections[0] }); };
 
   function body() {
-    const s = page.section;
-    if (s === "cover") return <Slot id={slot("cover")} tab={tab.id} section={s} kind="glance" describe="cover scorecard"><CoverPage model={model} tabs={tabs} ranked={ranked} onNavigate={open} /></Slot>;
-    if (s === "summary") return <>
-      {!!ids.length && data && <Slot id={slot("metrics")} tab={tab.id} section={s} kind="metrics" describe="key metric cards">
-        <CompleteMetricGrid items={ids} render={id => <FlipMetricCard key={id} id={id} data={data} target={model.customization?.targets?.[id]}
-          flipped={flipped === id} onToggle={() => setFlipped(current => current === id ? "" : id)} />}/>
-      </Slot>}
-      <Slot id={slot("verdict")} tab={tab.id} section={s} kind="verdict" describe="chapter briefing"><BriefingPanel model={model} chapter={cid} ids={ids} /></Slot>
-      <Slot id={slot("decision")} tab={tab.id} section={s} kind="verdict" describe="leadership decision"><DecisionPanel model={model} chapter={cid} ids={ids} /></Slot>
-      {!!data?.groups.length && <Slot id={slot("evidence-preview")} tab={tab.id} section={s} kind="evidence" describe="curated evidence tables">
-        <section className="dk-curated-evidence" aria-label="Evidence behind this chapter"><div className="dk-section-head"><span className="deck-eyebrow">Evidence behind the brief</span><h3>Decision-relevant breakdowns</h3><small>Top rows shown · full tables remain in Evidence tables</small></div><KeyTables model={model} chapter={cid} mode="curated" tableLimit={2} rowLimit={6}/></section>
-      </Slot>}
+    if (tab.id === "overview") return <>
+      <div data-deck-section="cover"><Slot id={`${tab.id}:cover:cover`} tab={tab.id} section="cover" kind="glance" describe="cover scorecard"><CoverPage model={model} tabs={tabs} ranked={ranked} onNavigate={open} /></Slot></div>
+      {tab.spec && model.narratives[tab.chapter] && <ChapterReport model={model} tab={tab} tabs={tabs} headless onSection={onSection} />}
     </>;
-    if (s === "insights") return <Slot id={slot("insights")} tab={tab.id} section={s} kind="insights" describe="insight list"><InsightsSection model={model} tab={cid} plan={cid === "recommendations"} /></Slot>;
-    if (s === "plan") return <Slot id={slot("plan")} tab={tab.id} section={s} kind="plan" describe="action plan"><ActionPlan cards={model.narratives[cid]?.cards ?? []} /></Slot>;
-    if (s === "performers") return <Slot id={slot("performers")} tab={tab.id} section={s} kind="evidence" describe="leaders and laggards"><Performers model={model} chapter={cid} /></Slot>;
-    if (s === "outlook" && tab.spec) return <Slot id={slot("outlook")} tab={tab.id} section={s} kind="trends" describe="outlook scenarios"><Outlook model={model} spec={tab.spec} ids={ids} /></Slot>;
-    if (s === "trends" && data) {
-      const historyIds = [...new Set([...(tab.spec?.history ?? []), ...ids])];
-      return <DeckRegister index="MoM" title="Month by month" subtitle={`${data.history.length} months frozen at report build · ${tab.label}`}>
-        <Slot id={slot("chart")} tab={tab.id} section={s} kind="trends" describe="monthly trend chart"><TrendChartPanel history={data.history.slice(-14)} ids={historyIds} selected={selectedMonth} onSelect={setSelectedMonth} title={`${tab.label} trend`} /></Slot>
-        <Slot id={slot("table")} tab={tab.id} section={s} kind="trends" describe="month-on-month table"><ReportMoMTable history={data.history.slice(-14)} ids={historyIds} selected={selectedMonth} onSelect={setSelectedMonth} title={tab.label} /></Slot>
-      </DeckRegister>;
-    }
-    if (s === "tables") return <Slot id={slot("tables")} tab={tab.id} section={s} kind="evidence" describe="key tables"><KeyTables model={model} chapter={cid} /></Slot>;
-    if (s === "data" && tab.spec) return <DataExplorer model={model} spec={tab.spec} />;
-    return <p className="empty-state">Nothing recorded for this page.</p>;
+    return <ChapterReport key={tab.id} model={model} tab={tab} tabs={tabs} onSection={onSection} />;
   }
 
   return <EditContext.Provider value={edit}><RecordDrilldownProvider model={model} chapterId={cid}>
     <div className="report-page deck" data-report-id={model.id || ""} data-drawer={drawer} data-editing={edit.editing} data-full={full}>
       <header className="deck-nav" data-export="omit">
-          <a className="deck-brand" href="#overview/cover" onClick={e => { e.preventDefault(); setPage({ tab: "overview", section: "cover" }); }}><img src={logo} alt="Physique 57"/><span><b>{model.customization?.title || "Monthly performance report"}</b><small>{model.scope.studio} · {monthLabel(model.scope.month)}{model.editedAt ? " · edited" : ""}</small></span></a>
+          <a className="deck-brand" href="#overview/cover" onClick={e => { e.preventDefault(); navigate({ tab: "overview", section: "cover" }); }}><img src={logo} alt="Physique 57"/><span><b>{model.customization?.title || "Monthly performance report"}</b><small>{model.scope.studio} · {monthLabel(model.scope.month)}{model.editedAt ? " · edited" : ""}</small></span></a>
           <div className="deck-nav-actions">
             {dirty && <span className="deck-unsaved"><CircleDot size={11}/>Unsaved changes</span>}
             {admin && dirty && <button className="button" onClick={() => setModel(saved)} disabled={!!busy}><Undo2 size={14}/>Discard</button>}
@@ -198,32 +181,25 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
             <button className="button deck-notes-toggle" aria-pressed={drawer} title="Speaker notes (N)" onClick={() => setDrawer(d => !d)}><Mic size={14}/>Notes</button>
           </div>
         <nav className="deck-tabs" aria-label="Report chapters">
-          {tabs.map(t => <button key={t.id} type="button" aria-current={t.id === tab.id ? "page" : undefined} data-tone={tone(model, t)} onClick={() => setPage({ tab: t.id, section: t.sections[0] })} title={verdictOf(model, t.chapter)?.headline ?? t.title}>
+          {tabs.map(t => <button key={t.id} type="button" aria-current={t.id === tab.id ? "page" : undefined} data-tone={tone(model, t)} onClick={() => navigate({ tab: t.id, section: t.sections[0] })} title={verdictOf(model, t.chapter)?.headline ?? t.title}>
             <i aria-hidden="true"/>{t.label}</button>)}
         </nav>
       </header>
       <div className="deck-body">
         <main className="deck-main" ref={main} id="main">
-          <div className="deck-page-head" data-export="omit">
-            {page.section === "cover" ? <span className="deck-eyebrow">Report overview</span>
-              : <div><span className="deck-eyebrow">{tab.spec?.eyebrow ?? "Report overview"} · {sectionMeta(page.section).display}</span><h1>{tab.id === "overview" ? tab.spec?.title ?? tab.title : tab.title}</h1>{tab.spec?.deck && <p>{tab.spec.deck}</p>}</div>}
-            <div className="deck-sections segmented" role="tablist" aria-label="Sections">
-              {tab.sections.map(s => { const Icon = SECTION_ICON[s]; const meta = SECTION_META[s]; return <button key={s} role="tab" aria-selected={s === page.section} data-group={meta.group} className={s === page.section ? "active" : ""} onClick={() => setPage({ tab: tab.id, section: s })}><Icon size={13}/><span className="deck-section-long">{meta.label}</span><span className="deck-section-short">{meta.short}</span></button>; })}
-            </div>
-          </div>
           {message && <p className="deck-message" role="status">{message}<button className="icon-button" aria-label="Dismiss" onClick={() => setMessage("")}><X size={13}/></button></p>}
           {edit.editing && <p className="deck-edit-banner"><PencilLine size={14}/>Editing — click any text to rewrite it. Use <b>✦</b> on a component to replace just that component with AI. Save writes to the database.</p>}
-          <article className="report-doc r2 deck-doc" data-report-theme={model.customization?.theme || "light"} data-accent={options.accent} data-surface={options.surface} data-typography={options.typography} data-card-style={options.cardStyle} data-density={options.density} data-section={page.section} key={`${page.tab}:${page.section}`}>
+          <article className="report-doc r2 deck-doc" data-report-theme={model.customization?.theme || "light"} data-accent={options.accent} data-surface={options.surface} data-typography={options.typography} data-card-style={options.cardStyle} data-density={options.density} data-section="chapter" key={page.tab}>
             {body()}
           </article>
           <div className="deck-chapter-markers" hidden>{tabs.filter(t => t.spec).map(t => <section key={t.id} className="r-section" id={t.id}><span className="r-section-topic">{t.label}</span></section>)}</div>
           <footer className="deck-pager-bar" data-export="omit">
-            <button className="button" disabled={index <= 0} onClick={() => go(-1)}><ChevronLeft size={15}/>Previous</button>
-            <span className="deck-progress" title="← → to move · N for notes · F for fullscreen"><b>{index + 1}</b> of {pages.length}<i aria-hidden="true"><i style={{ width: `${(index + 1) / pages.length * 100}%` }}/></i></span>
-            <button className="button" disabled={index >= pages.length - 1} onClick={() => go(1)}>Next<ChevronRight size={15}/></button>
+            <button className="button" disabled={index <= 0} onClick={() => go(-1)}><ChevronLeft size={15}/>{index > 0 ? tabs[index - 1].label : "Previous"}</button>
+            <span className="deck-progress" title="← → to change chapter · N for notes · F for fullscreen"><b>{index + 1}</b> of {tabs.length}<i aria-hidden="true"><i style={{ width: `${(index + 1) / tabs.length * 100}%` }}/></i></span>
+            <button className="button" disabled={index >= tabs.length - 1} onClick={() => go(1)}>{index < tabs.length - 1 ? tabs[index + 1].label : "Next"}<ChevronRight size={15}/></button>
           </footer>
         </main>
-        <SpeakerDrawer model={model} tabs={tabs} tab={tab.id} section={page.section} open={drawer} onNavigate={setPage} onClose={() => setDrawer(false)}
+        <SpeakerDrawer model={model} tabs={tabs} tab={tab.id} section={page.section} open={drawer} onNavigate={navigate} onClose={() => setDrawer(false)}
           onNotes={patch => { setModel(m => ({ ...m, ...patch })); setSaved(s => ({ ...s, ...patch })); }} />
       </div>
       <FloatingReviewTools><PresentationTools standalone beforeHost={async () => { if (!model.id) throw new Error(storageError || "Save the report before hosting a shared review."); }} />

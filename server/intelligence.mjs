@@ -520,7 +520,7 @@ export function intelligenceRoutes(
     const version = Number(req.body.insightVersion) || 0;
     const insightFields = version >= 2 ? {
       lens: { type: 'string', enum: [...new Set([...(requestedLenses.length ? requestedLenses : lenses), 'next_step'])] },
-      driver: textField, trend: textField, impact: textField, watch: textField, concentration: textField, offset: textField,
+      section: textField, driver: textField, trend: textField, impact: textField, watch: textField, concentration: textField, offset: textField,
       focus: { type: 'string', enum: [...new Set(['kpis','trend','cross',...focusIds])] },
       metrics: { type: 'array', items: metricIds.length ? { type: 'string', enum: metricIds } : textField },
       highlight: { type: 'array', items: textField },
