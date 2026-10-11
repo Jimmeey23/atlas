@@ -7,6 +7,9 @@
    One 14-month series per measure, all derived from the same four drivers, so the
    deck's arithmetic (attendance = sessions × class size, collections = attendance ×
    yield) holds together when a reader checks it by hand.                              */
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
+
 export const MONTHS = Array.from({ length: 14 }, (_, i) => new Date(Date.UTC(2025, 7 + i, 1)).toISOString().slice(0, 7));
 export const STUDIO = "Kenkere House";
 /** -1 is the selected month's predecessor, -13 the same month a year earlier. */
@@ -91,6 +94,21 @@ const GROUPS = {
 
 /** Rows are deterministic functions of the group name, so a criterion switch re-ranks real rows. */
 const seed = text => [...text].reduce((sum, char) => (sum * 31 + char.charCodeAt(0)) % 9973, 7);
+/** How a measure combines, taken from the metric registry so a rate is never added to a total. */
+const registry = require("../src/semantics/registry.json");
+const AGGREGATION = Object.fromEntries(registry.map(metric => [metric.id, metric.aggregation]));
+const FORMAT = Object.fromEntries(registry.map(metric => [metric.id, metric.format]));
+const kind = column => {
+  const now = rowAt(-1)[column];
+  if (AGGREGATION[column] === "sum") return "additive";
+  if (AGGREGATION[column]) return FORMAT[column] === "percent" || FORMAT[column] === "ratio" ? "share" : "rate";
+  return typeof now === "number" && now <= 1.2 ? "share" : "additive";
+};
+const additive = column => kind(column) === "additive";
+const clampShare = value => Math.min(.98, Math.max(.02, value));
+/** Deterministic per-row variation, so a breakdown is not made of rows that all moved identically. */
+const jitter = (name, key, spread) => 1 + spread * (((seed(name + key) % 200) - 100) / 100);
+
 function groupRows(names, columns, id) {
   return names.map(name => {
     const weight = .55 + (seed(name) % 90) / 100;           // 0.55 … 1.45
@@ -99,31 +117,54 @@ function groupRows(names, columns, id) {
       g: name, n: Math.round(42 + seed(name) % 180),
       ...Object.fromEntries(columns.map(column => {
         const base = rowAt(-1)[column];
-        const value = base == null ? null : base * weight * (1 + wobble);
-        const isRate = typeof base === "number" && base <= 1.2 && column !== "sessions";
-        return [column, isRate ? round(Math.min(.98, Math.max(.02, value)), 4) : Math.round(value)];
+        if (base == null) return [column, null];
+        if (additive(column)) return [column, Math.round(base * weight * (1 + wobble))];
+        const value = base * (1 + wobble);
+        return [column, kind(column) === "share" ? round(clampShare(value), 4) : Math.round(value)];
       })),
     };
   });
 }
+
 function groupTable({ id, field, fields, title, columns, compare, minimum, names, limit = 10 }) {
   const rows = groupRows(names, columns, id ?? field).sort((a, b) => Number(b[compare]) - Number(a[compare])).slice(0, limit);
+  /* Additive measures are scaled so the rows partition the chapter's own total: a breakdown that
+     does not add up to the figure above it makes every share and contribution on the page wrong. */
+  for (const column of columns) if (additive(column)) {
+    const chapter = rowAt(-1)[column], sum = rows.reduce((total, row) => total + (typeof row[column] === "number" ? row[column] : 0), 0);
+    if (typeof chapter === "number" && chapter > 0 && sum > 0) for (const row of rows) if (typeof row[column] === "number") row[column] = Math.round(row[column] * chapter / sum);
+  }
   const total = {};
   for (const column of ["n", ...columns]) {
-    const isRate = column !== "n" && typeof rowAt(-1)[column] === "number" && rowAt(-1)[column] <= 1.2;
     const values = rows.map(row => row[column]).filter(value => typeof value === "number");
-    total[column] = !values.length ? null : isRate ? round(values.reduce((a, b) => a + b, 0) / values.length, 4) : values.reduce((a, b) => a + b, 0);
+    /* A rate's total is the chapter's own figure, so the table header and the metric card agree. */
+    total[column] = !values.length ? null : additive(column) ? values.reduce((a, b) => a + b, 0)
+      : typeof rowAt(-1)[column] === "number" ? round(rowAt(-1)[column], kind(column) === "share" ? 4 : 2)
+      : round(values.reduce((a, b) => a + b, 0) / values.length, 4);
   }
-  const shape = (factor, mode) => Object.fromEntries(rows.map(row => [row.g, Object.fromEntries(columns.map(column => {
-    const base = rowAt(mode)[column] ?? rowAt(-1)[column];
-    const value = typeof row[column] === "number" ? row[column] * factor : null;
-    return [column, value == null ? null : base <= 1.2 && column !== "n" ? round(Math.min(.98, Math.max(.02, value)), 4) : Math.round(value)];
-  }))]));
+  /* Each row moves by its own amount, but the additive moves are rescaled so the rows still add up
+     to the chapter's own month-on-month and year-on-year comparison. */
+  const shape = (mode, spread) => {
+    const column = compare;
+    const sum = rows.reduce((total, row) => total + (typeof row[column] === "number" ? row[column] : 0), 0);
+    const target = rowAt(mode)[column] ?? rowAt(-1)[column];
+    const weighted = rows.reduce((total, row) => total + (typeof row[column] === "number" ? row[column] * jitter(row.g, `${mode}${id ?? field}`, spread) : 0), 0);
+    const k = additive(column) && weighted > 0 && typeof target === "number" && sum > 0 ? target / weighted : 1;
+    return Object.fromEntries(rows.map(row => [row.g, Object.fromEntries(columns.map(c => {
+      const base = row[c];
+      if (typeof base !== "number") return [c, null];
+      const moved = base * jitter(row.g, `${mode}${id ?? field}${c}`, spread);
+      if (additive(c)) return [c, Math.round(moved * k)];
+      const now = rowAt(-1)[c], then = rowAt(mode)[c] ?? now;
+      const value = moved * (now ? then / now : 1);
+      return [c, kind(c) === "share" ? round(clampShare(value), 4) : Math.round(value)];
+    }))]));
+  };
   return {
     id, field, fields, title, compare, minimum,
     deck: "Selected-month results. Rankings use eligible samples; comparisons refer to the same group in the previous month and previous year.",
     columns, rows, total,
-    prior: shape(.915, -2), priorYear: shape(.88, -13),
+    prior: shape(-2, .22), priorYear: shape(-13, .26),
     omitted: 0, eligible: rows,
     diagnostics: [`${rows.length} eligible groups shown. Samples below the threshold are excluded from rankings.`],
   };

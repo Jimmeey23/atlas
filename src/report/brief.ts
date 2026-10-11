@@ -151,6 +151,161 @@ export function driverBridge(data: ChapterData | undefined, ids: string[]): Driv
   return null;
 }
 
+/* ------------------------------------------------------------------ anatomy --- */
+
+/** A count a revenue figure can be decomposed by: revenue = volume × spend per unit. */
+const VOLUMES: { id: string; per: string }[] = [
+  { id: "transactions", per: "Average spend per transaction" },
+  { id: "buyers", per: "Average spend per buyer" },
+  { id: "attendance", per: "Revenue per visit" },
+  { id: "bookings", per: "Revenue per booking" },
+  { id: "sessions", per: "Revenue per session" },
+  { id: "new_clients", per: "Revenue per newcomer" },
+];
+const REVENUES = ["gross_revenue", "net_revenue", "collected_revenue", "revenue"];
+
+export interface Anatomy {
+  metric: string; volume: string; volumeLabel: string; priceLabel: string;
+  /** Contribution of more or fewer purchases, at last month's spend per purchase. */
+  volumeEffect: number;
+  /** Contribution of higher or lower spend per purchase, on this month's purchases. */
+  priceEffect: number;
+  /** The month's actual revenue movement, which the two effects add up to exactly. */
+  net: number;
+  volumeNow: number; volumePrior: number; priceNow: number; pricePrior: number;
+  /** Set when the report's own average-order-value measure is calculated on another basis. */
+  basisNote?: string;
+}
+
+/**
+ * What created the revenue movement: more or fewer purchases, or more or less spent on each.
+ * Prices are derived from the chapter's own revenue and count so the two effects add up to
+ * the recorded movement exactly — the panel never presents a decomposition that does not
+ * reconcile. Where the report's own average-order-value measure disagrees, the mismatch is
+ * surfaced rather than hidden, because it means the two figures are built on different bases.
+ */
+export function revenueAnatomy(data: ChapterData | undefined, ids: string[]): Anatomy | null {
+  if (!data) return null;
+  const pool = [...new Set([...ids, ...REVENUES])];
+  const revenue = REVENUES.map(id => pool.includes(id) ? id : "").find(id => id && num(data.total[id]) != null && num(data.prior[id]) != null);
+  if (!revenue) return null;
+  const volume = VOLUMES.find(v => num(data.total[v.id]) != null && num(data.prior[v.id]) != null);
+  if (!volume) return null;
+  const r1 = num(data.total[revenue])!, r0 = num(data.prior[revenue])!;
+  const v1 = num(data.total[volume.id])!, v0 = num(data.prior[volume.id])!;
+  if (!v1 || !v0) return null;
+  const p1 = r1 / v1, p0 = r0 / v0;
+  const stated = num(data.total.aov);
+  const derived = p1;
+  const basisNote = stated != null && derived && Math.abs(stated - derived) / Math.abs(derived) > 0.02
+    ? `The report's own average-order-value measure reads ${fmt("aov", stated)} against ${fmt(revenue, derived)} derived here — the two are calculated on different bases, so read them separately.`
+    : undefined;
+  return { metric: revenue, volume: volume.id, volumeLabel: label(volume.id), priceLabel: volume.per,
+    volumeEffect: (v1 - v0) * p0, priceEffect: (p1 - p0) * v1, net: r1 - r0,
+    volumeNow: v1, volumePrior: v0, priceNow: p1, pricePrior: p0, basisNote };
+}
+
+export interface QualityRow { id: string; label: string; value: number; change: number }
+export interface Quality {
+  rows: QualityRow[];
+  /** Volume-led, value-led, broad-based or contracting — read from the signs, nothing inferred. */
+  verdict: string;
+  diagnosis: string;
+  trend: "improving" | "deteriorating" | "mixed";
+}
+
+/**
+ * Is the movement real? Revenue momentum read beside the momentum of the things that
+ * produce it — purchases, buyers and spend per purchase. The verdict is read from the
+ * direction of those recorded figures, so it states a pattern rather than a cause.
+ */
+export function revenueQuality(data: ChapterData | undefined, ids: string[]): Quality | null {
+  if (!data) return null;
+  const anatomy = revenueAnatomy(data, ids);
+  if (!anatomy) return null;
+  const wanted = [...new Set([anatomy.metric, anatomy.volume, "buyers", "aov"].filter(id => id && definition(id)) as string[])];
+  const rows = wanted.map(id => {
+    const now = num(data.total[id]), was = num(data.prior[id]);
+    return now == null || was == null || was === 0 ? null : { id, label: label(id), value: now, change: (now - was) / Math.abs(was) };
+  }).filter((row): row is QualityRow => !!row);
+  if (rows.length < 3) return null;
+  const rev = rows[0].change, vol = rows[1].change, basket = rows.find(r => r.id === "aov")?.change ?? null;
+  const moved = (v: number) => Math.abs(v) >= 0.005;
+  const up = (v: number) => v > 0;
+  let verdict = "Broad-based", diagnosis = `Revenue and ${label(anatomy.volume).toLowerCase()} moved together, so the month's change is carried by participation as much as by spend.`, trend: Quality["trend"] = "improving";
+  if (moved(rev) && moved(vol) && up(rev) && !up(vol)) {
+    verdict = "Value-led"; trend = "mixed";
+    diagnosis = `Revenue rose ${pct(rev)} while ${label(anatomy.volume).toLowerCase()} fell ${pct(Math.abs(vol))}${basket != null ? `, so the month rests on spend per ${anatomy.volume === "buyers" ? "buyer" : "purchase"} (${pct(basket)})` : ""}. Growth of this kind lasts only while spending holds up.`;
+  } else if (moved(rev) && moved(vol) && !up(rev) && up(vol)) {
+    verdict = "Price-led decline"; trend = "mixed";
+    diagnosis = `Revenue fell ${pct(Math.abs(rev))} while ${label(anatomy.volume).toLowerCase()} rose ${pct(vol)}, so the loss is in value per ${anatomy.volume === "buyers" ? "buyer" : "purchase"} rather than in demand.`;
+  } else if (moved(rev) && moved(vol) && !up(rev) && !up(vol)) {
+    verdict = "Contracting"; trend = "deteriorating";
+    diagnosis = `Revenue and ${label(anatomy.volume).toLowerCase()} both fell, which is a demand problem rather than a pricing or mix problem.`;
+  } else if (moved(rev) && !up(rev)) {
+    verdict = "Softening"; trend = "deteriorating";
+    diagnosis = `Revenue fell while ${label(anatomy.volume).toLowerCase()} held, so the change sits in what each ${anatomy.volume === "buyers" ? "buyer" : "purchase"} is worth.`;
+  } else if (moved(vol) && !up(vol)) {
+    verdict = "Volume watch"; trend = "deteriorating";
+    diagnosis = `Revenue held while ${label(anatomy.volume).toLowerCase()} fell, so the topline is being propped up by spend per ${anatomy.volume === "buyers" ? "buyer" : "purchase"}.`;
+  }
+  return { rows, verdict, diagnosis, trend };
+}
+
+const pct = (value: number) => `${value > 0 ? "+" : "−"}${(Math.abs(value) * 100).toFixed(1)}%`;
+
+export interface PortfolioRow { name: string; value: number; prior: number; change: number; growth: number; share: number }
+export interface Portfolio {
+  title: string; metric: string; rows: PortfolioRow[];
+  quadrant: "growth" | "protect" | "emerging" | "under"; name: string; question: string; action: string;
+  medianShare: number;
+}
+export interface PortfolioMap { metric: string; field: string; title: string; latest: string; groups: { quadrant: Portfolio["quadrant"]; name: string; question: string; action: string; rows: PortfolioRow[] }[] }
+
+/** Which products, formats or channels deserve attention, read on contribution against momentum. */
+const QUADRANTS: { quadrant: Portfolio["quadrant"]; name: string; question: string; action: string }[] = [
+  { quadrant: "growth", name: "Growth engines", question: "Large and improving", action: "Protect the conditions that produced this." },
+  { quadrant: "protect", name: "Protect & optimise", question: "Large but losing ground", action: "Work the specific mechanism behind the fall." },
+  { quadrant: "emerging", name: "Emerging opportunities", question: "Small but improving fast", action: "Decide whether to fund the next step." },
+  { quadrant: "under", name: "Underperformers", question: "Small and losing ground", action: "Fix, fold or stop — decide with a date." },
+];
+const PORTFOLIO_FIELDS = ["product", "category", "format_group", "source", "entry_type", "format", "status"];
+
+/**
+ * Contribution against momentum for the chapter's product, format or channel breakdown.
+ * Contribution is the row's share of the recorded total, momentum its change on last
+ * month; the split is at the median share so the line between large and small follows
+ * this month's own distribution rather than a threshold someone chose by hand.
+ */
+export function portfolioMap(data: ChapterData | undefined, ids: string[]): PortfolioMap | null {
+  if (!data?.groups?.length) return null;
+  const table = [...data.groups].filter(t => t.prior && t.rows.length >= 3)
+    .sort((a, b) => PORTFOLIO_FIELDS.indexOf(a.field) - PORTFOLIO_FIELDS.indexOf(b.field) || b.rows.length - a.rows.length)
+    .find(t => PORTFOLIO_FIELDS.includes(t.field) && (t.compare ? t.columns.includes(t.compare) : false));
+  if (!table?.compare) return null;
+  const metric = table.compare;
+  const total = num(table.total?.[metric]);
+  const rows = table.rows.map(row => {
+    const now = num(row[metric]), was = num(table.prior?.[String(row.g)]?.[metric]);
+    if (now == null || was == null || !was) return null;
+    return { name: String(row.g ?? "Unspecified"), value: now, prior: was, change: now - was, growth: (now - was) / Math.abs(was), share: total ? now / total : 0 };
+  }).filter((row): row is PortfolioRow => !!row);
+  if (rows.length < 3 || !total) return null;
+  const shares = [...rows.map(r => r.share)].sort((a, b) => a - b);
+  const medianShare = shares[Math.floor(shares.length / 2)];
+  const band = 0.02;
+  const groups = QUADRANTS.map(q => ({ ...q, rows: rows.filter(row => {
+    const big = row.share >= medianShare;
+    if (Math.abs(row.growth) < band && row.share < medianShare) return false;
+    return q.quadrant === "growth" ? big && row.growth >= band
+      : q.quadrant === "protect" ? big && row.growth <= -band
+      : q.quadrant === "emerging" ? !big && row.growth >= band
+      : !big && row.growth <= -band;
+  }).sort((a, b) => b.value - a.value) })).filter(group => group.rows.length);
+  if (groups.length < 2) return null;
+  return { metric, field: table.field, title: table.title, latest: label(metric), groups };
+}
+
 /** Metrics a decision rests on: those the verdict cites, else the chapter's largest movers. */
 export function decisionMetrics(model: ReportModel, id: string, ids: string[]) {
   const data = model.chapters[id];
@@ -201,6 +356,41 @@ export function scenariosFor(spec: ChapterSpec, data: ChapterData, month: string
     const repeat = prior == null ? null : rate ? Math.min(1, Math.max(0, s.current + (s.current - prior))) : prior ? Math.max(0, s.current * (s.current / prior)) : null;
     return [{ id, current: s.current, prior, flat: s.current, repeat, run: s.run, seasonal: s.seasonal, thisLY: s.thisLY, nextLY: s.nextLY }];
   }).slice(0, 6);
+}
+
+/**
+ * The next questions a chapter raises — the work still to be done rather than what the
+ * page has already said. Each is offered only when the chapter holds the figures that
+ * would answer it, so the reader never gets a prompt the report cannot support.
+ */
+export function askAtlas(model: ReportModel, id: string, ids: string[]): { q: string; hint: string }[] {
+  const data = model.chapters[id];
+  if (!data) return [];
+  const out: { q: string; hint: string }[] = [];
+  const has = (metric: string) => definition(metric) != null && num(data.total[metric]) != null;
+  const table = (fields: string[]) => data.groups.find(t => t.prior && t.compare && fields.includes(t.field) && t.rows.length >= 3);
+  if (has("gross_revenue") && has("transactions") && (has("buyers") || has("aov")))
+    out.push({ q: "Are fewer people buying more often, or are individual purchases simply getting larger?", hint: "Separates the move in purchase count from the move in spend per purchase." });
+  const growth = table(["product", "category", "format_group", "format"]);
+  if (growth) {
+    const metricNow = growth.compare!;
+    const top = growth.rows.map(row => ({ name: String(row.g ?? ""), gain: (num(row[metricNow]) ?? 0) - (num(growth.prior?.[String(row.g)]?.[metricNow]) ?? 0) })).sort((a, b) => b.gain - a.gain)[0];
+    if (top?.name) out.push({ q: `Would the month have looked the same without ${top.name}?`, hint: `Tests whether the result rests on one line of the business rather than the whole of it.` });
+  }
+  if (has("discount_rate") || data.groups.some(t => t.columns.includes("discount_rate")))
+    out.push({ q: "Did discounting add purchases, or only reduce what each purchase was worth?", hint: "Discount rate read against transaction count, by product and by associate." });
+  const concentration = data.groups.map(t => t.analysis?.concentration).find(Boolean);
+  if (concentration?.metric)
+    out.push({ q: `How much of ${label(concentration.metric).toLowerCase()} rests on the largest few rows?`, hint: `${concentration.top1.g} carries ${(concentration.top1.share * 100).toFixed(0)}% already; the question is what happens if that slips.` });
+  const people = table(["source", "entry_type", "trainer", "associate"]);
+  if (people) out.push({ q: `Which ${people.field === "trainer" || people.field === "associate" ? "people" : "sources"} moved most, once the slots they carry are separated out?`, hint: "Same ranking, read within each row's own mix rather than across the whole chapter." });
+  if (has("revenue_at_risk_30d") || has("utilisation") || has("dormant_actives"))
+    out.push({ q: "Which memberships carry the most recoverable value in the next 30 days?", hint: "Expiring balances against the renewal rate those balances have historically converted at." });
+  if (has("buyers") || has("new_clients") || has("conversion_rate"))
+    out.push({ q: "Which customers contributed most to the change in spend per purchase?", hint: "Cohorts behind the move: new, returning and renewing buyers." });
+  out.push({ q: "Which of this month's sales are least likely to repeat next month?", hint: "Separates repeatable demand from one-off purchases before the next month is planned." });
+  const seen = new Set<string>();
+  return out.filter(item => !seen.has(item.q) && seen.add(item.q)).slice(0, 4);
 }
 
 /**

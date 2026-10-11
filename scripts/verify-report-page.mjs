@@ -48,7 +48,7 @@ try {
  await review.getByRole('button',{name:'Appearance',exact:true}).click();
  // Chapter tabs → insights keep their evidence drilldowns.
  await review.locator('.deck-tabs button',{hasText:'Schedule'}).click();
- await review.locator('.deck-sections').getByRole('tab',{name:/Insights/}).click();
+ await review.locator('.deck-sections').getByRole('tab',{name:/AI discoveries/}).click();
  const insight=review.locator('.deck-insight').first();await insight.getByRole('button',{name:'Explore data: Barre attendance improved'}).click();
  assert.equal(await insight.locator('.r-insight-drilldown').getAttribute('open'),'');
  const liveLink=new URL(await insight.getByRole('link',{name:/Open full source analytics/}).getAttribute('href'));
@@ -61,7 +61,7 @@ try {
  await review.locator('#main').evaluate(el=>el.scrollTop=700);await review.waitForTimeout(100);
  assert.equal(Math.round((await review.locator('.deck-nav').boundingBox()).y),0,'navbar pinned at the top');
  // Metric cards flip to their history.
- await review.locator('.deck-sections').getByRole('tab',{name:/Briefing/}).click();
+ await review.locator('.deck-sections').getByRole('tab',{name:/Executive pulse/}).click();
  const flip=review.locator('.deck-flip').first();await flip.locator('.deck-flip-front').click();assert.equal(await flip.getAttribute('data-flipped'),'true');
  // Exported HTML keeps native drilldowns and the headline shortcut without React.
  const downloadPromise=review.waitForEvent('download');await review.getByRole('button',{name:'Download HTML',exact:true}).click();

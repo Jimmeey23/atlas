@@ -95,6 +95,20 @@ try {
   await page.locator('.dk-brief').waitFor();
   for (const label of ['The reading', 'Where it sits', 'Against the year', 'What moved the number']) assert.ok(await page.locator('.dk-brief').getByText(label, { exact: true }).count(), `reading shows ${label}`);
   assert.ok(await page.locator('.dk-bridge-row').count() >= 3, 'the driver bridge decomposes the movement');
+  assert.ok(await page.locator('.dk-portfolio').count(), 'the portfolio map places each row on contribution against momentum');
+  assert.ok(await page.locator('.dk-ask li').count() >= 3, 'the page offers the questions it raises');
+  assert.ok((await page.locator('.deck-page-question').innerText()).length > 0, 'each page states the question it answers');
+  assert.ok(await page.locator('.deck-sections').getByRole('tab', { name: 'Executive pulse' }).count(), 'sections are named as intelligence layers');
+  // The revenue chapter takes the movement apart: volume against spend, then reads its quality.
+  await page.locator('.deck-tabs button', { hasText: /Sales|Revenue/ }).first().click();
+  await page.locator('.dk-anatomy').waitFor();
+  assert.equal(await page.locator('.dk-anatomy .dk-anat-row').count(), 3, 'the anatomy bridge shows both effects and the net change');
+  assert.ok((await page.locator('.dk-quality-verdict').innerText()).trim().length > 0, 'the growth-quality read names a verdict');
+  assert.ok(await page.locator('.dk-quality-rows > div').count() >= 3, 'quality rows read momentum beside the topline');
+  await page.locator('.dk-ask').scrollIntoViewIfNeeded(); await page.waitForTimeout(300); await page.screenshot({ path: `${shots}/deck-anatomy.png` });
+  await page.locator('#main').evaluate(el => el.scrollTo({ top: 0 }));
+  await page.locator('.deck-tabs button', { hasText: /Schedule|Sessions/ }).first().click();
+  await page.locator('.dk-brief').waitFor();
   for (const label of ['Action centre', 'Expected outcome', 'How we will know', 'Guardrail']) assert.ok(await page.locator('.dk-decision').getByText(label, { exact: true }).count(), `action centre shows ${label}`);
   assert.ok((await page.locator('.deck-metric-grid').boundingBox()).y < (await page.locator('.dk-brief').boundingBox()).y, 'metric cards sit above the briefing');
   assert.ok(await page.locator('.dk-takeaways li').count() >= 3, 'briefing lists takeaways'); await page.waitForTimeout(500);
@@ -118,7 +132,7 @@ try {
   await page.getByRole('button', { name: 'Notes' }).click();
   assert.equal(await page.locator('.deck-drawer').getAttribute('data-open'), 'true');
   const opener = await page.locator('.deck-notes-opener').innerText();
-  await page.locator('.deck-sections').getByRole('tab', { name: /Insights/ }).click();
+  await page.locator('.deck-sections').getByRole('tab', { name: /AI discoveries/ }).click();
   await page.waitForFunction(previous => document.querySelector('.deck-notes-opener')?.textContent !== previous, opener);
   assert.ok(await page.locator('.deck-insight').count() >= 2, 'every finding is on the page');
   await page.locator('.dk-view-toggle').getByRole('button', { name: /One at a time/ }).click();

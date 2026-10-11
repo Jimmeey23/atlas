@@ -11,7 +11,7 @@ import { definition } from "../../../report/definitions";
 import { findingsFor, ledger } from "../../../report/findings";
 import { builtLabel, monthLabel } from "../../../report/period";
 import { reportOptions } from "../../../report/options";
-import { chapterMetrics, deckPages, deckTabs, SECTION_LABEL, verdictOf, type DeckSection, type DeckTab } from "../../../report/deck";
+import { chapterMetrics, deckPages, deckTabs, SECTION_QUESTION, sectionLabel, verdictOf, type DeckSection, type DeckTab } from "../../../report/deck";
 import { downloadReport, printReport } from "../../../report/export";
 import { adminStatus, adminToken, lockAdmin, pinReport, saveReport, unlockAdmin, updateReport } from "../../../report/storage";
 import type { ReportComponentSpec, ReportModel } from "../../../report/model";
@@ -219,13 +219,14 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
           <div className="deck-page-head" data-export="omit">
             {page.section === "cover" ? <div className="deck-page-title"><span className="deck-eyebrow"><BookOpen size={13}/>Report overview</span><h1>{tab.title}</h1><p>{model.customization?.subtitle || "Commercial performance, the community journey and the decisions for the month ahead."}</p></div>
               : <div className="deck-page-title">
-                <span className="deck-eyebrow">{tab.spec?.eyebrow ?? "Report overview"} · {SECTION_LABEL[page.section]}</span>
+                <span className="deck-eyebrow">{tab.spec?.eyebrow ?? "Report overview"} · {sectionLabel(page.section, tab.chapter)}</span>
                 <h1>{tab.id === "overview" ? tab.spec?.title ?? tab.title : tab.title}</h1>
+                <span className="deck-page-question">{SECTION_QUESTION[page.section]}</span>
                 {tab.spec?.deck && <p>{tab.spec.deck}</p>}
                 <span className="deck-page-ordinal"><b>{String(index + 1).padStart(2, "0")}</b><span className="deck-page-dot">/</span>{String(pages.length).padStart(2, "0")} · {tab.id === "overview" ? "Overview" : `Chapter ${String(tabs.findIndex(t => t.id === tab.id)).padStart(2, "0")} of ${String(tabs.length - 1).padStart(2, "0")}`}</span>
               </div>}
             <div className="deck-sections segmented" role="tablist" aria-label="Sections">
-              {tab.sections.map(s => { const Icon = SECTION_ICON[s]; return <button key={s} role="tab" aria-selected={s === page.section} className={s === page.section ? "active" : ""} onClick={() => setPage({ tab: tab.id, section: s })}><Icon size={13}/>{SECTION_LABEL[s]}</button>; })}
+              {tab.sections.map(s => { const Icon = SECTION_ICON[s]; return <button key={s} role="tab" aria-selected={s === page.section} className={s === page.section ? "active" : ""} onClick={() => setPage({ tab: tab.id, section: s })} title={SECTION_QUESTION[s]}><Icon size={13}/>{sectionLabel(s, tab.chapter)}</button>; })}
             </div>
           </div>
           {message && <p className="deck-message" role="status">{message}<button className="icon-button" aria-label="Dismiss" onClick={() => setMessage("")}><X size={13}/></button></p>}

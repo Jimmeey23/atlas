@@ -1101,3 +1101,81 @@
 .deck-proof-definition>b{font-size:var(--d-fs-2);color:var(--dk-ink)}
 .deck-def-compact{margin:8px 0 0;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;font-size:var(--d-fs-1);color:var(--dk-ink-3)}
 .deck-def-compact code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dk-ink-3);opacity:.85;overflow-wrap:anywhere}
+
+/* ------------------------------------------------------------------ anatomy --- */
+/* The movement, taken apart: contribution rows around a centre line, so a fall reads left
+   of the line and a rise reads right of it without a legend. */
+.dk-anatomy,.dk-quality,.dk-portfolio{margin-top:var(--d-s6);padding-top:var(--d-s4);border-top:1px solid var(--dk-line)}
+.dk-anat-rows{display:grid;gap:2px;margin-top:14px}
+.dk-anat-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(120px,min(46%,320px)) minmax(88px,auto);gap:16px;align-items:center;padding:9px 0;border-bottom:1px solid var(--dk-line-2)}
+.dk-anat-row:last-child{border-bottom:0}
+.dk-anat-row[data-net=true]{border-top:1px solid var(--dk-ink);border-bottom:0;margin-top:4px;padding-top:12px}
+.dk-anat-label{display:grid;gap:2px;min-width:0}
+.dk-anat-label b{font-size:var(--d-fs-3);font-weight:600;color:var(--dk-ink)}
+.dk-anat-label small{font-size:var(--d-fs-2);color:var(--dk-ink-3)}
+.dk-anat-bar{position:relative;display:block;height:10px;border-radius:var(--d-r-1);background:color-mix(in srgb,var(--dk-ink) 5%,transparent)}
+.dk-anat-bar:before{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--dk-line-2)}
+.dk-anat-bar>i{position:absolute;top:1px;bottom:1px;border-radius:2px;background:var(--dk-ink-2)}
+.dk-anat-bar>i[data-sign=positive]{background:var(--dk-good)}
+.dk-anat-bar>i[data-sign=negative]{background:var(--dk-bad)}
+.dk-anat-row>em{display:inline-flex;align-items:center;gap:4px;justify-self:end;font-size:var(--d-fs-3);font-weight:600;font-variant-numeric:tabular-nums;color:var(--dk-ink)}
+.dk-anat-row>em[data-tone=up]{color:var(--dk-good)}
+.dk-anat-row>em[data-tone=down]{color:var(--dk-bad)}
+.dk-anat-warning{display:flex;align-items:flex-start;gap:7px;margin:10px 0 0;font-size:var(--d-fs-2);line-height:1.55;color:var(--dk-ink-2)}
+
+/* ------------------------------------------------------------------ quality --- */
+.dk-quality-rows{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:2px 26px;margin:16px 0 0}
+.dk-quality-rows>div{display:grid;gap:5px;padding:10px 0;border-bottom:1px solid var(--dk-line-2)}
+.dk-quality-rows dt{font-size:var(--d-fs-1);letter-spacing:var(--d-track);text-transform:uppercase;color:var(--dk-ink-3)}
+.dk-quality-rows dd{display:flex;align-items:baseline;gap:9px;margin:0}
+.dk-quality-rows dd>b{font-family:var(--font-display);font-size:var(--d-fs-5);font-weight:600;font-variant-numeric:tabular-nums;color:var(--dk-ink)}
+.dk-quality-rows dd>em{display:inline-flex;align-items:center;gap:3px;font-size:var(--d-fs-2);font-style:normal;font-variant-numeric:tabular-nums;color:var(--dk-ink-3)}
+.dk-quality-rows>div[data-tone=up] dd>em{color:var(--dk-good)}
+.dk-quality-rows>div[data-tone=down] dd>em{color:var(--dk-bad)}
+.dk-quality-bar{display:block;height:3px;background:color-mix(in srgb,var(--dk-ink) 6%,transparent);border-radius:2px;overflow:hidden}
+.dk-quality-bar>i{display:block;height:100%;background:var(--dk-ink-2);opacity:.75}
+.dk-quality-rows>div[data-tone=up] .dk-quality-bar>i{background:var(--dk-good)}
+.dk-quality-rows>div[data-tone=down] .dk-quality-bar>i{background:var(--dk-bad)}
+.dk-quality-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.dk-quality-verdict b{font-family:var(--font-display);font-size:var(--d-fs-4);font-weight:600;letter-spacing:.01em}
+.dk-quality-verdict[data-band=watch] b{color:var(--dk-warn)}
+.dk-quality-verdict[data-band=critical] b{color:var(--dk-bad)}
+.dk-quality-verdict[data-band=held] b{color:var(--dk-good)}
+.dk-quality-read{margin:16px 0 0;font-size:var(--d-fs-3);line-height:1.6;color:var(--dk-ink);max-width:82ch}
+.dk-portfolio-axis{font-size:var(--d-fs-2);color:var(--dk-ink-3)}
+
+/* ---------------------------------------------------------------- portfolio --- */
+.dk-portfolio-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:1px;margin-top:16px;background:var(--dk-line)}
+.dk-quad{display:grid;gap:10px;align-content:start;padding:16px 18px 14px;background:var(--dk-paper,transparent)}
+.dk-quad>header{display:grid;gap:2px}
+.dk-quad>header b{font-size:var(--d-fs-3);font-weight:650;color:var(--dk-ink)}
+.dk-quad>header small{font-size:var(--d-fs-2);color:var(--dk-ink-3)}
+.dk-quad[data-quadrant=growth] >header b{color:var(--dk-good)}
+.dk-quad[data-quadrant=protect] >header b{color:var(--dk-warn)}
+.dk-quad[data-quadrant=under] >header b{color:var(--dk-bad)}
+.dk-quad ul{display:grid;gap:0;margin:0;padding:0;list-style:none}
+.dk-quad li{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--dk-line-2)}
+.dk-quad-name,.dk-quad-move{display:grid;gap:1px;min-width:0}
+.dk-quad-name b{font-size:var(--d-fs-3);font-weight:550;color:var(--dk-ink)}
+.dk-quad-name small{font-size:var(--d-fs-1);color:var(--dk-ink-3)}
+.dk-quad-move{justify-items:end;text-align:right}
+.dk-quad-move b{font-size:var(--d-fs-3);font-weight:600;font-variant-numeric:tabular-nums;color:var(--dk-ink)}
+.dk-quad-move small{display:inline-flex;align-items:center;gap:3px;font-size:var(--d-fs-1);font-variant-numeric:tabular-nums;color:var(--dk-ink-3)}
+.dk-quad-move[data-tone=up] small{color:var(--dk-good)}
+.dk-quad-move[data-tone=down] small{color:var(--dk-bad)}
+.dk-quad>p{display:flex;align-items:flex-start;gap:6px;margin:2px 0 0;font-size:var(--d-fs-2);line-height:1.5;color:var(--dk-ink-3)}
+
+/* The one question a page answers, under its title. */
+.deck-page-question{display:block;margin-top:2px;font-family:var(--font-display);font-size:var(--d-fs-4);font-weight:450;letter-spacing:-.005em;color:var(--dk-ink-2)}
+
+/* Ask Atlas: the questions a chapter raises, ready to take into the analysis workspace. */
+.dk-ask{margin-top:var(--d-s6);padding-top:var(--d-s4);border-top:1px solid var(--dk-line)}
+.dk-ask ul{display:grid;gap:0;margin:14px 0 0;padding:0;list-style:none}
+.dk-ask li{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:11px 0;border-top:1px solid var(--dk-line-2)}
+.dk-ask li:first-child{border-top:0}
+.dk-ask-q{display:grid;gap:2px;min-width:0}
+.dk-ask-q b{font-family:var(--font-display);font-size:var(--d-fs-3);font-weight:550;line-height:1.4;color:var(--dk-ink)}
+.dk-ask-q small{font-size:var(--d-fs-2);color:var(--dk-ink-3)}
+.dk-ask-copy{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;padding:4px 9px;border:1px solid var(--dk-line-2);border-radius:999px;background:transparent;font:inherit;font-size:var(--d-fs-1);color:var(--dk-ink-3);cursor:pointer;transition:color .16s,border-color .16s}
+.dk-ask-copy:hover,.dk-ask-copy:focus-visible{color:var(--dk-ink);border-color:var(--dk-ink-3)}
+@media print{.dk-ask-copy{display:none}}

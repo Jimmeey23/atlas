@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Mic, Sparkles, Loader2, Timer, Play, Pause, RotateCcw, X, ExternalLink, AArrowUp, AArrowDown, MessageCircleQuestion, Hash, ArrowRight, NotebookPen, ScrollText, ChevronRight, Quote } from "lucide-react";
 import type { ReportModel, SpeakerNotes } from "../../../report/model";
-import { deckPages, liveNotes, pageKey, sectionContext, SECTION_LABEL, type DeckSection, type DeckTab } from "../../../report/deck";
+import { deckPages, deckTabs, liveNotes, pageKey, sectionContext, sectionLabel, type DeckSection, type DeckTab } from "../../../report/deck";
 import { generateSpeakerNotes, saveNotes } from "../../../report/storage";
 
 import { useSpeechFollow } from "./useSpeechFollow";
@@ -41,7 +41,7 @@ export function SpeakerDrawer({ model, tabs, tab, section, open, onClose, onNote
   const [fontScale, setFontScale] = useState(() => Number(localStorage.getItem(FONT_KEY)) || 1);
   const [teleprompter, setTeleprompter] = useState(false);
   const [speed, setSpeed] = useState(20), [autoFollow, setAutoFollow] = useState(true);
-  const candidates = useMemo(() => deckPages(tabs).map(p => { const script = liveNotes(model, tabs, p.tab, p.section); return { key: pageKey(p.tab, p.section), text: `${tabs.find(t => t.id === p.tab)?.label} ${SECTION_LABEL[p.section]} ${script.opener} ${script.points.join(' ')} ${script.numbers.join(' ')}` }; }), [model, tabs]);
+  const candidates = useMemo(() => deckPages(tabs).map(p => { const script = liveNotes(model, tabs, p.tab, p.section); return { key: pageKey(p.tab, p.section), text: `${tabs.find(t => t.id === p.tab)?.label} ${sectionLabel(p.section, tabs.find(t => t.id === p.tab)?.chapter)} ${script.opener} ${script.points.join(' ')} ${script.numbers.join(' ')}` }; }), [model, tabs]);
   const speech = useSpeechFollow({ candidates, current: key, lines: [notes.opener, ...notes.points, ...notes.numbers, notes.transition], enabled: open,
     onMatch: matched => { if (!autoFollow) return; const page = pages.find(p => pageKey(p.tab, p.section) === matched); if (page) { onNavigate(page); setView('script'); } } });
   const [busy, setBusy] = useState(false), [error, setError] = useState(""), [saved, setSaved] = useState("");
@@ -92,7 +92,7 @@ export function SpeakerDrawer({ model, tabs, tab, section, open, onClose, onNote
   const tabLabel = tabs.find(t => t.id === tab)?.label ?? "";
   return <aside className="deck-drawer" data-open={open} aria-label="Speaker notes" aria-hidden={!open} data-export="omit">
     <header className="deck-drawer-head">
-      <div><span className="deck-eyebrow"><Mic size={12}/>Speaker notes · live</span><h3>{tabLabel} <ChevronRight size={13}/> {SECTION_LABEL[section]}</h3><small>Page {position + 1} of {pages.length}{model.speakerNotes?.[key] ? " · AI talk track" : " · from the report"}</small></div>
+      <div><span className="deck-eyebrow"><Mic size={12}/>Speaker notes · live</span><h3>{tabLabel} <ChevronRight size={13}/> {sectionLabel(section, tab)}</h3><small>Page {position + 1} of {pages.length}{model.speakerNotes?.[key] ? " · AI talk track" : " · from the report"}</small></div>
       <button className="icon-button" aria-label="Close speaker notes" onClick={onClose}><X size={16}/></button>
     </header>
     <div className="deck-drawer-timer" data-pace={pace > .05 ? "behind" : pace < -.05 ? "ahead" : "on"}>
@@ -119,7 +119,7 @@ export function SpeakerDrawer({ model, tabs, tab, section, open, onClose, onNote
       <label><input type="checkbox" checked={autoFollow} onChange={e => setAutoFollow(e.target.checked)}/>Follow spoken section automatically</label>
       <label>Scroll speed <input type="range" aria-label="Teleprompter speed" min={5} max={60} value={speed} onChange={e => setSpeed(Number(e.target.value))}/>{speed}px/s</label>
       <small>{speech.listening ? 'Script follows matching speech; automatic scrolling pauses.' : 'Start the microphone to follow your speech. Browser recognition may use its speech service. Transcript stays in this window.'}</small>
-      {(speech.transcript || speech.interim) && <details className="deck-transcript"><summary>Captured speaker voice</summary><p>{speech.transcript}<em>{speech.interim}</em></p><button className="button" disabled={!speech.sectionTranscript} onClick={() => { typeMine([mine, `Speaker voice · ${tabLabel} / ${SECTION_LABEL[section]}\n${speech.sectionTranscript}`].filter(Boolean).join("\n\n")); setView("mine"); }}>Save this section’s voice to my notes</button><button className="button" onClick={speech.clear}>Clear transcript</button></details>}
+      {(speech.transcript || speech.interim) && <details className="deck-transcript"><summary>Captured speaker voice</summary><p>{speech.transcript}<em>{speech.interim}</em></p><button className="button" disabled={!speech.sectionTranscript} onClick={() => { typeMine([mine, `Speaker voice · ${tabLabel} / ${sectionLabel(section, tab)}\n${speech.sectionTranscript}`].filter(Boolean).join("\n\n")); setView("mine"); }}>Save this section’s voice to my notes</button><button className="button" onClick={speech.clear}>Clear transcript</button></details>}
     </section>
     </details>
     {view === "script" ? <>
@@ -133,13 +133,14 @@ export function SpeakerDrawer({ model, tabs, tab, section, open, onClose, onNote
       <textarea aria-label="My presenter notes for this page" value={mine} onChange={e => typeMine(e.target.value)} placeholder="Your own points for this page. Saved with the report." style={{ fontSize: `${13 * fontScale}px` }}/>
       <small role="status">{saved || (model.id ? "Saves automatically" : "Save the report to keep notes")}</small>
     </div>}
-    {next && <footer className="deck-drawer-next"><span>Up next</span><b>{tabs.find(t => t.id === next.tab)?.label} · {SECTION_LABEL[next.section]}</b></footer>}
+    {next && <footer className="deck-drawer-next"><span>Up next</span><b>{tabs.find(t => t.id === next.tab)?.label} · {sectionLabel(next.section, tabs.find(t => t.id === next.tab)?.chapter)}</b></footer>}
   </aside>;
 }
 
 /** Notes-only window for a second screen, following the presenting tab. */
 export function PoppedNotes({ model }: { model: ReportModel }) {
   const [state, setState] = useState<{ tab: string; section: DeckSection; notes: SpeakerNotes; elapsed: number } | null>(null);
+  const tabs = useMemo(() => deckTabs(model), [model]);
   const [scale, setScale] = useState(1.2);
   useEffect(() => {
     if (!model.id || typeof BroadcastChannel === "undefined") return;
@@ -152,6 +153,6 @@ export function PoppedNotes({ model }: { model: ReportModel }) {
     <header><Mic size={16}/><b>{model.scope.studio} · speaker notes</b>{state && <span>{clock(state.elapsed)}</span>}
       <button className="icon-button" aria-label="Smaller text" onClick={() => setScale(s => Math.max(.8, s - .1))}><AArrowDown size={15}/></button>
       <button className="icon-button" aria-label="Larger text" onClick={() => setScale(s => Math.min(2.2, s + .1))}><AArrowUp size={15}/></button></header>
-    {state ? <><h2>{SECTION_LABEL[state.section]}</h2><SpeakerNotesView notes={state.notes} fontScale={scale} teleprompter={false} /></> : <p className="deck-loading">Waiting for the presenting window… navigate a page there to sync.</p>}
+    {state ? <><h2>{sectionLabel(state.section, tabs.find(t => t.id === state.tab)?.chapter)}</h2><SpeakerNotesView notes={state.notes} fontScale={scale} teleprompter={false} /></> : <p className="deck-loading">Waiting for the presenting window… navigate a page there to sync.</p>}
   </div>;
 }

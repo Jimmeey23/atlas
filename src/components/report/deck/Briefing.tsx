@@ -1,11 +1,13 @@
 import { CalendarClock, Crosshair, Database, Flag, Gauge, IndianRupee, Scale, ShieldAlert, ShieldCheck, Sparkles, Target, Telescope, Users } from "lucide-react";
 import { definition, reportFmt as fmt, reportDelta as delta } from "../../../report/definitions";
-import { briefingOf, decisionMetrics, decisionOf, driverBridge, extremes, readingLines, verdictCard, yearPosition, type DriverBridge } from "../../../report/brief";
+import { briefingOf, decisionMetrics, decisionOf, driverBridge, extremes, portfolioMap, readingLines, revenueAnatomy, revenueQuality, verdictCard, yearPosition, type DriverBridge } from "../../../report/brief";
 import type { ChapterBriefing, InsightCard, ReportModel } from "../../../report/model";
 import { monthLabel } from "../../../report/period";
 import { EditableText, useEdit } from "./editing";
 import { useRecordDrilldown } from "./RecordDrilldown";
 import { Emphasis } from "./Layout";
+import { AnatomyBridge, PortfolioBlocks, QualityScorecard } from "./Anatomy";
+import { AskAtlas } from "./AskAtlas";
 
 const tone = (id: string, value: unknown, prior: unknown) => value == null || prior == null || Number(value) === Number(prior) ? "flat" : (Number(value) > Number(prior)) === (definition(id)?.higherIsBetter ?? true) ? "up" : "down";
 
@@ -14,7 +16,7 @@ function Bridge({ bridge }: { bridge: DriverBridge }) {
   const v = (value: number) => `${value > 0 ? "+" : "−"}${fmt(bridge.metric, Math.abs(value))}`;
   return <section className="dk-bridge" aria-label={`What moved ${definition(bridge.metric)?.label ?? bridge.metric}`}>
     <div className="dk-bridge-head">
-      <span className="deck-eyebrow"><Gauge size={12}/>What moved the number</span>
+      <span className="deck-eyebrow"><Gauge size={12}/>Which rows moved it</span>
       <span className="dk-bridge-net"><span>{definition(bridge.metric)?.label} net movement</span><b data-tone={bridge.net >= 0 ? "up" : "down"}>{v(bridge.net)}</b><span>on last month</span></span>
     </div>
     <div className="dk-bridge-rows">
@@ -44,6 +46,9 @@ export function BriefingPanel({ model, chapter, ids }: { model: ReportModel; cha
   const path = (key: string) => ["narratives", chapter, "briefing", key];
   const lines = readingLines(b, v?.headline);
   const bridge = driverBridge(data, ids);
+  const anatomy = revenueAnatomy(data, ids);
+  const quality = revenueQuality(data, ids);
+  const portfolio = portfolioMap(data, ids);
   const lead = ids.find(id => data?.total[id] != null);
   const position = lead && data ? yearPosition(lead, data, model.scope.month) : null;
   const spread = lead && data ? extremes(lead, data) : null;
@@ -65,7 +70,11 @@ export function BriefingPanel({ model, chapter, ids }: { model: ReportModel; cha
       <dt><j.icon size={12}/>{j.label}</dt>
       <dd>{j.editable ? <EditableText path={path(String(j.key))} value={j.text} as="span" placeholder={j.label} /> : j.text}</dd>
     </div>)}</dl>}
+    {anatomy && data && <AnatomyBridge anatomy={anatomy} data={data}/>}
+    {quality && data && <QualityScorecard quality={quality} data={data}/>}
     {bridge && <Bridge bridge={bridge}/>}
+    {portfolio && data && <PortfolioBlocks map={portfolio} data={data}/>}
+    <AskAtlas model={model} chapter={chapter} ids={ids}/>
   </section>;
 }
 

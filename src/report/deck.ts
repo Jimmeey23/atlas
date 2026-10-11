@@ -7,9 +7,34 @@ import { decisionOf, extremes, movers, questionBank, rankPerformers, scenariosFo
 /** The pages a report is presented as: an overview tab (cover + executive brief), then one tab per chapter. */
 export type DeckSection = "cover" | "summary" | "insights" | "plan" | "performers" | "outlook" | "trends" | "tables" | "data";
 export const SECTION_LABEL: Record<DeckSection, string> = {
-  cover: "Cover", summary: "Briefing", insights: "Insights", plan: "Action plan", performers: "Leaders & laggards",
-  outlook: "Outlook", trends: "Month on month", tables: "Key tables", data: "Explore data",
+  cover: "Cover", summary: "Executive pulse", insights: "AI discoveries", plan: "Decision centre", performers: "Leaders & laggards",
+  outlook: "Forward view", trends: "Evidence over time", tables: "Working tables", data: "Source records",
 };
+/** The one question each page answers, so a reader always knows what they are being told. */
+export const SECTION_QUESTION: Record<DeckSection, string> = {
+  cover: "Where does the month stand, and what is in this report?",
+  summary: "Are we performing well, and what is actually carrying the result?",
+  insights: "What would we otherwise miss — and how much can we trust it?",
+  plan: "What should we do, who owns it, and what would tell us it worked?",
+  performers: "Who and what is carrying the month, and who is holding it back?",
+  outlook: "What happens next under each version of the coming months?",
+  trends: "How does this month compare with the year behind it?",
+  tables: "What do the working numbers say, row by row?",
+  data: "What do the underlying records show?",
+};
+/** The layer a page plays in chapters where a breakdown is about products, customers or delivery. */
+const INTELLIGENCE: Record<string, Partial<Record<DeckSection, string>>> = {
+  "revenue-performance": { performers: "Product intelligence" },
+  "conversion-funnel": { performers: "Customer intelligence" },
+  lapsed: { performers: "Member intelligence" },
+  instructors: { performers: "Instructor intelligence" },
+  "instructor-outcomes": { performers: "Instructor intelligence" },
+  formats: { performers: "Format intelligence" },
+  sessions: { performers: "Session intelligence" },
+  "late-cancellations": { performers: "Booking discipline" },
+};
+/** A page's name in this chapter: the generic layer, or the chapter's own intelligence layer. */
+export const sectionLabel = (section: DeckSection, chapter?: string) => (chapter && INTELLIGENCE[chapter]?.[section]) || SECTION_LABEL[section];
 /** `chapter` is the narrative/figures key: the overview tab reads the executive brief. */
 export interface DeckTab { id: string; label: string; title: string; chapter: string; spec?: ChapterSpec; sections: DeckSection[] }
 
