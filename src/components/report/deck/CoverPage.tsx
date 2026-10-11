@@ -110,7 +110,7 @@ export function CoverPage({ model, tabs, ranked, onNavigate }: { model: ReportMo
     </header>
 
     {ticker.length > 2 && <Marquee label="Lead measures across every area" speed={Math.max(30, ticker.length * 5)}>
-      {ticker.map(({ tab, id, data }) => <span key={`${tab.id}-${id}`} className="dk-tick-wrap"><small>{tab.label}</small><Move id={id} data={data}/></span>)}
+      {ticker.map(({ tab, id, data }) => <span key={`${tab.id}-${id}`} className="dk-marquee-item"><small>{tab.label}</small><Move id={id} data={data}/></span>)}
     </Marquee>}
 
     {(verdict || brief?.takeaways.length) && <section className="dk-impact" aria-label="The month in one line">
@@ -125,7 +125,7 @@ export function CoverPage({ model, tabs, ranked, onNavigate }: { model: ReportMo
       })}</dl>}
       {!!brief?.takeaways.length && <ol className="dk-takeaways dk-takeaways-flow">{brief.takeaways.slice(0, 4).map((t, i) => <li key={i}><span>{String(i + 1).padStart(2, "0")}</span><p><Emphasis text={t}/></p></li>)}</ol>}
       {headlines.length > 2 && <Marquee label="Every area's verdict" reverse speed={Math.max(40, headlines.length * 9)}>
-        {headlines.map(({ tab, v }) => <button type="button" key={tab.id} className="dk-headline-chip" onClick={() => onNavigate(tab.id)}><b>{tab.label}</b>{v!.headline}</button>)}
+        {headlines.map(({ tab, v }) => <button type="button" key={tab.id} className="dk-marquee-item dk-headline-chip" onClick={() => onNavigate(tab.id)}><b>{tab.label}</b>{v!.headline}</button>)}
       </Marquee>}
     </section>}
 

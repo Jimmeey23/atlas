@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TrendingUp, TriangleAlert, GitBranch, Lightbulb, Radar, ArrowRightCircle, Plus, Trash2, ListFilter, PanelLeft, Rows3 } from "lucide-react";
+import { TrendingUp, TriangleAlert, GitBranch, Lightbulb, Radar, ArrowRightCircle, Plus, Trash2, ListFilter, LayoutPanelTop, Rows3 } from "lucide-react";
 import { lensOf, lensLabel } from "../Insight";
 import { DeckInsightCard } from "./InsightCard";
 import { reportOptions } from "../../../report/options";
@@ -50,6 +50,10 @@ export function InsightsSection({ model, tab, plan = false }: { model: ReportMod
   const card = (item: typeof shown[number], i: number) => <DeckInsightCard key={item.index} card={item.card} model={model} chapterId={tab} index={i} total={shown.length} plan={plan} confidence={options.showConfidence}
     onStep={view === "focus" ? step => setActive(Math.max(0, Math.min(shown.length - 1, i + step))) : undefined} />;
   return <div className="deck-insights dk-insights">
+    <header className="dk-insights-intro">
+      <div><span className="deck-eyebrow">Evidence-led interpretation</span><h2>{plan ? "Decisions, owners and next moves" : "What changed, why it changed, and what matters now"}</h2></div>
+      <p>{plan ? "A prioritised decision register drawn from this chapter's findings." : "Each finding connects the observed signal to its driver, supporting evidence and recommended response."}</p>
+    </header>
     <div className="dk-insights-bar">
       {lenses.length > 1 && <div className="deck-lens-filter" role="group" aria-label="Filter insights by lens">
         <ListFilter size={14}/>
@@ -57,16 +61,16 @@ export function InsightsSection({ model, tab, plan = false }: { model: ReportMod
         {lenses.map(id => { const Icon = LENS_ICON[id]; return <button key={id} data-lens={id} aria-pressed={lens === id} onClick={() => { setLens(id); setActive(0); }}><Icon size={13}/>{lensLabel(id)} <b>{indexed.filter(({ card }) => lensOf(card) === id).length}</b></button>; })}
       </div>}
       <div className="segmented dk-view-toggle" role="group" aria-label="Insight layout">
-        <button className={view === "focus" ? "active" : ""} aria-pressed={view === "focus"} onClick={() => setView("focus")}><PanelLeft size={13}/>Focus</button>
-        <button className={view === "list" ? "active" : ""} aria-pressed={view === "list"} onClick={() => setView("list")}><Rows3 size={13}/>All</button>
+        <button className={view === "focus" ? "active" : ""} aria-pressed={view === "focus"} onClick={() => setView("focus")}><LayoutPanelTop size={13}/>Reading view</button>
+        <button className={view === "list" ? "active" : ""} aria-pressed={view === "list"} onClick={() => setView("list")}><Rows3 size={13}/>All findings</button>
       </div>
     </div>
-    {view === "focus" ? <div className="dk-insight-board">
-      <nav className="dk-rail" aria-label="Insights in this chapter">{shown.map(({ card, index }, i) => <button key={index} type="button" aria-current={i === current || undefined} data-lens={lensOf(card)} onClick={() => setActive(i)}>
+    {view === "focus" ? <div className="dk-insight-stage">
+      <nav className="dk-insight-index" aria-label="Insights in this chapter">{shown.map(({ card, index }, i) => <button key={index} type="button" aria-current={i === current || undefined} data-lens={lensOf(card)} onClick={() => setActive(i)}>
         <span className="dk-rail-no">{String(i + 1).padStart(2, "0")}</span>
         <span className="dk-rail-text"><small>{lensLabel(lensOf(card))}{card.priority === "high" ? " · High priority" : ""}</small><b>{card.headline}</b>{card.impact && <em>{card.impact}</em>}</span>
       </button>)}</nav>
-      {shown[current] && card(shown[current], current)}
+      <div className="dk-insight-feature">{shown[current] && card(shown[current], current)}</div>
     </div> : <div className="deck-insight-list">{shown.map(card)}</div>}
   </div>;
 }

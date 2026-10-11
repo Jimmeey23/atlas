@@ -11,7 +11,7 @@ import { definition } from "../../../report/definitions";
 import { findingsFor, ledger } from "../../../report/findings";
 import { builtLabel, monthLabel } from "../../../report/period";
 import { reportOptions } from "../../../report/options";
-import { chapterMetrics, deckPages, deckTabs, SECTION_LABEL, verdictOf, type DeckSection, type DeckTab } from "../../../report/deck";
+import { chapterMetrics, deckPages, deckTabs, SECTION_META, sectionMeta, verdictOf, type DeckSection, type DeckTab } from "../../../report/deck";
 import { downloadReport, printReport } from "../../../report/export";
 import { adminStatus, adminToken, lockAdmin, pinReport, saveReport, unlockAdmin, updateReport } from "../../../report/storage";
 import type { ReportComponentSpec, ReportModel } from "../../../report/model";
@@ -158,6 +158,9 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
       </Slot>}
       <Slot id={slot("verdict")} tab={tab.id} section={s} kind="verdict" describe="chapter briefing"><BriefingPanel model={model} chapter={cid} ids={ids} /></Slot>
       <Slot id={slot("decision")} tab={tab.id} section={s} kind="verdict" describe="leadership decision"><DecisionPanel model={model} chapter={cid} ids={ids} /></Slot>
+      {!!data?.groups.length && <Slot id={slot("evidence-preview")} tab={tab.id} section={s} kind="evidence" describe="curated evidence tables">
+        <section className="dk-curated-evidence" aria-label="Evidence behind this chapter"><div className="dk-section-head"><span className="deck-eyebrow">Evidence behind the brief</span><h3>Decision-relevant breakdowns</h3><small>Top rows shown · full tables remain in Evidence tables</small></div><KeyTables model={model} chapter={cid} mode="curated" tableLimit={2} rowLimit={6}/></section>
+      </Slot>}
     </>;
     if (s === "insights") return <Slot id={slot("insights")} tab={tab.id} section={s} kind="insights" describe="insight list"><InsightsSection model={model} tab={cid} plan={cid === "recommendations"} /></Slot>;
     if (s === "plan") return <Slot id={slot("plan")} tab={tab.id} section={s} kind="plan" describe="action plan"><ActionPlan cards={model.narratives[cid]?.cards ?? []} /></Slot>;
@@ -203,9 +206,9 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
         <main className="deck-main" ref={main} id="main">
           <div className="deck-page-head" data-export="omit">
             {page.section === "cover" ? <span className="deck-eyebrow">Report overview</span>
-              : <div><span className="deck-eyebrow">{tab.spec?.eyebrow ?? "Report overview"} · {SECTION_LABEL[page.section]}</span><h1>{tab.id === "overview" ? tab.spec?.title ?? tab.title : tab.title}</h1>{tab.spec?.deck && <p>{tab.spec.deck}</p>}</div>}
+              : <div><span className="deck-eyebrow">{tab.spec?.eyebrow ?? "Report overview"} · {sectionMeta(page.section).display}</span><h1>{tab.id === "overview" ? tab.spec?.title ?? tab.title : tab.title}</h1>{tab.spec?.deck && <p>{tab.spec.deck}</p>}</div>}
             <div className="deck-sections segmented" role="tablist" aria-label="Sections">
-              {tab.sections.map(s => { const Icon = SECTION_ICON[s]; return <button key={s} role="tab" aria-selected={s === page.section} className={s === page.section ? "active" : ""} onClick={() => setPage({ tab: tab.id, section: s })}><Icon size={13}/>{SECTION_LABEL[s]}</button>; })}
+              {tab.sections.map(s => { const Icon = SECTION_ICON[s]; const meta = SECTION_META[s]; return <button key={s} role="tab" aria-selected={s === page.section} data-group={meta.group} className={s === page.section ? "active" : ""} onClick={() => setPage({ tab: tab.id, section: s })}><Icon size={13}/><span className="deck-section-long">{meta.label}</span><span className="deck-section-short">{meta.short}</span></button>; })}
             </div>
           </div>
           {message && <p className="deck-message" role="status">{message}<button className="icon-button" aria-label="Dismiss" onClick={() => setMessage("")}><X size={13}/></button></p>}

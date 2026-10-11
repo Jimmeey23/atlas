@@ -10,13 +10,13 @@ import { useRecordDrilldown } from "./RecordDrilldown";
 const tone = (id: string, value: unknown, prior: unknown) => value == null || prior == null || Number(value) === Number(prior) ? "flat" : (Number(value) > Number(prior)) === (definition(id)?.higherIsBetter ?? true) ? "up" : "down";
 
 /** Each briefing field answers one question; "why" gets the widest tile because that is where challenge comes. */
-const FIELDS: { key: Exclude<keyof ChapterBriefing, "takeaways">; label: string; question: string; icon: typeof Activity; wide?: boolean }[] = [
-  { key: "whatChanged", label: "What changed", question: "Size and direction of the move", icon: Activity },
-  { key: "whyItMoved", label: "Why it moved", question: "Decomposition and leading hypothesis", icon: GitBranch, wide: true },
-  { key: "whereItSits", label: "Where it sits", question: "Segments carrying the movement", icon: Crosshair },
-  { key: "whatHeldUp", label: "What held up", question: "The counter-signal", icon: ShieldCheck },
-  { key: "outlook", label: "Outlook", question: "Durability and next month", icon: Telescope },
-  { key: "soWhat", label: "So what", question: "Consequence if nothing changes", icon: Target },
+const FIELDS: { key: Exclude<keyof ChapterBriefing, "takeaways">; label: string; question: string; icon: typeof Activity; role: "lead" | "primary" | "support" }[] = [
+  { key: "whatChanged", label: "Performance movement", question: "The material change in this month's results", icon: Activity, role: "lead" },
+  { key: "whyItMoved", label: "Primary drivers", question: "The evidence explaining the movement", icon: GitBranch, role: "primary" },
+  { key: "whereItSits", label: "Where change concentrated", question: "The segments, products or cohorts carrying it", icon: Crosshair, role: "support" },
+  { key: "whatHeldUp", label: "What remained resilient", question: "The strongest counter-signal in the month", icon: ShieldCheck, role: "support" },
+  { key: "outlook", label: "Near-term read", question: "What the evidence suggests watching next", icon: Telescope, role: "support" },
+  { key: "soWhat", label: "Business implication", question: "Why this matters for the next decision", icon: Target, role: "primary" },
 ];
 
 /** The chapter's first page: headline verdict, numbered takeaways and six questions answered. */
@@ -41,12 +41,13 @@ export function BriefingPanel({ model, chapter, ids }: { model: ReportModel; cha
       {signals.map(x => <span key={x.key} className="dk-tick" data-tone={x.up ? "up" : "down"}><b>{x.g}</b>{x.change > 0 ? "+" : "−"}{fmt(x.metric, Math.abs(x.change))}<i>{definition(x.metric)?.label.toLowerCase()} vs last month</i></span>)}
     </Marquee>}
     <header className="dk-brief-head">
-      <div className="dk-brief-kicker"><span className="deck-eyebrow"><ScrollText size={12}/>Chapter briefing</span>
+      <div className="dk-brief-kicker"><span className="deck-eyebrow"><ScrollText size={12}/>Executive reading</span>
         {!b.written && <span className="dk-chip" title="Assembled from the verdict card and frozen figures; regenerate the analysis for the full briefing.">From the verdict</span>}</div>
       {v && <EditableText path={["narratives", chapter, "cards", vIndex, "headline"]} value={v.headline} as="h2" multiline={false} placeholder="Verdict headline" />}
     </header>
     {!!b.takeaways.length && <ol className="dk-takeaways dk-takeaways-flow">{b.takeaways.map((t, i) => <li key={i}><span>{String(i + 1).padStart(2, "0")}</span><p><Emphasis text={t}/></p></li>)}</ol>}
-    {!!fields.length && <div className="dk-brief-grid">{fields.map(f => <article key={f.key} className="dk-brief-tile" data-wide={f.wide || undefined} data-key={f.key}>
+    {!!fields.length && <div className="dk-brief-grid">{fields.map((f, index) => <article key={f.key} className="dk-brief-tile" data-role={f.role} data-key={f.key}>
+      <span className="dk-brief-index">{String(index + 1).padStart(2, "0")}</span>
       <header><f.icon size={14}/><b>{f.label}</b><small>{f.question}</small></header>
       <EditableText path={path(f.key)} value={b[f.key]} as="p" placeholder={f.question} />
     </article>)}</div>}

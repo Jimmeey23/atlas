@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, type CSSProperties } from "react";
 import { ArrowDownRight, ArrowUpRight, Minus, RotateCcw, Target, ChartColumnBig } from "lucide-react";
 import { Sparkline } from "../../MetricCard";
 import { definition, reportFmt as fmt, reportDelta as delta } from "../../../report/definitions";
@@ -50,23 +50,23 @@ export function FlipMetricCard({ id, data, target, flipped, onToggle }: { id: st
   const Arrow = mom === "flat" ? Minus : Number(value) >= Number(prior) ? ArrowUpRight : ArrowDownRight;
   const toggle = onToggle;
   const drilled = useRef(false);
-  return <div className="deck-flip" data-flipped={flipped}>
+  return <div className="deck-flip" data-flipped={flipped}
+    style={{ "--card-accent": `var(--accent, var(--${m?.domain ?? "accent"}))` } as CSSProperties}>
     <div className="deck-flip-inner">
-      <article className="deck-kpi deck-flip-face deck-flip-front" role="button" tabIndex={0} aria-pressed={flipped} aria-label={`${m?.label}: ${fmt(id, value)}. Show 14-month history`}
+      {!flipped ? <article className="deck-kpi deck-flip-face deck-flip-front" role="button" tabIndex={0} aria-pressed={false} aria-label={`${m?.label}: ${fmt(id, value)}. Show 14-month history`}
         title="Click for 14 months of history" onClick={toggle} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } }}>
         <div className="deck-kpi-label"><span title={m?.label}>{m?.label ?? id}</span><ChartColumnBig size={13} aria-hidden="true" className="deck-flip-hint"/></div>
         <div className="deck-kpi-reading">
           <span className="deck-kpi-value">{fmt(id, value)}</span>
-          <span className={`deck-kpi-delta metric-delta ${mom === "flat" ? "muted" : mom}`} title="Month on month"><Arrow size={12}/>{delta(id, value, prior)}<small>MoM</small></span>
+          <Sparkline values={values} color="var(--accent)" />
         </div>
-        <Sparkline values={values} color="var(--accent)" />
+        <span className={`deck-kpi-delta metric-delta ${mom === "flat" ? "muted" : mom}`} title="Month on month"><Arrow size={12}/>{delta(id, value, prior)}<small>MoM</small></span>
         <div className="deck-kpi-foot">
           <span className={`deck-yoy ${yoy}`}>YoY {delta(id, value, lastYear)}</span>
           {hit != null ? <span className={`deck-target ${hit ? "positive" : "negative"}`}><Target size={11}/>{hit ? "On target" : "Below"} {fmt(id, target)}</span>
             : <span>{currentSnapshotMetrics.has(id) ? "Snapshot" : m?.aggregation === "sum" ? "Total" : "Weighted"}</span>}
         </div>
-      </article>
-      <article className="deck-kpi deck-flip-face deck-flip-back" aria-hidden={!flipped} title="Click a bar for its records; click elsewhere to flip back" onClick={() => { if (drilled.current) drilled.current = false; else toggle(); }}>
+      </article> : <article className="deck-kpi deck-flip-face deck-flip-back" title="Click a bar for its records; click elsewhere to flip back" onClick={() => { if (drilled.current) drilled.current = false; else toggle(); }}>
         <div className="deck-kpi-label"><span>{m?.label ?? id} · 14 months</span>
           <button className="icon-button" aria-label="Flip back" tabIndex={flipped ? 0 : -1} onClick={e => { e.stopPropagation(); toggle(); }}><RotateCcw size={13}/></button></div>
         <MetricHistoryChart id={id} data={data} active={flipped} onDrill={() => { drilled.current = true; }} />
@@ -76,7 +76,7 @@ export function FlipMetricCard({ id, data, target, flipped, onToggle }: { id: st
           <div><dt>Avg</dt><dd>{fmt(id, finite.reduce((a, b) => a + b, 0) / finite.length)}</dd></div>
           <div><dt>{monthLabel(String(data.history.at(-1)?.month ?? "")).split(" ")[0] || "Latest"}</dt><dd>{fmt(id, value)}</dd></div>
         </dl>}
-      </article>
+      </article>}
     </div>
   </div>;
 }

@@ -10,6 +10,7 @@ import type { ChapterSpec } from "../../../report/chapters";
 import type { RecordSelection } from "./RecordDrilldown";
 import { metricRecordFocus } from "../../../report/source-records";
 import { monthLabel } from "../../../report/period";
+import { explorerBreakdowns } from "../../../report/evidence";
 
 const PAGE = 50, GROUP_ROWS = 25;
 const HIDDEN = /(^__|^row_id$|^source_row$|^source_snapshot$|^raw_json$|_id$|^unique_id|token|email|phone)/i;
@@ -30,7 +31,6 @@ const PRESETS: Record<string, string[]> = {
 const SHORT: Record<string, string> = { counts_toward: "Counts toward measure", format_group: "Format", format: "Class", trainer: "Instructor", checked_in: "Checked in", late_cancelled: "Late cancels", complimentary_visits: "Comps", non_paid: "Non-paid" };
 const title = (field: string) => SHORT[field] ?? groupLabel(field);
 const isNumber = (rows: Row[], key: string) => rows.some(r => typeof r[key] === "number") && rows.every(r => r[key] == null || typeof r[key] === "number");
-
 /**
  * Live source records behind a chapter, laid out like its dashboard tab: the
  * relevant columns first, totals on top, and collapsible groups with their own
@@ -74,6 +74,7 @@ export function DataExplorer({ model, spec, selection }: { model: ReportModel; s
   }, [spec.id, model.scope.studio, model.scope.month, selection, focus]);
   const available = useMemo(() => Object.keys(state.rows[0] ?? {}).filter(k => !HIDDEN.test(k) && state.rows.some(r => r[k] != null && r[k] !== "")), [state.rows]);
   const numeric = useMemo(() => columns.filter(c => isNumber(state.rows, c)), [columns, state.rows]);
+  const breakdowns = useMemo(() => explorerBreakdowns(spec, available), [spec, available]);
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
     const rows = needle ? state.rows.filter(r => columns.some(c => String(r[c] ?? "").toLowerCase().includes(needle))) : state.rows;
@@ -81,6 +82,15 @@ export function DataExplorer({ model, spec, selection }: { model: ReportModel; s
     return [...rows].sort((a, b) => { const x = a[sort.key], y = b[sort.key]; const n = typeof x === "number" && typeof y === "number" ? x - y : String(x ?? "").localeCompare(String(y ?? "")); return sort.desc ? -n : n; });
   }, [state.rows, search, columns, sort]);
   const sum = (rows: Row[], c: string) => rows.reduce((s, r) => s + (typeof r[c] === "number" ? Number(r[c]) : 0), 0);
+  const breakdownRows = (fields: string[], metrics: string[]) => {
+    const map = new Map<string, Row[]>();
+    for (const row of filtered) {
+      const key = fields.map(field => String(row[field] ?? "Unspecified")).join(" · ");
+      (map.get(key) ?? map.set(key, []).get(key)!).push(row);
+    }
+    const usable = metrics.filter(metric => available.includes(metric) && isNumber(state.rows, metric)).slice(0, 4);
+    return { metrics: usable, rows: [...map].map(([name, rows]) => ({ name, rows })).sort((a, b) => b.rows.length - a.rows.length) };
+  };
   const groups = useMemo(() => {
     if (!group) return [];
     const map = new Map<string, Row[]>();
@@ -121,6 +131,18 @@ export function DataExplorer({ model, spec, selection }: { model: ReportModel; s
         {group && <div><dt>{title(group)} groups</dt><dd>{groups.length.toLocaleString("en-IN")}</dd></div>}
         {numeric.slice(0, 4).map(c => <div key={c}><dt>{title(c)} · total</dt><dd>{formatField(c, sum(filtered, c))}</dd></div>)}
       </dl>
+      {!!breakdowns.length && <section className="dk-x-breakdowns" aria-label="Available source breakdowns">
+        <div className="dk-section-head"><span className="deck-eyebrow">Collapsed evidence</span><h3>Explore every configured breakdown</h3><small>Open only the dataset needed for the question</small></div>
+        {breakdowns.map((breakdown, index) => {
+          const summary = breakdownRows(breakdown.fields, breakdown.metrics);
+          return <details key={breakdown.id} open={selection?.table != null && index === 0}>
+            <summary><span><b>{breakdown.title}</b><small>{summary.rows.length.toLocaleString("en-IN")} groups · {filtered.length.toLocaleString("en-IN")} records</small></span><ChevronDown size={15}/></summary>
+            <div className="dk-x-breakdown-table table-scroll" tabIndex={0}><table><thead><tr><th>Group</th><th>Records</th><th>Share</th>{summary.metrics.map(metric => <th key={metric}>{title(metric)}</th>)}</tr></thead>
+              <tbody>{summary.rows.slice(0, 12).map(entry => <tr key={entry.name}><th scope="row">{entry.name}</th><td>{entry.rows.length.toLocaleString("en-IN")}</td><td>{(entry.rows.length / filtered.length * 100).toFixed(1)}%</td>{summary.metrics.map(metric => <td key={metric}><b>{formatField(metric, sum(entry.rows, metric))}</b><small>avg {formatField(metric, sum(entry.rows, metric) / entry.rows.length)}</small></td>)}</tr>)}</tbody></table></div>
+            {summary.rows.length > 12 && <p className="ranking-foot">Top 12 groups shown. Select this grouping above to inspect all {summary.rows.length.toLocaleString("en-IN")} groups and their source rows.</p>}
+          </details>;
+        })}
+      </section>}
       {selection?.metric && <p className="ranking-foot">Source items for the selected period and group. Eligibility and rate denominators follow the report definition; these rows are not a recomputed metric total.</p>}
       {item && <section className="deck-item-detail" aria-label="Full source item"><header><h3>Source item · all fields</h3><button className="button" onClick={() => setItem(null)}>Close item details</button></header><dl>{available.map(field => <div key={field}><dt>{title(field)}</dt><dd>{formatField(field, item[field])}</dd></div>)}</dl></section>}
       <div className="table-scroll monthly-table compact deck-explorer-table dk-x-table" tabIndex={0}>

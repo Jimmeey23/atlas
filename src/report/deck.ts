@@ -6,10 +6,21 @@ import { decisionOf, extremes, movers, questionBank, rankPerformers, scenariosFo
 
 /** The pages a report is presented as: an overview tab (cover + executive brief), then one tab per chapter. */
 export type DeckSection = "cover" | "summary" | "insights" | "plan" | "performers" | "outlook" | "trends" | "tables" | "data";
-export const SECTION_LABEL: Record<DeckSection, string> = {
-  cover: "Cover", summary: "Briefing", insights: "Insights", plan: "Action plan", performers: "Leaders & laggards",
-  outlook: "Outlook", trends: "Month on month", tables: "Key tables", data: "Explore data",
+export type DeckSectionGroup = "overview" | "analysis" | "evidence" | "action";
+export const SECTION_META: Record<DeckSection, { label: string; short: string; group: DeckSectionGroup }> = {
+  cover: { label: "Report overview", short: "Overview", group: "overview" },
+  summary: { label: "Performance brief", short: "Brief", group: "overview" },
+  insights: { label: "What changed & why", short: "Drivers", group: "analysis" },
+  plan: { label: "Decisions & owners", short: "Decisions", group: "action" },
+  performers: { label: "Ranked evidence", short: "Rankings", group: "evidence" },
+  outlook: { label: "Forward scenarios", short: "Scenarios", group: "analysis" },
+  trends: { label: "14-month trend", short: "Trends", group: "analysis" },
+  tables: { label: "Evidence tables", short: "Tables", group: "evidence" },
+  data: { label: "Source data explorer", short: "Source data", group: "evidence" },
 };
+/** Kept for export/presenter compatibility; section ids and saved page keys remain unchanged. */
+export const SECTION_LABEL = Object.fromEntries(Object.entries(SECTION_META).map(([id, meta]) => [id, meta.label])) as Record<DeckSection, string>;
+export const sectionMeta = (section: DeckSection, compact = false) => ({ ...SECTION_META[section], display: compact ? SECTION_META[section].short : SECTION_META[section].label });
 /** `chapter` is the narrative/figures key: the overview tab reads the executive brief. */
 export interface DeckTab { id: string; label: string; title: string; chapter: string; spec?: ChapterSpec; sections: DeckSection[] }
 

@@ -70,7 +70,7 @@ export type InsightLens = 'win' | 'risk' | 'driver' | 'opportunity' | 'watch' | 
 export const INSIGHT_LENSES: { id: InsightLens; label: string; question: string }[] = [
   { id: 'win', label: 'What’s working', question: 'Which result is genuinely better, and is it repeatable?' },
   { id: 'risk', label: 'Red flag', question: 'What is deteriorating or exposed, and how much is at stake?' },
-  { id: 'driver', label: 'What moved the number', question: 'Which segment, mix shift or rate change explains the headline?' },
+  { id: 'driver', label: 'Primary driver', question: 'Which segment, mix shift or rate change best explains the headline result?' },
   { id: 'opportunity', label: 'Untapped opportunity', question: 'Where is capacity, demand or value being left on the table?' },
   { id: 'watch', label: 'Early warning', question: 'Which leading indicator is turning before the headline does?' },
   { id: 'next_step', label: 'Recommended move', question: 'What should leadership decide or change next?' },

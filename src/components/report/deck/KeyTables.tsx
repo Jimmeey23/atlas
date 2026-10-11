@@ -5,12 +5,13 @@ import { definition, reportFmt as fmt, reportDelta as delta } from "../../../rep
 import type { GroupTable, ReportModel } from "../../../report/model";
 import { distinctTables } from "./Performers";
 import { useRecordDrilldown } from "./RecordDrilldown";
+import { curatedBreakdowns } from "../../../report/evidence";
 
 const label = (id: string) => definition(id)?.label ?? id;
 const tone = (id: string, value: unknown, prior: unknown) => value == null || prior == null || Number(value) === Number(prior) ? "" : (Number(value) > Number(prior)) === (definition(id)?.higherIsBetter ?? true) ? "up" : "down";
 
 /** One breakdown as the working table: every stored row, sortable, with its comparisons and totals. */
-function KeyTable({ table, chapter, open: initial }: { table: GroupTable; chapter: string; open: boolean }) {
+function KeyTable({ table, chapter, open: initial, compact = false, rowLimit }: { table: GroupTable; chapter: string; open: boolean; compact?: boolean; rowLimit?: number }) {
   const drill = useRecordDrilldown();
   const [open, setOpen] = useState(initial);
   const [search, setSearch] = useState("");
@@ -28,22 +29,23 @@ function KeyTable({ table, chapter, open: initial }: { table: GroupTable; chapte
       return sort.desc ? -n : n;
     });
   }, [source, search, sort, table, compare]);
+  const visibleRows = rowLimit ? rows.slice(0, rowLimit) : rows;
   const head = (key: string, text: string) => <th key={key} aria-sort={sort.key === key ? (sort.desc ? "descending" : "ascending") : undefined}>
     <button type="button" onClick={() => setSort(s => ({ key, desc: s.key === key ? !s.desc : true }))}>{text}{sort.key === key && (sort.desc ? <ArrowDown size={11}/> : <ArrowUp size={11}/>)}</button></th>;
   const total = table.total;
-  return <section className="dk-table" data-open={open}>
+  return <section className="dk-table" data-open={open} data-compact={compact || undefined}>
     <header>
-      <button type="button" className="dk-table-toggle" aria-expanded={open} onClick={() => setOpen(o => !o)}>
+      <button type="button" className="dk-table-toggle" aria-expanded={open} aria-disabled={compact || undefined} onClick={() => { if (!compact) setOpen(o => !o); }}>
         <Table2 size={15}/><span><b>{table.title}</b><small>{source.length} rows · ranked on {label(compare).toLowerCase()} · {table.minimum}</small></span><ChevronDown size={16} className="dk-chevron"/>
       </button>
-      {open && <div className="dk-table-tools">
+      {open && !compact && <div className="dk-table-tools">
         <label className="deck-search"><Search size={13}/><input type="search" aria-label={`Search ${table.title}`} placeholder="Find a row…" value={search} onChange={e => setSearch(e.target.value)} /></label>
         <button type="button" className="button" onClick={() => exportCSV(`${chapter}-${table.id ?? table.field}`, rows.map(r => ({ Group: r.g, ...Object.fromEntries(table.columns.map(c => [label(c), fmt(c, r[c])])), Records: r.n })))}><Download size={12}/>CSV</button>
       </div>}
     </header>
     {open && <div className="dk-table-scroll" tabIndex={0}><table>
       <thead><tr>{head("g", "Group")}{table.columns.map(c => head(c, label(c)))}{head("mom", `${label(compare)} MoM`)}<th>YoY</th>{head("n", "Records")}</tr></thead>
-      <tbody>{rows.map(r => {
+      <tbody>{visibleRows.map(r => {
         const g = String(r.g), prior = table.prior?.[g]?.[compare], ly = table.priorYear?.[g]?.[compare];
         return <tr key={g}>
           <th scope="row">{drill ? <button type="button" className="dk-row-drill" title="Open source records" onClick={() => drill({ chapterId: chapter, table, group: g, metric: compare })}>{g}</button> : g}</th>
@@ -55,12 +57,14 @@ function KeyTable({ table, chapter, open: initial }: { table: GroupTable; chapte
       })}</tbody>
       {total && <tfoot><tr><th scope="row">All groups</th>{table.columns.map(c => <td key={c}>{fmt(c, total[c])}</td>)}<td/><td/><td>{Number(total.n ?? 0).toLocaleString("en-IN")}</td></tr></tfoot>}
     </table></div>}
+    {open && rowLimit != null && rows.length > rowLimit && <p className="dk-table-note">Showing the {rowLimit} strongest rows of {rows.length}. Open Evidence tables for the complete sortable table.</p>}
     {open && !!table.diagnostics?.length && <p className="dk-table-note">{table.diagnostics[0]}</p>}
   </section>;
 }
 
-export function KeyTables({ model, chapter }: { model: ReportModel; chapter: string }) {
+export function KeyTables({ model, chapter, mode = "full", tableLimit, rowLimit }: { model: ReportModel; chapter: string; mode?: "full" | "curated"; tableLimit?: number; rowLimit?: number }) {
   const tables = distinctTables(model.chapters[chapter]?.groups ?? []);
   if (!tables.length) return <p className="empty-state">No tables were stored for this chapter.</p>;
-  return <div className="dk-tables">{tables.map((t, i) => <KeyTable key={t.id ?? t.field} table={t} chapter={chapter} open={i < 2} />)}</div>;
+  const shown = mode === "curated" ? curatedBreakdowns(tables, tableLimit ?? 2) : tables.slice(0, tableLimit);
+  return <div className="dk-tables" data-mode={mode}>{shown.map((t, i) => <KeyTable key={t.id ?? t.field} table={t} chapter={chapter} open={mode === "curated" || i < 2} compact={mode === "curated"} rowLimit={mode === "curated" ? rowLimit ?? 6 : rowLimit} />)}</div>;
 }

@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
 import { reportRoutes } from '../server/reports.mjs';
-import { deckTabs, deckPages, liveNotes, sectionContext } from '../src/report/deck.ts';
+import { deckTabs, deckPages, liveNotes, sectionContext, SECTION_META } from '../src/report/deck.ts';
 import { setIn } from '../src/components/report/deck/editing.tsx';
+import { curatedBreakdowns, explorerBreakdowns } from '../src/report/evidence.ts';
 
 async function serve(app: ReturnType<typeof express>) {
   const server = app.listen(0, '127.0.0.1');
@@ -88,6 +89,25 @@ test('deck pages and live speaker notes come from the frozen report', () => {
   assert.equal(liveNotes({ ...model, speakerNotes: { 'overview:cover': { opener: 'Saved', points: [], numbers: [], questions: [], transition: '' } } }, tabs, 'overview', 'cover').opener, 'Saved');
   assert.ok(JSON.parse(sectionContext(model, 'overview', 'cover')).narrative.summary.startsWith('September'));
   assert.deepEqual(setIn({ a: [{ b: 1 }] }, ['a', 0, 'b'], 2), { a: [{ b: 2 }] });
+});
+
+test('reader labels improve without changing durable section ids', () => {
+  assert.equal(SECTION_META.summary.label, 'Performance brief');
+  assert.equal(SECTION_META.insights.label, 'What changed & why');
+  assert.equal(SECTION_META.tables.label, 'Evidence tables');
+  assert.equal(SECTION_META.data.label, 'Source data explorer');
+  assert.deepEqual(Object.keys(SECTION_META), ['cover', 'summary', 'insights', 'plan', 'performers', 'outlook', 'trends', 'tables', 'data']);
+});
+
+test('briefing evidence is curated and explorer breakdowns stay configured and collapsed', () => {
+  const groups = [
+    { id: 'products', field: 'product', title: 'By product', columns: ['revenue'], rows: [] },
+    { id: 'associates', field: 'associate', title: 'By associate', columns: ['revenue', 'transactions'], rows: [] },
+    { id: 'payments', field: 'payment_method', title: 'Payment mix', columns: ['transactions'], rows: [] },
+  ];
+  assert.deepEqual(curatedBreakdowns(groups).map(t => t.id), ['products', 'associates']);
+  const spec = { groups } as any;
+  assert.deepEqual(explorerBreakdowns(spec, ['product', 'associate', 'payment_method']).map(g => g.id), ['products', 'associates', 'payments']);
 });
 
 test('AI component replacement sends a strict JSON schema and requires admin', async () => {
