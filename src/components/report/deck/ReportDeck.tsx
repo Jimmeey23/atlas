@@ -11,13 +11,13 @@ import { definition } from "../../../report/definitions";
 import { findingsFor, ledger } from "../../../report/findings";
 import { builtLabel, monthLabel } from "../../../report/period";
 import { reportOptions } from "../../../report/options";
-import { chapterMetrics, deckPages, deckTabs, SECTION_QUESTION, sectionLabel, verdictOf, type DeckSection, type DeckTab } from "../../../report/deck";
+import { chapterMetrics, deckPages, deckTabs, SECTION_LABEL, verdictOf, type DeckSection, type DeckTab } from "../../../report/deck";
 import { downloadReport, printReport } from "../../../report/export";
 import { adminStatus, adminToken, lockAdmin, pinReport, saveReport, unlockAdmin, updateReport } from "../../../report/storage";
 import type { ReportComponentSpec, ReportModel } from "../../../report/model";
 import { EditContext, setIn, Slot, type DeckEdit } from "./editing";
 import { FlipMetricCard } from "./FlipMetricCard";
-import { ActionCentre, BriefingPanel } from "./Briefing";
+import { BriefingPanel, DecisionPanel } from "./Briefing";
 import { CoverPage } from "./CoverPage";
 import { Performers } from "./Performers";
 import { KeyTables } from "./KeyTables";
@@ -77,8 +77,6 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
   const [exportMounted, setExportMounted] = useState(false);
   // One flipped metric card at a time; leaving the page resets it.
   const [flipped, setFlipped] = useState("");
-  // How far through the current page the reader is, shown as a hairline in the masthead.
-  const [read, setRead] = useState(0);
   const exportRef = useRef<HTMLElement>(null);
   const main = useRef<HTMLElement>(null);
   const dirty = JSON.stringify([model.narratives, model.replacements ?? {}]) !== JSON.stringify([saved.narratives, saved.replacements ?? {}]);
@@ -86,7 +84,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
   const index = pages.findIndex(p => p.tab === page.tab && p.section === page.section);
 
   useEffect(() => { void adminStatus().then(s => { setAdminConfigured(s.configured); if (!s.unlocked && adminToken()) { lockAdmin(); setAdmin(false); } }).catch(() => undefined); }, []);
-  useEffect(() => { history.replaceState(null, "", `#${page.tab}/${page.section}`); main.current?.scrollTo({ top: 0 }); setFlipped(""); setRead(0); }, [page.tab, page.section]);
+  useEffect(() => { history.replaceState(null, "", `#${page.tab}/${page.section}`); main.current?.scrollTo({ top: 0 }); setFlipped(""); }, [page.tab, page.section]);
   // Shared review sessions: the presenter toolkit follows and drives the chapter tab.
   useEffect(() => { window.dispatchEvent(new CustomEvent("p57-report-navigate", { detail: page.tab === "overview" ? "" : page.tab })); }, [page.tab]);
   useEffect(() => {
@@ -155,23 +153,14 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
     if (s === "cover") return <Slot id={slot("cover")} tab={tab.id} section={s} kind="glance" describe="cover scorecard"><CoverPage model={model} tabs={tabs} ranked={ranked} onNavigate={open} /></Slot>;
     if (s === "summary") return <>
       {!!ids.length && data && <Slot id={slot("metrics")} tab={tab.id} section={s} kind="metrics" describe="key metric cards">
-        {/* The four decisive measures lead the page; the rest are one click away, not a wall of tiles. */}
-        <CompleteMetricGrid items={ids.slice(0, 4)} render={id => <FlipMetricCard key={id} id={id} data={data} target={model.customization?.targets?.[id]}
+        <CompleteMetricGrid items={ids} render={id => <FlipMetricCard key={id} id={id} data={data} target={model.customization?.targets?.[id]}
           flipped={flipped === id} onToggle={() => setFlipped(current => current === id ? "" : id)} />}/>
-        {ids.length > 4 && <details className="deck-more-measures">
-          <summary>All {ids.length} measures in this chapter<small>Figures frozen at report build · click a measure for its fourteen-month history</small></summary>
-          <CompleteMetricGrid items={ids.slice(4)} render={id => <FlipMetricCard key={id} id={id} data={data} target={model.customization?.targets?.[id]}
-            flipped={flipped === id} onToggle={() => setFlipped(current => current === id ? "" : id)} />}/>
-        </details>}
       </Slot>}
-      <Slot id={slot("verdict")} tab={tab.id} section={s} kind="verdict" describe="chapter reading"><BriefingPanel model={model} chapter={cid} ids={ids} /></Slot>
-      <Slot id={slot("decision")} tab={tab.id} section={s} kind="verdict" describe="action centre"><ActionCentre model={model} chapter={cid} ids={ids} /></Slot>
+      <Slot id={slot("verdict")} tab={tab.id} section={s} kind="verdict" describe="chapter briefing"><BriefingPanel model={model} chapter={cid} ids={ids} /></Slot>
+      <Slot id={slot("decision")} tab={tab.id} section={s} kind="verdict" describe="leadership decision"><DecisionPanel model={model} chapter={cid} ids={ids} /></Slot>
     </>;
     if (s === "insights") return <Slot id={slot("insights")} tab={tab.id} section={s} kind="insights" describe="insight list"><InsightsSection model={model} tab={cid} plan={cid === "recommendations"} /></Slot>;
-    if (s === "plan") return <>
-      <Slot id={slot("action")} tab={tab.id} section={s} kind="plan" describe="action centre"><ActionCentre model={model} chapter={cid} ids={ids} /></Slot>
-      <Slot id={slot("plan")} tab={tab.id} section={s} kind="plan" describe="action register"><ActionPlan cards={model.narratives[cid]?.cards ?? []} /></Slot>
-    </>;
+    if (s === "plan") return <Slot id={slot("plan")} tab={tab.id} section={s} kind="plan" describe="action plan"><ActionPlan cards={model.narratives[cid]?.cards ?? []} /></Slot>;
     if (s === "performers") return <Slot id={slot("performers")} tab={tab.id} section={s} kind="evidence" describe="leaders and laggards"><Performers model={model} chapter={cid} /></Slot>;
     if (s === "outlook" && tab.spec) return <Slot id={slot("outlook")} tab={tab.id} section={s} kind="trends" describe="outlook scenarios"><Outlook model={model} spec={tab.spec} ids={ids} /></Slot>;
     if (s === "trends" && data) {
@@ -189,9 +178,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
   return <EditContext.Provider value={edit}><RecordDrilldownProvider model={model} chapterId={cid}>
     <div className="report-page deck" data-report-id={model.id || ""} data-drawer={drawer} data-editing={edit.editing} data-full={full}>
       <header className="deck-nav" data-export="omit">
-        <div className="deck-masthead">
           <a className="deck-brand" href="#overview/cover" onClick={e => { e.preventDefault(); setPage({ tab: "overview", section: "cover" }); }}><img src={logo} alt="Physique 57"/><span><b>{model.customization?.title || "Monthly performance report"}</b><small>{model.scope.studio} · {monthLabel(model.scope.month)}{model.editedAt ? " · edited" : ""}</small></span></a>
-          {options.confidentiality ? <span className="deck-nav-chip"><Lock size={11}/>{options.confidentiality}</span> : <span className="deck-nav-chip">{model.narratives ? `${Object.values(model.narratives).filter(n => n?.generated).length}/${Object.keys(model.narratives).length} chapters AI-written` : "Frozen snapshot"}</span>}
           <div className="deck-nav-actions">
             {dirty && <span className="deck-unsaved"><CircleDot size={11}/>Unsaved changes</span>}
             {admin && dirty && <button className="button" onClick={() => setModel(saved)} disabled={!!busy}><Undo2 size={14}/>Discard</button>}
@@ -207,26 +194,18 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
             <button className="icon-button" title="Fullscreen (F)" aria-label="Toggle fullscreen" onClick={() => void toggleFull()}>{full ? <Minimize size={16}/> : <Maximize size={16}/>}</button>
             <button className="button deck-notes-toggle" aria-pressed={drawer} title="Speaker notes (N)" onClick={() => setDrawer(d => !d)}><Mic size={14}/>Notes</button>
           </div>
-        </div>
         <nav className="deck-tabs" aria-label="Report chapters">
-          {tabs.map((t, i) => <button key={t.id} type="button" aria-current={t.id === tab.id ? "page" : undefined} data-tone={tone(model, t)} onClick={() => setPage({ tab: t.id, section: t.sections[0] })} title={verdictOf(model, t.chapter)?.headline ?? t.title}>
-            <i aria-hidden="true"/><s aria-hidden="true">{String(i + 1).padStart(2, "0")}</s>{t.label}</button>)}
+          {tabs.map(t => <button key={t.id} type="button" aria-current={t.id === tab.id ? "page" : undefined} data-tone={tone(model, t)} onClick={() => setPage({ tab: t.id, section: t.sections[0] })} title={verdictOf(model, t.chapter)?.headline ?? t.title}>
+            <i aria-hidden="true"/>{t.label}</button>)}
         </nav>
-        <span className="deck-read-bar" style={{ width: `${read}%` }} aria-hidden="true"/>
       </header>
       <div className="deck-body">
-        <main className="deck-main" ref={main} id="main" onScroll={event => { const el = event.currentTarget; const span = el.scrollHeight - el.clientHeight; setRead(span > 24 ? Math.min(100, Math.max(0, el.scrollTop / span * 100)) : 0); }}>
+        <main className="deck-main" ref={main} id="main">
           <div className="deck-page-head" data-export="omit">
-            {page.section === "cover" ? <div className="deck-page-title"><span className="deck-eyebrow"><BookOpen size={13}/>Report overview</span><h1>{tab.title}</h1><p>{model.customization?.subtitle || "Commercial performance, the community journey and the decisions for the month ahead."}</p></div>
-              : <div className="deck-page-title">
-                <span className="deck-eyebrow">{tab.spec?.eyebrow ?? "Report overview"} · {sectionLabel(page.section, tab.chapter)}</span>
-                <h1>{tab.id === "overview" ? tab.spec?.title ?? tab.title : tab.title}</h1>
-                <span className="deck-page-question">{SECTION_QUESTION[page.section]}</span>
-                {tab.spec?.deck && <p>{tab.spec.deck}</p>}
-                <span className="deck-page-ordinal"><b>{String(index + 1).padStart(2, "0")}</b><span className="deck-page-dot">/</span>{String(pages.length).padStart(2, "0")} · {tab.id === "overview" ? "Overview" : `Chapter ${String(tabs.findIndex(t => t.id === tab.id)).padStart(2, "0")} of ${String(tabs.length - 1).padStart(2, "0")}`}</span>
-              </div>}
+            {page.section === "cover" ? <span className="deck-eyebrow">Report overview</span>
+              : <div><span className="deck-eyebrow">{tab.spec?.eyebrow ?? "Report overview"} · {SECTION_LABEL[page.section]}</span><h1>{tab.id === "overview" ? tab.spec?.title ?? tab.title : tab.title}</h1>{tab.spec?.deck && <p>{tab.spec.deck}</p>}</div>}
             <div className="deck-sections segmented" role="tablist" aria-label="Sections">
-              {tab.sections.map(s => { const Icon = SECTION_ICON[s]; return <button key={s} role="tab" aria-selected={s === page.section} className={s === page.section ? "active" : ""} onClick={() => setPage({ tab: tab.id, section: s })} title={SECTION_QUESTION[s]}><Icon size={13}/>{sectionLabel(s, tab.chapter)}</button>; })}
+              {tab.sections.map(s => { const Icon = SECTION_ICON[s]; return <button key={s} role="tab" aria-selected={s === page.section} className={s === page.section ? "active" : ""} onClick={() => setPage({ tab: tab.id, section: s })}><Icon size={13}/>{SECTION_LABEL[s]}</button>; })}
             </div>
           </div>
           {message && <p className="deck-message" role="status">{message}<button className="icon-button" aria-label="Dismiss" onClick={() => setMessage("")}><X size={13}/></button></p>}

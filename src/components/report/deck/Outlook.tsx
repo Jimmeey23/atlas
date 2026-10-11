@@ -76,11 +76,17 @@ export function Outlook({ model, spec, ids }: { model: ReportModel; spec: Chapte
   return <section className="dk-outlook" aria-label="Outlook">
     <div className="dk-outlook-top">
       <div className="dk-outlook-lead">
-        <span className="deck-eyebrow"><Telescope size={12}/>Forward view · reading for {next}</span>
+        <span className="deck-eyebrow"><Telescope size={12}/>Reading for {next}</span>
         {b.outlook ? <p><Emphasis text={b.outlook}/></p> : <p className="dk-muted">No durability reading was written for this chapter.</p>}
         {!!under.length && <p className="dk-outlook-summary">Under <b>{pick.name.toLowerCase()}</b>, {better} of {under.length} measures improve on {monthLabel(model.scope.month).split(" ")[0]} and {worse} {worse === 1 ? "slips" : "slip"}{under[0] ? ` — ${label(under[0].id).toLowerCase()} lands at ${fmt(under[0].id, under[0][chosen])}` : ""}.</p>}
         <small><Info size={12}/>Conditional arithmetic on recorded figures, not forecasts or probabilities.</small>
       </div>
+      {(warnings.length > 0 || watch.length > 0) && <aside className="dk-outlook-side">
+        {!!warnings.length && <><h4><TriangleAlert size={14}/>What could change this</h4>
+          <ul>{warnings.map((c, i) => <li key={i}><b>{c.headline}</b>{c.trend && <small>{c.trend}</small>}</li>)}</ul></>}
+        {!!watch.length && <><h4><Eye size={14}/>Signals to review in {next.split(" ")[0]}</h4>
+          <ol>{watch.map((w, i) => <li key={i}><p>{w.text}</p><small>{w.from}</small></li>)}</ol></>}
+      </aside>}
     </div>
 
     {!!scenarios.length && <>
@@ -100,7 +106,6 @@ export function Outlook({ model, spec, ids }: { model: ReportModel; spec: Chapte
           </header>
           <Projection id={s.id} history={data.history.slice(-12)} next={target ?? null} chosen />
           <p className="dk-scenario-read"><Emphasis text={readScenario(s, next.split(" ")[0])}/></p>
-          {rows.length > 1 && <p className="dk-scenario-range">Across the three readings this measure lands between <b>{fmt(s.id, lo)}</b> and <b>{fmt(s.id, hi)}</b>.</p>}
           <ul>{rows.map(r => <li key={r.key} data-chosen={r.key === chosen || undefined}>
             <button type="button" onClick={() => setChosen(r.key)} title={r.why}>{r.name}</button>
             <i aria-hidden="true"><i style={{ left: `${(r.v - lo) / span * 100}%` }}/></i>
@@ -113,12 +118,6 @@ export function Outlook({ model, spec, ids }: { model: ReportModel; spec: Chapte
           </footer>
         </article>;
       })}</div>
-      {(warnings.length > 0 || watch.length > 0) && <div className="dk-outlook-side">
-        {!!warnings.length && <section><h4><TriangleAlert size={14}/>What would change this reading</h4>
-          <ul>{warnings.map((c, i) => <li key={i}><b>{c.headline}</b>{c.trend && <small>{c.trend}</small>}</li>)}</ul></section>}
-        {!!watch.length && <section><h4><Eye size={14}/>Signals to review in {next.split(" ")[0]}</h4>
-          <ol>{watch.map((w, i) => <li key={i}><p>{w.text}</p><small>{w.from}</small></li>)}</ol></section>}
-      </div>}
     </>}
     {!scenarios.length && <p className="empty-state"><Radar size={14}/>Not enough recorded months to build scenarios for this chapter.</p>}
     {d?.successMeasure && <p className="dk-outlook-goal"><Target size={14}/>The decision on the briefing page is judged by: <b>{d.successMeasure}</b></p>}

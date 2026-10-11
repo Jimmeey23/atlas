@@ -85,12 +85,7 @@ try {
   await page.locator('.deck-nav').waitFor();
   // Fixed navbar at the very top.
   const nav = await page.locator('.deck-nav').boundingBox(); assert.equal(Math.round(nav.y), 0);
-  assert.ok(['fixed', 'sticky'].includes(await page.locator('.deck-nav').evaluate(el => getComputedStyle(el).position)), 'the chapter nav is pinned above the scroll area');
-  // The report must actually scroll: the deck is a viewport-height column and .deck-main is its scroll area.
-  assert.ok(['auto', 'scroll'].includes(await page.locator('#main').evaluate(el => getComputedStyle(el).overflowY)), '.deck-main is the scroll container');
-  assert.ok(await page.locator('#main').evaluate(el => { el.scrollTop = 400; return el.scrollTop; }) > 0, 'the report body scrolls vertically');
-  assert.equal(Math.round((await page.locator('.deck-nav').boundingBox()).y), 0, 'the nav does not scroll away with the page');
-  await page.locator('#main').evaluate(el => el.scrollTo({ top: 0 }));
+  assert.equal(await page.locator('.deck-nav').evaluate(el => getComputedStyle(el).position), 'fixed');
   await page.waitForTimeout(500); await page.screenshot({ path: `${shots}/deck-cover.png` });
   assert.ok(await page.locator('.dk-score').count() >= 2, 'cover carries the chapter scorecard');
   await page.locator('.dk-scorecard').scrollIntoViewIfNeeded(); await page.waitForTimeout(300); await page.screenshot({ path: `${shots}/deck-cover-2.png` });
@@ -98,23 +93,8 @@ try {
   // Chapter tab → verdict with the new categories and flip cards.
   await page.getByRole('navigation', { name: 'Report chapters' }).getByRole('button', { name: 'Schedule' }).or(page.locator('.deck-tabs button', { hasText: /Sessions|Schedule|Classes/ })).first().click();
   await page.locator('.dk-brief').waitFor();
-  for (const label of ['The reading', 'Where it sits', 'Against the year', 'What moved the number']) assert.ok(await page.locator('.dk-brief').getByText(label, { exact: true }).count(), `reading shows ${label}`);
-  assert.ok(await page.locator('.dk-bridge-row').count() >= 3, 'the driver bridge decomposes the movement');
-  assert.ok(await page.locator('.dk-portfolio').count(), 'the portfolio map places each row on contribution against momentum');
-  assert.ok(await page.locator('.dk-ask li').count() >= 3, 'the page offers the questions it raises');
-  assert.ok((await page.locator('.deck-page-question').innerText()).length > 0, 'each page states the question it answers');
-  assert.ok(await page.locator('.deck-sections').getByRole('tab', { name: 'Executive pulse' }).count(), 'sections are named as intelligence layers');
-  // The revenue chapter takes the movement apart: volume against spend, then reads its quality.
-  await page.locator('.deck-tabs button', { hasText: /Sales|Revenue/ }).first().click();
-  await page.locator('.dk-anatomy').waitFor();
-  assert.equal(await page.locator('.dk-anatomy .dk-anat-row').count(), 3, 'the anatomy bridge shows both effects and the net change');
-  assert.ok((await page.locator('.dk-quality-verdict').innerText()).trim().length > 0, 'the growth-quality read names a verdict');
-  assert.ok(await page.locator('.dk-quality-rows > div').count() >= 3, 'quality rows read momentum beside the topline');
-  await page.locator('.dk-ask').scrollIntoViewIfNeeded(); await page.waitForTimeout(300); await page.screenshot({ path: `${shots}/deck-anatomy.png` });
-  await page.locator('#main').evaluate(el => el.scrollTo({ top: 0 }));
-  await page.locator('.deck-tabs button', { hasText: /Schedule|Sessions/ }).first().click();
-  await page.locator('.dk-brief').waitFor();
-  for (const label of ['Action centre', 'Expected outcome', 'How we will know', 'Guardrail']) assert.ok(await page.locator('.dk-decision').getByText(label, { exact: true }).count(), `action centre shows ${label}`);
+  for (const label of ['What changed', 'Why it moved', 'Where it sits', 'What held up', 'Outlook', 'So what']) assert.ok(await page.locator('.dk-brief').getByText(label, { exact: true }).count(), `briefing shows ${label}`);
+  for (const label of ['Decision for leadership', 'Why this call', 'What the data says', 'Expected impact', 'Success measure', 'Risks & guardrail', 'Alternative considered']) assert.ok(await page.locator('.dk-decision').getByText(label, { exact: true }).count(), `decision shows ${label}`);
   assert.ok((await page.locator('.deck-metric-grid').boundingBox()).y < (await page.locator('.dk-brief').boundingBox()).y, 'metric cards sit above the briefing');
   assert.ok(await page.locator('.dk-takeaways li').count() >= 3, 'briefing lists takeaways'); await page.waitForTimeout(500);
   await page.screenshot({ path: `${shots}/deck-verdict.png`, fullPage: false });
@@ -137,10 +117,8 @@ try {
   await page.getByRole('button', { name: 'Notes' }).click();
   assert.equal(await page.locator('.deck-drawer').getAttribute('data-open'), 'true');
   const opener = await page.locator('.deck-notes-opener').innerText();
-  await page.locator('.deck-sections').getByRole('tab', { name: /AI discoveries/ }).click();
+  await page.locator('.deck-sections').getByRole('tab', { name: /Insights/ }).click();
   await page.waitForFunction(previous => document.querySelector('.deck-notes-opener')?.textContent !== previous, opener);
-  assert.ok(await page.locator('.deck-insight').count() >= 2, 'every finding is on the page');
-  await page.locator('.dk-view-toggle').getByRole('button', { name: /One at a time/ }).click();
   assert.ok(await page.locator('.dk-rail button').count() >= 2, 'insight rail lists every finding');
   await page.locator('.dk-rail button').nth(1).click(); await page.waitForTimeout(400);
   assert.ok((await page.locator('.deck-insight-headline h3').first().innerText()).length > 0);
@@ -244,5 +222,5 @@ try {
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'no horizontal overflow on mobile');
   await page.screenshot({ path: `${shots}/deck-mobile.png` });
   assert.deepEqual(errors, []);
-  console.log('PASS: fixed navbar, chapter/section tabs, the reading with driver bridge, action centre, discovery cards with evidence, flip measures, MoM table + chart, live + AI speaker notes, admin edit, AI component swap, DB persistence, pinning, retention, mobile.');
+  console.log('PASS: fixed navbar, chapter/section tabs, verdict categories, flip cards, MoM table + chart, evidence, live + AI speaker notes, admin edit, AI component swap, DB persistence, pinning, retention, mobile.');
 } finally { await browser?.close(); await vite.close(); http.closeAllConnections(); await new Promise(r => http.close(r)); }
