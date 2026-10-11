@@ -11,10 +11,13 @@ import { durability } from "./Verdict";
 
 const LENS_ICON: Record<InsightLens, typeof TrendingUp> = { win: TrendingUp, risk: TriangleAlert, driver: GitBranch, opportunity: Lightbulb, watch: Radar, next_step: ArrowRightCircle };
 const tone = (id: string, value: unknown, prior: unknown) => value == null || prior == null || Number(value) === Number(prior) ? "flat" : (Number(value) > Number(prior)) === (definition(id)?.higherIsBetter ?? true) ? "up" : "down";
+/** What kind of claim this is, said plainly, so a reader knows how much weight to give it. */
+const CLAIM: Record<string, string> = { high: "Verified in the data", medium: "Inferred from the drivers", low: "Hypothesis to test" };
 
 /**
- * An insight read top to bottom as an argument: the claim, the causal chain
- * (cause → where → worth), the move, and the proof beside it.
+ * A discovery, read as five answers in order: what was found, what the evidence is,
+ * why it matters commercially, what the diagnosis is, and what to do next. The
+ * argument sits in the main column; the figures it rests on sit beside it.
  */
 export function DeckInsightCard({ card, model, chapterId, index, total, plan = false, confidence = true, onStep }: { card: InsightCard; model: ReportModel; chapterId: string; index: number; total?: number; plan?: boolean; confidence?: boolean; onStep?: (step: number) => void }) {
   const drill = useRecordDrilldown();
@@ -30,10 +33,14 @@ export function DeckInsightCard({ card, model, chapterId, index, total, plan = f
   const fullVisual = claimHeight < 520 || !!(table && table.columns.length > 4);
   const visual = chart && <div className="deck-proof-visual" data-full={fullVisual}>{table ? <EvidenceBlock table={table} full initialView="chart"/> : cited[0] && <FocusTrend id={cited[0].id} history={cited[0].data.history.slice(-14)} />}</div>;
   const cause = card.driver || card.reasoning;
-  const chain = [
-    cause && { key: "cause", icon: GitBranch, label: plan ? "Why this move" : "Cause", text: plan && card.recommendation ? card.recommendation : cause },
-    card.concentration && { key: "where", icon: Crosshair, label: "Where", text: card.concentration },
-    card.impact && { key: "worth", icon: IndianRupee, label: "Worth", text: card.impact },
+  /* The anatomy of the argument: what it means, what caused it, where it sits, what it is worth. */
+  const anatomy = [
+    card.meaning && { key: "meaning", icon: Lightbulb, label: "What it means", text: card.meaning },
+    cause && { key: "cause", icon: GitBranch, label: card.confidence === "low" ? "Hypothesis" : "Diagnosis", text: cause },
+    card.concentration && { key: "where", icon: Crosshair, label: "Where it sits", text: card.concentration },
+    card.impact && { key: "worth", icon: IndianRupee, label: "Commercial significance", text: card.impact },
+    (card.watch || card.trend) && { key: "watch", icon: Eye, label: "What to watch", text: [card.trend, card.watch].filter(Boolean).join(" ") },
+    card.offset && { key: "held", icon: ShieldCheck, label: "Counter-signal", text: card.offset },
   ].filter(Boolean) as { key: string; icon: typeof GitBranch; label: string; text: string }[];
   const levels = { high: 3, medium: 2, low: 1 } as const;
   return <article className="deck-insight" data-lens={lens} data-priority={card.priority ?? "medium"}>
@@ -43,6 +50,7 @@ export function DeckInsightCard({ card, model, chapterId, index, total, plan = f
         title={[card.priority && `${card.priority} priority`, confidence && card.confidence && `${card.confidence} confidence`].filter(Boolean).join(" · ")}>
         {card.priority && <b>{card.priority} priority</b>}
         {confidence && card.confidence && <span className="deck-insight-confidence" aria-label={`${card.confidence} confidence`}>{[1, 2, 3].map(n => <i key={n} data-on={n <= levels[card.confidence!]} />)}</span>}
+        {confidence && card.confidence && <span className="dk-chip">{CLAIM[card.confidence]}</span>}
       </span>}
       <span className="deck-insight-no">{String(index + 1).padStart(2, "0")}{total ? <small> of {String(total).padStart(2, "0")}</small> : null}</span>
       {onStep && <span className="dk-stepper"><button type="button" className="icon-button" aria-label="Previous insight" disabled={index === 0} onClick={() => onStep(-1)}><ChevronLeft size={15}/></button>
@@ -51,29 +59,26 @@ export function DeckInsightCard({ card, model, chapterId, index, total, plan = f
     <div className="deck-insight-body">
       <div className="deck-insight-claim"><div ref={claim} className="deck-claim-content">
         <div className="deck-insight-headline"><InsightDrilldown modal model={model} chapterId={chapterId} headline={card.headline} metrics={cited} table={table}>{card.headline}</InsightDrilldown></div>
-        {card.meaning && <p className="deck-insight-meaning">{card.meaning}</p>}
-        {!!chain.length && <ol className="deck-chain">{chain.map((step, i) => <li key={step.key} data-step={step.key}>
+        {!!anatomy.length && <ol className="deck-chain">{anatomy.map(step => <li key={step.key} data-step={step.key}>
           <span className="deck-chain-label"><step.icon size={12}/>{step.label}</span><p>{step.text}</p>
-          {i < chain.length - 1 && <ChevronRight className="deck-chain-arrow" size={16} aria-hidden="true"/>}
         </li>)}</ol>}
-        {(card.action || (plan && card.recommendation)) && <div className="deck-insight-move">
+        {card.action && <div className="deck-insight-move">
           <ArrowRightCircle size={18}/>
-          <div><b>{plan ? "The move" : "Recommended move"}</b><p>{card.action || card.recommendation}</p>
-            {(card.ownerArea || card.horizon) && <span className="deck-insight-owner">{card.ownerArea && <span><Users size={12}/>{card.ownerArea}</span>}{card.horizon && <span><CalendarClock size={12}/>{card.horizon}</span>}</span>}</div>
+          <div><b>{plan ? "The move" : "Recommended move"}</b><p>{card.action}</p>
+            {(card.ownerArea || card.horizon) && <span className="deck-insight-owner">{card.ownerArea && <span><Users size={12}/>{card.ownerArea}</span>}{card.horizon && <span><CalendarClock size={12}/>{card.horizon}</span>}</span>}
+          </div>
         </div>}
-        {(card.offset || card.trend || card.watch) && <footer className="deck-insight-foot">
-          {card.trend && !plan && <span title={card.trend}><Activity size={12}/>{durability(card.trend)}</span>}
-          {card.offset && <span title={card.offset}><ShieldCheck size={12}/>Held up: {card.offset}</span>}
-          {card.watch && <span title={card.watch}><Eye size={12}/>Watch: {card.watch}</span>}
+        {card.trend && !plan && <footer className="deck-insight-foot">
+          <span title={card.trend}><Activity size={12}/>{durability(card.trend)}</span>
         </footer>}
       </div></div>
       {(cited.length > 0 || table || card.evidence) && <aside className="deck-insight-proof" aria-label="Evidence">
-        <span className="deck-eyebrow"><ShieldCheck size={13}/>Evidence & comparisons</span><small className="deck-proof-source">{model.scope.studio} · {model.scope.month} · saved report</small>
+        <span className="deck-eyebrow"><ShieldCheck size={13}/>Evidence</span><small className="deck-proof-source">{model.scope.studio} · {model.scope.month} · saved report</small>
         {card.evidence && <p className="deck-insight-evidence">{card.evidence}</p>}
         {cited.map(({ id, data }) => <div className="deck-proof-metric" key={id} data-tone={tone(id, data.total[id], data.prior[id])}>
           <span>{definition(id)?.label ?? id}</span><strong>{fmt(id, data.total[id])}</strong>
           <Spark id={id} history={data.history.slice(-12)} width={120} height={24} />
-          <small>Previous month {fmt(id, data.prior[id])} · Last year {fmt(id, data.priorYear[id])}</small><em>MoM {delta(id, data.total[id], data.prior[id])}</em><em>YoY {delta(id, data.total[id], data.priorYear[id])}</em>
+          <small>Previous month {fmt(id, data.prior[id])} · Last year {fmt(id, data.priorYear[id])}</small><em>MoM {delta(id, data.total[id], data.prior[id])} · YoY {delta(id, data.total[id], data.priorYear[id])}</em>
         </div>)}
         <div className="dk-proof-actions">
         {cited[0] && drill && <button type="button" className="deck-proof-toggle" onClick={() => drill({ metric: cited[0].id, chapterId: chapterId, table, group: card.highlight?.[0] })}><Database size={13}/>Explore records</button>}

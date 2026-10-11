@@ -30,7 +30,7 @@ function InsightEditor({ card, path, onRemove }: { card: InsightCard; path: (str
 export function InsightsSection({ model, tab, plan = false }: { model: ReportModel; tab: string; plan?: boolean }) {
   const edit = useEdit();
   const [lens, setLens] = useState<InsightLens | "all">("all");
-  const [view, setView] = useState<"focus" | "list">("focus");
+  const [view, setView] = useState<"focus" | "list">("list");
   const [active, setActive] = useState(0);
   const options = reportOptions(model.customization);
   const cards = model.narratives[tab]?.cards ?? [];
@@ -57,8 +57,8 @@ export function InsightsSection({ model, tab, plan = false }: { model: ReportMod
         {lenses.map(id => { const Icon = LENS_ICON[id]; return <button key={id} data-lens={id} aria-pressed={lens === id} onClick={() => { setLens(id); setActive(0); }}><Icon size={13}/>{lensLabel(id)} <b>{indexed.filter(({ card }) => lensOf(card) === id).length}</b></button>; })}
       </div>}
       <div className="segmented dk-view-toggle" role="group" aria-label="Insight layout">
-        <button className={view === "focus" ? "active" : ""} aria-pressed={view === "focus"} onClick={() => setView("focus")}><PanelLeft size={13}/>Focus</button>
-        <button className={view === "list" ? "active" : ""} aria-pressed={view === "list"} onClick={() => setView("list")}><Rows3 size={13}/>All</button>
+        <button className={view === "list" ? "active" : ""} aria-pressed={view === "list"} onClick={() => setView("list")}><Rows3 size={13}/>Reading order</button>
+        <button className={view === "focus" ? "active" : ""} aria-pressed={view === "focus"} onClick={() => setView("focus")}><PanelLeft size={13}/>One at a time</button>
       </div>
     </div>
     {view === "focus" ? <div className="dk-insight-board">

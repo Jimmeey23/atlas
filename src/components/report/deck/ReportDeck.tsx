@@ -17,7 +17,7 @@ import { adminStatus, adminToken, lockAdmin, pinReport, saveReport, unlockAdmin,
 import type { ReportComponentSpec, ReportModel } from "../../../report/model";
 import { EditContext, setIn, Slot, type DeckEdit } from "./editing";
 import { FlipMetricCard } from "./FlipMetricCard";
-import { BriefingPanel, DecisionPanel } from "./Briefing";
+import { ActionCentre, BriefingPanel } from "./Briefing";
 import { CoverPage } from "./CoverPage";
 import { Performers } from "./Performers";
 import { KeyTables } from "./KeyTables";
@@ -155,14 +155,23 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
     if (s === "cover") return <Slot id={slot("cover")} tab={tab.id} section={s} kind="glance" describe="cover scorecard"><CoverPage model={model} tabs={tabs} ranked={ranked} onNavigate={open} /></Slot>;
     if (s === "summary") return <>
       {!!ids.length && data && <Slot id={slot("metrics")} tab={tab.id} section={s} kind="metrics" describe="key metric cards">
-        <CompleteMetricGrid items={ids} render={id => <FlipMetricCard key={id} id={id} data={data} target={model.customization?.targets?.[id]}
+        {/* The four decisive measures lead the page; the rest are one click away, not a wall of tiles. */}
+        <CompleteMetricGrid items={ids.slice(0, 4)} render={id => <FlipMetricCard key={id} id={id} data={data} target={model.customization?.targets?.[id]}
           flipped={flipped === id} onToggle={() => setFlipped(current => current === id ? "" : id)} />}/>
+        {ids.length > 4 && <details className="deck-more-measures">
+          <summary>All {ids.length} measures in this chapter<small>Figures frozen at report build · click a measure for its fourteen-month history</small></summary>
+          <CompleteMetricGrid items={ids.slice(4)} render={id => <FlipMetricCard key={id} id={id} data={data} target={model.customization?.targets?.[id]}
+            flipped={flipped === id} onToggle={() => setFlipped(current => current === id ? "" : id)} />}/>
+        </details>}
       </Slot>}
-      <Slot id={slot("verdict")} tab={tab.id} section={s} kind="verdict" describe="chapter briefing"><BriefingPanel model={model} chapter={cid} ids={ids} /></Slot>
-      <Slot id={slot("decision")} tab={tab.id} section={s} kind="verdict" describe="leadership decision"><DecisionPanel model={model} chapter={cid} ids={ids} /></Slot>
+      <Slot id={slot("verdict")} tab={tab.id} section={s} kind="verdict" describe="chapter reading"><BriefingPanel model={model} chapter={cid} ids={ids} /></Slot>
+      <Slot id={slot("decision")} tab={tab.id} section={s} kind="verdict" describe="action centre"><ActionCentre model={model} chapter={cid} ids={ids} /></Slot>
     </>;
     if (s === "insights") return <Slot id={slot("insights")} tab={tab.id} section={s} kind="insights" describe="insight list"><InsightsSection model={model} tab={cid} plan={cid === "recommendations"} /></Slot>;
-    if (s === "plan") return <Slot id={slot("plan")} tab={tab.id} section={s} kind="plan" describe="action plan"><ActionPlan cards={model.narratives[cid]?.cards ?? []} /></Slot>;
+    if (s === "plan") return <>
+      <Slot id={slot("action")} tab={tab.id} section={s} kind="plan" describe="action centre"><ActionCentre model={model} chapter={cid} ids={ids} /></Slot>
+      <Slot id={slot("plan")} tab={tab.id} section={s} kind="plan" describe="action register"><ActionPlan cards={model.narratives[cid]?.cards ?? []} /></Slot>
+    </>;
     if (s === "performers") return <Slot id={slot("performers")} tab={tab.id} section={s} kind="evidence" describe="leaders and laggards"><Performers model={model} chapter={cid} /></Slot>;
     if (s === "outlook" && tab.spec) return <Slot id={slot("outlook")} tab={tab.id} section={s} kind="trends" describe="outlook scenarios"><Outlook model={model} spec={tab.spec} ids={ids} /></Slot>;
     if (s === "trends" && data) {

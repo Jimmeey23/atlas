@@ -1,4 +1,4 @@
-import { ArrowDownRight, ArrowRight, ArrowRightCircle, ArrowUpRight, BookOpen, Coins, Database, Flag, Minus, ShieldAlert, Sparkles, TrendingUp, TriangleAlert } from "lucide-react";
+import { ArrowDownRight, ArrowRight, ArrowUpRight, BookOpen, Coins, Database, Flag, Minus, ShieldAlert, Sparkles, TrendingUp, TriangleAlert } from "lucide-react";
 import logo from "../../../assets/report/logo.png";
 import hero from "../../../assets/report/method.jpg";
 import { HEADLINE } from "../Glance";
@@ -9,25 +9,19 @@ import { EXECUTIVE, chapterMetrics, type DeckTab } from "../../../report/deck";
 import type { Finding } from "../../../report/findings";
 import type { ChapterData, InsightCard, ReportModel } from "../../../report/model";
 import { builtLabel, monthLabel } from "../../../report/period";
-import { DecisionPanel } from "./Briefing";
-import { Emphasis, FillGrid, Marquee } from "./Layout";
+import { Emphasis, FillGrid } from "./Layout";
 
 const rank = { high: 0, medium: 1, low: 2 } as const;
 type Pick = { card: InsightCard; tab: DeckTab };
 
-/** Lead measures for an area's tile: the scorecard's headline pair, then the chapter's own. */
+/** Lead measures for an area's row: the scorecard's headline pair, then the chapter's own. */
 const headlineIds = (tab: DeckTab, data: ChapterData) => [...(HEADLINE[tab.id] ?? []), ...(tab.spec?.metrics ?? [])]
   .filter((id, i, all) => all.indexOf(id) === i && definition(id) && data.total[id] != null).slice(0, 2);
 
-function Move({ id, data }: { id: string; data: ChapterData }) {
-  const t = tone(id, data.total[id], data.prior[id]);
-  const Arrow = t === "flat" ? Minus : Number(data.total[id]) >= Number(data.prior[id]) ? ArrowUpRight : ArrowDownRight;
-  return <span className="dk-tick" data-tone={t}><b>{definition(id)?.label}</b>{fmt(id, data.total[id])}<i><Arrow size={12}/>{delta(id, data.total[id], data.prior[id])}</i></span>;
-}
-
 /**
- * The opening page: who and when, the month in one line, every area's scorecard
- * and the calls to make. Sections without data collapse rather than leave holes.
+ * The opening page. It answers three questions in order: what happened this month,
+ * which areas carry that, and what the document contains. Everything else lives in
+ * the chapters, so the front page never has to explain the same movement twice.
  */
 export function CoverPage({ model, tabs, ranked, onNavigate }: { model: ReportModel; tabs: DeckTab[]; ranked: Finding[]; onNavigate: (tab: string) => void }) {
   const c = model.customization;
@@ -50,10 +44,10 @@ export function CoverPage({ model, tabs, ranked, onNavigate }: { model: ReportMo
   const facts = [["Studio", model.scope.studio], ["Period", period], ["Prepared for", c?.preparedFor], ["Prepared by", c?.preparedBy], ["Built", builtLabel(model.builtAt)],
     ["Analysis", `${Object.values(model.narratives).filter(n => n.generated).length}/${Object.keys(model.narratives).length} chapters AI-written`]].filter(([, v]) => v) as [string, string][];
 
-  // Every area's lead measure, for the ticker.
-  const ticker = areas.flatMap(tab => { const data = model.chapters[tab.id]; return headlineIds(tab, data).filter(id => data.prior[id] != null).map(id => ({ tab, id, data })); });
   const heroStats = execIds.filter(id => execData?.prior[id] != null).slice(0, 4);
-  const headlines = areas.map(tab => ({ tab, v: verdictCard(model, tab.id) })).filter(x => x.v);
+  /** Every lead measure of every area, ranked by how far it moved — a list, never a ticker. */
+  const movements = areas.flatMap(tab => { const data = model.chapters[tab.id]; return headlineIds(tab, data).filter(id => data.prior[id] != null).map(id => ({ tab, id, data, change: Number(data.total[id]) / Number(data.prior[id]) - 1 })); })
+    .sort((a, b) => Math.abs(b.change) - Math.abs(a.change)).slice(0, 6);
 
   const list = (items: Pick[], kind: "wins" | "risks" | "moves", findings: Finding[] = []) => <ol className="dk-cover-list" data-kind={kind}>
     {items.map((p, i) => <li key={i}><button type="button" onClick={() => onNavigate(p.tab.id)}><b>{kind === "moves" ? p.card.action || p.card.headline : p.card.headline}</b>
@@ -61,9 +55,9 @@ export function CoverPage({ model, tabs, ranked, onNavigate }: { model: ReportMo
     {!items.length && findings.map((f, i) => <li key={`f${i}`}><button type="button" onClick={() => onNavigate(f.chapter)}><b>{f.text.split(". ")[0]}</b><span>{tabs.find(t => t.id === f.chapter)?.label ?? f.chapter}</span></button></li>)}
   </ol>;
   const columns = [
-    { key: "wins", title: "What’s working", icon: TrendingUp, items: wins, findings: wins.length ? [] : fallback("opportunity") },
-    { key: "risks", title: "Needs attention", icon: TriangleAlert, items: risks, findings: risks.length ? [] : fallback("risk") },
-    { key: "moves", title: "Decisions requested", icon: ArrowRightCircle, items: moves, findings: [] as Finding[] },
+    { key: "wins", title: "What is working", icon: TrendingUp, items: wins, findings: wins.length ? [] : fallback("opportunity") },
+    { key: "risks", title: "What needs attention", icon: TriangleAlert, items: risks, findings: risks.length ? [] : fallback("risk") },
+    { key: "moves", title: "Decisions requested", icon: ArrowRight, items: moves, findings: [] as Finding[] },
   ].filter(col => col.items.length || col.findings.length);
 
   const tiles = areas.flatMap(tab => {
@@ -80,11 +74,11 @@ export function CoverPage({ model, tabs, ranked, onNavigate }: { model: ReportMo
         <em data-tone={tone(id, data.total[id], data.prior[id])}>{delta(id, data.total[id], data.prior[id])} MoM</em>
         <em data-tone={tone(id, data.total[id], data.priorYear[id])}>{delta(id, data.total[id], data.priorYear[id])} YoY</em>
       </span>)}</span>
+      <span className="dk-score-verdict">{v?.headline ?? ""}</span>
       <Spark id={ids[0]} history={data.history.slice(-12)} width={220} height={30} />
-      {v && <span className="dk-score-verdict">{v.headline}</span>}
     </button>];
   });
-  // Derived tiles complete the last row instead of leaving it ragged.
+  // Derived rows complete the chapter register instead of leaving it ragged.
   const records = Object.values(model.chapters).reduce((s, d) => s + (d?.n ?? 0), 0);
   const stake = [verdict, ...areas.map(t => verdictCard(model, t.id))].find(v => v?.impact)?.impact;
   const fillers = [
@@ -110,10 +104,6 @@ export function CoverPage({ model, tabs, ranked, onNavigate }: { model: ReportMo
       </figure>
     </header>
 
-    {ticker.length > 2 && <Marquee label="Lead measures across every area" speed={Math.max(30, ticker.length * 5)}>
-      {ticker.map(({ tab, id, data }) => <span key={`${tab.id}-${id}`} className="dk-tick-wrap"><small>{tab.label}</small><Move id={id} data={data}/></span>)}
-    </Marquee>}
-
     {(verdict || brief?.takeaways.length) && <section className="dk-impact" aria-label="The month in one line">
       <div className="dk-impact-head">
         <span className="dk-impact-kicker"><span className="dk-pulse" aria-hidden="true"/>The month in one line · {period}</span>
@@ -125,18 +115,31 @@ export function CoverPage({ model, tabs, ranked, onNavigate }: { model: ReportMo
         return <div key={id} data-tone={t}><dt>{definition(id)?.label}</dt><dd><strong>{fmt(id, execData.total[id])}</strong><span>{delta(id, execData.total[id], execData.prior[id])} vs last month</span></dd></div>;
       })}</dl>}
       {!!brief?.takeaways.length && <ol className="dk-takeaways dk-takeaways-flow">{brief.takeaways.slice(0, 4).map((t, i) => <li key={i}><span>{String(i + 1).padStart(2, "0")}</span><p><Emphasis text={t}/></p></li>)}</ol>}
-      {headlines.length > 2 && <Marquee label="Every area's verdict" reverse speed={Math.max(40, headlines.length * 9)}>
-        {headlines.map(({ tab, v }) => <button type="button" key={tab.id} className="dk-headline-chip" onClick={() => onNavigate(tab.id)}><b>{tab.label}</b>{v!.headline}</button>)}
-      </Marquee>}
     </section>}
 
-    {!!tiles.length && <section aria-label="Scorecard">
-      <div className="dk-section-head"><span className="deck-eyebrow">Scorecard</span><h3>Every area at a glance</h3><small>Select an area to open it</small></div>
+    {movements.length > 2 && <section aria-label="Largest movements this month">
+      <div className="dk-rule-head"><span className="deck-eyebrow">Largest movements</span><h3>Where the month turned</h3></div>
+      <ul className="dk-ledger" style={{ ["--d-ledger-cols" as never]: "minmax(0,1fr) 150px 110px 120px" }}>
+        {movements.map(({ tab, id, data }) => {
+          const t = tone(id, data.total[id], data.prior[id]);
+          const Arrow = t === "flat" ? Minus : Number(data.total[id]) >= Number(data.prior[id]) ? ArrowUpRight : ArrowDownRight;
+          return <li key={`${tab.id}-${id}`}>
+            <span><b style={{ fontWeight: 550 }}>{definition(id)?.label}</b> <small>{tab.label}</small></span>
+            <span className="dk-num">{fmt(id, data.total[id])}</span>
+            <span className="dk-num" style={{ color: t === "up" ? "var(--dk-good)" : t === "down" ? "var(--dk-bad)" : "var(--dk-ink-3)" }}><Arrow size={12} style={{ verticalAlign: "-2px" }}/> {delta(id, data.total[id], data.prior[id])}</span>
+            <button type="button" className="dk-link" onClick={() => onNavigate(tab.id)}>Open chapter <ArrowRight size={12}/></button>
+          </li>;
+        })}
+      </ul>
+    </section>}
+
+    {!!tiles.length && <section aria-label="Every area at a glance">
+      <div className="dk-rule-head"><span className="deck-eyebrow">Chapters</span><h3>Every area, on its lead measures</h3></div>
       <FillGrid className="dk-scorecard" items={tiles} fillers={fillers as JSX.Element[]} min={250} max={4} />
     </section>}
 
     {!!areas.length && <section className="dk-index" aria-label="Report contents">
-      <div className="dk-section-head"><span className="deck-eyebrow"><BookOpen size={12}/>Contents</span><h3>The document, chapter by chapter</h3><small>{areas.length + 1} areas · each one carries its verdict, the evidence behind it and a decision</small></div>
+      <div className="dk-rule-head"><span className="deck-eyebrow"><BookOpen size={12}/>Contents</span><h3>The document, chapter by chapter</h3></div>
       <div className="dk-index-grid">{areas.map((area, i) => {
         const data = model.chapters[area.id];
         const ids = headlineIds(area, data);
@@ -147,7 +150,7 @@ export function CoverPage({ model, tabs, ranked, onNavigate }: { model: ReportMo
         return <button type="button" key={area.id} className="dk-index-card" data-status={status} onClick={() => onNavigate(area.id)}>
           <span className="dk-index-no">{String(i + 2).padStart(2, "0")}</span>
           <span className="dk-index-body"><b>{area.label}</b><small>{v?.headline || area.spec?.title || "Open the chapter"}</small></span>
-          {lead && data && <span className="dk-index-foot"><em>{definition(lead)?.label} {fmt(lead, data.total[lead])}</em><span data-tone={tone(lead, data.total[lead], data.prior[lead])}>{delta(lead, data.total[lead], data.prior[lead])} MoM</span><ArrowRight size={13}/></span>}
+          {lead && data && <span className="dk-index-foot"><em>{definition(lead)?.label} {fmt(lead, data.total[lead])}</em><span data-tone={tone(lead, data.total[lead], data.prior[lead])}>{delta(lead, data.total[lead], data.prior[lead])} MoM</span></span>}
         </button>;
       })}</div>
     </section>}
@@ -155,7 +158,5 @@ export function CoverPage({ model, tabs, ranked, onNavigate }: { model: ReportMo
     {!!columns.length && <section className="dk-cover-columns" aria-label="What to act on">
       {columns.map(col => <div key={col.key} data-kind={col.key}><h3><col.icon size={15}/>{col.title}</h3>{list(col.items, col.key as "wins", col.findings)}</div>)}
     </section>}
-
-    {exec && <DecisionPanel model={model} chapter={EXECUTIVE} ids={execIds} />}
   </div>;
 }

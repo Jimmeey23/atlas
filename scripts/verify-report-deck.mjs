@@ -93,8 +93,9 @@ try {
   // Chapter tab → verdict with the new categories and flip cards.
   await page.getByRole('navigation', { name: 'Report chapters' }).getByRole('button', { name: 'Schedule' }).or(page.locator('.deck-tabs button', { hasText: /Sessions|Schedule|Classes/ })).first().click();
   await page.locator('.dk-brief').waitFor();
-  for (const label of ['What changed', 'Why it moved', 'Where it sits', 'What held up', 'Outlook', 'So what']) assert.ok(await page.locator('.dk-brief').getByText(label, { exact: true }).count(), `briefing shows ${label}`);
-  for (const label of ['Decision for leadership', 'Why this call', 'What the data says', 'Expected impact', 'Success measure', 'Risks & guardrail', 'Alternative considered']) assert.ok(await page.locator('.dk-decision').getByText(label, { exact: true }).count(), `decision shows ${label}`);
+  for (const label of ['The reading', 'Where it sits', 'Against the year', 'What moved the number']) assert.ok(await page.locator('.dk-brief').getByText(label, { exact: true }).count(), `reading shows ${label}`);
+  assert.ok(await page.locator('.dk-bridge-row').count() >= 3, 'the driver bridge decomposes the movement');
+  for (const label of ['Action centre', 'Expected outcome', 'How we will know', 'Guardrail']) assert.ok(await page.locator('.dk-decision').getByText(label, { exact: true }).count(), `action centre shows ${label}`);
   assert.ok((await page.locator('.deck-metric-grid').boundingBox()).y < (await page.locator('.dk-brief').boundingBox()).y, 'metric cards sit above the briefing');
   assert.ok(await page.locator('.dk-takeaways li').count() >= 3, 'briefing lists takeaways'); await page.waitForTimeout(500);
   await page.screenshot({ path: `${shots}/deck-verdict.png`, fullPage: false });
@@ -119,6 +120,8 @@ try {
   const opener = await page.locator('.deck-notes-opener').innerText();
   await page.locator('.deck-sections').getByRole('tab', { name: /Insights/ }).click();
   await page.waitForFunction(previous => document.querySelector('.deck-notes-opener')?.textContent !== previous, opener);
+  assert.ok(await page.locator('.deck-insight').count() >= 2, 'every finding is on the page');
+  await page.locator('.dk-view-toggle').getByRole('button', { name: /One at a time/ }).click();
   assert.ok(await page.locator('.dk-rail button').count() >= 2, 'insight rail lists every finding');
   await page.locator('.dk-rail button').nth(1).click(); await page.waitForTimeout(400);
   assert.ok((await page.locator('.deck-insight-headline h3').first().innerText()).length > 0);
@@ -222,5 +225,5 @@ try {
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'no horizontal overflow on mobile');
   await page.screenshot({ path: `${shots}/deck-mobile.png` });
   assert.deepEqual(errors, []);
-  console.log('PASS: fixed navbar, chapter/section tabs, verdict categories, flip cards, MoM table + chart, evidence, live + AI speaker notes, admin edit, AI component swap, DB persistence, pinning, retention, mobile.');
+  console.log('PASS: fixed navbar, chapter/section tabs, the reading with driver bridge, action centre, discovery cards with evidence, flip measures, MoM table + chart, live + AI speaker notes, admin edit, AI component swap, DB persistence, pinning, retention, mobile.');
 } finally { await browser?.close(); await vite.close(); http.closeAllConnections(); await new Promise(r => http.close(r)); }

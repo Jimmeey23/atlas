@@ -340,3 +340,8 @@
 .rb2-swatches button{display:inline-flex;align-items:center;gap:7px;padding:6px 11px 6px 7px;border:1px solid var(--hairline);border-radius:999px;background:var(--surface);color:inherit;font:inherit;font-size:12px;cursor:pointer}
 .rb2-swatches button i{width:16px;height:16px;border-radius:50%;background:var(--swatch)}
 .rb2-swatches button[aria-checked=true]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+
+/* Confidence chip on a finding, and the reference hero's inner container. */
+.report-doc .r2-confidence{margin-left:auto}
+.report-doc .r2-insight-head .r2-confidence{color:var(--r-subtle);border-color:var(--r-line)}
+.report-doc .r-reference-hero-content{position:relative;z-index:1}

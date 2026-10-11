@@ -87,6 +87,70 @@ export function decisionOf(model: ReportModel, id: string): (LeadershipDecision 
     ...present(n?.decision) };
 }
 
+/**
+ * Words that carry a sentence, for spotting prose that says the same thing twice.
+ * Articles, prepositions and connectives are dropped so only the substance counts.
+ */
+const SUBSTANCE = 4;
+const terms = (text: string) => new Set((text.toLowerCase().match(/[a-z0-9%₹.,]+/g) ?? []).filter(word => word.length > SUBSTANCE));
+const overlap = (a: string, b: string) => {
+  const A = terms(a), B = terms(b);
+  if (!A.size || !B.size) return 0;
+  let shared = 0;
+  for (const word of A) if (B.has(word)) shared++;
+  return shared / Math.min(A.size, B.size);
+};
+
+/**
+ * The reading, deduplicated. A briefing answers several questions from the same month,
+ * so fields frequently restate each other; repeating a sentence at a second heading
+ * costs the reader attention and makes the page feel padded. Lines that largely repeat
+ * the headline or an earlier line are dropped, and the reading never runs past three.
+ */
+export function readingLines(b: ChapterBriefing, headline = ""): string[] {
+  const kept: string[] = [];
+  for (const line of [b.whatChanged, b.whyItMoved, b.whereItSits, b.whatHeldUp, b.soWhat].map(t => (t ?? "").trim()).filter(Boolean)) {
+    if (headline && overlap(line, headline) > .6) continue;
+    if (kept.some(existing => overlap(existing, line) > .5)) continue;
+    kept.push(line);
+    if (kept.length === 3) break;
+  }
+  return kept;
+}
+
+export interface DriverRow { name: string; change: number; value: number; share: number }
+export interface DriverBridge {
+  metric: string; net: number; peak: number; rows: DriverRow[]; rest: { count: number; change: number } | null; groups: number;
+}
+
+/**
+ * What actually moved the number: each row of the chapter's primary breakdown,
+ * measured as its contribution to the month-on-month change. Contributions come from
+ * recorded rows only and are read as arithmetic on them, not as attribution — rows
+ * that partition the total add up to the net movement, which is what the panel states.
+ */
+export function driverBridge(data: ChapterData | undefined, ids: string[]): DriverBridge | null {
+  if (!data) return null;
+  for (const table of data.groups ?? []) {
+    const metric = (table.compare && table.columns.includes(table.compare) ? table.compare : table.columns.find(column => definition(column) && table.columns.includes(column))) ?? "";
+    if (!metric || !table.prior || table.rows.length < 3) continue;
+    const rows = table.rows.map(row => {
+      const now = num(row[metric]), was = num(table.prior?.[String(row.g)]?.[metric]);
+      return now == null || was == null ? null : { name: String(row.g ?? "Unspecified"), change: now - was, value: now };
+    }).filter((row): row is { name: string; change: number; value: number } => !!row && row.change !== 0);
+    if (rows.length < 3) continue;
+    const net = rows.reduce((sum, row) => sum + row.change, 0);
+    const ranked = [...rows].sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
+    const shown = ranked.slice(0, 5);
+    const tail = ranked.slice(5);
+    const peak = Math.max(...shown.map(row => Math.abs(row.change)), 0);
+    return { metric, net, peak, groups: data.groups.length,
+      rows: shown.map(row => ({ ...row, share: peak ? Math.abs(row.change) / peak : 0 })),
+      rest: tail.length ? { count: tail.length, change: tail.reduce((sum, row) => sum + row.change, 0) } : null };
+  }
+  return null;
+}
+
 /** Metrics a decision rests on: those the verdict cites, else the chapter's largest movers. */
 export function decisionMetrics(model: ReportModel, id: string, ids: string[]) {
   const data = model.chapters[id];
