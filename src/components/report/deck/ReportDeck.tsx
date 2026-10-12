@@ -19,6 +19,8 @@ import { EditContext, setIn, Slot, type DeckEdit } from "./editing";
 import { FlipMetricCard } from "./FlipMetricCard";
 import { BriefingPanel, DecisionPanel } from "./Briefing";
 import { CoverPage } from "./CoverPage";
+import { ContinuousReport } from "./ContinuousReport";
+import "../../../design/report-continuous.css";
 import { Performers } from "./Performers";
 import { KeyTables } from "./KeyTables";
 import { Outlook } from "./Outlook";
@@ -64,6 +66,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
   const pages = deckPages(tabs);
   const fromHash = () => { const [t, s] = decodeURIComponent(location.hash.slice(1)).split("/"); const found = tabs.find(x => x.id === t); return found ? { tab: found.id, section: (found.sections.includes(s as DeckSection) ? s : found.sections[0]) as DeckSection } : { tab: tabs[0].id, section: tabs[0].sections[0] }; };
   const [page, setPage] = useState(fromHash);
+  const [continuous, setContinuous] = useState(true);
   // Notes stay closed until the presenter asks for them, so the report gets the full width.
   const [drawer, setDrawer] = useState(() => { try { return innerWidth > 820 && localStorage.getItem(DRAWER_KEY) === "open"; } catch { return false; } });
   const [admin, setAdmin] = useState(!!adminToken());
@@ -84,7 +87,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
   const index = pages.findIndex(p => p.tab === page.tab && p.section === page.section);
 
   useEffect(() => { void adminStatus().then(s => { setAdminConfigured(s.configured); if (!s.unlocked && adminToken()) { lockAdmin(); setAdmin(false); } }).catch(() => undefined); }, []);
-  useEffect(() => { history.replaceState(null, "", `#${page.tab}/${page.section}`); main.current?.scrollTo({ top: 0 }); setFlipped(""); }, [page.tab, page.section]);
+  useEffect(() => { history.replaceState(null, "", `#${page.tab}/${page.section}`); if (continuous) document.getElementById(`chapter-${page.tab}`)?.scrollIntoView({ block: "start", behavior: "instant" }); else main.current?.scrollTo({ top: 0 }); setFlipped(""); }, [page.tab, page.section, continuous]);
   // Shared review sessions: the presenter toolkit follows and drives the chapter tab.
   useEffect(() => { window.dispatchEvent(new CustomEvent("p57-report-navigate", { detail: page.tab === "overview" ? "" : page.tab })); }, [page.tab]);
   useEffect(() => {
@@ -146,7 +149,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
   const data = model.chapters[cid];
   const ids = tab.spec ? chapterMetrics(tab.spec, data) : [];
   const slot = (name: string) => `${tab.id}:${page.section}:${name}`;
-  const open = (id: string) => { const t = tabs.find(x => x.id === id || x.chapter === id); if (t) setPage({ tab: t.id, section: t.sections[0] }); };
+  const open = (id: string) => { const t = tabs.find(x => x.id === id || x.chapter === id); if (t) { setPage({ tab: t.id, section: t.sections[0] }); if (continuous) document.getElementById(`chapter-${t.id}`)?.scrollIntoView({ block: "start", behavior: "instant" }); } };
 
   function body() {
     const s = page.section;
@@ -179,10 +182,11 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
   }
 
   return <EditContext.Provider value={edit}><RecordDrilldownProvider model={model} chapterId={cid}>
-    <div className="report-page deck" data-report-id={model.id || ""} data-drawer={drawer} data-editing={edit.editing} data-full={full}>
+    <div className="report-page deck" data-report-id={model.id || ""} data-drawer={drawer} data-editing={edit.editing} data-full={full} data-continuous={continuous}>
       <header className="deck-nav" data-export="omit">
-          <a className="deck-brand" href="#overview/cover" onClick={e => { e.preventDefault(); setPage({ tab: "overview", section: "cover" }); }}><img src={logo} alt="Physique 57"/><span><b>{model.customization?.title || "Monthly performance report"}</b><small>{model.scope.studio} · {monthLabel(model.scope.month)}{model.editedAt ? " · edited" : ""}</small></span></a>
+          <a className="deck-brand" href="#overview/cover" onClick={e => { e.preventDefault(); open("overview"); }}><img src={logo} alt="Physique 57"/><span><b>{model.customization?.title || "Monthly performance report"}</b><small>{model.scope.studio} · {monthLabel(model.scope.month)}{model.editedAt ? " · edited" : ""}</small></span></a>
           <div className="deck-nav-actions">
+            <button className="button" aria-pressed={continuous} onClick={() => setContinuous(value => !value)}>{continuous ? "Presentation view" : "Single-page report"}</button>
             {dirty && <span className="deck-unsaved"><CircleDot size={11}/>Unsaved changes</span>}
             {admin && dirty && <button className="button" onClick={() => setModel(saved)} disabled={!!busy}><Undo2 size={14}/>Discard</button>}
             {admin && <button className="button primary" onClick={() => void save()} disabled={!dirty || !!busy}>{busy === "save" ? <Loader2 size={14} className="rb2-spin"/> : <Save size={14}/>}Save</button>}
@@ -198,30 +202,31 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
             <button className="button deck-notes-toggle" aria-pressed={drawer} title="Speaker notes (N)" onClick={() => setDrawer(d => !d)}><Mic size={14}/>Notes</button>
           </div>
         <nav className="deck-tabs" aria-label="Report chapters">
-          {tabs.map(t => <button key={t.id} type="button" aria-current={t.id === tab.id ? "page" : undefined} data-tone={tone(model, t)} onClick={() => setPage({ tab: t.id, section: t.sections[0] })} title={verdictOf(model, t.chapter)?.headline ?? t.title}>
+          {tabs.map(t => <button key={t.id} type="button" aria-current={t.id === tab.id ? "page" : undefined} data-tone={tone(model, t)} onClick={() => open(t.id)} title={verdictOf(model, t.chapter)?.headline ?? t.title}>
             <i aria-hidden="true"/>{t.label}</button>)}
         </nav>
       </header>
       <div className="deck-body">
         <main className="deck-main" ref={main} id="main">
-          <div className="deck-page-head" data-export="omit">
+          {!continuous && <div className="deck-page-head" data-export="omit">
             {page.section === "cover" ? <span className="deck-eyebrow">Report overview</span>
               : <div><span className="deck-eyebrow">{tab.spec?.eyebrow ?? "Report overview"} · {sectionMeta(page.section).display}</span><h1>{tab.id === "overview" ? tab.spec?.title ?? tab.title : tab.title}</h1>{tab.spec?.deck && <p>{tab.spec.deck}</p>}</div>}
             <div className="deck-sections segmented" role="tablist" aria-label="Sections">
               {tab.sections.map(s => { const Icon = SECTION_ICON[s]; const meta = SECTION_META[s]; return <button key={s} role="tab" aria-selected={s === page.section} data-group={meta.group} className={s === page.section ? "active" : ""} onClick={() => setPage({ tab: tab.id, section: s })}><Icon size={13}/><span className="deck-section-long">{meta.label}</span><span className="deck-section-short">{meta.short}</span></button>; })}
             </div>
           </div>
+          }
           {message && <p className="deck-message" role="status">{message}<button className="icon-button" aria-label="Dismiss" onClick={() => setMessage("")}><X size={13}/></button></p>}
           {edit.editing && <p className="deck-edit-banner"><PencilLine size={14}/>Editing — click any text to rewrite it. Use <b>✦</b> on a component to replace just that component with AI. Save writes to the database.</p>}
-          <article className="report-doc r2 deck-doc" data-report-theme={model.customization?.theme || "light"} data-accent={options.accent} data-surface={options.surface} data-typography={options.typography} data-card-style={options.cardStyle} data-density={options.density} data-section={page.section} key={`${page.tab}:${page.section}`}>
-            {body()}
+          <article className="report-doc r2 deck-doc" data-report-theme={model.customization?.theme || "light"} data-accent={options.accent} data-surface={options.surface} data-typography={options.typography} data-card-style={options.cardStyle} data-density={options.density} data-section={page.section} key={continuous ? "continuous" : `${page.tab}:${page.section}`}>
+            {continuous ? <ContinuousReport model={model} tabs={tabs} ranked={ranked} onNavigate={open}/> : body()}
           </article>
           <div className="deck-chapter-markers" hidden>{tabs.filter(t => t.spec).map(t => <section key={t.id} className="r-section" id={t.id}><span className="r-section-topic">{t.label}</span></section>)}</div>
-          <footer className="deck-pager-bar" data-export="omit">
+          {!continuous && <footer className="deck-pager-bar" data-export="omit">
             <button className="button" disabled={index <= 0} onClick={() => go(-1)}><ChevronLeft size={15}/>Previous</button>
             <span className="deck-progress" title="← → to move · N for notes · F for fullscreen"><b>{index + 1}</b> of {pages.length}<i aria-hidden="true"><i style={{ width: `${(index + 1) / pages.length * 100}%` }}/></i></span>
             <button className="button" disabled={index >= pages.length - 1} onClick={() => go(1)}>Next<ChevronRight size={15}/></button>
-          </footer>
+          </footer>}
         </main>
         <SpeakerDrawer model={model} tabs={tabs} tab={tab.id} section={page.section} open={drawer} onNavigate={setPage} onClose={() => setDrawer(false)}
           onNotes={patch => { setModel(m => ({ ...m, ...patch })); setSaved(s => ({ ...s, ...patch })); }} />

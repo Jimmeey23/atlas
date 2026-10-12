@@ -31,7 +31,7 @@ export function DeckInsightCard({ card, model, chapterId, index, total, plan = f
   const visual = chart && <div className="deck-proof-visual" data-full={fullVisual}>{table ? <EvidenceBlock table={table} full initialView="chart"/> : cited[0] && <FocusTrend id={cited[0].id} history={cited[0].data.history.slice(-14)} />}</div>;
   const cause = card.driver || card.reasoning;
   const chain = [
-    cause && { key: "cause", icon: GitBranch, label: plan ? "Why this move" : "Cause", text: plan && card.recommendation ? card.recommendation : cause },
+    cause && { key: "cause", icon: GitBranch, label: plan ? "Why this move" : "Driver", text: plan && card.recommendation ? card.recommendation : cause },
     card.concentration && { key: "where", icon: Crosshair, label: "Where", text: card.concentration },
     card.impact && { key: "worth", icon: IndianRupee, label: "Worth", text: card.impact },
   ].filter(Boolean) as { key: string; icon: typeof GitBranch; label: string; text: string }[];

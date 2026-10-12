@@ -1,3 +1,8 @@
+import { ContinuousReport } from "./deck/ContinuousReport";
+import { deckTabs } from "../../report/deck";
+import { findingsFor, ledger } from "../../report/findings";
+import "../../design/report-deck.css";
+import "../../design/report-continuous.css";
 import { ReportSettings } from "./ReportSettings";
 import { definition } from "../../report/definitions";
 import { GenerationStats } from "./GenerationStats";
@@ -151,6 +156,8 @@ export function ReportBuilder({ version }: { version: string | number }) {
     catch (e) { job.set({ storageError: String(e) }); }
   }
 
+  const previewTabs = useMemo(() => model ? deckTabs(model) : [], [model]);
+  const previewFindings = useMemo(() => model ? ledger(findingsFor(model)) : [], [model]);
   const ready = !!studio && !!month && customization.chapterIds.length > 0;
   const busy = running || !!opening;
   const analysisPreferences = (c?: ReportCustomization) => JSON.stringify([c?.audience, c?.tone, c?.detail, c?.instructions, c?.focusAreas ?? [], c?.targets ?? {}, c?.lenses ?? [], c?.insightsPerChapter, c?.includeActions, c?.quantifyImpact, c?.comparisonFocus]);
@@ -167,10 +174,10 @@ export function ReportBuilder({ version }: { version: string | number }) {
       <header className="rs-hero">
         <div className="rs-hero-mark"><Presentation size={22}/></div>
         <div className="rs-hero-copy"><span className="eyebrow">Monthly report studio</span><h2>Turn the month into decisions.</h2>
-          <p>Build a tabbed, presentable review with verdicts, flip-to-history metric cards, month-on-month tables and live speaker notes. Reports open in their own tab.</p></div>
+          <p>One continuous studio review: connect the month’s results to their drivers, evidence and decisions. Explore the report here or open it in a dedicated reader.</p></div>
         <ul className="rs-hero-features">
-          <li><Lightbulb size={14}/>Root cause · concentration · value at stake</li>
-          <li><Mic size={14}/>Live speaker notes per page</li>
+          <li><Lightbulb size={14}/>Drivers · counter-evidence · value at stake</li>
+          <li><Mic size={14}/>Distinct chapters · source-backed recommendations</li>
           <li><PencilLine size={14}/>Admin edits & AI component swaps</li>
         </ul>
       </header>
@@ -255,6 +262,13 @@ export function ReportBuilder({ version }: { version: string | number }) {
           </section>
         </aside>
       </div>
+      {model && <section className="rs-report-preview" aria-label="Monthly report preview">
+        <header><div><span className="eyebrow">Your studio review</span><h2>{model.scope.studio} · {monthLabel(model.scope.month)}</h2><p>{running ? "Chapters appear as their analysis completes." : "Frozen monthly evidence · open a metric or table row to examine its source."}</p></div><button className="button" onClick={() => void open(model)} disabled={busy}><ExternalLink size={14}/>Open reader</button></header>
+        {(studio !== model.scope.studio || month !== model.scope.month) && <p className="notice">This preview is {model.scope.studio} · {monthLabel(model.scope.month)}. Generate a report to apply the newly selected scope.</p>}
+        <article className="report-doc r2 deck deck-doc cr-inline" data-report-theme={model.customization?.theme || "light"} data-accent={reportOptions(model.customization).accent}>
+          <ContinuousReport model={model} tabs={previewTabs} ranked={previewFindings} onNavigate={id => document.getElementById(`chapter-${id}`)?.scrollIntoView({ block: "start" })}/>
+        </article>
+      </section>}
     </div>
   );
 }

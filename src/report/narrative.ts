@@ -7,7 +7,7 @@ import { INSIGHT_LENSES, type ChapterData, type ChapterNarrative, type InsightCa
 import { reportOptions } from "./options";
 import { addCall, type CallUsage, type ChapterUsage } from "./usage";
 
-const CACHE_PREFIX = "atlas-report-narrative:v13:";
+const CACHE_PREFIX = "atlas-report-narrative:v14:";
 /** Exact evidence and request identity, independent of presentation settings. */
 async function analysisKey(value: unknown) {
   const bytes = new TextEncoder().encode(JSON.stringify(value));
@@ -50,6 +50,7 @@ export function chapterPayload(spec: ChapterSpec, data: ChapterData, model: Repo
     figures: spec.metrics.map(id => [id, ...[data.total, data.prior, data.priorYear, data.yearToDate, data.priorYearToDate].map(row => row?.[id] ?? null), delta(id, data.total[id], data.prior[id]), delta(id, data.total[id], data.priorYear[id])]),
   }) + "\nCalendar-year context:\n" + yearContextPayload(spec,data,model.scope.month));
   for (const group of data.groups) {
+    if (group.analysis) parts.push(`Engine-derived analysis for ${group.id ?? group.field}:\n${JSON.stringify(group.analysis)}\nMedian lift is a conditional benchmark, not a forecast. Rate and mix effects are arithmetic, not causal estimates.`);
     const head = ["Group", ...group.columns.map((id) => definition(id)?.label ?? id)].join(" | ");
     const body = group.rows
       .map((row) =>
@@ -175,7 +176,7 @@ function insightRules(model: ReportModel, spec: ChapterSpec) {
     "headline: the verdict in at most 16 words, including the key number.",
     "meaning (shown as 'Why it matters'): 45–80 words on the business consequence for members, revenue, capacity or the brand. Do not restate the figure.",
     "evidence: at most 40 words of exact supplied figures with their comparison periods.",
-    "driver (shown as 'Root cause'): 30–60 words decomposing the movement: which breakdown rows or mix shifts contributed how much, and the offsetting force. Decompositions are arithmetic; label a causal idea as a hypothesis and name the check that would confirm it.",
+    "driver (shown as 'Primary driver'): 30–60 words decomposing the movement: which breakdown rows or mix shifts contributed how much, and the offsetting force. Decompositions are arithmetic; label a causal idea as a hypothesis and name the check that would confirm it.",
     "concentration (shown as 'Where it concentrates'): at most 30 words naming the specific segments, formats, slots, channels or instructors that carry most of the movement, with their share or contribution. Empty string when the movement is broad-based or no breakdown supports it.",
     "offset (shown as 'What held up'): at most 25 words on the strongest counter-signal: the metric or segment moving the other way, so the reading stays balanced. Empty string when nothing material offsets it.",
     `trend (shown as 'Structural or one-off?'): at most 35 words giving one verdict — new, persistent for n months, reversing, seasonal or one-off. ${COMPARISON_FOCUS[o.comparisonFocus]}`,
@@ -195,9 +196,21 @@ function insightRules(model: ReportModel, spec: ChapterSpec) {
     "confidence: high, medium or low, justified by source coverage, sample size and consistency across comparisons.",
     "summary: 90–140 words — the chapter's verdict: what happened, the largest quantified driver, the offset, whether it is durable, and the one thing leadership should take from it.",
     "Exactly one card has focus kpis: the chapter verdict.",
+    ...DEEP_REVIEW_RULES,
     ...CHAPTER_RULES,
   ].join("\n");
 }
+
+/** Analytical depth contract informed by the reference report structure; figures come only from this snapshot. */
+const DEEP_REVIEW_RULES = [
+  "DEEP REVIEW: write an argument, not a metric recap. For each material finding connect signal → quantified driver → counter-evidence → consequence → decision. Use supplied engine-derived group analysis for full-population movers, rate/mix bridges, concentration and median-lift benchmarks; never infer all-group contributions from a truncated table.",
+  "Test competing explanations where evidence exists: demand versus supplied capacity; transaction volume versus average ticket; channel mix versus within-channel conversion; member reach versus repeat frequency. State which explanation the evidence supports, which it weakens and what remains untested. If a required measure or matched comparison is missing, say so rather than inventing the test.",
+  "Use comparisons to separate scale from efficiency: absolute attendance versus fill; total revenue versus revenue per session; acquired leads versus conversion. A leader by volume need not lead by yield. Name exact denominators, source periods and eligible sample sizes when supplied. Do not equate repeated visits or package utilisation with a new purchase.",
+  "Distinguish selected-month performance from lifetime history, current snapshots and network context. Compare cohorts only on supplied equal observation windows; otherwise explicitly flag maturity bias. Do not create matched-slot effects, cohort-adjusted rates or member-level joins unless the supplied evidence contains them.",
+  "For cross-chapter synthesis, explain a supported tension rather than forcing reconciliation: cash can hold while acquisition quality weakens, or average class size can rise while reach falls. Cite the separate source bases. Never claim these linked signals prove a mechanism.",
+  "Recommendations must name a specific segment or operating lever, the observed gap, a responsible team, and a review indicator. Any proposed threshold, experiment duration or ambition must be labelled proposed; it is not a source fact. Quantify conditional opportunity only from supplied inputs, show the multiplication or bridge and its assumptions, and explain the alternative and downside. Leave impact empty when not calculable.",
+  "Acknowledge missing source coverage and thin samples in the finding they affect. Do not make a confident instructor, channel or partnership quality judgement from small counts. Keep member and instructor language respectful; suggest a measurable experiment where causal evidence is absent.",
+];
 
 /** v3: the chapter-level briefing, decision, performer commentary and question bank. Shown on screen except questions. */
 const CHAPTER_RULES = [
@@ -485,7 +498,7 @@ export async function generateNarratives(
         ]);
         const extra = { insightVersion: 3, metricIds, lenses: spec.id === "recommendations" ? ["next_step"] : o.lenses.filter(l => l !== "next_step") };
         // Include complete pre-budget evidence: changes to omitted records must invalidate reuse too.
-        const fingerprint = await analysisKey({ version: 13, providerModel, providerPolicy, message, focusIds, extra,
+        const fingerprint = await analysisKey({ version: 14, providerModel, providerPolicy, message, focusIds, extra,
           figures, portfolio, preferences, scenarios: spec.id === "predictions" ? forwardScenarios(model) : "" });
         const key = `${CACHE_PREFIX}${model.scope.studio}:${model.scope.month}:${spec.id}:${fingerprint}`;
         const previous = model.narratives[spec.id];

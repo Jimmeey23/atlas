@@ -27,10 +27,10 @@ function InsightEditor({ card, path, onRemove }: { card: InsightCard; path: (str
 }
 
 /** Insights as a focus board: a numbered rail of findings and one finding at a time, full width; or the whole list. */
-export function InsightsSection({ model, tab, plan = false }: { model: ReportModel; tab: string; plan?: boolean }) {
+export function InsightsSection({ model, tab, plan = false, initialView = "focus" }: { model: ReportModel; tab: string; plan?: boolean; initialView?: "focus" | "list" }) {
   const edit = useEdit();
   const [lens, setLens] = useState<InsightLens | "all">("all");
-  const [view, setView] = useState<"focus" | "list">("focus");
+  const [view, setView] = useState<"focus" | "list">(initialView);
   const [active, setActive] = useState(0);
   const options = reportOptions(model.customization);
   const cards = model.narratives[tab]?.cards ?? [];

@@ -1,11 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {chapters} from '../src/report/chapters';
-import {yearContextPayload,generateNarratives,portfolioPayload} from '../src/report/narrative';
+import {yearContextPayload,generateNarratives,portfolioPayload,chapterPayload} from '../src/report/narrative';
 import {figuresHash} from '../src/report/period';
 import {reportOptions} from '../src/report/options';
 import type {ChapterData,ReportModel} from '../src/report/model';
 const data=(id:string,extra:Partial<ChapterData>={}):ChapterData=>({id,n:10,total:{},prior:{},priorYear:{},history:[],groups:[],...extra});
+test('chapter evidence retains full-population drivers beyond the displayed ranking',()=>{
+ const spec=chapters.find(c=>c.id==='sessions')!;
+ const d=data(spec.id,{total:{attendance:100},groups:[{id:'format',field:'format',title:'Formats',deck:'',columns:['attendance'],rows:[{g:'Visible leader',attendance:80}],total:null,omitted:5,analysis:{metric:'attendance',totalChange:-40,decliners:[{g:'Omitted material driver',current:5,prior:45,change:-40}],bridge:{rate:'fill_rate',denominator:'capacity',current:.5,prior:.7,rateEffect:-.15,mixEffect:-.05,drivers:[]}}}]});
+ const model:ReportModel={scope:{studio:'Test studio',month:'2026-09'},builtAt:'',figuresHash:'drivers',chapters:{sessions:d},narratives:{}};
+ const payload=chapterPayload(spec,d,model);
+ assert.match(payload,/Omitted material driver/);
+ assert.match(payload,/"totalChange":-40/);
+ assert.match(payload,/"rateEffect":-0.15/);
+ assert.match(payload,/arithmetic, not causal estimates/);
+});
 test('year context excludes unavailable months and separates monthly rate mean from governed YTD',()=>{
  const spec=chapters.find(c=>c.id==='conversion-funnel')!;
  const d=data(spec.id,{total:{conversion_rate:.4},history:[{month:'2025-12',conversion_rate:.9},{month:'2026-01',conversion_rate:.2},{month:'2026-02'},{month:'2026-03',conversion_rate:.4}],yearToDate:{n:100,conversion_rate:.35},priorYearToDate:{n:80,conversion_rate:.3}});

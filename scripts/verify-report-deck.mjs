@@ -83,6 +83,24 @@ try {
   const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message)); page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|favicon/.test(m.text())) errors.push(m.text()); });
   await page.goto(`${url}/report?id=${saved.id}`);
   await page.locator('.deck-nav').waitFor();
+  assert.equal(await page.locator('.deck').getAttribute('data-continuous'), 'true', 'single-page reader is the default');
+  assert.equal(await page.locator('.cr-chapter').count(), 3, 'all selected chapters are on the same page');
+  const continuousChapter = page.locator('[data-chapter="sessions"]');
+  await page.getByRole('navigation', { name: 'Report chapters' }).getByRole('button', { name: 'Schedule' }).or(page.locator('.deck-tabs button', { hasText: /Sessions|Schedule|Classes/ })).first().click();
+  await continuousChapter.locator('.deck-flip-front').first().click();
+  assert.equal(await continuousChapter.locator('.deck-flip').first().getAttribute('data-flipped'), 'true');
+  await continuousChapter.getByRole('button', { name: 'Flip back' }).click();
+  await continuousChapter.locator('.cr-disclosure summary').filter({ hasText: 'Complete evidence tables' }).click();
+  await continuousChapter.locator('.dk-row-drill').first().click();
+  await page.locator('.deck-record-dialog .dk-x-context').waitFor();
+  await page.getByRole('button', { name: 'Close source records' }).click();
+  await page.screenshot({ path: `${shots}/report-continuous.png` });
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'single page has no mobile document overflow');
+  await page.screenshot({ path: `${shots}/report-continuous-mobile.png` });
+  await page.setViewportSize({ width: 1440, height: 920 });
+  await page.getByRole('navigation', { name: 'Report chapters' }).getByRole('button', { name: 'Overview', exact: true }).click();
+  await page.getByRole('button', { name: 'Presentation view', exact: true }).click();
   // Fixed navbar at the very top.
   const nav = await page.locator('.deck-nav').boundingBox(); assert.equal(Math.round(nav.y), 0);
   assert.equal(await page.locator('.deck-nav').evaluate(el => getComputedStyle(el).position), 'fixed');
@@ -93,7 +111,7 @@ try {
   // Chapter tab → verdict with the new categories and flip cards.
   await page.getByRole('navigation', { name: 'Report chapters' }).getByRole('button', { name: 'Schedule' }).or(page.locator('.deck-tabs button', { hasText: /Sessions|Schedule|Classes/ })).first().click();
   await page.locator('.dk-brief').waitFor();
-  for (const label of ['What changed', 'Why it moved', 'Where it sits', 'What held up', 'Outlook', 'So what']) assert.ok(await page.locator('.dk-brief').getByText(label, { exact: true }).count(), `briefing shows ${label}`);
+  for (const label of ['Performance movement', 'Primary drivers', 'Where change concentrated', 'What remained resilient', 'Near-term read', 'Business implication']) assert.ok(await page.locator('.dk-brief').getByText(label, { exact: true }).count(), `briefing shows ${label}`);
   for (const label of ['Decision for leadership', 'Why this call', 'What the data says', 'Expected impact', 'Success measure', 'Risks & guardrail', 'Alternative considered']) assert.ok(await page.locator('.dk-decision').getByText(label, { exact: true }).count(), `decision shows ${label}`);
   assert.ok((await page.locator('.deck-metric-grid').boundingBox()).y < (await page.locator('.dk-brief').boundingBox()).y, 'metric cards sit above the briefing');
   assert.ok(await page.locator('.dk-takeaways li').count() >= 3, 'briefing lists takeaways'); await page.waitForTimeout(500);
@@ -117,21 +135,21 @@ try {
   await page.getByRole('button', { name: 'Notes' }).click();
   assert.equal(await page.locator('.deck-drawer').getAttribute('data-open'), 'true');
   const opener = await page.locator('.deck-notes-opener').innerText();
-  await page.locator('.deck-sections').getByRole('tab', { name: /Insights/ }).click();
+  await page.locator('.deck-sections').getByRole('tab', { name: /What changed/ }).click();
   await page.waitForFunction(previous => document.querySelector('.deck-notes-opener')?.textContent !== previous, opener);
-  assert.ok(await page.locator('.dk-rail button').count() >= 2, 'insight rail lists every finding');
-  await page.locator('.dk-rail button').nth(1).click(); await page.waitForTimeout(400);
+  assert.ok(await page.locator('.dk-insight-index button').count() >= 2, 'insight rail lists every finding');
+  await page.locator('.dk-insight-index button').nth(1).click(); await page.waitForTimeout(400);
   assert.ok((await page.locator('.deck-insight-headline h3').first().innerText()).length > 0);
   assert.ok(await page.locator('.deck-notes-qa').count() >= 5, 'notes carry a question bank');
   await page.screenshot({ path: `${shots}/deck-insights.png` });
-  await page.locator('.dk-rail button').first().click();
+  await page.locator('.dk-insight-index button').first().click();
   // Notes change the available report width without changing the viewport breakpoint.
   for (const width of [1440, 1280, 390]) {
     if (width === 390) await page.getByRole('button', { name: 'Notes', exact: true }).click();
     await page.setViewportSize({ width, height: 920 });
     await page.waitForTimeout(350);
     const layout = await page.locator('.dk-insights').evaluate(root => {
-      const rail = root.querySelector('.dk-rail').getBoundingClientRect();
+      const rail = root.querySelector('.dk-insight-index').getBoundingClientRect();
       const card = root.querySelector('.deck-insight').getBoundingClientRect();
       const claim = root.querySelector('.deck-insight-claim').getBoundingClientRect();
       return { width: root.clientWidth, overflow: root.scrollWidth - root.clientWidth,
@@ -209,7 +227,7 @@ try {
   assert.ok(Object.values(stored.narratives).some(n => n.cards.some(c => c.headline === 'Edited verdict headline')), 'edit persisted');
   assert.ok(Object.keys(stored.replacements).some(k => k.endsWith(':summary:metrics')), 'replacement persisted');
   assert.ok(Object.keys(stored.speakerNotes ?? {}).length === 1, 'AI talk track persisted');
-  await page.reload(); await page.locator('[data-replaced=true]').waitFor();
+  await page.reload(); await page.locator('[data-replaced=true]').waitFor(); await page.getByRole('button', { name: 'Presentation view', exact: true }).click();
   // Pin.
   await page.getByRole('button', { name: 'Pin report' }).click(); await page.getByText(/Pinned/).first().waitFor();
   // Dark theme: the same page reads correctly on the app's dark surfaces.

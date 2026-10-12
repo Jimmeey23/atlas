@@ -52,10 +52,10 @@ function KeyTable({ table, chapter, open: initial, compact = false, rowLimit }: 
           {table.columns.map(c => <td key={c} data-lead={c === compare || undefined}>{fmt(c, r[c])}</td>)}
           <td data-tone={tone(compare, r[compare], prior)}>{prior == null ? "—" : delta(compare, r[compare], prior)}</td>
           <td data-tone={tone(compare, r[compare], ly)}>{ly == null ? "—" : delta(compare, r[compare], ly)}</td>
-          <td className="dk-muted-cell">{Number(r.n ?? 0).toLocaleString("en-IN")}</td>
+          <td className="dk-muted-cell">{r.n == null ? "—" : Number(r.n).toLocaleString("en-IN")}</td>
         </tr>;
       })}</tbody>
-      {total && <tfoot><tr><th scope="row">All groups</th>{table.columns.map(c => <td key={c}>{fmt(c, total[c])}</td>)}<td/><td/><td>{Number(total.n ?? 0).toLocaleString("en-IN")}</td></tr></tfoot>}
+      {total && <tfoot><tr><th scope="row">All groups</th>{table.columns.map(c => <td key={c}>{fmt(c, total[c])}</td>)}<td/><td/><td>{total.n == null ? "—" : Number(total.n).toLocaleString("en-IN")}</td></tr></tfoot>}
     </table></div>}
     {open && rowLimit != null && rows.length > rowLimit && <p className="dk-table-note">Showing the {rowLimit} strongest rows of {rows.length}. Open Evidence tables for the complete sortable table.</p>}
     {open && !!table.diagnostics?.length && <p className="dk-table-note">{table.diagnostics[0]}</p>}
