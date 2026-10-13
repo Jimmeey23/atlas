@@ -87,6 +87,11 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
   const tab = tabs.find(t => t.id === page.tab) ?? tabs[0];
   const index = pages.findIndex(p => p.tab === page.tab && p.section === page.section);
 
+  useEffect(()=>{
+    const audio=new Audio('/audio/sfx/applause.mp3');audio.preload='none';
+    const complete=()=>{audio.currentTime=0;void audio.play().then(()=>setMessage('Chapter complete.')).catch(()=>setMessage('Chapter complete. Use Sound clips to play applause.'));};
+    window.addEventListener('p57-chapter-complete',complete);return()=>{window.removeEventListener('p57-chapter-complete',complete);audio.pause();};
+  },[]);
   useEffect(() => { void adminStatus().then(s => { setAdminConfigured(s.configured); if (!s.unlocked && adminToken()) { lockAdmin(); setAdmin(false); } }).catch(() => undefined); }, []);
   useEffect(() => { history.replaceState(null, "", `#${page.tab}/${page.section}`); if (continuous) document.getElementById(`chapter-${page.tab}`)?.scrollIntoView({ block: "start", behavior: "instant" }); else main.current?.scrollTo({ top: 0 }); setFlipped(""); }, [page.tab, page.section, continuous]);
   // Shared review sessions: the presenter toolkit follows and drives the chapter tab.

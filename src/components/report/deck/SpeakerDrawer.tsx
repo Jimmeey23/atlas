@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { Mic, Sparkles, Loader2, Timer, Play, Pause, RotateCcw, X, ExternalLink, AArrowUp, AArrowDown, MessageCircleQuestion, Hash, ArrowRight, NotebookPen, ScrollText, ChevronRight, Quote } from "lucide-react";
 import type { ReportModel, SpeakerNotes } from "../../../report/model";
 import { deckPages, liveNotes, pageKey, sectionContext, SECTION_LABEL, type DeckSection, type DeckTab } from "../../../report/deck";
 import { generateSpeakerNotes, saveNotes } from "../../../report/storage";
 
+import { reportFmt } from "../../../report/definitions";
 import { useSpeechFollow } from "./useSpeechFollow";
 const clock = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 const FONT_KEY = "atlas-speaker-font";
@@ -33,7 +34,29 @@ export function SpeakerDrawer({ model, tabs, tab, section, open, onClose, onNote
   onNotes: (patch: Pick<ReportModel, "presenterNotes" | "speakerNotes">) => void;
 }) {
   const key = pageKey(tab, section);
-  const notes = useMemo(() => liveNotes(model, tabs, tab, section), [model, tabs, tab, section]);
+  const [visibleSection,setVisibleSection]=useState('');
+  const [drawerWidth,setDrawerWidth]=useState(()=>{try{return Number(localStorage.getItem('atlas-notes-width')) || 360;}catch{return 360;}});
+  const drag=useRef<{x:number;width:number}|null>(null);
+  function startResize(e:PointerEvent<HTMLDivElement>){e.preventDefault();drag.current={x:e.clientX,width:drawerWidth};e.currentTarget.setPointerCapture(e.pointerId);}
+  function moveResize(e:PointerEvent<HTMLDivElement>){if(!drag.current)return;const width=Math.max(260,Math.min(900,window.innerWidth*.7,drag.current.width+drag.current.x-e.clientX));setDrawerWidth(width);}
+  function endResize(){drag.current=null;try{localStorage.setItem('atlas-notes-width',String(drawerWidth));}catch{/* optional persistence */}}
+  useEffect(()=>{
+    const root=document.getElementById('main');if(!root)return;let frame=0;
+    const update=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{const top=root.getBoundingClientRect().top;const sections=Array.from(root.querySelectorAll<HTMLElement>('.source-section'));const active=sections.filter(el=>el.getBoundingClientRect().top<=top+180).at(-1);setVisibleSection(active?.id || '');});};
+    setVisibleSection('');update();root.addEventListener('scroll',update,{passive:true});return()=>{cancelAnimationFrame(frame);root.removeEventListener('scroll',update);};
+  },[tab,section,model.importedChapters]);
+  const notes = useMemo(() => {
+    const source=model.importedChapters?.find(c=>c.id===tab);
+    if(!source)return liveNotes(model,tabs,tab,section);
+    const current=source.sections?.find(s=>`${tab}-${s.id}`===visibleSection);
+    const clean=(text:string)=>{const doc=new DOMParser().parseFromString(text,'text/html');return (doc.body.textContent || '').replace(/\s+/g,' ').trim();};
+    const doc=current?new DOMParser().parseFromString(current.html || '','text/html'):null;
+    const paragraphs=doc?Array.from(doc.querySelectorAll('p,.sr-sub')).filter(p=>!p.closest('table,details,figure')).map(p=>clean(p.innerHTML)).filter(Boolean):[];
+    const prose=paragraphs.length?paragraphs.slice(0,4):current?.blocks?.filter(b=>b.kind==='text').map(b=>b.text || '').filter(Boolean).slice(0,4) || [source.summary || source.title];
+    const points=prose.filter((p):p is string=>!!p).map(p=>p.match(/^.*?[.!?](?:\s|$)/)?.[0]?.trim() || p);
+    const numbers=current?[]:source.metrics?.filter(m=>m.metricId&&m.dataChapterId).slice(0,8).map(m=>`${m.label}: ${reportFmt(m.metricId!,model.chapters[m.dataChapterId!]?.total[m.metricId!])}. September 2026.`) || [];
+    return {opener:`${current?.title || source.title}. ${points[0] || source.summary}`,points:[...points.slice(1),current?'Point to the evidence beside this section. Read its period and definition before comparing values.':'Explain the September headline cards first, then walk through the findings below.'],numbers,questions:[],transition:current?'Pause for questions on this finding before moving to the next section.':'Move down to the first finding.'};
+  }, [model, tabs, tab, section,visibleSection]);
   const pages = deckPages(tabs);
   const position = pages.findIndex(p => p.tab === tab && p.section === section);
   const next = pages[position + 1];
@@ -90,7 +113,11 @@ export function SpeakerDrawer({ model, tabs, tab, section, open, onClose, onNote
   const budget = Math.max(1, Math.round(target * 60 / Math.max(1, pages.length)));
   const pace = elapsed / Math.max(1, target * 60) - (position + 1) / Math.max(1, pages.length);
   const tabLabel = tabs.find(t => t.id === tab)?.label ?? "";
-  return <aside className="deck-drawer" data-open={open} aria-label="Speaker notes" aria-hidden={!open} data-export="omit">
+  return <aside className="deck-drawer" data-open={open} aria-label="Speaker notes" aria-hidden={!open} data-export="omit" style={{"--deck-drawer-w":`${drawerWidth}px`} as CSSProperties}>
+    <div className="deck-notes-resize" role="separator" aria-label="Resize notes sidebar" aria-orientation="vertical" tabIndex={0} onPointerDown={startResize} onPointerMove={moveResize} onPointerUp={endResize} onPointerCancel={endResize} onKeyDown={e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();setDrawerWidth(w=>Math.max(260,Math.min(900,w+(e.key==='ArrowLeft'?20:-20))));}}}/>
+    <div className="deck-notes-resize-corner" aria-label="Resize notes from corner" onPointerDown={startResize} onPointerMove={moveResize} onPointerUp={endResize} onPointerCancel={endResize}/>
+    <button className="icon-button deck-notes-close" aria-label="Close speaker notes" onClick={onClose}><X size={16}/></button>
+    <details className="deck-notes-setup"><summary><ChevronRight size={13}/>{tabLabel} · Notes settings</summary>
     <header className="deck-drawer-head">
       <div><span className="deck-eyebrow"><Mic size={12}/>Speaker notes · live</span><h3>{tabLabel} <ChevronRight size={13}/> {SECTION_LABEL[section]}</h3><small>Page {position + 1} of {pages.length}{model.speakerNotes?.[key] ? " · AI talk track" : " · from the report"}</small></div>
       <button className="icon-button" aria-label="Close speaker notes" onClick={onClose}><X size={16}/></button>
@@ -106,6 +133,7 @@ export function SpeakerDrawer({ model, tabs, tab, section, open, onClose, onNote
       <button className={view === "script" ? "active" : ""} aria-pressed={view === "script"} onClick={() => setView("script")}><ScrollText size={13}/>Talk track</button>
       <button className={view === "mine" ? "active" : ""} aria-pressed={view === "mine"} onClick={() => setView("mine")}><NotebookPen size={13}/>My notes{mine ? " •" : ""}</button>
     </div>
+    </details>
     <details className="deck-presenter-tools">
       <summary><ChevronRight size={13}/>Presenter tools<small>{speech.listening ? "Listening" : teleprompter ? "Teleprompter on" : "Text size, teleprompter, voice follow"}</small></summary>
     <div className="deck-drawer-tools">

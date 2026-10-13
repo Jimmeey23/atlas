@@ -1,6 +1,18 @@
 import baseCSS from "../design/report.css?raw";
 import reviewCSS from "../design/report-review.css?raw";
 import v2CSS from "../design/report-v2.css?raw";
+import deckCSS from "../design/report-deck.css?raw";
+import sourceCSS from "../design/report-source.css?raw";
+import continuousCSS from "../design/report-continuous.css?raw";
+const sourceExportCSS = deckCSS + "\n" + continuousCSS + "\n" + sourceCSS + `
+.report-doc.deck{--surface-1:var(--r-card);--surface-2:var(--r-bg-soft);--surface-3:var(--r-bg-soft);--canvas:var(--r-bg);--text-1:var(--r-text);--text-2:var(--r-muted);--text-3:var(--r-subtle);--hairline:var(--r-border);--accent:var(--r-primary-3);--pos:var(--r-good);--neg:var(--r-bad);--warn:#a66a20;--font-ui:Arial,Helvetica,sans-serif;--font-display:Arial,Helvetica,sans-serif;padding:24px;min-height:0}
+.report-doc svg.lucide{width:16px;height:16px;min-width:16px;max-height:16px;flex:0 0 16px;display:inline-block;fill:none;stroke:currentColor}
+.report-doc .source-section-head{position:static}.report-doc .source-hero,.report-doc .source-hero-art i,.report-doc .source-hero-art svg,.report-doc .deck-flip-face{animation:none!important}
+.report-doc .deck-kpi{cursor:default}.report-doc .source-interactive-chart{overflow:hidden}.report-doc .source-interactive-chart svg{max-width:100%}
+@media(max-width:760px){.report-doc.deck{padding:16px}}
+@media print{.report-doc.deck{padding:0}.report-doc .source-hero{break-inside:avoid}.report-doc .source-card-wrap .deck-flip{height:170px}}
+`;
+
 // The builder rules in v2 are app chrome and are removed with it; the document rules travel.
 const reportCSS = baseCSS + "\n" + reviewCSS + "\n" + v2CSS.split("/* ---------- Builder")[0];
 import { monthLabel } from "./compute";
@@ -51,6 +63,18 @@ export async function serialiseReport(element: HTMLElement, model: ReportModel) 
     img.src = await embedded.get(source)!;
     img.removeAttribute('loading');
   }));
+  // Background photographs must travel with the standalone file too.
+  const originals=Array.from(element.querySelectorAll<HTMLElement>('.source-hero[data-photo]'));
+  await Promise.all(Array.from(clone.querySelectorAll<HTMLElement>('.source-hero[data-photo]')).map(async (hero,i)=>{
+    let background=getComputedStyle(originals[i]).backgroundImage;
+    const urls=[...background.matchAll(/url\(["']?([^"')]+)["']?\)/g)];
+    for(const match of urls){
+      const src=new URL(match[1],location.href).href;
+      if(!embedded.has(src))embedded.set(src,(async()=>{const response=await fetch(src);if(!response.ok)throw new Error('The hero image could not be embedded. Retry export.');const blob=await response.blob();return new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(new Error('The hero image could not be read.'));reader.readAsDataURL(blob);});})());
+      background=background.replace(match[0],`url("${await embedded.get(src)!}")`);
+    }
+    hero.style.backgroundImage=background;
+  }));
   const title = `${model.customization?.title || "Performance report"} — ${model.scope.studio} — ${monthLabel(model.scope.month)} performance report`;
   return [
     "<!doctype html>",
@@ -65,7 +89,7 @@ export async function serialiseReport(element: HTMLElement, model: ReportModel) 
     "html{scroll-behavior:smooth}body{margin:0;background:#f4f6fa;padding:24px}",
     "@media(max-width:768px){body{padding:0}}",
     "@media print{body{padding:0;background:#fff}}",
-    safeInStyle(reportCSS),
+    safeInStyle(reportCSS + (model.importedChapters?.length ? "\n" + sourceExportCSS : "")),
     "</style>",
     "</head>",
     "<body>",
