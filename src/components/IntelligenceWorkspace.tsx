@@ -4,11 +4,13 @@ import { ArrowUp, ArrowUpRight, Sparkles, MessageSquare, ChartNoAxesCombined, Ch
 import { fmt, formatField } from "../semantics/formats";
 import { metrics } from "../semantics/metrics";
 import { ChatAnswer } from "./ChatAnswer";
-import { AgentReply } from "./AgentReply";
+import { AgentReply, cellValue } from "./AgentReply";
+import { chartTypes, elementSpec, pivotRows, type ElementSpec } from "../semantics/element-spec";
+import { elementChartOption } from "./elementChart";
 import { ChartControls } from "./ChartControls";
 import { AgentSettings } from "./AgentSettings";
 import { usePreferences, hydratePreferences } from "../state/preferences";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as echarts from "echarts";
 import { tabs, useStore } from "../state/store";
 import { DataInsightAction } from "./DataInsightAction";
@@ -414,13 +416,163 @@ export function InsightEditor() {
   );
 }
 const displayValue = formatField;
+const fieldLabel = (key: string) => metrics[key]?.label || key.replaceAll("_", " ");
+const cssVar = (name: string, fallback: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+
+function ElementChart({ spec, rows, title }: { spec: ElementSpec; rows: any[]; title: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const theme = useStore((s) => s.theme);
+  useEffect(() => {
+    if (!ref.current) return;
+    const chart = echarts.init(ref.current, undefined, { renderer: "svg" });
+    chart.setOption(
+      elementChartOption(
+        spec,
+        rows,
+        {
+          palette: [cssVar("--accent", "#7c5cff"), cssVar("--accent-2", "#22c1c3"), "#f59e0b", "#ef4466", "#10b981", "#6366f1"],
+          text: cssVar("--text-3", "#8a8f98"),
+          line: cssVar("--hairline", "rgba(128,128,128,.18)"),
+          surface: cssVar("--surface-1", "#fff"),
+        },
+        cellValue,
+      ) as echarts.EChartsOption,
+    );
+    const observer = new ResizeObserver(() => chart.resize());
+    observer.observe(ref.current);
+    return () => {
+      observer.disconnect();
+      chart.dispose();
+    };
+  }, [spec, rows, theme]);
+  const height =
+    spec.type === "horizontal_bar"
+      ? Math.max(180, Math.min(560, rows.length * 26 + 40))
+      : spec.type === "heatmap"
+        ? Math.max(220, Math.min(620, new Set(rows.map((r) => r[spec.x])).size * 30 + 90))
+        : 300;
+  return <div className="chart" ref={ref} style={{ height }} role="img" aria-label={title} />;
+}
+
+function ElementKpis({ spec, row }: { spec: ElementSpec; row: any }) {
+  return (
+    <div className="agent-reply-highlights">
+      {spec.series.map((key, i) => {
+        const value = Number(row[key]);
+        const previousKey = spec.compare[i];
+        const previous = previousKey ? Number(row[previousKey]) : NaN;
+        const comparable = Number.isFinite(value) && Number.isFinite(previous);
+        const percent = metrics[key]?.format === "percent" || /rate|pct|percent|share/.test(key);
+        const delta = comparable ? (percent ? (value - previous) * (Math.abs(value) <= 1 && Math.abs(previous) <= 1 ? 100 : 1) : previous ? ((value - previous) / Math.abs(previous)) * 100 : NaN) : NaN;
+        const better = metrics[key]?.higherIsBetter ?? true;
+        const tone = !Number.isFinite(delta) || delta === 0 ? "neutral" : delta > 0 === better ? "positive" : "negative";
+        return (
+          <div key={key} className={`agent-reply-kpi ${tone}`}>
+            <span>{fieldLabel(key)}</span>
+            <strong>{cellValue(key, row[key])}</strong>
+            {Number.isFinite(delta) && (
+              <small>
+                {delta > 0 ? "+" : delta < 0 ? "−" : ""}
+                {Math.abs(delta).toFixed(1)}
+                {percent ? "pp" : "%"} vs {cellValue(key, previous)}
+              </small>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ElementPivot({ spec, rows }: { spec: ElementSpec; rows: any[] }) {
+  const p = pivotRows(rows, spec.x, spec.group, spec.value);
+  const show = (v: number | null) => (v == null ? "—" : cellValue(spec.value, v));
+  return (
+    <div className="intelligence-table">
+      <table>
+        <thead>
+          <tr>
+            <th>{fieldLabel(spec.x)}</th>
+            {p.colKeys.map((c) => (
+              <th key={c} className="num">{c}</th>
+            ))}
+            {p.totals && <th className="num">Total</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {p.rowKeys.map((r) => (
+            <tr key={r}>
+              <td>{["trainer", "instructor", "teacher"].includes(spec.x.toLowerCase()) ? <InstructorName name={r} /> : r}</td>
+              {p.colKeys.map((c) => (
+                <td key={c} className="num">{show(p.cell(r, c))}</td>
+              ))}
+              {p.totals && <td className="num"><strong>{show(p.rowTotal(r))}</strong></td>}
+            </tr>
+          ))}
+        </tbody>
+        {p.totals && (
+          <tfoot>
+            <tr>
+              <th>Total</th>
+              {p.colKeys.map((c) => (
+                <th key={c} className="num">{show(p.colTotal(c))}</th>
+              ))}
+              <th className="num">{show(p.total)}</th>
+            </tr>
+          </tfoot>
+        )}
+      </table>
+    </div>
+  );
+}
+
+function ElementTable({ rows }: { rows: any[] }) {
+  const keys = Object.keys(rows[0] || {});
+  const [sort, setSort] = useState<{ key: string; desc: boolean } | null>(null);
+  const sorted = !sort
+    ? rows
+    : [...rows].sort((a, b) => {
+        const x = a[sort.key],
+          y = b[sort.key];
+        const order =
+          x == null ? 1 : y == null ? -1 : Number.isFinite(Number(x)) && Number.isFinite(Number(y)) ? Number(x) - Number(y) : String(x).localeCompare(String(y));
+        return sort.desc ? -order : order;
+      });
+  return (
+    <div className="intelligence-table">
+      <table>
+        <thead>
+          <tr>
+            {keys.map((k) => (
+              <th key={k} aria-sort={sort?.key === k ? (sort.desc ? "descending" : "ascending") : "none"}>
+                <button className="link" onClick={() => setSort({ key: k, desc: sort?.key === k ? !sort.desc : true })}>
+                  {fieldLabel(k)}
+                  {sort?.key === k ? (sort.desc ? " ↓" : " ↑") : ""}
+                </button>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((r, i) => (
+            <tr key={i}>
+              {keys.map((k) => (
+                <td key={k}>{["trainer","instructor","teacher"].includes(k.toLowerCase()) && r[k] != null ? <InstructorName name={String(r[k])}/> : cellValue(k, r[k])}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 function Element({ doc, version }: { doc: Doc; version: number }) {
   const filters = useStore((s) => s.filters);
   const page = useStore((s) => s.tab);
   const [rows, setRows] = useState<any[]>([]);
   const [error, setError] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
+  const spec = useMemo(() => elementSpec(doc.body), [doc]);
   useEffect(() => {
     let active = true;
     setError("");
@@ -441,42 +593,6 @@ function Element({ doc, version }: { doc: Doc; version: number }) {
       active = false;
     };
   }, [doc, filters, version, page]);
-  useEffect(() => {
-    if (
-      !ref.current ||
-      !["bar", "line", "pie", "scatter"].includes(doc.body.type) ||
-      !rows.length
-    )
-      return;
-    const chart = echarts.init(ref.current);
-    const { x, y, type } = doc.body;
-    chart.setOption({
-      tooltip: { trigger: type === "pie" ? "item" : "axis", valueFormatter: (value: unknown) => displayValue(y, value) },
-      xAxis: {
-        type: type === "scatter" ? "value" : "category",
-        data: rows.map((r) => r[x]),
-      },
-      yAxis: { type: "value", axisLabel: { formatter: (value: number) => displayValue(y, value) } },
-      series: [
-        {
-          type,
-          data:
-            type === "pie"
-              ? rows.map((r) => ({ name: r[x], value: Number(r[y]) }))
-              : type === "scatter"
-                ? rows.map((r) => [Number(r[x]), Number(r[y])])
-                : rows.map((r) => Number(r[y])),
-          smooth: type === "line",
-        },
-      ],
-    });
-    const observer = new ResizeObserver(() => chart.resize());
-    observer.observe(ref.current);
-    return () => {
-      observer.disconnect();
-      chart.dispose();
-    };
-  }, [rows, doc]);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(doc);
   const [notice, setNotice] = useState("");
@@ -562,29 +678,16 @@ function Element({ doc, version }: { doc: Doc; version: number }) {
         </>
       )}
       {(error || notice) && <p role="alert">{error || notice}</p>}
-      {["bar", "line", "pie", "scatter"].includes(doc.body.type) ? (
-        <div className="chart" ref={ref} style={{ height: 300 }} />
+      {!rows.length ? (
+        !error && <p className="small" role="status">No rows for this scope.</p>
+      ) : chartTypes.includes(spec.type) ? (
+        <ElementChart spec={spec} rows={rows} title={doc.title} />
+      ) : spec.type === "kpi" ? (
+        <ElementKpis spec={spec} row={rows[0]} />
+      ) : spec.type === "pivot" ? (
+        <ElementPivot spec={spec} rows={rows} />
       ) : (
-        <div className="intelligence-table">
-          <table>
-            <thead>
-              <tr>
-                {Object.keys(rows[0] || {}).map((k) => (
-                  <th key={k}>{k}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r, i) => (
-                <tr key={i}>
-                  {Object.keys(rows[0] || {}).map((k) => (
-                    <td key={k}>{["trainer","instructor","teacher"].includes(k.toLowerCase()) && r[k] != null ? <InstructorName name={String(r[k])}/> : displayValue(k, r[k])}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ElementTable rows={rows} />
       )}
     </article>
   );

@@ -212,7 +212,10 @@ test("GPT tool loop queries real fixtures and persists requested elements and co
     assert.equal(response.status, 200, JSON.stringify(result));
     assert.equal(steps, 3);
     assert.equal(documents.find(d => d.kind === "artifact").body.pinnedScope.from,"2026-09-01");
-    assert.equal(calls[1].tool_choice.name,"save_element");
+    // One query is not enough to understand a build request: the agent keeps its tools free
+    // to explore and correct, and is only forced to save near the step limit.
+    assert.equal(calls[1].tool_choice, "required");
+    assert.match(calls[0].instructions, /BUILD MODE/);
     assert.equal(result.saved.length, 1);
     assert.equal(documents.find((d) => d.kind === "artifact").page, 12);
     assert.equal(
@@ -227,6 +230,120 @@ test("GPT tool loop queries real fixtures and persists requested elements and co
       ),
     );
     assert.equal(result.evidence[0].provenance[0].rows, 1);
+  } finally {
+    await new Promise<void>((r, j) => server.close((e) => (e ? j(e) : r())));
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("build rejects an element whose fields are not in its query result, then saves the corrected advanced element", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "p57-agent-loop-"));
+  await mkdir(path.join(root, ".cache"));
+  const columns = [
+    "Member ID",
+    "Late Cancelled",
+    "Session Date",
+    "Location",
+    "Attended",
+  ];
+  await writeFile(
+    path.join(root, ".cache/bookings.json"),
+    JSON.stringify({
+      key: "bookings",
+      columns,
+      rows: [["1", true, "2026-09-01", "Kemps Corner", false]],
+      fetchedAt: 1791000000000,
+    }),
+  );
+  const documents: any[] = [];
+  const db = {
+    from: () => {
+      const filters: any[] = [];
+      let write: any;
+      return {
+        select() {
+          return this;
+        },
+        eq(key: string, value: any) {
+          filters.push([key, value]);
+          return this;
+        },
+        order() {
+          return this;
+        },
+        limit() {
+          return this;
+        },
+        upsert(value: any) {
+          write = { ...value, id: value.id || crypto.randomUUID() };
+          const index = documents.findIndex((d) => d.id === write.id);
+          if (index >= 0) documents[index] = write;
+          else documents.push(write);
+          return this;
+        },
+        async single() {
+          return {
+            data:
+              write ||
+              documents.find((d) => filters.every(([k, v]) => d[k] === v)),
+            error: null,
+          };
+        },
+        then(resolve: any, reject: any) {
+          return Promise.resolve({
+            data: documents.filter((d) =>
+              filters.every(([k, v]) => d[k] === v),
+            ),
+            error: null,
+          }).then(resolve, reject);
+        },
+      };
+    },
+  };
+  let steps = 0;
+  const calls: any[] = [];
+  const save = (id: string, body: object) => ({
+    output: [{ type: "function_call", name: "save_element", call_id: id, arguments: JSON.stringify({ kind: "artifact", title: "Bookings vs attended by studio", page: 12, body_json: JSON.stringify(body) }) }],
+  });
+  const sql = "SELECT location, COUNT(*) AS bookings, COUNT(*) FILTER (WHERE attended) AS attended FROM bookings GROUP BY location";
+  const ai = {
+    responses: {
+      create: async (request: any) => {
+        calls.push(structuredClone(request));
+        steps++;
+        if (steps === 1) return save("bad", { type: "combo", sql, x: "location", series: ["bookings"], y2: ["attendance_rate"] });
+        if (steps === 2) return save("good", { type: "combo", sql, x: "location", series: ["bookings"], y2: ["attended"] });
+        return { output: [], output_text: "Saved." };
+      },
+    },
+  };
+  const app = express();
+  app.use(express.json());
+  intelligenceRoutes(app, root, [{ key: "bookings", columns }], undefined, {
+    db,
+    ai,
+  });
+  const server = app.listen(0, "127.0.0.1");
+  await new Promise((r) => server.once("listening", r));
+  const url = "http://127.0.0.1:" + (server.address() as any).port;
+  try {
+    const response = await fetch(url + "/api/intelligence/build", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: "Create and save the late cancellation members table for September 2026",
+        page: 12,
+        filters: { from:"2026-10-01", to:"2026-10-31", location: ["Kwality House, Kemps Corner"] },
+      }),
+    });
+    const result: any = await response.json();
+    assert.equal(response.status, 200, JSON.stringify(result));
+    const rejection = calls[1].input.find((i: any) => i.type === "function_call_output" && i.call_id === "bad");
+    assert.match(JSON.parse(rejection.output).error, /"attendance_rate" is not a column of the query result\. Result columns: location, bookings, attended/);
+    const artifacts = documents.filter((d) => d.kind === "artifact");
+    assert.equal(artifacts.length, 1);
+    assert.deepEqual(artifacts[0].body.y2, ["attended"]);
+    assert.equal(result.saved.length, 1);
   } finally {
     await new Promise<void>((r, j) => server.close((e) => (e ? j(e) : r())));
     await rm(root, { recursive: true, force: true });
