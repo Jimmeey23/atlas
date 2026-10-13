@@ -1,5 +1,5 @@
 /* Member-supplied photographs give every chapter a consistent hero treatment. */
-.chapter-photo-hero.chapter-photo-hero{background-size:100% 100%,auto 100%;background-position:center,right center;background-repeat:no-repeat;background-color:#091122;color:#fff;border:0;border-radius:18px;padding:40px;min-height:580px;box-sizing:border-box;align-items:flex-end;gap:28px;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+.chapter-photo-hero.chapter-photo-hero{background-size:cover;background-position:center,center top;background-repeat:no-repeat;background-color:#091122;color:#fff;border:0;border-radius:18px;padding:40px;min-height:580px;box-sizing:border-box;align-items:flex-end;gap:28px;print-color-adjust:exact;-webkit-print-color-adjust:exact}
 .chapter-photo-hero.chapter-photo-hero h1,.chapter-photo-hero.chapter-photo-hero h2,.chapter-photo-hero.chapter-photo-hero p,.chapter-photo-hero.chapter-photo-hero .deck-eyebrow,.chapter-photo-hero.chapter-photo-hero .cr-number,.chapter-photo-hero.chapter-photo-hero .cr-basis,.chapter-photo-hero.chapter-photo-hero .source-hero-number,.chapter-photo-hero.chapter-photo-hero .source-hero-evidence{color:#fff}
 .chapter-photo-hero .source-hero-art{display:none}
 .chapter-photo-hero .cr-basis{max-width:160px}
