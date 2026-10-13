@@ -17,6 +17,7 @@ import { PerformanceMarketing } from "./components/PerformanceMarketing";
 import { EarnedRevenueChange } from "./components/EarnedRevenueChange";
 import { PresentationTools } from "./components/PresentationTools";
 import { motion } from "framer-motion";
+import { SqlElementBuilder } from "./components/SqlElementBuilder";
 import { AtlasSettings } from "./components/AtlasSettings";
 import { QuickFilters } from "./components/QuickFilters";
 import { FloatingAgent } from "./components/FloatingAgent";
@@ -1314,6 +1315,7 @@ export default function App() {
             {modal === "settings" && (
               <>
                 <AtlasSettings />
+                <SqlElementBuilder key={s.tab} page={s.tab} version={version} />
                 <p className="muted">
                   Every cost-based figure uses the rate below. Adjust rule
                   thresholds to match your operating policy.

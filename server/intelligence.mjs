@@ -43,19 +43,50 @@ function gzipWriter(file) {
     },
   };
 }
+/** Remove SQL comments while preserving quoted values and identifiers. */
+export function cleanAnalyticalSQL(input) {
+  let sql = '', tokens = '', quote = '', line = false, block = false;
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i], next = input[i + 1];
+    if (line) { if (char === '\n') { line = false; sql += '\n'; tokens += '\n'; } continue; }
+    if (block) { if (char === '*' && next === '/') { block = false; i++; sql += ' '; tokens += ' '; } continue; }
+    if (quote) {
+      sql += char; tokens += quote === "'" ? ' ' : char;
+      if (char === quote) {
+        if (next === quote) { sql += next; tokens += ' '; i++; }
+        else quote = '';
+      }
+      continue;
+    }
+    if (char === '-' && next === '-') { line = true; i++; continue; }
+    if (char === '/' && next === '*') { block = true; i++; continue; }
+    if (char === "'" || char === '"') quote = char;
+    sql += char; tokens += char === "'" ? ' ' : char;
+  }
+  if (quote || block) throw new Error('Close the SQL quote or block comment before previewing.');
+  return { sql: sql.trim().replace(/;+\s*$/, '').trim(), tokens: tokens.trim().replace(/;+\s*$/, '').trim() };
+}
+export function analyticalStatements(input) {
+  const sql = cleanAnalyticalSQL(input).sql;
+  const statements = []; let start = 0, quote = '';
+  for (let i = 0; i < sql.length; i++) {
+    const char = sql[i];
+    if (quote) { if (char === quote) { if (sql[i + 1] === quote) i++; else quote = ''; } }
+    else if (char === "'" || char === '"') quote = char;
+    else if (char === ';') { if (sql.slice(start, i).trim()) statements.push(sql.slice(start, i).trim()); start = i + 1; }
+  }
+  if (sql.slice(start).trim()) statements.push(sql.slice(start).trim());
+  return statements;
+}
 export function validateSQL(sql) {
-  if (
-    typeof sql !== "string" ||
-    sql.length > 12000 ||
-    !/^\s*(select|with)\b/i.test(sql) ||
-    /[;]|--|\/\*|\b(insert|update|delete|drop|alter|create|attach|copy|pragma|call|install|load|export|import|read_\w+|http\w*|sqlite\w*|postgres\w*|glob|query|query_table|getenv)\b/i.test(
-      sql,
-    )
-  )
-    throw new Error(
-      "Only one read-only SELECT against studio tables is allowed.",
-    );
-  return sql;
+  if (typeof sql !== 'string' || !sql.trim()) throw new Error('Enter a query to preview.');
+  if (sql.length > 100000) throw new Error('Query exceeds 100,000 characters.');
+  const cleaned = cleanAnalyticalSQL(sql);
+  if (analyticalStatements(cleaned.sql).some(statement => !/^\s*(select|with)\b/i.test(cleanAnalyticalSQL(statement).tokens))) throw new Error('Use SELECT or WITH for an analytical element.');
+  if ([...cleaned.tokens.matchAll(/\b(?:from|join)\b/gi)].some(match => /^\s*'/.test(cleaned.sql.slice(match.index + match[0].length)))) throw new Error('Use a workspace table name instead of an external file path.');
+  if (/\b(insert|update|delete|drop|alter|create|attach|detach|copy|pragma|call|install|load|export|import|read_\w+|http\w*|sqlite\w*|postgres\w*|glob|query|query_table|getenv)\b/i.test(cleaned.tokens))
+    throw new Error('This query uses a database-changing command or external-access function. Interface elements support analytical queries over workspace data.');
+  return cleaned.sql;
 }
 export function intelligenceRoutes(
   app,
@@ -189,14 +220,14 @@ export function intelligenceRoutes(
   }
 
   async function queryStudio(sql, filters = {}, raw = false) {
-    validateSQL(sql);
+    sql = validateSQL(sql);
     const job = queue.then(async () => {
       const c = await connection();
       await mkdir(path.join(scratch, ".cache", "agent"), { recursive: true });
       const provenance = [];
       const requested = [
-        ...sql.matchAll(/\b(?:from|join)\s+"?([a-z_][\w]*)/gi),
-      ].map((m) => m[1]);
+        ...cleanAnalyticalSQL(sql).tokens.matchAll(/\b(?:from|join)\s+"?([a-z_][\w]*)/gi),
+      ].map((m) => m[1].toLowerCase());
       for (const source of config.filter(
         (s) =>
           requested.includes(s.key) ||
@@ -374,10 +405,10 @@ export function intelligenceRoutes(
       }
       // Reject physical tables, catalogs, external functions and unscoped raw data.
       const tables = [
-        ...sql.matchAll(/\b(?:from|join)\s+"?([a-z_][\w]*)/gi),
-      ].map((m) => m[1]);
-      const ctes = [...sql.matchAll(/(?:with|,)\s*(\w+)\s+as\s*\(/gi)].map(
-        (m) => m[1],
+        ...cleanAnalyticalSQL(sql).tokens.matchAll(/\b(?:from|join)\s+"?([a-z_][\w]*)/gi),
+      ].map((m) => m[1].toLowerCase());
+      const ctes = [...cleanAnalyticalSQL(sql).tokens.matchAll(/(?:with(?:\s+recursive)?|,)\s*"?(\w+)"?(?:\s*\([^)]*\))?\s+as\s*(?:(?:not\s+)?materialized\s*)?\(/gi)].map(
+        (m) => m[1].toLowerCase(),
       );
       if (
         tables.some(
@@ -391,11 +422,13 @@ export function intelligenceRoutes(
         );
       const timeout = setTimeout(() => c.interrupt(), 20000);
       try {
-        const reader = await c.runAndReadAll(
-          `SELECT * FROM (${sql}) AS answer LIMIT 500`,
-        );
-        const rows = reader.getRowObjectsJson();
-        return { rows, limit: 500, provenance, filters };
+        const resultSets = [];
+        for (const statement of analyticalStatements(sql)) {
+          const reader = await c.runAndReadAll(`SELECT * FROM (${statement}) AS answer LIMIT 500`);
+          resultSets.push(reader.getRowObjectsJson());
+        }
+        const rows = resultSets.at(-1) || [];
+        return { rows, limit: 500, provenance, filters, ...(resultSets.length > 1 ? { resultSets } : {}) };
       } finally {
         clearTimeout(timeout);
       }
@@ -421,7 +454,7 @@ export function intelligenceRoutes(
       const b = doc.body;
       const invalid = elementSpecError(b);
       if (invalid) throw new Error(invalid);
-      validateSQL(b.sql);
+      b.sql = validateSQL(b.sql);
     }
     const payload = {
       ...(doc.id ? { id: doc.id } : {}),

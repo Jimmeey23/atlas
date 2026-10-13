@@ -1,9 +1,11 @@
+import "./QuickFilters.css";
 import { periods, relativePeriod } from "../data/periods";
 import { useStore } from "../state/store";
 import { shortLocation } from "../data/normalise";
 import { useEffect, useRef } from "react";
 import { ChevronDown } from "lucide-react";
 
+const primaryPeriods = ["This week", "Last week", "This month", "Last month", "Last 30 days", "This quarter"];
 const mainStudios = [/kemps corner/i, /bandra/i, /kenkere/i];
 export function QuickFilters({ locations }: { locations: string[] }) {
   const s = useStore();
@@ -15,9 +17,11 @@ export function QuickFilters({ locations }: { locations: string[] }) {
     .filter((value): value is string => !!value);
   const others = studios.filter((value) => !isPrimary(value));
   const othersSelected = others.filter((value) => s.filters.location.includes(value)).length;
+  const datesRef = useRef<HTMLDetailsElement>(null);
   const othersRef = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
     const close = (e: PointerEvent) => {
+      if (datesRef.current?.open && !datesRef.current.contains(e.target as Node)) datesRef.current.open = false;
       if (othersRef.current?.open && !othersRef.current.contains(e.target as Node)) othersRef.current.open = false;
     };
     document.addEventListener("pointerdown", close);
@@ -44,7 +48,7 @@ export function QuickFilters({ locations }: { locations: string[] }) {
     <div className="quick-filters">
       <div className="quick-periods" aria-label="Quick date periods">
         <span className="quick-label" aria-hidden="true">Period</span>
-        {periods.map((name) => {
+        {primaryPeriods.map((name) => {
           const range = relativePeriod(name);
           return (
             <button
@@ -60,7 +64,22 @@ export function QuickFilters({ locations }: { locations: string[] }) {
             </button>
           );
         })}
-        <button onClick={() => s.set({ filterOpen: true })}>Custom…</button>
+        <details className="quick-others quick-date-others" ref={datesRef} onToggle={e => {
+          const el = e.currentTarget, menu = el.querySelector<HTMLElement>('.quick-others-menu');
+          if (!el.open || !menu) return;
+          const box = el.querySelector('summary')!.getBoundingClientRect();
+          menu.style.top = `${box.bottom + 6}px`;
+          menu.style.left = `${Math.max(12, Math.min(box.left, window.innerWidth - menu.offsetWidth - 12))}px`;
+        }}>
+          <summary aria-label="Other date periods">Other <ChevronDown size={12} /></summary>
+          <div className="quick-others-menu" role="group" aria-label="Additional date periods">
+            {periods.filter(name => !primaryPeriods.includes(name)).map(name => {
+              const range = relativePeriod(name), selected = s.filters.from === range.from && s.filters.to === range.to;
+              return <button key={name} aria-pressed={selected} className={selected ? 'selected' : ''} onClick={() => { s.filter(range); if (datesRef.current) datesRef.current.open = false; }}>{name}</button>;
+            })}
+            <button onClick={() => { s.set({ filterOpen: true }); if (datesRef.current) datesRef.current.open = false; }}>Custom…</button>
+          </div>
+        </details>
       </div>
       <div className="quick-studios" aria-label="Quick studio filters">
         <span className="quick-label" aria-hidden="true">Studios</span>

@@ -1,4 +1,3 @@
-import { SqlElementBuilder } from "./SqlElementBuilder";
 import { DropdownField } from "./ui/DropdownField";
 import { InstructorName } from "./InstructorAvatar";
 import { ArrowUp, ArrowUpRight, Sparkles, MessageSquare, ChartNoAxesCombined, Check, Database, Pencil, Trash2, Paperclip, Mic, Square, Settings2 } from "lucide-react";
@@ -718,7 +717,6 @@ export function SavedElements({
   const { docs } = useDocuments("artifact");
   return (
     <div className="saved-elements">
-      <SqlElementBuilder key={page} page={page} version={version} />
       {docs
         .filter((d) => d.page === page)
         .map((d) => (

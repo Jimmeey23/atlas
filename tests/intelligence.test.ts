@@ -6,19 +6,25 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 // @ts-ignore Server route is JavaScript; shared normalization is TypeScript.
 import { intelligenceRoutes, validateSQL } from "../server/intelligence.mjs";
-test("agent refuses writes, file reads, environmental access and multi-statements", () => {
+test("agent refuses writes, file reads, environmental access", () => {
   for (const sql of [
     "DELETE FROM sales",
+    "SELECT * FROM '/etc/passwd'",
     "SELECT * FROM read_json('/etc/passwd')",
     "SELECT getenv('OPENAI_API_KEY')",
-    "SELECT 1; SELECT 2",
-    "SELECT * FROM sales -- bypass",
   ])
     assert.throws(() => validateSQL(sql));
+  assert.equal(validateSQL("SELECT 1; SELECT 2;"), "SELECT 1; SELECT 2");
   assert.equal(
     validateSQL("SELECT COUNT(*) FROM sales"),
     "SELECT COUNT(*) FROM sales",
   );
+});
+test("analytical SQL accepts comments, trailing delimiters and keywords inside values", () => {
+  assert.equal(validateSQL("-- Monthly analysis\nSELECT 'update; delete -- label' AS metric FROM sales;"), "SELECT 'update; delete -- label' AS metric FROM sales");
+  assert.equal(validateSQL("WITH totals AS (SELECT month, SUM(revenue) revenue FROM sales GROUP BY month) /* chart */ SELECT * FROM totals;"), "WITH totals AS (SELECT month, SUM(revenue) revenue FROM sales GROUP BY month)   SELECT * FROM totals");
+  assert.throws(() => validateSQL("SELECT 1; /* comment */ DELETE FROM sales"));
+  assert.throws(() => validateSQL("WITH t AS (DELETE FROM sales RETURNING *) SELECT * FROM t"));
 });
 test("agent queries real raw fields with global filters and reports missing configuration", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "p57-agent-"));
@@ -63,6 +69,12 @@ test("agent queries real raw fields with global filters and reports missing conf
     assert.equal(result.response.status, 200, JSON.stringify(result.body));
     assert.equal(result.body.rows.length, 1);
     assert.equal(result.body.rows[0]["Late Cancelled"], true);
+    const multi = await q("-- first result\nSELECT COUNT(*) AS n FROM bookings; /* final element */ SELECT 'update; from unknown' AS label, SUM(late_cancelled) AS late FROM bookings;");
+    assert.equal(multi.response.status, 200, JSON.stringify(multi.body));
+    assert.equal(multi.body.resultSets.length, 2);
+    assert.equal(Number(multi.body.resultSets[0][0].n), 2);
+    assert.equal(Number(multi.body.rows[0].late), 1);
+    assert.equal(multi.body.rows[0].label, 'update; from unknown');
     const blocked = await q("SELECT * FROM facts_bookings");
     assert.equal(blocked.response.status, 400);
     const dates = await q("SELECT COUNT(*) AS n FROM bookings", {
