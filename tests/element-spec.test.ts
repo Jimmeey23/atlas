@@ -91,3 +91,25 @@ test("chart options carry every series, stacking, second axis and heatmap grid",
   assert.deepEqual(heat.series[0].data, [[0, 0, 8], [1, 1, 3]]);
   assert.equal(heat.visualMap.max, 8);
 });
+
+test("the form the user names limits the element types the agent may save", async () => {
+  const { requestedElementTypes } = await import("../src/semantics/element-spec.ts");
+  const table = requestedElementTypes("build a mom table of avg spend per unique member")!;
+  assert.ok(table.includes("table") && table.includes("pivot"));
+  assert.ok(!table.includes("bar") && !table.includes("line"));
+  assert.deepEqual(requestedElementTypes("plot a line chart of attendance"), ["line", "area"]);
+  assert.ok(requestedElementTypes("a bar chart and a table of sales")!.includes("bar"));
+  assert.ok(requestedElementTypes("a bar chart and a table of sales")!.includes("table"));
+  assert.equal(requestedElementTypes("create a chart of late cancellations by instructor"), null);
+  assert.equal(requestedElementTypes("show revenue by studio"), null);
+  assert.equal(requestedElementTypes("build a timetable view"), null);
+});
+
+test("history requests are recognised and ignoreDates is read from the body", async () => {
+  const { wantsFullHistory } = await import("../src/semantics/element-spec.ts");
+  for (const m of ["build a mom table of avg spend", "month on month revenue", "monthly trend of fill rate", "YoY sales table", "this table should not be affected by the date filters of the tab", "ignore the date filter"])
+    assert.equal(wantsFullHistory(m), true, m);
+  for (const m of ["sales by studio in september", "top instructors last month"]) assert.equal(wantsFullHistory(m), false, m);
+  assert.equal(elementSpec({ type: "table", sql: "x", ignoreDates: true }).ignoreDates, true);
+  assert.equal(elementSpec({ type: "table", sql: "x" }).ignoreDates, false);
+});

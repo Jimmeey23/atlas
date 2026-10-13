@@ -54,6 +54,6 @@ export function formatField(field: string, value: unknown): string {
   const number = Number(text.replace(/[₹,\s]/g, ""));
   if (!Number.isFinite(number)) return text;
   const isCount = /count|known|missing|rows|lines|records|quantity|credits|rank/i.test(field);
-  if (!isCount && /revenue|amount|price|cost|paid|payment value|vat|discount|gross.sales|net.sales|total.sales|sales.total|(?:total|left|paid|balance).*money|money.*(?:left|total|balance)/i.test(field.replaceAll("_", " "))) return fmt("revenue", number, true);
+  if (!isCount && /revenue|spend|amount|price|cost|paid|payment value|vat|discount|gross.sales|net.sales|total.sales|sales.total|(?:total|left|paid|balance).*money|money.*(?:left|total|balance)/i.test(field.replaceAll("_", " "))) return fmt("revenue", number, true);
   return new Intl.NumberFormat("en-IN", {maximumFractionDigits:1}).format(number);
 }

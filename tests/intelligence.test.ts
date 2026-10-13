@@ -331,7 +331,7 @@ test("build rejects an element whose fields are not in its query result, then sa
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        message: "Create and save the late cancellation members table for September 2026",
+        message: "Create and save bookings against attended by studio for September 2026",
         page: 12,
         filters: { from:"2026-10-01", to:"2026-10-31", location: ["Kwality House, Kemps Corner"] },
       }),
@@ -344,6 +344,126 @@ test("build rejects an element whose fields are not in its query result, then sa
     assert.equal(artifacts.length, 1);
     assert.deepEqual(artifacts[0].body.y2, ["attended"]);
     assert.equal(result.saved.length, 1);
+  } finally {
+    await new Promise<void>((r, j) => server.close((e) => (e ? j(e) : r())));
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("build holds the agent to the requested table form and a date-independent MoM history", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "p57-agent-loop-"));
+  await mkdir(path.join(root, ".cache"));
+  const columns = [
+    "Member ID",
+    "Late Cancelled",
+    "Session Date",
+    "Location",
+    "Attended",
+  ];
+  await writeFile(
+    path.join(root, ".cache/bookings.json"),
+    JSON.stringify({
+      key: "bookings",
+      columns,
+      rows: [["1", true, "2026-09-01", "Kemps Corner", false]],
+      fetchedAt: 1791000000000,
+    }),
+  );
+  const documents: any[] = [];
+  const db = {
+    from: () => {
+      const filters: any[] = [];
+      let write: any;
+      return {
+        select() {
+          return this;
+        },
+        eq(key: string, value: any) {
+          filters.push([key, value]);
+          return this;
+        },
+        order() {
+          return this;
+        },
+        limit() {
+          return this;
+        },
+        upsert(value: any) {
+          write = { ...value, id: value.id || crypto.randomUUID() };
+          const index = documents.findIndex((d) => d.id === write.id);
+          if (index >= 0) documents[index] = write;
+          else documents.push(write);
+          return this;
+        },
+        async single() {
+          return {
+            data:
+              write ||
+              documents.find((d) => filters.every(([k, v]) => d[k] === v)),
+            error: null,
+          };
+        },
+        then(resolve: any, reject: any) {
+          return Promise.resolve({
+            data: documents.filter((d) =>
+              filters.every(([k, v]) => d[k] === v),
+            ),
+            error: null,
+          }).then(resolve, reject);
+        },
+      };
+    },
+  };
+  let steps = 0;
+  const calls: any[] = [];
+  const save = (id: string, body: object) => ({
+    output: [{ type: "function_call", name: "save_element", call_id: id, arguments: JSON.stringify({ kind: "artifact", title: "Avg spend per member, MoM", page: 4, body_json: JSON.stringify(body) }) }],
+  });
+  const sql = "SELECT strftime(CAST(date AS DATE), '%Y-%m') AS month, COUNT(*) AS bookings FROM bookings GROUP BY 1 ORDER BY 1";
+  const ai = {
+    responses: {
+      create: async (request: any) => {
+        calls.push(structuredClone(request));
+        steps++;
+        if (steps === 1) return save("chart", { type: "bar", sql, x: "month", series: ["bookings"] });
+        if (steps === 2) return save("dated", { type: "table", sql });
+        if (steps === 3) return save("good", { type: "table", sql, ignoreDates: true });
+        return { output: [], output_text: "Saved." };
+      },
+    },
+  };
+  const app = express();
+  app.use(express.json());
+  intelligenceRoutes(app, root, [{ key: "bookings", columns }], undefined, {
+    db,
+    ai,
+  });
+  const server = app.listen(0, "127.0.0.1");
+  await new Promise((r) => server.once("listening", r));
+  const url = "http://127.0.0.1:" + (server.address() as any).port;
+  try {
+    const response = await fetch(url + "/api/intelligence/build", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: "Build a MoM table of bookings per member, not affected by the date filters of the tab",
+        page: 4,
+        filters: { from:"2026-09-01", to:"2026-09-30", location: ["Kwality House, Kemps Corner"] },
+      }),
+    });
+    const result: any = await response.json();
+    assert.equal(response.status, 200, JSON.stringify(result));
+    const error = (id: string) => JSON.parse(calls.at(-1).input.find((i: any) => i.type === "function_call_output" && i.call_id === id).output).error;
+    assert.match(error("chart"), /asked for a table.*"bar"/);
+    assert.match(error("dated"), /ignoreDates/);
+    const artifacts = documents.filter((d) => d.kind === "artifact");
+    assert.equal(artifacts.length, 1);
+    assert.equal(artifacts[0].body.ignoreDates, true);
+    assert.equal(artifacts[0].body.pinnedScope?.from, undefined);
+    assert.equal(artifacts[0].body.pinnedScope?.to, undefined);
+    // Verified over every month, not just the page's September.
+    assert.equal(result.evidence.at(-1).filters.from, undefined);
+    assert.match(calls[0].instructions, /ignoreDates/);
   } finally {
     await new Promise<void>((r, j) => server.close((e) => (e ? j(e) : r())));
     await rm(root, { recursive: true, force: true });

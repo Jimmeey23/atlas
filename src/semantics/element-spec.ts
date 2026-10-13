@@ -30,6 +30,8 @@ export interface ElementSpec {
   group: string;
   value: string;
   compare: (string | null)[];
+  /** Shows full history whatever the page's date filter; studio and other filters still apply. */
+  ignoreDates: boolean;
 }
 
 const names = (v: unknown) => (Array.isArray(v) ? v.filter((s): s is string => typeof s === "string" && !!s) : typeof v === "string" && v ? [v] : []);
@@ -47,6 +49,7 @@ export function elementSpec(body: any): ElementSpec {
     group: name(body?.group),
     value: name(body?.value),
     compare: Array.isArray(body?.compare) ? body.compare.map((c: unknown) => (typeof c === "string" && c ? c : null)) : [],
+    ignoreDates: body?.ignoreDates === true,
   };
 }
 
@@ -139,4 +142,31 @@ export function pivotRows(rows: Record<string, unknown>[], x: string, group: str
     colTotal: (c: string) => sum(rowKeys.map((r) => cell(r, c))),
     total: sum([...cells.values()]),
   };
+}
+
+/** Element forms a request names explicitly, or null when it leaves the form open. */
+const namedForms: [RegExp, ElementType[]][] = [
+  [/\b(tables?|tabular|spreadsheet)\b/i, ["table", "pivot", "list"]],
+  [/\b(pivot|matrix|cross-?tab)\b/i, ["pivot"]],
+  [/\bheat ?maps?\b/i, ["heatmap"]],
+  [/\b(kpis?|scorecards?|cards?|tiles?)\b/i, ["kpi"]],
+  [/\blists?\b/i, ["list", "table"]],
+  [/\b(line|area) (charts?|graphs?)\b/i, ["line", "area"]],
+  [/\b(bar|column) (charts?|graphs?)\b|\bbars?\b/i, ["bar", "horizontal_bar", "stacked_bar"]],
+  [/\bstacked\b/i, ["stacked_bar"]],
+  [/\b(pie|donut|doughnut)\b/i, ["pie", "donut"]],
+  [/\bscatter\b/i, ["scatter"]],
+  [/\bcombo\b|\bdual[- ]axis\b/i, ["combo"]],
+];
+export function requestedElementTypes(message: string): ElementType[] | null {
+  const types = new Set<ElementType>();
+  for (const [pattern, forms] of namedForms) if (pattern.test(message)) forms.forEach((t) => types.add(t));
+  return types.size ? [...types] : null;
+}
+
+/** Requests whose element must span months beyond whatever period the page is showing. */
+export function wantsFullHistory(message: string): boolean {
+  return /\b(mom|m-o-m|month[- ]on[- ]month|month[- ]over[- ]month|month[- ]by[- ]month|monthly trend|yoy|year[- ]on[- ]year|year[- ]over[- ]year|all[- ]time|full history|every month)\b/i.test(message)
+    || /\b(not|never|n't)\b[^.]{0,30}\b(affected|filtered|changed|limited)\b[^.]{0,20}\b(date|period)/i.test(message)
+    || /\b(ignore|regardless of|independent of|irrespective of)\b[^.]{0,20}\b(date|period)/i.test(message);
 }

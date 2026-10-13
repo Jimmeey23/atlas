@@ -416,6 +416,12 @@ export function InsightEditor() {
   );
 }
 const displayValue = formatField;
+/** An element set to ignore dates keeps the page's studio and other filters but none of its period. */
+const undated = (scope: any, ignore: boolean) => {
+  if (!ignore) return scope;
+  const { from, to, ...rest } = scope;
+  return rest;
+};
 const fieldLabel = (key: string) => metrics[key]?.label || key.replaceAll("_", " ");
 const cssVar = (name: string, fallback: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
 
@@ -580,7 +586,7 @@ function Element({ doc, version }: { doc: Doc; version: number }) {
       method: "POST",
       body: JSON.stringify({
         sql: doc.body.sql,
-        filters: doc.body.pinnedScope || { ...filters, lateOnly: page === 12 },
+        filters: undated(doc.body.pinnedScope || { ...filters, lateOnly: page === 12 }, spec.ignoreDates),
       }),
     })
       .then((d) => {
@@ -608,7 +614,7 @@ function Element({ doc, version }: { doc: Doc; version: number }) {
       </div>
       <ChartControls rows={rows} title={doc.title} />
       <div className="small">
-        Live query · {doc.body.pinnedScope ? `fixed scope: ${doc.body.pinnedScope.from || "all dates"} → ${doc.body.pinnedScope.to || "latest"}` : "inherits dashboard filters"} · saved in Supabase
+        Live query · {spec.ignoreDates ? (doc.body.pinnedScope ? "all dates · fixed studios and filters" : "all dates · ignores the page date filter") : doc.body.pinnedScope ? `fixed scope: ${doc.body.pinnedScope.from || "all dates"} → ${doc.body.pinnedScope.to || "latest"}` : "inherits dashboard filters"} · saved in Supabase
       </div>
       <button className="button" onClick={() => setEditing(!editing)}>
         Edit / move
@@ -643,6 +649,14 @@ function Element({ doc, version }: { doc: Doc; version: number }) {
               </option>
             ))}
           </DropdownField>
+          <label className="small">
+            <input
+              type="checkbox"
+              checked={draft.body.ignoreDates === true}
+              onChange={(e) => setDraft({ ...draft, body: { ...draft.body, ignoreDates: e.target.checked } })}
+            />{" "}
+            Ignore the page date filter (show every month)
+          </label>
           <textarea
             aria-label="Data query"
             value={draft.body.sql}

@@ -16,3 +16,9 @@ test('numeric display fields have at most one decimal without changing identifie
 test('every registered metric uses its metric formatter in generic tables',()=>{
  for(const id of Object.keys(metrics)) assert.equal(formatField(id,1.23456789),fmt(id,1.23456789,true),id);
 });
+
+test("spend columns are money", async () => {
+  const { formatField } = await import("../src/semantics/formats.ts");
+  assert.match(formatField("avg_spend_per_member", 7601.7), /^₹/);
+  assert.match(formatField("total_spend", "125000"), /^₹/);
+});
