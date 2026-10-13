@@ -5,6 +5,7 @@ export function tree(rows: Row[], groups: string[]): TreeRow[] {
   const map = new Map<string, TreeRow>();
   for (const row of rows) {
     const depth = groups.length - Math.round(Math.log2(Number(row.level) + 1));
+    if (!Number.isFinite(depth) || depth < 1 || depth > groups.length) continue;
     const path = groups.slice(0, depth).map((field, i) => ({
       field,
       value: String(row["g" + i] ?? "Unspecified"),

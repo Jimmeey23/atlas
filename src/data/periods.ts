@@ -6,6 +6,10 @@ const today = () =>
     day: "2-digit",
   }).format(new Date());
 export const periods = [
+  "Today",
+  "Yesterday",
+  "Last 7 days",
+  "Last 90 days",
   "This week",
   "Last week",
   "This month",
@@ -19,6 +23,9 @@ export function relativePeriod(name: string, now = today()) {
   const end = new Date(now + "T00:00:00Z");
   const start = new Date(end);
   const dow = (end.getUTCDay() + 6) % 7;
+  if (name === "Yesterday") { start.setUTCDate(start.getUTCDate() - 1); end.setUTCDate(end.getUTCDate() - 1); }
+  if (name === "Last 7 days") start.setUTCDate(start.getUTCDate() - 6);
+  if (name === "Last 90 days") start.setUTCDate(start.getUTCDate() - 89);
   if (name === "This week") start.setUTCDate(start.getUTCDate() - dow);
   if (name === "Last week") {
     start.setUTCDate(start.getUTCDate() - dow - 7);

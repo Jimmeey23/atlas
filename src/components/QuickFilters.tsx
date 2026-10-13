@@ -44,7 +44,7 @@ export function QuickFilters({ locations }: { locations: string[] }) {
     <div className="quick-filters">
       <div className="quick-periods" aria-label="Quick date periods">
         <span className="quick-label" aria-hidden="true">Period</span>
-        {periods.slice(0, 6).map((name) => {
+        {periods.map((name) => {
           const range = relativePeriod(name);
           return (
             <button
@@ -60,6 +60,7 @@ export function QuickFilters({ locations }: { locations: string[] }) {
             </button>
           );
         })}
+        <button onClick={() => s.set({ filterOpen: true })}>Custom…</button>
       </div>
       <div className="quick-studios" aria-label="Quick studio filters">
         <span className="quick-label" aria-hidden="true">Studios</span>

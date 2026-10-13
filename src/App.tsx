@@ -91,6 +91,7 @@ import { Chart, Pulse } from "./components/Charts";
 import { Rankings } from "./components/Rankings";
 import { Heatmap } from "./components/Heatmap";
 import { AcquisitionMainTables, AcquisitionDeepDive, AcquisitionTableView } from "./components/AcquisitionTables";
+import { metricTable } from "./semantics/catalogue";
 import { MoMTable } from "./components/MoMTable";
 import { InstructorIntelligence, instructorPayrollKpis, useInstructorPayroll } from "./components/InstructorIntelligence";
 import { MonthlyMemberIntelligence } from "./components/MonthlyMemberIntelligence";
@@ -932,6 +933,7 @@ export default function App() {
               <StudioCommunityOperations version={contentVersion} onDrill={setDrill} />
               <MonthlyMemberIntelligence kind="frequency" version={contentVersion} />
               <StudioOperationsDeepDive version={contentVersion} onDrill={setDrill} />
+              <MoMTable version={workspaceVersion} ids={Object.keys(metrics).filter(id => metricTable(id) === bp.source)} />
             </div>
           ) : (
             <>
@@ -1092,14 +1094,8 @@ export default function App() {
                 />}
                 <Register
                   index="04"
-                  title={
-                    s.tab === 0
-                      ? "How the locations compare"
-                      : s.tab === 3
-                        ? "Instructor distribution"
-                        : "The relationship behind the result"
-                  }
-                  subtitle="Explore the contributing pattern"
+                  title="Monthly performance comparison"
+                  subtitle="Completed-month trend · click a bar to scope that month"
                 >
                   <Chart tab={s.tab} data={analysis} secondary />
                 </Register>
@@ -1158,7 +1154,7 @@ export default function App() {
               </Register> : null}
               {s.tab === 14 && <PerformanceScorecard dimension="format_group" index="08" version={version} onDrill={setDrill} />}
               {s.tab === 14 && <FormatComparison version={version} />}
-              <MoMTable version={workspaceVersion} ids={bp.columns.slice(0, 9)} />
+              <MoMTable version={workspaceVersion} ids={[...new Set([...bp.columns, ...bp.kpis, ...Object.keys(metrics)])].filter(id => metricTable(id) === bp.source)} />
               {s.tab === 4 && <SalesScorecards version={version} onDrill={setDrill} />}
               {s.tab === 5 && <AcquisitionMainTables version={version} />}
               <Register

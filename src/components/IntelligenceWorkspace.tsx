@@ -1,3 +1,4 @@
+import { SqlElementBuilder } from "./SqlElementBuilder";
 import { DropdownField } from "./ui/DropdownField";
 import { InstructorName } from "./InstructorAvatar";
 import { ArrowUp, ArrowUpRight, Sparkles, MessageSquare, ChartNoAxesCombined, Check, Database, Pencil, Trash2, Paperclip, Mic, Square, Settings2 } from "lucide-react";
@@ -15,7 +16,7 @@ import * as echarts from "echarts";
 import { tabs, useStore } from "../state/store";
 import { DataInsightAction } from "./DataInsightAction";
 type Doc = { id: string; kind: string; title: string; page: number; body: any };
-async function api(url: string, options: RequestInit = {}) {
+export async function api(url: string, options: RequestInit = {}) {
   const r = await fetch("/api/intelligence/" + url, {
     ...options,
     headers: { "Content-Type": "application/json", ...options.headers },
@@ -573,7 +574,7 @@ function ElementTable({ rows }: { rows: any[] }) {
   );
 }
 
-function Element({ doc, version }: { doc: Doc; version: number }) {
+export function Element({ doc, version, preview = false }: { doc: Doc; version: number; preview?: boolean }) {
   const filters = useStore((s) => s.filters);
   const page = useStore((s) => s.tab);
   const [rows, setRows] = useState<any[]>([]);
@@ -614,9 +615,9 @@ function Element({ doc, version }: { doc: Doc; version: number }) {
       </div>
       <ChartControls rows={rows} title={doc.title} />
       <div className="small">
-        Live query · {spec.ignoreDates ? (doc.body.pinnedScope ? "all dates · fixed studios and filters" : "all dates · ignores the page date filter") : doc.body.pinnedScope ? `fixed scope: ${doc.body.pinnedScope.from || "all dates"} → ${doc.body.pinnedScope.to || "latest"}` : "inherits dashboard filters"} · saved in Supabase
+        Live query · {spec.ignoreDates ? (doc.body.pinnedScope ? "all dates · fixed studios and filters" : "all dates · ignores the page date filter") : doc.body.pinnedScope ? `fixed scope: ${doc.body.pinnedScope.from || "all dates"} → ${doc.body.pinnedScope.to || "latest"}` : "inherits dashboard filters"} · {preview ? "unsaved preview" : "saved in Supabase"}
       </div>
-      <button className="button" onClick={() => setEditing(!editing)}>
+      {!preview && <><button className="button" onClick={() => setEditing(!editing)}>
         Edit / move
       </button>{" "}
       <button
@@ -629,6 +630,7 @@ function Element({ doc, version }: { doc: Doc; version: number }) {
       >
         Delete
       </button>
+      </>}
       {editing && (
         <>
           <input
@@ -716,6 +718,7 @@ export function SavedElements({
   const { docs } = useDocuments("artifact");
   return (
     <div className="saved-elements">
+      <SqlElementBuilder key={page} page={page} version={version} />
       {docs
         .filter((d) => d.page === page)
         .map((d) => (

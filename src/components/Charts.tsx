@@ -256,7 +256,7 @@ export function Chart({
   const state = useStore();
   const prefs = usePreferences((s) => s.preferences);
   const bp = blueprints[tab];
-  const chartTitle = tab === 14 && secondary ? "Format performance relationship" : tab === 4 && !salesActivity ? (secondary ? "Sales relationship" : "Revenue by category") : bp.chartTitle;
+  const chartTitle = secondary ? "Monthly performance comparison" : tab === 14 && secondary ? "Format performance relationship" : tab === 4 && !salesActivity ? (secondary ? "Sales relationship" : "Revenue by category") : bp.chartTitle;
   useEffect(() => {
     let active = true;
     if (!data.count) {
@@ -268,9 +268,7 @@ export function Chart({
       try {
         let r: Row[] = [];
         if (secondary)
-          r = data.groups
-            .filter((g) => Number(g.level) === 2 ** (bp.groups.length - 1) - 1)
-            .slice(0, 80);
+          r = data.trend.map(row => ({ ...row, g0: row.month }));
         else if (tab === 12) {
           // Patterns need every booking as the denominator, so lift the tab's late-only restriction here.
           const all = w.replace(/ AND late_cancelled>0/, "").replace(/ WHERE late_cancelled>0$/, "");
@@ -333,9 +331,7 @@ export function Chart({
             `SELECT trainer,${metricSQL(["contribution", "payroll_cost", "payroll_revenue", "contribution_margin"], context())},COUNT(*) AS n FROM payroll${w} GROUP BY trainer ORDER BY contribution DESC LIMIT 15`,
           );
         else if (tab === 3 || secondary)
-          r = data.groups
-            .filter((g) => Number(g.level) === 2 ** (bp.groups.length - 1) - 1)
-            .slice(0, 80);
+          r = data.trend.map(row => ({ ...row, g0: row.month }));
         else {
           const ids = [...new Set([...bp.kpis, ...bp.columns])].filter(
             (id) =>
@@ -415,7 +411,10 @@ export function Chart({
           "contribution_margin",
         ].includes(id),
       );
-    if ((tab === 3 || secondary) && chartRows.length) {
+    if (secondary && chartRows.length) {
+      const measure = bp.columns.find(id => metrics[id].format === "currency") || bp.columns[0];
+      option = { ...option, tooltip: { trigger: "axis" }, xAxis: { type: "category", data: chartRows.map(r => String(r.month)), ...axis }, yAxis: { type: "value", name: metrics[measure].label, ...axis }, series: [{ name: metrics[measure].label, type: "bar", data: chartRows.map(r => r[measure] == null ? null : Number(r[measure])) }] };
+    } else if (tab === 3 && chartRows.length) {
       const xMetric =
         tab === 3
           ? "draw_premium_pp"
@@ -1086,7 +1085,7 @@ export function Chart({
       <div className="chart-caption">
         <span>
           {secondary
-            ? "Each point represents an entity in scope"
+            ? "Completed-month observations; missing values remain unavailable"
             : tab === 4 && salesActivity ? "Daily gross collections (left axis) and transactions (right axis); average order value in tooltips. Only dates with source records are shown." : tab === 5 ? "Bars: newcomers per first-visit month · lines: share of each cohort that returned, converted and is retained (latest recorded outcome)" : tab === 7 || tab === 12 ? "Late cancellations by weekday and class time · hover a cell for its share of that slot's bookings, members and classes affected" : "Actual source observations, aggregated in SQL"}
         </span>
         <span>Hover for details / Click to filter</span>

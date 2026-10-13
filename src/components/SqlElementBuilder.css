@@ -1,0 +1,12 @@
+.sql-builder { margin: 16px 0; padding: 16px; border: 1px solid var(--hairline); border-radius: 12px; }
+.sql-builder summary { cursor: pointer; font-weight: 600; }
+.sql-builder-controls { display:flex; flex-wrap:wrap; gap:16px; margin:16px 0; }
+.sql-builder label { display:inline-flex; gap:8px; align-items:center; margin:6px; }
+.sql-builder textarea { display:block; width:100%; font-family:monospace; }
+.sql-builder > label:has(textarea) { display:block; }
+.sql-builder fieldset { border:1px solid var(--hairline); margin:12px 0; }
+.quick-periods { flex-wrap:wrap; }
+:root:is([data-theme]) .quick-filters { flex-wrap: wrap; overflow-x: visible; }
+:root:is([data-theme]) .quick-filters .quick-periods { flex-wrap: wrap; min-width: 0; max-width: 100%; }
+:root:is([data-theme]) .quick-filters .quick-studios { flex-wrap: wrap; min-width: 0; max-width: 100%; }
+.sql-builder textarea { background: var(--surface-1); color: var(--text-1); border: 1px solid var(--hairline); border-radius: 8px; padding: 12px; }

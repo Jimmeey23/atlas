@@ -38,7 +38,7 @@ export function SalesScorecards({version,onDrill}:{version:number;onDrill:(entry
   const fieldsFor=(kind:Kind)=>registry.filter(f=>f.field!=='member_id'&&(f.field!=='previous_product'||kind==='upgrades')).map(f=>({...f,label:headings[f.field]??f.label}));
   useEffect(()=>{
     let active=true;setLoading(true);setError('');setPages({});
-    const conditions:Record<Kind,string>={discounts:'TRUE',upgrades:'is_upgrade',annual:'is_annual',private:'is_private'};
+    const conditions:Record<Kind,string>={discounts:'discount>0',upgrades:'is_upgrade',annual:'is_annual',private:'is_private'};
     Promise.all(specs.map(async spec=>{
       const [groups,total]=await Promise.all([
         query(`WITH facts AS (${facts}) SELECT ${salesScorecardSelect(dimsOf(spec.kind))},${salesScorecardAggregate} FROM facts WHERE ${conditions[spec.kind]} GROUP BY ALL ORDER BY gross_revenue DESC NULLS LAST`),
@@ -48,7 +48,7 @@ export function SalesScorecards({version,onDrill}:{version:number;onDrill:(entry
     return()=>{active=false;};
   },[filters,transient,version,fieldKey]); // eslint-disable-line react-hooks/exhaustive-deps
   function drill(kind:Kind,row:Row|null,id:string) {
-    const terms=[kind==='upgrades'?'is_upgrade':kind==='annual'?'is_annual':kind==='private'?'is_private':'TRUE'];
+    const terms=[kind==='upgrades'?'is_upgrade':kind==='annual'?'is_annual':kind==='private'?'is_private':'discount>0'];
     if(row) terms.push(...salesScorecardTerms(dimsOf(kind),row,quote));
     if(id==='discount_value'||id==='discounted_lines'||id==='discount_penetration') terms.push('discount>0');
     onDrill({id:`sales-${kind}-${id}`,label:`${specs.find(s=>s.kind===kind)!.title} · ${labels[id]}`,source:'sales',filters,metrics:['transactions','buyers','gross_revenue','net_revenue','discount_value','discount_rate'],path:[],predicate:`source_row IN (SELECT source_row FROM (${facts}) WHERE ${terms.join(' AND ')})`,values:row||totals[kind]||{},children:[]});
