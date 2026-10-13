@@ -90,6 +90,13 @@ try {
   await continuousChapter.locator('.deck-flip-front').first().click();
   assert.equal(await continuousChapter.locator('.deck-flip').first().getAttribute('data-flipped'), 'true');
   await continuousChapter.getByRole('button', { name: 'Flip back' }).click();
+  assert.equal(await continuousChapter.locator('.cr-disclosure[open]').count(), 0, 'chapter supporting evidence starts collapsed');
+  assert.equal(await continuousChapter.locator('.cr-trend, .cr-evidence, .dk-tables, .monthly-table').count(), 0, 'unopened chapter evidence does not render charts or tables');
+  const trendDisclosure = continuousChapter.locator('.cr-disclosure').filter({ hasText: 'Supporting evidence · monthly trends' });
+  await trendDisclosure.locator('summary').click();
+  await trendDisclosure.locator('.cr-trend').waitFor();
+  await trendDisclosure.locator('summary').click();
+  await page.waitForFunction(() => !document.querySelector('[data-chapter="sessions"] .cr-trend'));
   await continuousChapter.locator('.cr-disclosure summary').filter({ hasText: 'Complete evidence tables' }).click();
   await continuousChapter.locator('.dk-row-drill').first().click();
   await page.locator('.deck-record-dialog .dk-x-context').waitFor();
