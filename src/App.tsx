@@ -179,6 +179,16 @@ export default function App() {
     // Content, not fetch time: a re-check that finds identical rows must not recompute the page.
     .map((k) => health[k]?.hash || health[k]?.fetchedAt || "unavailable")
     .join(",");
+  // Sections that query several sources through joined views reload on this, not `version`:
+  // `version` ticks on every source state change, and each tick blanked and refilled them.
+  const contentKey = Object.keys(health)
+    .sort()
+    .map((k) => k + ":" + (health[k].hash || health[k].fetchedAt))
+    .join(",");
+  const content = useRef({ key: contentKey, version: 0 });
+  if (content.current.key !== contentKey)
+    content.current = { key: contentKey, version: content.current.version + 1 };
+  const contentVersion = content.current.version;
   const ready =
     s.tab === 11
       ? dependencies(11).every(
@@ -202,7 +212,7 @@ export default function App() {
   const [command, setCommand] = useState("");
   const [toast, setToast] = useState("");
   const [version, setVersion] = useState(0);
-  const instructorPayroll = useInstructorPayroll(version, s.tab === 3);
+  const instructorPayroll = useInstructorPayroll(contentVersion, s.tab === 3);
   const [thresholdValues, setThresholdValues] =
     useState<Thresholds>(thresholds());
   const main = useRef<HTMLElement>(null);
@@ -915,13 +925,13 @@ export default function App() {
             <PerformanceMarketing version={version} onDrill={setDrill} />
           ) : s.tab === 1 ? (
             <div className="studio-operations-page">
-              <StudioOperationsOverview version={version} onDrill={setDrill} />
+              <StudioOperationsOverview version={contentVersion} onDrill={setDrill} />
               <PinnedInsights page={1} />
               <SavedElements page={1} version={version} />
-              <StudioOperations version={version} onDrill={setDrill} />
-              <StudioCommunityOperations version={version} onDrill={setDrill} />
-              <MonthlyMemberIntelligence kind="frequency" version={version} />
-              <StudioOperationsDeepDive version={version} onDrill={setDrill} />
+              <StudioOperations version={contentVersion} onDrill={setDrill} />
+              <StudioCommunityOperations version={contentVersion} onDrill={setDrill} />
+              <MonthlyMemberIntelligence kind="frequency" version={contentVersion} />
+              <StudioOperationsDeepDive version={contentVersion} onDrill={setDrill} />
             </div>
           ) : (
             <>
@@ -987,10 +997,10 @@ export default function App() {
               <SavedElements page={s.tab} version={version} />
               {s.tab === 3 && (
                 <>
-                  <InstructorIntelligence version={version}/>
-                  <PerformanceScorecard dimension="trainer" index="I2" version={version} onDrill={setDrill}/>
-                  <AcquisitionTableView kind="trainers" version={version}/>
-                  <MonthlyMemberIntelligence kind="instructors" version={version}/>
+                  <InstructorIntelligence version={contentVersion}/>
+                  <PerformanceScorecard dimension="trainer" index="I2" version={contentVersion} onDrill={setDrill}/>
+                  <AcquisitionTableView kind="trainers" version={contentVersion}/>
+                  <MonthlyMemberIntelligence kind="instructors" version={contentVersion}/>
                 </>
               )}
               {s.tab === 0 && <Pulse data={analysis} />}
