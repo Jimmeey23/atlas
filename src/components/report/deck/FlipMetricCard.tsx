@@ -48,6 +48,7 @@ export function FlipMetricCard({ id, data, target, flipped, onToggle }: { id: st
   const finite = values.filter((v): v is number => v != null && Number.isFinite(v));
   const hit = target == null || value == null ? null : (Number(value) >= target) === (m?.higherIsBetter ?? true);
   const Arrow = mom === "flat" ? Minus : Number(value) >= Number(prior) ? ArrowUpRight : ArrowDownRight;
+  const YearArrow = yoy === "flat" ? Minus : Number(value) >= Number(lastYear) ? ArrowUpRight : ArrowDownRight;
   const toggle = onToggle;
   const drilled = useRef(false);
   return <div className="deck-flip" data-flipped={flipped}
@@ -60,9 +61,8 @@ export function FlipMetricCard({ id, data, target, flipped, onToggle }: { id: st
           <span className="deck-kpi-value">{fmt(id, value)}</span>
           <Sparkline values={values} color="var(--accent)" />
         </div>
-        <span className={`deck-kpi-delta metric-delta ${mom === "flat" ? "muted" : mom}`} title="Month on month"><Arrow size={12}/>{delta(id, value, prior)}<small>MoM</small></span>
+        <div className="deck-kpi-comparisons"><span className={`deck-kpi-delta metric-delta ${mom === "flat" ? "muted" : mom}`} title="Month on month"><Arrow size={12}/>{delta(id, value, prior)}<small>MoM</small></span><span className={`deck-kpi-delta metric-delta ${yoy === "flat" ? "muted" : yoy}`} title="Year on year"><YearArrow size={12}/>{delta(id, value, lastYear)}<small>YoY</small></span></div>
         <div className="deck-kpi-foot">
-          <span className={`deck-yoy ${yoy}`}>YoY {delta(id, value, lastYear)}</span>
           {hit != null ? <span className={`deck-target ${hit ? "positive" : "negative"}`}><Target size={11}/>{hit ? "On target" : "Below"} {fmt(id, target)}</span>
             : <span>{currentSnapshotMetrics.has(id) ? "Snapshot" : m?.aggregation === "sum" ? "Total" : "Weighted"}</span>}
         </div>

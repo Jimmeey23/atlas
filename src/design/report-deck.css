@@ -866,3 +866,4 @@
 /* v4 refinements */
 .dk-impact-stats strong,.dk-scenario-pick{color:var(--text-1)}
 .deck-record-dialog>header h2{font-family:var(--font-display);font-size:var(--d-fs-6);font-weight:600;letter-spacing:-.02em;margin:8px 0 4px}
+.deck-kpi-comparisons{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.deck-kpi-comparisons .deck-kpi-delta{margin:0;font-size:11px;padding:4px 7px;white-space:nowrap}.deck-kpi-comparisons small{font-size:10px}

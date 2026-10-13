@@ -39,3 +39,28 @@
 
 .source-content .source-evidence-controls svg{width:14px;height:14px;min-width:14px;max-height:14px;flex:0 0 14px;display:inline-block;fill:none;stroke:currentColor}.source-evidence-controls button{display:inline-flex;align-items:center;justify-content:center;gap:6px}.source-svg-view svg{min-width:460px;max-height:440px}.source-hero-evidence svg{width:13px;height:13px;flex:none}
 .source-svg-view [fill="#CBC3B6"],.source-svg-view [fill="#E2C3AC"]{fill:color-mix(in srgb,var(--accent) 22%,var(--surface-1))}.source-svg-view [fill="#A8543A"],.source-svg-view [fill="#4A6FA5"]{fill:var(--accent)}.source-svg-view [fill="#7A7267"],.source-svg-view [fill="#8C939A"]{fill:var(--text-3)}.source-svg-view [fill="#4A7C59"]{fill:var(--good,var(--accent))}
+.source-hero[data-photo="bandra-review"]{background-image:linear-gradient(90deg,rgba(9,17,34,.88),rgba(9,17,34,.64) 58%,rgba(9,17,34,.38)),url('/report-assets/bandra-september-2026-hero.png');background-size:cover;background-position:center 40%;border-color:rgba(255,255,255,.14);border-top-color:var(--accent);color:#fff;min-height:360px}
+.source-hero[data-photo="bandra-review"] .source-hero-title,.source-hero[data-photo="bandra-review"] .source-hero-number{color:#fff}.source-hero[data-photo="bandra-review"] .source-hero-number{opacity:.8}.source-hero[data-photo="bandra-review"] .source-hero-description{color:#f1f3f7}.source-hero[data-photo="bandra-review"] .deck-eyebrow,.source-hero[data-photo="bandra-review"] .source-hero-evidence{color:#dbe2ee}.source-hero[data-photo="bandra-review"] .source-hero-art{opacity:.1}
+@media(max-width:760px){.source-hero[data-photo="bandra-review"]{background-position:60% center;min-height:0}}
+/* Keep the complete supplied photograph below the hero copy without cropping. */
+.source-hero[data-photo="bandra-review"]{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:36px;row-gap:28px;background:linear-gradient(125deg,#101a2d,#1b2943);padding-bottom:0}
+.source-hero[data-photo="bandra-review"]::after{content:"";display:block;grid-column:1 / -1;aspect-ratio:1448 / 1086;background:url('/report-assets/bandra-september-2026-hero.png') center / contain no-repeat;margin:0 -44px;width:calc(100% + 88px);align-self:end}
+@media(max-width:1050px){.source-hero[data-photo="bandra-review"]{column-gap:24px}.source-hero[data-photo="bandra-review"]::after{margin-inline:-36px;width:calc(100% + 72px)}}
+@media(max-width:760px){.source-hero[data-photo="bandra-review"]{grid-template-columns:1fr;row-gap:18px}.source-hero[data-photo="bandra-review"]::after{margin-inline:-24px;width:calc(100% + 48px)}}
+/* Full-photo hero with the original overlay treatment. */
+.source-hero[data-photo="bandra-review"]{display:flex;align-items:flex-start;gap:36px;aspect-ratio:1448 / 1086;min-height:620px;padding:48px 44px;box-sizing:border-box;background-image:linear-gradient(90deg,rgba(9,17,34,.86),rgba(9,17,34,.58) 58%,rgba(9,17,34,.28)),url('/report-assets/bandra-september-2026-hero.png');background-size:cover;background-position:center;border-radius:18px}
+.source-hero[data-photo="bandra-review"]::after{display:none}
+.source-card-wrap .deck-flip{height:188px}.source-card-wrap .deck-kpi{padding:16px 18px}.source-card-wrap .deck-kpi-foot{margin-top:10px;padding-top:10px}.source-card-wrap .deck-flip-chart{height:98px}
+@media(max-width:1050px){.source-hero[data-photo="bandra-review"]{padding:36px;gap:24px;min-height:500px}}
+@media(max-width:760px){.source-hero[data-photo="bandra-review"]{padding:28px 24px;gap:18px;flex-direction:column;min-height:540px;background-size:cover,contain;background-repeat:no-repeat;background-color:#101a2d}.source-card-wrap .deck-flip{height:184px}}
+/* Performance Review: bottom-aligned copy and a hero 10% shorter. */
+.source-hero[data-photo="bandra-review"]{align-items:flex-end;aspect-ratio:1448 / 977.4;min-height:558px;background-image:linear-gradient(180deg,rgba(9,17,34,.2) 20%,rgba(9,17,34,.62) 60%,rgba(9,17,34,.94)),url('/report-assets/bandra-september-2026-hero.png')}
+@media(max-width:1050px){.source-hero[data-photo="bandra-review"]{min-height:450px}}
+@media(max-width:760px){.source-hero[data-photo="bandra-review"]{min-height:486px;align-items:flex-start;justify-content:flex-end}}
+/* Compact review cover; retain a deliberate inset around all hero content. */
+.source-hero[data-photo="bandra-review"]{aspect-ratio:1448 / 850;min-height:490px;padding:40px 48px;gap:28px}
+.deck-body:has(.source-chapter)>.deck-main{padding-left:24px;padding-right:24px}
+.deck-body:has(.deck-drawer[data-open="true"]):has(.source-chapter)>.deck-main{padding-right:16px}
+.deck-body:has(.deck-drawer[data-open="true"]) .source-chapter{max-width:none;width:100%;margin-inline:0}
+@media(max-width:1050px){.source-hero[data-photo="bandra-review"]{min-height:400px;padding:32px 36px;gap:24px}}
+@media(max-width:760px){.source-hero[data-photo="bandra-review"]{min-height:430px;padding:28px;gap:16px}.deck-body:has(.source-chapter)>.deck-main{padding-inline:16px}}
