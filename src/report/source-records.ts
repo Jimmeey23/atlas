@@ -20,6 +20,8 @@ function population(aggregate: string): string | null {
   if (a.includes('{')) return null;
   const filtered = /^COUNT\(\*\)\s*FILTER\s*\(WHERE\s+(.+)\)$/is.exec(a);
   if (filtered) return filtered[1];
+  const filteredDistinct = /^COUNT\(DISTINCT\s+(\w+)\)\s*FILTER\s*\(WHERE\s+(.+)\)$/is.exec(a);
+  if(filteredDistinct && sqlTypes[filteredDistinct[1]])return `"${filteredDistinct[1]}" IS NOT NULL AND (${filteredDistinct[2]})`;
   const sum = /^SUM\((\w+)\)$/i.exec(a);
   if (sum && sqlTypes[sum[1]]) return `COALESCE(TRY_CAST("${sum[1]}" AS DOUBLE),0)<>0`;
   const distinct = /^COUNT\(DISTINCT\s+(\w+)\)$/i.exec(a);

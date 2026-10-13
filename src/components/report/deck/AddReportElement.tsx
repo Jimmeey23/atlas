@@ -1,0 +1,11 @@
+import {useState} from 'react';
+import {Plus} from 'lucide-react';
+import type {ReportModel} from '../../../report/model';
+import {applyReportOperations} from '../../../report/source-edit';
+import {useEdit} from './editing';
+export function AddReportElement({model,chapterId,sectionId}:{model:ReportModel;chapterId:string;sectionId:string}){
+ const edit=useEdit(),[open,setOpen]=useState(false),[kind,setKind]=useState<'text'|'chart'|'table'>('text'),[dataset,setDataset]=useState(Object.keys(model.chapters)[0]),[group,setGroup]=useState('month'),[title,setTitle]=useState('New element'),[error,setError]=useState('');
+ const data=model.chapters[dataset];
+ function add(){try{const next=applyReportOperations(model,[{action:'add',chapterId,sectionId,blockId:'',element:'',text:'',block:{id:`element-${Date.now()}`,kind,title,text:kind==='text'?'Write your interpretation here.':undefined,dataChapterId:kind==='text'?undefined:dataset,groupField:kind==='text'?undefined:group,metricId:kind==='text'?undefined:(group==='month'?Object.keys(data.total).find(k=>k!=='n'&&!k.includes('__')):data.groups.find(g=>g.field===group)?.columns[0])}}]);edit?.set(['importedChapters'],next.importedChapters);setOpen(false);}catch(e){setError((e as Error).message);}}
+ return <div className="source-add-element"><button className="button" aria-expanded={open} onClick={()=>setOpen(v=>!v)}><Plus size={14}/>Add element</button>{open && <div className="source-add-popover"><label>Title<input value={title} onChange={e=>setTitle(e.target.value)}/></label><label>Element type<select value={kind} onChange={e=>setKind(e.target.value as typeof kind)}><option value="text">Text</option><option value="chart">Interactive chart</option><option value="table">Evidence table</option></select></label>{kind!=='text'&&<><label>Dataset<select value={dataset} onChange={e=>{setDataset(e.target.value);setGroup('month');}}>{Object.keys(model.chapters).map(id=><option key={id}>{id}</option>)}</select></label><label>Breakdown<select value={group} onChange={e=>setGroup(e.target.value)}><option value="month">Monthly history</option>{data.groups.map(g=><option key={g.id} value={g.field}>{g.title}</option>)}</select></label></>}<button className="button primary" onClick={add}>Add</button>{error && <p role="alert">{error}</p>}</div>}</div>;
+}

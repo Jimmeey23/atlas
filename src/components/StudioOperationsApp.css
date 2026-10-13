@@ -587,3 +587,15 @@
     min-width: 140px;
   }
 }
+/* Charts and the virtualized register must retain measurable dimensions off-screen.
+   content-visibility:auto replaces panel layout with an estimated height while
+   scrolling, feeding zero/changed sizes into chart and row ResizeObservers. */
+.studio-operations-page .register {
+  content-visibility: visible;
+  contain-intrinsic-size: none;
+}
+.studio-operations-page .ref-table-scroll {
+  overflow-anchor: none;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}

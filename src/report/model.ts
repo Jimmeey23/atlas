@@ -195,6 +195,11 @@ export interface ReportSignal {
   n: number;
 }
 export interface ReportModel {
+  /** Supplied source documents, frozen with this saved report. */
+  importedChapters?: ImportedChapterSource[];
+  recordSnapshots?: Record<string,Record<string,string>>;
+  sourceRecords?: Record<string, { rows: Row[]; fetchedAt: number; title: string; scope: ReportScope }>;
+  dataAudit?: { checkedAt: string; basis: string; corrections: string[] };
   customization?: ReportCustomization;
   id?: string;
   savedAt?: string;
@@ -223,6 +228,19 @@ export interface ReportModel {
   presenterNotes?: Record<string, string>;
   /** AI-written talk tracks per page, keyed chapter:section. */
   speakerNotes?: Record<string, SpeakerNotes>;
+}
+export interface ImportedChapterSource {
+  id: string; title: string; filename: string; html: string; sha256: string; tables: number; charts: number;
+  summary?: string;
+  scopeNote?: string;
+  metrics?: { label: string; value: string; note: string; metricId?: string; dataChapterId?: string }[];
+  sections?: { id: string; title: string; html: string; tables: number; charts: number; chartRepairs?: number; blocks?: ReportEvidenceBlock[] }[];
+}
+export interface ReportEvidenceBlock {
+  id: string; kind: 'text' | 'chart' | 'table'; title: string; text?: string;
+  source?: string; dataChapterId?: string; metricId?: string; groupField?: string;
+  columns?: string[]; rows?: Row[]; chartType?: 'bar' | 'line' | 'area';
+  description?: string;
 }
 /** A speaker script for one report page. */
 export interface SpeakerNotes {

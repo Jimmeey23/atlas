@@ -48,6 +48,7 @@ export const verdictOf = (model: ReportModel, id: string): InsightCard | undefin
 };
 
 export function deckTabs(model: ReportModel): DeckTab[] {
+  if (model.importedChapters?.length) return model.importedChapters.map(c => ({ id: c.id, label: c.title, title: c.title, chapter: c.id, sections: [c.id === "overview" ? "cover" : "summary", "insights", "tables", "trends"] }));
   const ordered = model.customization ? model.customization.chapterIds.flatMap(id => chapters.find(c => c.id === id) ?? []) : chapters;
   const available = ordered.filter(spec => model.chapters[spec.id] || model.narratives[spec.id]);
   const exec = available.find(spec => spec.id === EXECUTIVE);
@@ -85,6 +86,8 @@ const direction = (id: string, change: number) => (change >= 0) === (definition(
  * report take precedence and are topped up from the question bank.
  */
 export function liveNotes(model: ReportModel, tabs: DeckTab[], tabId: string, section: DeckSection): SpeakerNotes {
+  const source = model.importedChapters?.find(c => c.id === tabId);
+  if (source && !model.speakerNotes?.[pageKey(tabId, section)]) return { opener: `${source.title} · Bandra · September 2026`, points: [source.scopeNote || "", source.summary || ""].filter(Boolean), numbers: source.metrics?.map(m => `${m.label}: ${m.value}. ${m.note}`) ?? [], questions: [{ q: "Which period do the headline cards cover?", a: source.scopeNote || "September 2026 only." }], transition: "Move to the next chapter, or open its supporting evidence." };
   const tab = tabs.find(t => t.id === tabId);
   const cid = tab?.chapter ?? tabId;
   const spec = tab?.spec ?? chapters.find(c => c.id === cid);
@@ -180,6 +183,8 @@ export function liveNotes(model: ReportModel, tabs: DeckTab[], tabId: string, se
 
 /** Compact JSON of one section, for AI component replacement and talk tracks. */
 export function sectionContext(model: ReportModel, tabId: string, section: DeckSection, component?: { id: string; describe: string }) {
+  const imported = model.importedChapters?.find(c => c.id === tabId);
+  if (imported) return JSON.stringify({ report: model.scope, chapter: imported.title, section, component, source: imported.filename, metricPeriod: model.scope.month, metrics: imported.metrics?.map(m=>({...m,actual:m.metricId && m.dataChapterId ? model.chapters[m.dataChapterId]?.total[m.metricId]:undefined})), scopeNote: imported.scopeNote, summary: imported.summary, evidence: imported.sections?.map(s=>({title:s.title,blocks:s.blocks?.filter(b=>!component || component.id.includes(b.id)),text:s.html.replace(/<[^>]+>/g,' ')})), datasets: Object.fromEntries([...new Set(imported.metrics?.map(m=>m.dataChapterId).filter((id):id is string=>!!id))].map(id=>[id,model.chapters[id]])),audit:model.dataAudit }).slice(0, 58000);
   const overview = tabId === "overview";
   if (overview && model.narratives[EXECUTIVE]) tabId = EXECUTIVE;
   const spec = chapters.find(c => c.id === tabId);

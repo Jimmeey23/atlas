@@ -9,6 +9,7 @@ export interface SavedReport {
   pinned?: boolean;
   aiChapters: number;
   chapterCount?: number;
+  imported?: boolean;
 }
 /** Generated reports kept by the server, in addition to pinned ones. */
 export const KEEP_RECENT = 5;
@@ -33,6 +34,7 @@ export const loadReport = (id: string, signal?: AbortSignal) => request<ReportMo
 export const saveReport = (model: ReportModel, signal?: AbortSignal) => request<ReportModel>("/api/reports", json("POST", model, signal));
 /** Admin only: overwrite prose, design and replaced components of a saved version. */
 export const updateReport = (model: ReportModel) => request<ReportModel>(`/api/reports/${encodeURIComponent(model.id!)}`, json("PUT", {
+  importedChapters: model.importedChapters,
   narratives: model.narratives, customization: model.customization, replacements: model.replacements ?? {},
   presenterNotes: model.presenterNotes ?? {}, speakerNotes: model.speakerNotes ?? {},
 }));
@@ -49,3 +51,5 @@ export const generateComponent = (context: string, prompt: string, signal?: Abor
   request<{ component: ReportComponentSpec }>("/api/reports/component", json("POST", { context, prompt }, signal));
 export const generateSpeakerNotes = (context: string, signal?: AbortSignal) =>
   request<{ notes: SpeakerNotes }>("/api/reports/speaker-notes", json("POST", { context }, signal));
+
+export const generateReportEdits = (context:string,prompt:string,signal?:AbortSignal) => request<{summary:string;operations:import('./source-edit').ReportEditOperation[]}>('/api/reports/edit-plan',json('POST',{context,prompt},signal));

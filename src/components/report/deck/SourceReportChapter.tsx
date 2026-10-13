@@ -1,0 +1,32 @@
+import { useMemo, useState } from 'react';
+import { Search, Plus, Trash2, Database } from 'lucide-react';
+import type { ReportModel } from '../../../report/model';
+import type { DeckSection } from '../../../report/deck';
+import { EditableText, Slot, useEdit } from './editing';
+import { FlipMetricCard } from './FlipMetricCard';
+import { CompleteMetricGrid } from './CompleteMetricGrid';
+import { ReportEvidence } from './ReportEvidence';
+import { SourceContent } from './SourceContent';
+import { AddReportElement } from './AddReportElement';
+import { ReportEditor } from './ReportEditor';
+import '../../../design/report-source.css';
+export function SourceReportChapter({model,chapterId,section='summary'}:{model:ReportModel;chapterId:string;section?:DeckSection}) {
+ const index=model.importedChapters?.findIndex(c=>c.id===chapterId) ?? -1,chapter=model.importedChapters?.[index],edit=useEdit();
+ const [query,setQuery]=useState(''),[flipped,setFlipped]=useState<Record<string,boolean>>({});
+ const sections=useMemo(()=>(chapter?.sections ?? []).map((s,i)=>({...s,index:i})).filter(s=>section==='tables'?s.blocks?.some(b=>b.kind==='table') || s.tables>0:section==='trends'?s.blocks?.some(b=>b.kind==='chart') || s.charts>0:true).filter(s=>!query||JSON.stringify(s).toLowerCase().includes(query.toLowerCase())),[chapter,section,query]);
+ if(!chapter)return <p className="notice">Select a chapter to continue.</p>;
+ const path=['importedChapters',index];
+ const metrics=(chapter.metrics ?? []).filter(m=>m.metricId && m.dataChapterId && model.chapters[m.dataChapterId]?.total[m.metricId]!=null && Number.isFinite(Number(model.chapters[m.dataChapterId].total[m.metricId])));
+ function addSection(){edit?.set([...path,'sections'],[...(chapter!.sections ?? []),{id:`section-${Date.now()}`,title:'New section',html:'',tables:0,charts:0,blocks:[{id:`text-${Date.now()}`,kind:'text',title:'New insight',text:'Write your interpretation here.'}]}]);}
+ return <section className="cr-chapter source-chapter" id={`chapter-${chapter.id}`} data-chapter={chapter.id}>
+  <header className="source-hero"><div className="source-hero-art" aria-hidden="true"><i/><i/><i/><svg viewBox="0 0 720 320"><path d="M0 280C120 220 140 310 260 185S400 260 480 110 630 180 720 20"/><path d="M0 320C110 180 160 250 270 135S400 200 470 60 650 120 720 0"/></svg></div><span className="source-hero-number" aria-hidden="true">{String(index+1).padStart(2,'0')}</span><div className="source-hero-copy"><span className="deck-eyebrow">Supreme HQ · September 2026 · Chapter {index+1}</span><EditableText path={[...path,'title']} value={chapter.title} as="h2" className="source-hero-title"/><EditableText path={[...path,'summary']} value={chapter.summary} as="p" className="source-hero-description"/><span className="source-hero-evidence"><Database size={13}/>{chapter.tables} evidence tables · {chapter.charts} interactive charts</span></div></header>
+  <ReportEditor model={model} chapterId={chapterId}/>
+  <Slot id={`${chapter.id}:summary:metrics`} tab={chapter.id} section="summary" kind="metrics" describe="September 2026 metric cards">
+   <CompleteMetricGrid items={metrics.map((_,i)=>String(i))} className="deck-metric-grid source-metric-grid" render={id=>{const i=Number(id),m=metrics[i];return <div key={`${m.dataChapterId}-${m.metricId}`} className="source-card-wrap"><FlipMetricCard id={m.metricId!} data={model.chapters[m.dataChapterId!]} flipped={!!flipped[id]} onToggle={()=>setFlipped(f=>({...f,[id]:!f[id]}))}/>{edit?.editing && <div className="source-card-edit"><select aria-label={`Change metric ${i+1}`} value={`${m.dataChapterId}:${m.metricId}`} onChange={e=>{const [dataChapterId,metricId]=e.target.value.split(':');edit.set([...path,'metrics',(chapter.metrics ?? []).indexOf(m)],{...m,dataChapterId,metricId});}}>{Object.entries(model.chapters).flatMap(([cid,d])=>Object.keys(d.total).filter(k=>k!=='n'&&!k.includes('__')&&d.total[k]!=null).map(k=><option key={`${cid}:${k}`} value={`${cid}:${k}`}>{cid} · {k}</option>))}</select><button className="icon-button" aria-label={`Remove metric ${m.label}`} onClick={()=>edit.set([...path,'metrics'],chapter.metrics?.filter(x=>x!==m))}><Trash2 size={12}/></button></div>}</div>;}}/>
+  </Slot>
+  <nav className="source-tools" data-export="omit" aria-label="Chapter evidence navigation"><label><Search size={14}/><input aria-label="Search chapter evidence" placeholder="Search this chapter…" value={query} onChange={e=>setQuery(e.target.value)}/></label><select aria-label="Jump to source section" value="" onChange={e=>document.getElementById(`${chapter.id}-${e.target.value}`)?.scrollIntoView({behavior:'smooth',block:'start'})}><option value="">Explore this chapter</option>{sections.map(s=><option key={s.id} value={s.id}>{s.title}</option>)}</select>{edit?.editing && <button className="button" onClick={addSection}><Plus size={14}/>Add section</button>}</nav>
+  {!sections.length && <p className="empty-state">No matching sections.</p>}
+  {sections.map(s=><section key={s.id} id={`${chapter.id}-${s.id}`} className="source-section"><header className="source-section-head"><span className="source-section-index">{String(s.index+1).padStart(2,'0')}</span><EditableText path={[...path,'sections',s.index,'title']} value={s.title} as="h2"/>{edit?.editing && <div><AddReportElement model={model} chapterId={chapter.id} sectionId={s.id}/><button className="icon-button" aria-label={`Delete section ${s.title}`} onClick={()=>edit.set([...path,'sections'],chapter.sections?.filter(x=>x.id!==s.id))}><Trash2 size={14}/></button></div>}</header>{s.html && <SourceContent html={s.html} model={model} chapterId={chapter.id} path={[...path,'sections',s.index,'html']} blocks={s.blocks}/>}{s.blocks?.filter(b=>!s.html.includes(`data-report-block="${b.id}"`)).map(block=>{const i=s.blocks!.indexOf(block);return <ReportEvidence key={block.id} block={block} chapterId={chapter.id} model={model} path={[...path,'sections',s.index,'blocks',i]}/>;})}</section>)}
+  <details className="cr-source"><summary>Reporting scope & data audit</summary><EditableText path={[...path,'scopeNote']} value={chapter.scopeNote} as="p"/><p>{model.dataAudit?.basis}</p>{model.dataAudit && <><p>Audit completed {new Date(model.dataAudit.checkedAt).toLocaleDateString('en-IN')}.</p><ul>{model.dataAudit.corrections.map((c,i)=><li key={i}>{c}</li>)}</ul></>}<p>Supplied chapter: {chapter.filename}. Original source versions are preserved in the report backup.</p></details>
+ </section>;
+}

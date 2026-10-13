@@ -1,0 +1,51 @@
+import {createElement,useMemo,useRef,useState,type ReactNode} from 'react';
+import {Database,Download,Maximize2,RotateCcw,Table2,Trash2,ZoomIn,ZoomOut} from 'lucide-react';
+import type {ReportModel,ReportEvidenceBlock} from '../../../report/model';
+import {exportReportCSV} from '../../../report/csv';
+import {useEdit} from './editing';
+import {useRecordDrilldown} from './RecordDrilldown';
+import {ReportEvidence} from './ReportEvidence';
+const sourceFor:Record<string,string>={overview:'conversion-funnel','sales-performance':'revenue-performance','class-performance':'sessions','instructor-performance':'sessions','lapsed-churned':'lapsed','format-comparisons':'sessions','cancellations-discounts':'late-cancellations','studio-overview':'sessions','lead-performance':'leads','member-behaviour':'attendance'};
+const sourceKeys:Record<string,string>={'conversion-funnel':'new','revenue-performance':'sales',sessions:'sessions',lapsed:'lapsed','late-cancellations':'bookings',leads:'leads',attendance:'checkins'};
+function datasetFor(element:Element,chapterId:string){
+ const dataset=element.getAttribute('data-source-dataset') || element.querySelector('[data-source-dataset]')?.getAttribute('data-source-dataset');
+ if(dataset)return Object.entries(sourceKeys).find(([,key])=>key===dataset)?.[0] || dataset;
+ const text=(element.querySelector('figcaption')?.textContent || '')+' '+(element.querySelector('tr')?.textContent || '');
+ if(/lead|pipeline|CRM/i.test(text))return 'leads';
+ if(/newcomer|first.visit|conversion|second.visit/i.test(text))return 'conversion-funnel';
+ if(/cash|sales|VAT|receipt|payment method|discount code|package sold/i.test(text))return 'revenue-performance';
+ if(/check.in|member attendance|visits per/i.test(text))return 'attendance';
+ if(/expiry|lapsed|churn/i.test(text))return 'lapsed';
+ if(chapterId==='cancellations-discounts')return /booking|no.show/i.test(text)?'late-cancellations':/discount/i.test(text)?'revenue-performance':'sessions';
+ return sourceFor[chapterId];
+}
+const fieldFor=(text:string)=>/trainer|instructor/i.test(text)?'trainer':/payment/i.test(text)?'payment_method':/associate|salesperson|sold by/i.test(text)?'associate':/format|class format/i.test(text)?'format':/^day$|weekday/i.test(text)?'day':/start|hour|time/i.test(text)?'time':/category/i.test(text)?'category':/product|plan/i.test(text)?'product':/channel|source/i.test(text)?'source':/stage/i.test(text)?'stage':/status/i.test(text)?'status':/member|community/i.test(text)?'member':undefined;
+function tableRows(table:Element){const rows=Array.from(table.querySelectorAll('tr')).map(r=>Array.from(r.querySelectorAll('th,td')).map(c=>c.textContent?.trim() || ''));const columns=rows.shift() ?? [];return rows.map(r=>Object.fromEntries(r.map((v,i)=>[columns[i] || `Column ${i+1}`,v])));}
+function SourceFigure({element,model,chapterId,onEdit}:{element:Element;model:ReportModel;chapterId:string;onEdit:(id:string,text:string,remove?:boolean)=>void}){
+ const ref=useRef<HTMLElement>(null),[zoom,setZoom]=useState(1),[data,setData]=useState(false),[hover,setHover]=useState(''),edit=useEdit(),drill=useRecordDrilldown();
+ const svg=element.querySelector('svg'),caption=element.querySelector('figcaption')?.textContent || 'Source chart',note=element.querySelector('.sr-cnote')?.textContent;
+ const table=element.parentElement?.querySelector('table');const rows=table?tableRows(table):[];
+ const cid=datasetFor(table || element,chapterId),field=fieldFor(caption);
+ function records(label?:string){drill?.({chapterId:cid,month:model.scope.month,...(label&&field?{group:label,table:{field,title:caption,deck:'Supplied evidence',columns:[],rows:[],total:null}}:{})});}
+ function labelFor(mark:Element){const x=Number(mark.getAttribute('cx') ?? mark.getAttribute('x')),y=Number(mark.getAttribute('cy') ?? mark.getAttribute('y'));const labels=Array.from(svg?.querySelectorAll('text') ?? []);const nearest=labels.map(t=>({text:t.textContent ?? '',d:Math.abs(Number(t.getAttribute('x'))-x)+Math.abs(Number(t.getAttribute('y'))-y)})).sort((a,b)=>a.d-b.d);return mark.querySelector('title')?.textContent || nearest[0]?.text || caption;}
+ return <figure ref={ref} className="source-authored-chart"><figcaption contentEditable={!!edit?.editing} suppressContentEditableWarning onBlur={e=>onEdit(element.getAttribute('data-source-element') || '',e.currentTarget.textContent || '')}>{caption}</figcaption><div className="source-evidence-controls" data-export="omit"><button className="icon-button" aria-label={`Zoom in ${caption}`} onClick={()=>setZoom(z=>Math.min(3,z+.25))}><ZoomIn size={14}/></button><button className="icon-button" aria-label={`Zoom out ${caption}`} onClick={()=>setZoom(z=>Math.max(1,z-.25))}><ZoomOut size={14}/></button><button className="icon-button" aria-label={`Reset ${caption}`} onClick={()=>{setZoom(1);setHover('');}}><RotateCcw size={14}/></button><button className="button" aria-expanded={data} onClick={()=>setData(v=>!v)}><Table2 size={14}/>Evidence</button><button className="button" onClick={()=>records()}><Database size={14}/>Source records</button><button className="icon-button" aria-label={`Expand ${caption}`} onClick={()=>void ref.current?.requestFullscreen?.().catch(()=>{})}><Maximize2 size={14}/></button><button className="button" onClick={()=>{if(rows.length)exportReportCSV(caption,rows,model);else{const url=URL.createObjectURL(new Blob([svg?.outerHTML || ''],{type:'image/svg+xml'}));const a=document.createElement('a');a.href=url;a.download='source-chart.svg';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}}}><Download size={14}/>{rows.length?'CSV':'SVG'}</button>{edit?.editing && <button className="icon-button" aria-label={`Delete ${caption}`} onClick={()=>onEdit(element.getAttribute('data-source-element') || '','',true)}><Trash2 size={14}/></button>}</div><div className="source-svg-view" style={{overflowX:'auto'}} onMouseMove={e=>{const mark=(e.target as Element).closest('rect,circle,path');if(mark)setHover(labelFor(mark));else setHover('');}} onClick={e=>{const mark=(e.target as Element).closest('rect,circle');if(mark)records();}}><div style={{width:`${zoom*100}%`}} dangerouslySetInnerHTML={{__html:svg?.outerHTML || ''}}/></div>{hover && <div className="source-chart-hover" role="status">{hover}</div>}{note && <p className="sr-cnote">{note}</p>}{data && <div className="source-authored-evidence">{table?<div className="table-scroll" dangerouslySetInnerHTML={{__html:table.outerHTML}}/>:<p>The related source figures and analysis are retained in this section. Use Source records to inspect the app’s September dataset; the reconciled evidence register follows the authored chapter.</p>}</div>}</figure>;
+}
+/** Preserve the complete authored document, adding native interaction at its actual elements. */
+export function SourceContent({html,path,chapterId,model,blocks}:{html:string;path:(string|number)[];chapterId:string;model:ReportModel;blocks?:ReportEvidenceBlock[]}){
+ const edit=useEdit(),drill=useRecordDrilldown();
+ const doc=useMemo(()=>new DOMParser().parseFromString(html,'text/html'),[html]);
+ function update(id:string,text:string,remove=false){if(!edit?.editing)return;const copy=new DOMParser().parseFromString(html,'text/html');const node=copy.querySelector(`[data-source-element="${id}"]`);if(!node)return;if(remove)node.remove();else if(node.tagName==='FIGURE'){const caption=node.querySelector('figcaption');if(caption)caption.textContent=text;}else node.textContent=text;edit.set(path,copy.body.innerHTML);}
+ function render(node:Node,key:string):ReactNode{
+  if(node.nodeType===Node.TEXT_NODE)return /^\s*$/.test(node.textContent || '') && /^(TABLE|THEAD|TBODY|TR|TFOOT)$/.test(node.parentElement?.tagName || '')?null:node.textContent;
+  if(node.nodeType!==Node.ELEMENT_NODE)return null;
+  const el=node as Element,tag=el.tagName.toLowerCase(),id=el.getAttribute('data-source-element');
+  if(tag==='figure')return <SourceFigure key={key} element={el} model={model} chapterId={chapterId} onEdit={update}/>;
+  const blockId=el.getAttribute('data-report-block');if(blockId){const i=blocks?.findIndex(b=>b.id===blockId) ?? -1;return i>=0?<ReportEvidence key={key} block={blocks![i]} path={[...path.slice(0,-1),'blocks',i]} chapterId={chapterId} model={model}/>:null;}
+  const props:Record<string,unknown>={key};for(const a of Array.from(el.attributes)){if(a.name==='class')props.className=a.value;else if(a.name==='style'||/^on/i.test(a.name))continue;else props[a.name]=a.value;}
+  if(tag==='table'){const cid=datasetFor(el,chapterId),headers=Array.from(el.querySelectorAll('tr:first-child th')).map(h=>h.textContent || ''),field=fieldFor(headers[0] || '');props.onClick=(e:React.MouseEvent)=>{if(edit?.editing)return;const row=(e.target as Element).closest('tr');if(!row||row.parentElement?.tagName==='THEAD')return;const group=row.querySelector('td,th')?.textContent?.trim();drill?.({chapterId:cid,month:model.scope.month,...(group&&field?{group,table:{field,title:'Supplied source table',deck:'',columns:[],rows:[],total:null}}:{})});};return <div key={key} className="source-authored-table"><div className="source-evidence-controls" data-export="omit"><button className="button" onClick={()=>drill?.({chapterId:cid,month:model.scope.month})}><Database size={14}/>Source records</button><button className="button" onClick={()=>exportReportCSV('supplied-evidence',tableRows(el),model)}><Download size={14}/>CSV</button></div>{createElement(tag,props,Array.from(el.childNodes).map((n,i)=>render(n,`${key}-${i}`)))}</div>;}
+  if(edit?.editing && id && ['p','h3','h4','li','td','th'].includes(tag)){props.contentEditable=true;props.suppressContentEditableWarning=true;props.onBlur=(e:React.FocusEvent<HTMLElement>)=>update(id,e.currentTarget.textContent || '');props.onKeyDown=(e:React.KeyboardEvent)=>{if(e.altKey && e.key==='Backspace'){e.preventDefault();update(id,'',true);}};props.title='Edit this element; Alt+Backspace deletes it';}
+  if(['br','hr','img','input','wbr','col','area','base','embed','link','meta','param','source','track'].includes(tag))return createElement(tag,props);
+  return createElement(tag,props,Array.from(el.childNodes).map((n,i)=>render(n,`${key}-${i}`)));
+ }
+ return <div className="source-content source-authored-content">{Array.from(doc.body.childNodes).map((n,i)=>render(n,String(i)))}</div>;
+}

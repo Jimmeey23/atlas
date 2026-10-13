@@ -30,6 +30,15 @@ function validate(report) {
 
 const plainRecord = value => value == null || (typeof value === "object" && !Array.isArray(value));
 function validateExtras(report) {
+  if (report.importedChapters != null) {
+    if (!Array.isArray(report.importedChapters) || report.importedChapters.length > 35) throw fail("Source chapters are malformed.");
+    for (const chapter of report.importedChapters) {
+      if (!chapter || ["id", "title", "filename", "sha256"].some(k => typeof chapter[k] !== "string") || !/^[a-z0-9-]+$/.test(chapter.id)) throw fail("Source chapter metadata is malformed.");
+      if (chapter.sections != null && (!Array.isArray(chapter.sections) || chapter.sections.some(s => !s || typeof s.id !== "string" || typeof s.title !== "string" || typeof s.html !== "string" || /<(script|style|iframe|object|embed|form)\b|\son\w+\s*=|javascript:/i.test(s.html)))) throw fail("Source chapter evidence is malformed.");
+      if(chapter.sections?.some(s=>s.blocks && (!Array.isArray(s.blocks) || s.blocks.some(b=>!b || !['text','chart','table'].includes(b.kind) || typeof b.id!=='string' || typeof b.title!=='string' || b.text!=null && typeof b.text!=='string' || b.rows!=null && !Array.isArray(b.rows)))))throw fail('Report elements are malformed.');
+      if (chapter.metrics != null && (!Array.isArray(chapter.metrics) || chapter.metrics.some(m => !m || ["label", "value", "note"].some(k => typeof m[k] !== "string")))) throw fail("Source chapter metrics are malformed.");
+    }
+  }
   if (!plainRecord(report.replacements) || !plainRecord(report.presenterNotes) || !plainRecord(report.speakerNotes))
     throw fail("Report edits are malformed.");
   for (const [key, spec] of Object.entries(report.replacements ?? {}))
@@ -85,14 +94,22 @@ export function reportRoutes(app, store, cloud, env = process.env) {
       const report = await store.read(key);
       if (!report) return null;
       return { id: report.id, scope: report.scope, builtAt: report.builtAt, savedAt: report.savedAt, editedAt: report.editedAt,
-        title: report.customization?.title, pinned: pinned.has(report.id),
-        aiChapters: Object.values(report.narratives).filter(n => n.generated).length, chapterCount: Object.keys(report.narratives).length };
+        title: report.customization?.title, pinned: pinned.has(report.id), imported: !!report.importedChapters?.length,
+        aiChapters: report.importedChapters?.length ? 0 : Object.values(report.narratives).filter(n => n.generated).length, chapterCount: report.importedChapters?.length || Object.keys(report.narratives).length };
     }));
     return listed.filter(Boolean);
   }));
   app.get("/api/reports/:id", route(async req => {
     const report = await readReport(req.params.id);
     return { ...report, pinned: (await pins()).has(report.id) };
+  }));
+  app.get('/api/reports/:id/records/:source',route(async req=>{
+    const report=await readReport(req.params.id),source=req.params.source,month=String(req.query.month || report.scope.month);
+    if(!/^[a-z0-9-]+$/.test(source) || !/^\d{4}-\d{2}$/.test(month))throw fail('Invalid evidence selection.');
+    if(month===report.scope.month && report.sourceRecords?.[source])return report.sourceRecords[source];
+    const key=report.recordSnapshots?.[source]?.[month];
+    if(!key || !key.startsWith(`.floor/report-evidence/${report.id}/`))throw fail('No frozen evidence exists for this period.',404);
+    const snapshot=await store.read(key);if(!snapshot)throw fail('Frozen evidence snapshot was not found.',404);return snapshot;
   }));
   app.post("/api/reports", route(async req => {
     const report = req.body;
@@ -112,7 +129,7 @@ export function reportRoutes(app, store, cloud, env = process.env) {
     const body = req.body ?? {};
     const next = { ...current, narratives: body.narratives ?? current.narratives, customization: body.customization ?? current.customization,
       replacements: body.replacements ?? current.replacements, presenterNotes: body.presenterNotes ?? current.presenterNotes,
-      speakerNotes: body.speakerNotes ?? current.speakerNotes, editedAt: new Date().toISOString() };
+      speakerNotes: body.speakerNotes ?? current.speakerNotes, importedChapters: body.importedChapters ?? current.importedChapters, editedAt: new Date().toISOString() };
     validate(next);
     await store.write(keyOf(current.id), next);
     return { ...next, pinned: (await pins()).has(current.id) };

@@ -14,6 +14,7 @@ import { useStore } from "../../state/store";
 import { themeOptions } from "../../state/preferences";
 import { monthLabel } from "../../report/compute";
 import { openReportPage } from "../../report/export";
+import { ImportedReport } from "./ImportedReport";
 import { reportOptions } from "../../report/options";
 import type { ReportModel, ReportCustomization } from "../../report/model";
 import { KEEP_RECENT, listReports, loadReport, pinReport } from "../../report/storage";
@@ -236,7 +237,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
             <div className="rs-ready-head"><span className="rs-ready-icon"><CheckCircle2 size={18}/></span><div><b>{model.customization?.title || "Monthly performance report"}</b><small>{model.scope.studio} · {monthLabel(model.scope.month)} · {model.savedAt ? `saved ${when(model.savedAt)}` : status === "stopped" ? "partial, unsaved" : "unsaved"}</small></div></div>
             <button className="button primary rs-cta" disabled={busy} onClick={() => void open(model)}>{opening ? <Loader2 size={15} className="rb2-spin"/> : <ExternalLink size={15}/>}Open report in new tab</button>
             <div className="rs-ready-actions">
-              <button className="button" disabled={busy} title="Writes failed, missing or changed chapters and reuses unchanged analysis" onClick={() => void startReport({ regenerate: true })}><RefreshCw size={14} />Rewrite insights</button>
+              {!model.importedChapters?.length && <button className="button" disabled={busy} title="Writes failed, missing or changed chapters and reuses unchanged analysis" onClick={() => void startReport({ regenerate: true })}><RefreshCw size={14} />Rewrite insights</button>}
               {!model.id && <button className="button" disabled={busy} onClick={() => void persistReport(model)}><Database size={14}/>{status === "stopped" ? "Save partial" : "Save"}</button>}
               <button className="button" disabled={busy} onClick={() => job.set({ model: null, status: "idle", narrativeError: "", error: "" })}><FilePlus2 size={14}/>New</button>
             </div>
@@ -253,7 +254,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
               <ul>{(items as typeof recent).map(item => <li key={item.id} data-current={item.id === model?.id}>
                 <button className="rs-library-open" onClick={() => void open(item.id)} title="Open in new tab">
                   <span className="rs-library-icon"><FileText size={15}/></span>
-                  <span><b>{item.scope.studio} · {monthLabel(item.scope.month)}</b><small>{item.title && !/^monthly performance report$/i.test(item.title) ? `${item.title} · ` : ""}{when(item.editedAt || item.savedAt)}{item.editedAt ? " · edited" : ""} · {item.aiChapters}/{item.chapterCount ?? 0} AI</small></span>
+                  <span><b>{item.scope.studio} · {monthLabel(item.scope.month)}</b><small>{item.title && !/^monthly performance report$/i.test(item.title) ? `${item.title} · ` : ""}{when(item.editedAt || item.savedAt)}{item.editedAt ? " · edited" : ""} · {item.imported ? `${item.chapterCount} source chapters` : `${item.aiChapters}/${item.chapterCount ?? 0} AI`}</small></span>
                   <ArrowUpRight size={14}/>
                 </button>
                 <button className="icon-button" aria-label={item.pinned ? "Unpin report" : "Pin report"} title={item.pinned ? "Unpin" : "Pin to keep"} aria-pressed={!!item.pinned} onClick={() => void togglePin(item.id, !item.pinned)}>{item.pinned ? <PinOff size={14}/> : <Pin size={14}/>}</button>
@@ -266,7 +267,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
         <header><div><span className="eyebrow">Your studio review</span><h2>{model.scope.studio} · {monthLabel(model.scope.month)}</h2><p>{running ? "Chapters appear as their analysis completes." : "Frozen monthly evidence · open a metric or table row to examine its source."}</p></div><button className="button" onClick={() => void open(model)} disabled={busy}><ExternalLink size={14}/>Open reader</button></header>
         {(studio !== model.scope.studio || month !== model.scope.month) && <p className="notice">This preview is {model.scope.studio} · {monthLabel(model.scope.month)}. Generate a report to apply the newly selected scope.</p>}
         <article className="report-doc r2 deck deck-doc cr-inline" data-report-theme={model.customization?.theme || "light"} data-accent={reportOptions(model.customization).accent}>
-          <ContinuousReport model={model} tabs={previewTabs} ranked={previewFindings} onNavigate={id => document.getElementById(`chapter-${id}`)?.scrollIntoView({ block: "start" })}/>
+          {model.importedChapters?.length ? <ImportedReport model={model}/> : <ContinuousReport model={model} tabs={previewTabs} ranked={previewFindings} onNavigate={id => document.getElementById(`chapter-${id}`)?.scrollIntoView({ block: "start" })}/>}
         </article>
       </section>}
     </div>

@@ -1,6 +1,6 @@
 import { useRef, type CSSProperties } from "react";
 import { ArrowDownRight, ArrowUpRight, Minus, RotateCcw, Target, ChartColumnBig } from "lucide-react";
-import { Sparkline } from "../../MetricCard";
+import { Sparkline } from "../../Sparkline";
 import { definition, reportFmt as fmt, reportDelta as delta } from "../../../report/definitions";
 import { monthLabel, monthShort } from "../../../report/period";
 import { currentSnapshotMetrics } from "../../../semantics/evidence";

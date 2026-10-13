@@ -53,7 +53,7 @@ const SUGGESTIONS: Record<string, string[]> = {
  * One replaceable component. Admins get an AI button that rewrites only this
  * component from its own section's figures; the rest of the report is untouched.
  */
-export function Slot({ id, tab, section, kind, describe, children }: { id: string; tab: string; section: DeckSection; kind: keyof typeof SUGGESTIONS; describe: string; children: ReactNode }) {
+export function Slot({ id, tab, section, kind, describe, children, onRecord }: { onRecord?: (label?:string)=>void; id: string; tab: string; section: DeckSection; kind: keyof typeof SUGGESTIONS; describe: string; children: ReactNode }) {
   const edit = useEdit();
   const replacement = edit?.model.replacements?.[id];
   const [open, setOpen] = useState(false);
@@ -78,7 +78,7 @@ export function Slot({ id, tab, section, kind, describe, children }: { id: strin
       {replacement && edit.editing && <button type="button" className="deck-slot-button" title="Restore the original component" aria-label="Restore original component" onClick={() => edit.replace(id, null)}><Undo2 size={13}/></button>}
       <button type="button" className="deck-slot-button deck-ai" title={`Replace this ${describe} with AI`} aria-label={`Replace ${describe} with AI`} aria-expanded={open} onClick={() => setOpen(!open)}><Sparkles size={13}/></button>
     </div>}
-    {replacement ? <ComponentRenderer spec={replacement} /> : children}
+    {replacement ? <ComponentRenderer spec={replacement} onRecord={onRecord} model={edit?.model} /> : children}
     {open && <div className="deck-ai-panel" role="dialog" aria-label={`AI replacement for ${describe}`}>
       <header><Wand2 size={15}/><div><b>Replace this {describe}</b><small>Only this component changes. The AI reads this section’s frozen figures.</small></div>
         <button className="icon-button" aria-label="Close" onClick={() => { abort.current?.abort(); setOpen(false); }}><X size={15}/></button></header>
@@ -89,7 +89,7 @@ export function Slot({ id, tab, section, kind, describe, children }: { id: strin
         {draft && <button className="button" onClick={() => { edit?.replace(id, draft); setDraft(null); setOpen(false); }}><Check size={14}/>Use this</button>}
       </div>
       {error && <p className="notice" role="alert">{error}</p>}
-      {draft && <div className="deck-ai-preview"><span className="deck-eyebrow">Preview</span><ComponentRenderer spec={draft} /></div>}
+      {draft && <div className="deck-ai-preview"><span className="deck-eyebrow">Preview</span><ComponentRenderer spec={draft} onRecord={onRecord} model={edit?.model} /></div>}
     </div>}
   </div>;
 }

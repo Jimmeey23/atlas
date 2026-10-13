@@ -14,6 +14,7 @@ import { ReferenceHero } from './ReportChrome';
 import { CriterionEvidence, EvidenceBlock, TrendEvidence } from './ReportEvidence';
 import { InsightBlock, lensOf } from './Insight';
 import { ActionPlan, AtAGlance } from './Glance';
+import { SourceReportChapter } from './deck/SourceReportChapter';
 
 const PRIORITY_METRICS: Record<string, string[]> = {
   'revenue-performance': ['gross_revenue', 'net_revenue', 'transactions', 'aov', 'membership_rev_share'],
@@ -34,6 +35,7 @@ const PRIORITY_METRICS: Record<string, string[]> = {
 export const ReportDocument = forwardRef<HTMLElement, { model: ReportModel; theme: 'light' | 'dark'; pending?: string[] }>(
   function ReportDocument({ model, theme, pending }, ref) {
     const options = reportOptions(model.customization);
+    if (model.importedChapters?.length) return <article ref={ref} className="report-doc r2 deck deck-doc" data-report-theme={theme} data-accent={options.accent}>{model.importedChapters.map(c => <SourceReportChapter key={c.id} model={model} chapterId={c.id}/>)}</article>;
     const adaptive = options.layout === "adaptive";
     const built = builtLabel(model.builtAt);
     const ordered = model.customization ? model.customization.chapterIds.flatMap(id => chapters.find(c => c.id === id) ?? []) : chapters;

@@ -616,12 +616,12 @@ export function intelligenceRoutes(
     return { ...result, cacheStatus };
   }));
   /** Structured JSON from the report model, for admin component replacement and talk tracks. */
-  async function reportJSON(req, name, instructions, schema, maxTokens = 8000) {
+  async function reportJSON(req, name, instructions, schema, maxTokens = 8000, contextLimit = 60000) {
     await provider();
     if (!ai) throw new Error("OpenAI is not configured. Add a key in Agent settings to use AI report tools.");
     const { context, prompt } = req.body ?? {};
-    if (typeof context !== "string" || !context.trim() || context.length > 60000)
-      throw new Error("Report section context up to 60,000 characters is required.");
+    if (typeof context !== "string" || !context.trim() || context.length > contextLimit)
+      throw new Error("Report context exceeds the supported editing budget.");
     if (prompt != null && (typeof prompt !== "string" || prompt.length > 2000)) throw new Error("Describe the change in at most 2,000 characters.");
     const started = Date.now();
     // Genuine throttling is retried with the provider's hint; an empty account fails at once.
@@ -666,6 +666,22 @@ export function intelligenceRoutes(
     },
     required: ["kind", "title", "subtitle", "body", "tone", "items", "chart", "columns", "rows", "bullets", "left", "right"],
   };
+  app.post("/api/reports/edit-plan", route(async req => {
+    requireAdmin(req);
+    const nullableString={type:['string','null']};
+    const blockSchema={type:['object','null'],additionalProperties:false,properties:{
+      id:str,kind:{type:'string',enum:['text','chart','table']},title:str,text:nullableString,description:nullableString,
+      source:nullableString,dataChapterId:nullableString,metricId:nullableString,groupField:nullableString,
+      columns:{type:['array','null'],items:str},rows:{type:['array','null'],items:{type:'object',additionalProperties:true}},chartType:{type:['string','null'],enum:['bar','line','area',null]},
+    },required:['id','kind','title','text','description','source','dataChapterId','metricId','groupField','columns','rows','chartType']};
+    // Structured row dictionaries cannot have open-ended keys in strict provider schemas.
+    // Return evidence references instead; the client resolves frozen dataset rows.
+    blockSchema.properties.rows={type:['array','null'],items:{type:'object',additionalProperties:false,properties:{dataset:str,group:str},required:['dataset','group']}};
+    const schema={type:'object',additionalProperties:false,properties:{summary:str,operations:{type:'array',items:{type:'object',additionalProperties:false,properties:{action:{type:'string',enum:['set','add','replace','delete']},chapterId:str,sectionId:str,blockId:str,element:str,text:str,block:blockSchema},required:['action','chapterId','sectionId','blockId','element','text','block']}}},required:['summary','operations']};
+    const {result,usage}=await reportJSON(req,'report_edit_plan',
+      "You edit the COMPLETE monthly report. The context includes every visible element, all chapters and governed datasets. Return up to 50 operations using exact stable chapter/section/block IDs. Source sections contain sourceText and sourceElementIds for the complete authored prose and evidence. Use a sourceElementId as blockId to edit, delete or replace an original paragraph, figure, table or list item. Add after a source element by setting its blockId. Never delete the supplied prose merely to add a table. For the report title/subtitle use empty chapterId and element=title/subtitle. set edits title, summary, scopeNote, or a block's text/description; delete removes a chapter (empty sectionId), section (empty blockId), or block. add with element=chapter and a new chapterId creates a chapter whose title is text; add with empty sectionId adds a section with title=text and an optional block; add with sectionId and empty blockId appends a block. replace targets an existing block. For metric cards use element=metric:<metricId>, text=<dataChapterId> to add or set a governed metric reference, or delete to remove it. For chart/table blocks set dataChapterId to a dataset ID from context, groupField to a known group field or month for history, columns to actual metric/label fields. Leave rows null: the client resolves actual frozen dataset values. Never write or manufacture numbers in tables/charts or metric values. Keep observed and modeled figures distinct. No HTML, scripts or middle-of-sentence bold styling. Preserve the September 2026 Supreme HQ scope. Use null for optional block fields and block=null for text-only operations. The summary describes the proposed changes, not an assertion they were saved.",schema,12000,1000000);
+    return {...result,usage};
+  }));
   app.post("/api/reports/component", route(async (req) => {
     requireAdmin(req);
     const { result, usage } = await reportJSON(req, "report_component",
