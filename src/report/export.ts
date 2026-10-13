@@ -64,8 +64,8 @@ export async function serialiseReport(element: HTMLElement, model: ReportModel) 
     img.removeAttribute('loading');
   }));
   // Background photographs must travel with the standalone file too.
-  const originals=Array.from(element.querySelectorAll<HTMLElement>('.source-hero[data-photo]'));
-  await Promise.all(Array.from(clone.querySelectorAll<HTMLElement>('.source-hero[data-photo]')).map(async (hero,i)=>{
+  const originals=Array.from(element.querySelectorAll<HTMLElement>('.source-hero[data-photo], .chapter-photo-hero'));
+  await Promise.all(Array.from(clone.querySelectorAll<HTMLElement>('.source-hero[data-photo], .chapter-photo-hero')).map(async (hero,i)=>{
     let background=getComputedStyle(originals[i]).backgroundImage;
     const urls=[...background.matchAll(/url\(["']?([^"')]+)["']?\)/g)];
     for(const match of urls){

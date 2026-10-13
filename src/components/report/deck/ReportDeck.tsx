@@ -1,3 +1,4 @@
+import { chapterHeroStyle } from "./chapterHero";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Mic, Lock, LockOpen, PencilLine, Save, Undo2, Pin, PinOff, Download, Printer, Maximize, Minimize, Palette, Loader2, KeyRound, X, TriangleAlert, Gauge, Lightbulb, ChartLine, Database, ListChecks, BookOpen, CircleDot, Medal, Telescope, Table2 } from "lucide-react";
 import logo from "../../../assets/report/logo.png";
@@ -215,7 +216,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
       </header>
       <div className="deck-body">
         <main className="deck-main" ref={main} id="main">
-          {!continuous && <div className="deck-page-head" data-export="omit">
+          {!continuous && <div className={`deck-page-head${tab.id !== "overview" && !model.importedChapters?.length ? " chapter-photo-hero" : ""}`} style={tab.id !== "overview" && !model.importedChapters?.length ? chapterHeroStyle(Math.max(0, tabs.findIndex(t => t.id === tab.id) - 1)) : undefined} data-export="omit">
             {page.section === "cover" ? <span className="deck-eyebrow">Report overview</span>
               : <div><span className="deck-eyebrow">{tab.spec?.eyebrow ?? "Report overview"} · {sectionMeta(page.section).display}</span><h1>{tab.id === "overview" ? tab.spec?.title ?? tab.title : tab.title}</h1>{tab.spec?.deck && <p>{tab.spec.deck}</p>}</div>}
             <div className="deck-sections segmented" role="tablist" aria-label="Sections">

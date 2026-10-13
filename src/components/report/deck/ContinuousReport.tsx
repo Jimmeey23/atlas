@@ -1,3 +1,4 @@
+import { chapterHeroStyle } from "./chapterHero";
 import { useState } from "react";
 import type { ReactNode } from "react";
 import type { ReportModel } from "../../../report/model";
@@ -37,7 +38,7 @@ function ReportChapter({ model, tab, number }: { model: ReportModel; tab: DeckTa
   const evidence = curatedBreakdowns(data?.groups ?? [], 1)[0];
   return <RecordDrilldownProvider model={model} chapterId={tab.chapter}>
     <section className="cr-chapter r-section" id={`chapter-${tab.id}`} data-chapter={tab.chapter}>
-      <header className="cr-chapter-head"><span className="cr-number">{String(number).padStart(2, "0")}</span>
+      <header className="cr-chapter-head chapter-photo-hero" data-photo="chapter" style={chapterHeroStyle(number - 1)}><span className="cr-number">{String(number).padStart(2, "0")}</span>
         <div><span className="deck-eyebrow">{tab.spec?.eyebrow || "Leadership review"}</span><h2>{tab.title}</h2><p>{tab.spec?.deck}</p></div>
         <span className="cr-basis">{tab.spec?.network ? "Network scope" : "Selected studio"}<small>{data ? `${data.n.toLocaleString("en-IN")} contributing records` : "Cross-chapter synthesis"}</small></span>
       </header>
