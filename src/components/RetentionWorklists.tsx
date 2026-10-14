@@ -6,6 +6,7 @@ import { today } from "../data/analytics";
 import { useStore } from "../state/store";
 import {
   reasons,
+  eligibleIntervention,
   episodeKey,
   followupFor,
   retentionSQL,
@@ -95,7 +96,7 @@ export function RetentionWorklists({ version }: { version: number }) {
   }, [sourceVersion, filters, transient, asOf]);
   const classified = useMemo(
     () =>
-      rows.map((row) => ({
+      rows.filter(eligibleIntervention).map((row) => ({
         row,
         reasons: {
           ...reasons(row, asOf, horizon, gap),
@@ -236,7 +237,7 @@ export function RetentionWorklists({ version }: { version: number }) {
       <div className="register-head">
         <div>
           <h2>Member follow-ups</h2>
-          <p>Clear reasons. Relevant context. One next step.</p>
+          <p>Paid access only. Complimentary, zero-value, 2-for-1 and intro access excluded.</p>
         </div>
         <button
           className="button"
@@ -454,6 +455,7 @@ export function RetentionWorklists({ version }: { version: number }) {
       <details className="worklist-method">
         <summary>Eligibility and evidence</summary>
         <p>
+          All follow-up lists exclude complimentary, zero-value, 2-for-1 and intro access.
           Renewals include paid ongoing access (multi-session packages or
           memberships), excluding complimentary, introductory and single-session
           products. The representative membership prioritises current paid

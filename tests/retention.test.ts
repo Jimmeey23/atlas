@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   reasons,
+  eligibleIntervention,
   daysBetween,
   episodeKey,
   followupFor,
@@ -154,4 +155,35 @@ test("older closures reopen only after an evidenced later term or attendance eve
       .status,
     "Not started",
   );
+});
+
+test("paid interventions exclude promotional and zero-value access across worklists", () => {
+  for (const product of ["Complimentary Membership", "Intro Pack", "2 for 1 Pack", "2-for-1 Membership", "2:1 Pack", "2/1 Pack", "Two for One Pack"]) {
+    const row = { ...active, product };
+    assert.equal(eligibleIntervention(row), false, product);
+    assert.equal(reasons(row, asOf).unused, undefined, product);
+    assert.equal(reasons(row, asOf).renewal, undefined, product);
+  }
+  for (const membership_amount of [0, null, -1]) {
+    assert.equal(eligibleIntervention({ ...active, membership_amount }), false);
+  }
+  assert.equal(eligibleIntervention(active), true);
+});
+
+test("SQL intervention filter matches paid-access eligibility", async () => {
+  const { DuckDBInstance } = await import("@duckdb/node-api");
+  const { paidInterventionSQL } = await import("../src/data/retention.ts");
+  const db = await DuckDBInstance.create(":memory:");
+  const connection = await db.connect();
+  try {
+    const result = await connection.runAndReadAll(`SELECT product FROM (VALUES
+      ('Regular Pack', 1000), ('Complimentary Membership', 1000),
+      ('Intro Pack', 1000), ('2 for 1 Pack', 1000), ('2-for-1 Pack', 1000),
+      ('2:1 Pack', 1000), ('2/1 Pack', 1000), ('Two for One Pack', 1000),
+      ('Zero-value Membership', 0), ('Unknown value', NULL)
+    ) AS access(product,revenue) WHERE ${paidInterventionSQL}`);
+    assert.deepEqual(result.getRowObjects().map(r => r.product), ['Regular Pack']);
+  } finally {
+    connection.closeSync();
+  }
 });

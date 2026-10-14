@@ -84,6 +84,13 @@ export const daysBetween = (a: unknown, b: unknown) => {
     86400000;
   return Number.isFinite(value) ? value : null;
 };
+// Keep promotional and unpaid access out of operational membership interventions.
+const excludedAccessPattern = "complimentary|free|intro|newcomer|2[[:space:]-]*(for|:)[[:space:]-]*1|2[[:space:]]*[-/][[:space:]]*1|two[[:space:]-]*for[[:space:]-]*one";
+export const paidInterventionSQL = `revenue>0 AND NOT regexp_matches(lower(COALESCE(product,'')), '${excludedAccessPattern}')`;
+export function eligibleIntervention(row: Row): boolean {
+  return Number(row.membership_amount) > 0 &&
+    !/complimentary|free|intro|newcomer|2[\s-]*(?:for|:)[\s-]*1|2\s*[-/]\s*1|two[\s-]*for[\s-]*one/i.test(String(row.product ?? ""));
+}
 export function reasons(
   row: Row,
   asOf: string,
@@ -104,14 +111,14 @@ export function reasons(
     expiry != null &&
     expiry >= 0;
   const ongoing =
-    Number(row.membership_amount) > 0 &&
+    eligibleIntervention(row) &&
     (Number(row.session_limit) > 1 ||
-      /membership|unlimited|u\/l|pack/i.test(String(row.product))) &&
-    !/complimentary|free|intro|newcomer/i.test(String(row.product));
+      /membership|unlimited|u\/l|pack/i.test(String(row.product)));
   if (current && ongoing && expiry! <= horizon)
     result.renewal = `Access ends ${row.end_date} · ${expiry} days remaining`;
   if (
     current &&
+    eligibleIntervention(row) &&
     Number(row.remaining) > 0 &&
     Number(row.session_limit) > 0 &&
     Number(row.remaining) <= Number(row.session_limit)
@@ -162,7 +169,7 @@ export function retentionSQL(
       CASE WHEN COUNT(gap) FILTER(WHERE gap>0 AND TRY_CAST(date AS DATE)>='${safeDate}'::DATE-INTERVAL 180 DAY)>=3 THEN MEDIAN(gap) FILTER(WHERE gap>0 AND TRY_CAST(date AS DATE)>='${safeDate}'::DATE-INTERVAL 180 DAY) END AS typical_gap
     FROM gaps GROUP BY member_id
   ), memberships AS (
-    SELECT * FROM lapsed WHERE member_id IS NOT NULL QUALIFY ROW_NUMBER() OVER(PARTITION BY member_id ORDER BY CASE WHEN status IN ('Active','New','Not Activated') AND start_date<='${safeDate}' AND end_date>='${safeDate}' AND revenue>0 AND (session_limit>1 OR regexp_matches(lower(product),'membership|unlimited|u/l|pack')) AND NOT regexp_matches(lower(product),'complimentary|free|intro|newcomer') THEN 0 ELSE 1 END,date DESC NULLS LAST,end_date DESC NULLS LAST,source_row DESC)=1
+    SELECT * FROM lapsed WHERE member_id IS NOT NULL AND ${paidInterventionSQL} QUALIFY ROW_NUMBER() OVER(PARTITION BY member_id ORDER BY CASE WHEN status IN ('Active','New','Not Activated') AND start_date<='${safeDate}' AND end_date>='${safeDate}' AND revenue>0 AND (session_limit>1 OR regexp_matches(lower(product),'membership|unlimited|u/l|pack')) AND NOT regexp_matches(lower(product),'complimentary|free|intro|newcomer') THEN 0 ELSE 1 END,date DESC NULLS LAST,end_date DESC NULLS LAST,source_row DESC)=1
   ), people AS (
     SELECT * FROM new WHERE member_id IS NOT NULL AND NOT imported QUALIFY ROW_NUMBER() OVER(PARTITION BY member_id ORDER BY date DESC NULLS LAST,source_row DESC)=1
   ), base AS (

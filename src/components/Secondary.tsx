@@ -1,3 +1,4 @@
+import { paidInterventionSQL } from "../data/retention";
 import { InstructorName } from "./InstructorAvatar";
 import { useEffect, useState } from "react";
 import { ChevronDown, Download, ExternalLink } from "lucide-react";
@@ -52,7 +53,7 @@ export function Secondary({
     if (!open) return;
     let active = true;
     let predicate = "";
-    if (tab === 6 && index === 1) predicate = "completed=0";
+    if (tab === 6 && index === 1) predicate = `completed=0 AND ${paidInterventionSQL}`;
     if (tab === 6 && index === 2) predicate = "freeze_count>0";
     if (tab === 6 && index === 3) predicate = "days_absent>21";
     if (tab === 7 && index === 1) predicate = "no_show";

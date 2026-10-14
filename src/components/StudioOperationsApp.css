@@ -599,3 +599,25 @@
   scrollbar-gutter: stable;
   overscroll-behavior: contain;
 }
+
+/* Schedule columns have different widths from the selectable performance grid. */
+.ops-workspace #ops-schedule-table th,
+.ops-workspace #ops-schedule-table td {
+  left: auto;
+  right: auto;
+  overflow: hidden;
+}
+.ops-workspace #ops-schedule-table tbody td {
+  position: static;
+}
+/* Narrative schedule evidence needs natural row height, including in compact density. */
+:root .ops-workspace #ops-schedule-table tr > :is(th, td) {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  padding-block: 12px !important;
+  line-height: 1.5 !important;
+  vertical-align: top !important;
+  white-space: normal !important;
+  text-overflow: clip;
+}
