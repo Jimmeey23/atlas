@@ -113,3 +113,16 @@ test("history requests are recognised and ignoreDates is read from the body", as
   assert.equal(elementSpec({ type: "table", sql: "x", ignoreDates: true }).ignoreDates, true);
   assert.equal(elementSpec({ type: "table", sql: "x" }).ignoreDates, false);
 });
+
+import { elementResultError } from '../src/semantics/element-spec.ts';
+test('element preview rejects empty results, invalid measures and misleading chart grains', () => {
+  const bar={type:'bar',sql:'SELECT 1',x:'month',series:['revenue']};
+  assert.match(elementResultError(bar,[])!,/no rows/);
+  assert.match(elementResultError(bar,[{month:'Sep',revenue:null}])!,/no measured values/);
+  assert.match(elementResultError(bar,[{month:'Sep',revenue:'not a number'}])!,/numeric/);
+  assert.equal(elementResultError(bar,[{month:'Sep',revenue:100},{month:'Oct',revenue:null}]),null);
+  assert.match(elementResultError({type:'kpi',sql:'SELECT 1',series:['n']},[{n:1},{n:2}])!,/exactly one/);
+  assert.match(elementResultError({...bar,type:'donut'},[{month:'Sep',revenue:-1}])!,/negative/);
+  assert.match(elementResultError({...bar,type:'donut'},[{month:'Sep',revenue:0}])!,/positive/);
+  assert.match(elementResultError({type:'pivot',sql:'SELECT 1',x:'month',group:'studio',value:'fill_rate'},[{month:'Sep',studio:'A',fill_rate:.5},{month:'Sep',studio:'A',fill_rate:.7}])!,/multiple rows per matrix cell/);
+});

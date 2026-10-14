@@ -1,0 +1,76 @@
+// UI fixture verification; never writes test data to the connected cloud workspace.
+import { chromium } from 'playwright';
+import assert from 'node:assert/strict';
+import { mkdir, writeFile } from 'node:fs/promises';
+const base=process.env.ATLAS_VERIFY_URL || 'http://127.0.0.1:5177';
+const output=process.env.ATLAS_VERIFY_OUTPUT || '/tmp/p57-agent-verification';
+await mkdir(output,{recursive:true});
+const browser=await chromium.launch({headless:true});
+const page=await browser.newPage({viewport:{width:1440,height:1000},reducedMotion:'reduce'});
+const errors=[];const requests=[];
+page.on('pageerror',e=>errors.push(e.message));
+await page.addInitScript(()=>{localStorage.setItem('floor-theme','porcelain');localStorage.setItem('atlas-preferences',JSON.stringify({chatSaveHistory:false}));});
+const docs=[];
+await page.route('**/api/intelligence/documents**',async route=>{const req=route.request();await route.fulfill({contentType:'application/json',body:JSON.stringify(req.method()==='POST'?{...req.postDataJSON(),id:'ui-settings'}:docs.filter(d=>d.kind===new URL(req.url()).searchParams.get('kind')))});});
+await page.route('**/api/intelligence/status',route=>route.fulfill({contentType:'application/json',body:JSON.stringify({openai:true,supabase:true,model:'fixture-model',missing:[]})}));
+await page.route(/\/api\/intelligence\/(ask|build)$/,async route=>{
+  const req=route.request(),body=req.postDataJSON();requests.push({path:new URL(req.url()).pathname,body});
+  const build=req.url().endsWith('/build');
+  const presentation={headline:build?'Monthly sales view saved':'Sales increased by 18%.',answer:build?'The requested table was checked and saved on your selected page.':'The exact calculation is (147500 − 125000) / 125000 × 100.\n\nRead [the public reference](https://example.com/source).\n\n```python\nchange = (147500 - 125000) / 125000 * 100\n```',basis:build?'source':'calculation',highlights:[],chart:{type:'none'},table_evidence:null,caveats:[],follow_ups:['Explain the assumptions'],actions:[],sources:[{title:'Reference',url:'https://example.com/source'}]};
+  const saved=build?[{id:'ui-artifact',kind:'artifact',title:'Monthly sales table',page:body.page,body:{type:'table',sql:'SELECT 1 AS sales'}}]:[];
+  docs.push(...saved);
+  const result={answer:presentation.headline+'\n\n'+presentation.answer,presentation,evidence:[],activity:[{tool:build?'save_element':'calculate',label:build?'Saving monthly sales table':'Calculating and checking the arithmetic',status:'complete'}],saved,scope:body.filters,model:'fixture-model',conversationId:null};
+  await route.fulfill({contentType:'application/x-ndjson',body:JSON.stringify({type:'progress',text:'Checking the result'})+'\n'+JSON.stringify({type:'result',result})+'\n'});
+});
+const launcher=page.getByRole('button',{name:'Ask GPT',exact:true});
+const dialog=page.locator('#atlas-agent-dialog');
+const input=page.getByRole('textbox',{name:'Ask studio intelligence',exact:true});
+const rects=async()=>({agent:await launcher.boundingBox(),review:await page.getByRole('button',{name:'Review tools',exact:true}).boundingBox()});
+const disjoint=({agent:a,review:b})=>{assert.ok(a&&b);assert.ok(a.x+a.width+8<=b.x||b.x+b.width+8<=a.x||a.y+a.height+8<=b.y||b.y+b.height+8<=a.y,'floating controls overlap or lack separation');};
+const report={requests:[],layouts:[],errors};
+try{
+  await page.goto(base+'/?tab=6');
+  for(const [width,height] of [[1440,1000],[768,900],[390,844]]){
+    await page.setViewportSize({width,height});
+    await launcher.waitFor({state:'visible'});
+    const controls=await rects();disjoint(controls);
+    await launcher.click();await dialog.waitFor({state:'visible'});
+    assert.equal(await page.locator('#root').evaluate(n=>n.inert),true);
+    assert.equal(await page.locator('.agent-skill-grid button').count(),6);
+    const box=await dialog.boundingBox();assert.ok(box.x>=0&&box.y>=0&&box.x+box.width<=width+1&&box.y+box.height<=height+1);
+    assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')),'Ask studio intelligence');
+    await page.screenshot({path:output+`/agent-${width}.png`});
+    report.layouts.push({width,height,box,controls});
+    await page.keyboard.press('Escape');await dialog.waitFor({state:'hidden'});
+    assert.equal(await page.locator('#root').evaluate(n=>n.inert),false);
+    assert.equal(await launcher.evaluate(n=>n===document.activeElement),true);
+  }
+  await page.setViewportSize({width:1440,height:1000});await launcher.click();
+  await page.getByRole('button',{name:'Restore chat size',exact:true}).click();
+  assert.ok((await dialog.boundingBox()).width < 1040);
+  await page.getByRole('button',{name:'Expand assistant',exact:true}).click();
+  await page.getByRole('button',{name:'Restore chat size',exact:true}).focus();
+  await page.keyboard.press('Shift+Tab');
+  assert.ok(await page.evaluate(()=>document.activeElement?.closest('#atlas-agent-dialog')!==null));
+  await input.focus();
+  await input.fill('Calculate the increase from 125000 to 147500');await page.getByRole('button',{name:'Send question',exact:true}).click();
+  await page.getByText('Calculated from stated inputs',{exact:true}).waitFor();
+  await page.getByRole('link',{name:'the public reference',exact:true}).waitFor();
+  assert.equal(await page.locator('.agent-code-block code').count(),1);
+  await page.getByRole('button',{name:'Close GPT assistant',exact:true}).click();await launcher.click();
+  await page.getByText('Calculated from stated inputs',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Create',exact:true}).click();
+  await page.locator('.chat-destination select').selectOption('4');
+  await input.fill('Build a monthly sales table for 2026');await page.getByRole('button',{name:'Build element',exact:true}).click();
+  await page.getByRole('button',{name:/Saved: Monthly sales table/}).waitFor();
+  assert.equal(requests.at(-1).path,'/api/intelligence/build');assert.equal(requests.at(-1).body.page,4);
+  await page.screenshot({path:output+'/agent-answer.png'});
+  await page.getByRole('button',{name:'New conversation',exact:true}).click();await page.locator('.agent-skill-grid').waitFor();
+  await page.getByRole('button',{name:'Ask',exact:true}).click();
+  await input.fill('How do I create a chart?');await page.getByRole('button',{name:'Send question',exact:true}).click();await page.getByText('Calculated from stated inputs',{exact:true}).waitFor();
+  assert.equal(requests.at(-1).path,'/api/intelligence/ask');
+  report.requests=requests.map(r=>({path:r.path,page:r.body.page,message:r.body.message}));
+  assert.deepEqual(errors,[]);
+  console.log(JSON.stringify(report));
+  await writeFile(output+'/verification.json',JSON.stringify(report,null,2));
+}finally{await browser.close();}

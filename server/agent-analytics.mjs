@@ -460,6 +460,12 @@ export function describeCall(name, args = {}) {
     case 'query_sales': return `Totalling sales${args.group_by && args.group_by !== 'total' ? ' by ' + args.group_by.replace('_', ' & ') : ''}`;
     case 'query_studio': return 'Running a custom query on the source sheets';
     case 'inspect_source': return `Checking ${args.source} coverage`;
+    case 'get_skill': return `Applying ${String(args.skill || '').replaceAll('_', ' ')} guidance`;
+    case 'get_metric_definitions': return `Checking definitions for ${list(args.metric_ids)}`;
+    case 'calculate': return 'Calculating and checking the arithmetic';
+    case 'audit_data_quality': return `Auditing ${args.source} field coverage`;
+    case 'validate_element': return 'Previewing the element against source data';
+    case 'research_web': return 'Researching public sources and collecting citations';
     case 'find_entity': return `Resolving “${args.text}” (${args.kind})`;
     case 'compare_periods': return `Comparing ${list(args.metric_ids)} across two periods${by(args.group_by)}`;
     case 'explain_change': return `Breaking down what drove ${label(args.metric_id)}`;

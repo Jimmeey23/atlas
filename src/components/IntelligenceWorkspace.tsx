@@ -1,10 +1,11 @@
 import { DropdownField } from "./ui/DropdownField";
 import { InstructorName } from "./InstructorAvatar";
-import { ArrowUp, ArrowUpRight, Sparkles, MessageSquare, ChartNoAxesCombined, Check, Database, Pencil, Trash2, Paperclip, Mic, Square, Settings2 } from "lucide-react";
+import { Plus, Search, Calculator, TrendingUp, ScanLine, WandSparkles, ArrowUp, ArrowUpRight, Sparkles, MessageSquare, ChartNoAxesCombined, Check, Database, Pencil, Trash2, Paperclip, Mic, Square, Settings2 } from "lucide-react";
 import { fmt, formatField } from "../semantics/formats";
 import { metrics } from "../semantics/metrics";
 import { ChatAnswer } from "./ChatAnswer";
 import { AgentReply, cellValue } from "./AgentReply";
+import { agentIntent } from "../semantics/agent-intent";
 import { chartTypes, elementSpec, pivotRows, type ElementSpec } from "../semantics/element-spec";
 import { elementChartOption } from "./elementChart";
 import { ChartControls } from "./ChartControls";
@@ -740,6 +741,13 @@ export function IntelligenceWorkspace({
   const [conversationId, setConversationId] = useState<string>();
   const [messages, setMessages] = useState<any[]>([]);
   const [question, setQuestion] = useState("");
+  const composerInput = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const input = composerInput.current;
+    if (!input) return;
+    input.style.height = "auto";
+    input.style.height = `${Math.min(160, Math.max(44, input.scrollHeight))}px`;
+  }, [question, mode]);
   const [page, setPage] = useState(s.tab === 13 ? 0 : s.tab);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string[]>([]);
@@ -749,47 +757,54 @@ export function IntelligenceWorkspace({
   const [memoryText, setMemoryText] = useState("");
   const [attachments, setAttachments] = useState<{ name: string; note: string }[]>([]);
   const [recording, setRecording] = useState(false);
-  const recorder = useRef<MediaRecorder | null>(null);
-  const recordStart = useRef(0);
+  const speech = useRef<any>(null);
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (!busy) return;
+    const started = Date.now();
+    setElapsed(0);
+    const timer = window.setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 1000);
+    return () => clearInterval(timer);
+  }, [busy]);
+  useEffect(() => () => speech.current?.abort(), []);
+  const newConversation = () => {
+    if (busy) return;
+    setConversationId(undefined);
+    setMessages([]);
+    setProgress([]);
+    setError("");
+  };
   const attachFiles = async (files: FileList | null) => {
     if (!files) return;
     const next = [...attachments];
-    for (const file of Array.from(files).slice(0, 5)) {
-      if (/^(text\/|application\/(json|csv))/i.test(file.type) || /\.(csv|txt|md|json)$/i.test(file.name)) {
-        const text = (await file.text()).slice(0, 8000);
-        next.push({ name: file.name, note: `Attached file ${file.name}:\n${text}` });
-      } else if (file.type.startsWith("audio/")) {
-        next.push({ name: file.name, note: `[Audio note attached: ${file.name}, ${(file.size / 1024).toFixed(0)} KB — audio transcription is not configured, so treat this as a verbal note reference.]` });
-      } else {
-        next.push({ name: file.name, note: `[File attached: ${file.name} (${file.type || "unknown type"}) — binary content not readable as text.]` });
-      }
+    const unsupported: string[] = [];
+    for (const file of Array.from(files).slice(0, Math.max(0, 5 - next.length))) {
+      if (!/^(text\/|application\/(json|csv))/i.test(file.type) && !/\.(csv|txt|md|json)$/i.test(file.name)) { unsupported.push(file.name); continue; }
+      if (file.size > 100000) { unsupported.push(file.name + " (over 100 KB)"); continue; }
+      const text = await file.text();
+      if (next.reduce((n, a) => n + a.note.length, 0) + text.length > 9000) { unsupported.push(file.name + " (text exceeds the attachment limit)"); continue; }
+      next.push({ name: file.name, note: `Attached file ${file.name}:\n${text}` });
     }
     setAttachments(next);
+    setError(unsupported.length ? `Not attached: ${unsupported.join(", ")}. Use text, CSV, Markdown or JSON within the text limit. Binary files and audio are not read by this assistant.` : "");
   };
-  const toggleRecording = async () => {
-    if (recording) {
-      recorder.current?.stop();
-      return;
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const rec = new MediaRecorder(stream);
-      recorder.current = rec;
-      recordStart.current = Date.now();
-      rec.onstop = () => {
-        const seconds = Math.round((Date.now() - recordStart.current) / 1000);
-        setAttachments((a) => [
-          ...a,
-          { name: `Voice note (${seconds}s)`, note: `[Voice note recorded in the studio workspace, ${seconds}s — audio transcription is not configured, treat as a verbal instruction reference.]` },
-        ]);
-        stream.getTracks().forEach((t) => t.stop());
-        setRecording(false);
-      };
-      rec.start();
-      setRecording(true);
-    } catch (e) {
-      setError("Microphone unavailable: " + String(e));
-    }
+  const toggleRecording = () => {
+    if (recording) { speech.current?.stop(); return; }
+    const Recognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!Recognition) { setError("Voice dictation is unavailable in this browser. Type your question or attach a text file."); return; }
+    const recognition = new Recognition();
+    recognition.lang = "en-IN";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.onresult = (event: any) => {
+      const text = Array.from(event.results as any[]).map((r: any) => r[0].transcript).join(" ");
+      setQuestion(q => [q.trim(), text].filter(Boolean).join(" "));
+    };
+    recognition.onerror = (event: any) => { setError(`Voice dictation could not complete (${event.error}). You can type your question.`); setRecording(false); };
+    recognition.onend = () => setRecording(false);
+    speech.current = recognition;
+    try { recognition.start(); setRecording(true); setError(""); }
+    catch { setError("Voice dictation could not start. Check browser microphone permissions."); }
   };
   useEffect(() => {
     api("status")
@@ -812,6 +827,7 @@ export function IntelligenceWorkspace({
       .filter(Boolean)
       .join("\n\n");
     if (!message || busy) return;
+    if (message.length > 12000) { setError("The question and attachments exceed 12,000 characters. Shorten the text before sending."); return; }
     setBusy(true);
     setError("");
     setProgress([]);
@@ -821,7 +837,7 @@ export function IntelligenceWorkspace({
     }
     setMessages((m) => [...m, { role: "user", content: message }]);
     try {
-      const requestedMode = forceMode ?? (/\b(create|build|generate|make|add|save|plot|draw)\b/i.test(base) && /\b(chart|table|graph|element|view|insight|summary|list|dashboard)\b/i.test(base) ? "build" : mode);
+      const requestedMode = forceMode ?? agentIntent(base, mode);
       if (requestedMode !== mode) setMode(requestedMode);
       const controller = new AbortController();
       requestController.current = controller;
@@ -880,9 +896,10 @@ export function IntelligenceWorkspace({
         <div className="chat-compact-bar">
           <div className="chat-modes" role="group" aria-label="Assistant function">
             <button aria-pressed={mode === "ask"} onClick={() => setMode("ask")}><MessageSquare size={14}/> Ask</button>
-            <button aria-pressed={mode === "build"} onClick={() => setMode("build")}><ChartNoAxesCombined size={14}/> Build</button>
+            <button aria-pressed={mode === "build"} onClick={() => setMode("build")}><ChartNoAxesCombined size={14}/> Create</button>
           </div>
           <span className="chat-scope" title="Name a studio or period in your question to query that scope directly."><Database size={12}/><span>{s.filters.location?.join(" · ") || "All studios"} · {s.filters.from} → {s.filters.to}</span></span>
+          <button className="icon-button" disabled={busy} aria-label="New conversation" title="New conversation" onClick={newConversation}><Plus size={16}/></button>
           <span className={`chat-status-dot ${status ? (status.openai ? "ok" : "warn") : ""}`} title={status ? `${status.openai ? "GPT connected" : "GPT requires configuration"} · ${status.supabase ? "Workspace storage connected" : "Workspace storage requires configuration"}` : "Checking agent connections…"} />
           <button className={`icon-button ${controls ? "is-active" : ""}`} aria-pressed={controls} aria-label="Agent settings" title="Agent settings" onClick={() => setControls(!controls)}><Settings2 size={15}/></button>
         </div>
@@ -891,7 +908,7 @@ export function IntelligenceWorkspace({
         <div className="agent-heading">
           <div className="agent-heading-title">
             <span className="atlas-chat-avatar" aria-hidden="true"><Sparkles size={18} /></span>
-            <div><h2>Atlas Intelligence</h2><p>Ask in plain words or shorthand — studios, instructors, classes, periods.</p></div>
+            <div><h2>Atlas Intelligence</h2><p>Analyse, research, calculate and create — with context and evidence.</p></div>
           </div>
           <button className="button" onClick={() => setControls(!controls)}>
             Agent settings
@@ -904,7 +921,7 @@ export function IntelligenceWorkspace({
         </div>
         <p className="chat-scope"><Database size={13}/><span>{s.filters.location?.join(" · ") || "All studios"} · {s.filters.from} → {s.filters.to}</span></p>
         <p className="chat-scope-hint">Name a studio or period to query that scope directly. Creation requests automatically use Build.</p>
-        <div className="agent-capabilities"><span><Database size={13}/> Governed KPI queries</span><span>Source coverage checks</span><span>Studio & period comparisons</span><span>Validated charts & tables</span></div>
+        <div className="agent-capabilities"><span><Database size={13}/> Governed KPI queries</span><span>Source coverage checks</span><span>Studio & period comparisons</span><span>Validated charts & tables</span><span>Exact calculations</span><span>Public research with citations</span><span>8 task skills</span></div>
         <p className="small" role="status">{status ? `${status.openai ? "GPT connected" : "GPT requires configuration"} · ${status.supabase ? "Workspace storage connected" : "Workspace storage requires configuration"}` : "Checking agent connections…"}</p>
         </>
       )}
@@ -917,11 +934,8 @@ export function IntelligenceWorkspace({
             <h3>Conversations</h3>
             <button
               className="button"
-              onClick={() => {
-                setConversationId(undefined);
-                setMessages([]);
-                setError("");
-              }}
+              disabled={busy}
+              onClick={newConversation}
             >
               New conversation
             </button>
@@ -929,6 +943,7 @@ export function IntelligenceWorkspace({
               <button
                 key={d.id}
                 className="agent-history"
+                disabled={busy}
                 onClick={() => {
                   setConversationId(d.id);
                   setMessages(d.body.messages || []);
@@ -988,8 +1003,19 @@ export function IntelligenceWorkspace({
             {!messages.length && (
               <div className="chat-welcome">
                 <span className="chat-orb"><Sparkles size={26}/></span>
-                <h3>{mode === "ask" ? "Clarity, from your numbers." : "Turn a question into a view."}</h3>
-                <p>{mode === "ask" ? "Explore performance with answers grounded in your source sheets." : "Create a chart, table or insight and save it to your workspace."}</p>
+                <h3>{mode === "ask" ? "A clearer view. A better next step." : "Build something worth using."}</h3>
+                <p>{mode === "ask" ? "Understand your studio data, explore a scenario, research a question or work through an idea." : "Describe the measures, breakdown and period. Your element is checked against the source before it is saved."}</p>
+                <div className="agent-skill-grid" aria-label="Agent skills">
+                  {[
+                    { icon: ScanLine, label: "Investigate", detail: "Drivers, comparisons & anomalies", prompt: "Explain what changed in studio performance last month, with drivers and evidence.", mode: "ask" },
+                    { icon: TrendingUp, label: "Plan ahead", detail: "Forecasts & what-if scenarios", prompt: "What would happen to session revenue if regular class fill increased by 10 percentage points? State the assumptions.", mode: "ask" },
+                    { icon: ChartNoAxesCombined, label: "Create a view", detail: "Charts, pivots, tables & KPIs", prompt: "Build a monthly studio sales table for 2026 with month-on-month changes.", mode: "build" },
+                    { icon: Search, label: "Research", detail: "Public sources with citations", prompt: "Research current wellness and boutique fitness trends in India using public sources. Include citations and distinguish facts from estimates.", mode: "ask" },
+                    { icon: Calculator, label: "Calculate", detail: "Exact arithmetic & formulas", prompt: "Calculate the percentage increase from 125000 to 147500 and explain the formula.", mode: "ask" },
+                    { icon: WandSparkles, label: "Write & organise", detail: "Plans, member voice & ideas", prompt: "Draft a concise internal follow-up guide for documenting community member concerns in third person, with ownership and closure steps.", mode: "ask" },
+                  ].map(skill => <button key={skill.label} onClick={() => { setQuestion(skill.prompt); setMode(skill.mode as "ask" | "build"); }}><skill.icon size={18}/><strong>{skill.label}</strong><small>{skill.detail}</small></button>)}
+                </div>
+                <span className="agent-example-label">Try a specific question</span>
                 <div className="chat-suggestions">
                   {(mode === "ask" ? ["Why did attendance change at Bandra last month?", "Anything unusual this week?", "Will Kemps hit ₹50L sales this month?", "Top 5 recurring classes by class average in Sept"] : ["Build a table of monthly sales by studio for 2026", "Create a chart of late cancellations by instructor"]).map(text => <button key={text} onClick={() => setQuestion(text)}>{text}<span>↗</span></button>)}
                 </div>
@@ -1027,7 +1053,7 @@ export function IntelligenceWorkspace({
                 )}
               </article>
             ))}
-            {busy && <div className="chat-thinking" role="status"><div className="chat-thinking-head"><Sparkles size={15}/><span>{progress.at(-1) || (mode === "ask" ? "Checking source data…" : "Building and validating your element…")}</span><span className="chat-loading-dots">•••</span><button className="button" onClick={()=>requestController.current?.abort()}>Stop</button></div>{progress.length > 1 && <ol className="chat-progress">{progress.slice(0,-1).map((p,i)=><li key={i}><Check size={11}/>{p}</li>)}</ol>}</div>}
+            {busy && <div className="chat-thinking" role="status"><div className="chat-thinking-head"><Sparkles size={15}/><span className="chat-elapsed">{elapsed}s</span><span>{progress.at(-1) || (mode === "ask" ? "Checking source data…" : "Building and validating your element…")}</span><span className="chat-loading-dots">•••</span><button className="button" onClick={()=>requestController.current?.abort()}>Stop</button></div>{progress.length > 1 && <ol className="chat-progress">{progress.slice(0,-1).map((p,i)=><li key={i}><Check size={11}/>{p}</li>)}</ol>}</div>}
             <div ref={end}/>
           </div>
           <div className="chat-composer">
@@ -1061,11 +1087,13 @@ export function IntelligenceWorkspace({
             </div>
           )}
           <div className="chat-input-row">
-            <label className="chat-tool" aria-label="Attach files">
+            <label className="chat-tool" aria-label="Attach text files" title="Attach CSV, text, Markdown or JSON">
               <Paperclip size={15} />
               <input
                 type="file"
                 multiple
+                accept=".txt,.csv,.md,.json,text/*,application/json"
+                aria-label="Attach text files"
                 hidden
                 onChange={(e) => {
                   void attachFiles(e.target.files);
@@ -1075,23 +1103,25 @@ export function IntelligenceWorkspace({
             </label>
             <button
               className={`chat-tool ${recording ? "recording" : ""}`}
-              aria-label={recording ? "Stop voice note" : "Record a voice note"}
+              aria-label={recording ? "Stop dictation" : "Dictate question"}
+              title="Dictate your question as text"
               onClick={() => void toggleRecording()}
             >
               {recording ? <Square size={13} /> : <Mic size={15} />}
             </button>
             <textarea
               aria-label="Ask studio intelligence"
+              ref={composerInput}
               value={question}
               rows={1}
               onChange={(e) => setQuestion(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
+                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                   e.preventDefault();
                   void send();
                 }
               }}
-              placeholder={mode === "ask" ? "Ask about your studio performance…" : "Describe the chart, table or insight to build…"}
+              placeholder={mode === "ask" ? "Ask a question, explore an idea, or describe what to create…" : "Describe the chart, table, pivot or KPI to create…"}
             />
             <button
               className="chat-send"
@@ -1106,7 +1136,7 @@ export function IntelligenceWorkspace({
               <ArrowUp size={19}/>
             </button>
           </div>
-          <div className="chat-composer-meta"><span>{mode === "ask" ? "Answers with source evidence" : "Validated before saving"}</span><span>Enter to send · Shift+Enter for a new line</span></div>
+          <div className="chat-composer-meta"><span>{mode === "ask" ? "Studio evidence · public research · general help" : "Checked against source data before saving"}</span><span>Enter to send · Shift+Enter for a new line</span></div>
           </div>
           {error && <p className="chat-error" role="alert">{error}</p>}
           {mode === "build" && status && (!status.openai || !status.supabase) && <p className="chat-error">Connect GPT and saved workspace storage in Agent settings to build elements.</p>}

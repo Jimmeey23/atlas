@@ -1,0 +1,119 @@
+/* Shared assistant surface: restrained surfaces, clear controls and readable evidence. */
+:root[data-theme] .atlas-agent-surface .atlas-chat-launcher {
+  right: 92px; left: auto; bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  height: 52px; padding: 7px 17px 7px 8px; gap: 9px; border-radius: 16px;
+  background: var(--surface-1); color: var(--text-1); border: 1px solid var(--hairline-strong);
+  box-shadow: 0 4px 20px #0002; font-size: 13px; font-weight: 650; z-index: 1290;
+}
+:root[data-theme] .atlas-agent-surface .atlas-chat-launcher:hover { background: var(--surface-2); transform: translateY(-2px); }
+:root[data-theme] .atlas-agent-surface .atlas-chat-launcher .atlas-chat-avatar { background: color-mix(in srgb, var(--accent) 10%, var(--surface-1)); color: var(--accent); border-radius: 11px; }
+.atlas-agent-surface[data-open=true] > .atlas-chat-launcher { visibility: hidden; }
+.atlas-agent-backdrop { position: fixed; inset: 0; z-index: 1700; background: #09132165; backdrop-filter: blur(6px); animation: agent-fade-in 160ms ease-out; }
+:root[data-theme] #atlas-agent-dialog {
+  position: fixed; inset: auto 24px 92px auto; height: min(790px, calc(100dvh - 116px));
+  max-height: none; max-width: calc(100vw - 48px); border: 1px solid var(--hairline-strong);
+  border-radius: 24px; z-index: 1701; background: var(--surface-1); overflow: hidden;
+  display: flex; flex-direction: column; box-shadow: 0 32px 100px #0004, 0 2px 12px #0001;
+  animation: agent-fade-in 180ms ease-out;
+}
+:root[data-theme] #atlas-agent-dialog[hidden] { display: none; }
+:root[data-theme] #atlas-agent-dialog.maximized { inset: 24px auto 24px 50%; transform: translateX(-50%); height: auto; }
+:root[data-theme] #atlas-agent-dialog > header { padding: 22px 26px; background: var(--surface-1); border-bottom: 1px solid var(--hairline); gap: 16px; }
+:root[data-theme] #atlas-agent-dialog > header::before { display: none; }
+:root[data-theme] #atlas-agent-dialog .atlas-chat-title { gap: 14px; }
+:root[data-theme] #atlas-agent-dialog .atlas-chat-title > .atlas-chat-avatar { width: 48px; height: 48px; border-radius: 15px; background: color-mix(in srgb, var(--accent) 9%, var(--surface-1)); border: 1px solid color-mix(in srgb, var(--accent) 15%, var(--hairline)); color: var(--accent); }
+.atlas-agent-eyebrow { color: var(--text-3); font-size: 9px; letter-spacing: .13em; font-weight: 650; }
+:root[data-theme] #atlas-agent-dialog .atlas-chat-title strong { font-size: 20px; font-weight: 650; letter-spacing: -.55px; line-height: 1.4; }
+:root[data-theme] #atlas-agent-dialog .atlas-chat-title small { font-size: 12px; color: var(--text-2); }
+:root[data-theme] #atlas-agent-dialog > header > div { gap: 6px; }
+:root[data-theme] #atlas-agent-dialog > header > div button { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--hairline); background: var(--surface-1); }
+:root[data-theme] #atlas-agent-dialog > header > div button:hover { background: var(--surface-2); color: var(--text-1); }
+:root[data-theme] #atlas-agent-dialog .studio-chat.compact { padding: 0; }
+:root[data-theme] #atlas-agent-dialog .chat-compact-bar { margin: 0; padding: 12px 24px; gap: 12px; border-bottom: 1px solid var(--hairline); background: var(--surface-2); }
+:root[data-theme] #atlas-agent-dialog .chat-compact-bar .chat-modes { background: var(--surface-1); border: 1px solid var(--hairline); border-radius: 11px; }
+:root[data-theme] #atlas-agent-dialog .chat-compact-bar .chat-modes button { min-height: 36px; font-size: 12px; padding-inline: 13px; }
+:root[data-theme] #atlas-agent-dialog .chat-modes button[aria-pressed=true] { background: var(--text-1); color: var(--surface-1); box-shadow: none; }
+:root[data-theme] #atlas-agent-dialog .chat-compact-bar .icon-button { width: 40px; height: 40px; }
+:root[data-theme] #atlas-agent-dialog .agent-layout { margin: 0; gap: 0; }
+:root[data-theme] #atlas-agent-dialog .agent-layout > aside { margin: 0; padding: 10px 24px; border-bottom: 1px solid var(--hairline); background: var(--surface-1); }
+:root[data-theme] #atlas-agent-dialog .agent-layout > aside summary { font-size: 12px; color: var(--text-2); }
+:root[data-theme] #atlas-agent-dialog .agent-messages { padding: 24px 32px; scroll-behavior: smooth; }
+:root[data-theme] .studio-chat .chat-welcome { max-width: 720px; margin: auto; padding: 22px 0; text-align: left; }
+:root[data-theme] .studio-chat .chat-welcome .chat-orb { display: grid; place-items: center; margin: 0 0 20px; width: 48px; height: 48px; border-radius: 15px; background: var(--surface-2); border: 1px solid var(--hairline); color: var(--accent); box-shadow: none; }
+:root[data-theme] .studio-chat .chat-welcome h3 { font-size: clamp(24px, 3vw, 32px); line-height: 1.2; font-weight: 600; letter-spacing: -.9px; color: var(--text-1); margin: 0 0 12px; }
+:root[data-theme] .studio-chat .chat-welcome > p { max-width: 540px; font-size: 14px; line-height: 1.65; color: var(--text-2); margin: 0 0 22px; }
+.agent-skill-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0 0 24px; }
+.agent-skill-grid button { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 6px; padding: 16px; background: var(--surface-1); color: var(--text-1); border: 1px solid var(--hairline); border-radius: 14px; cursor: pointer; min-height: 100px; transition: background 150ms, border-color 150ms; }
+.agent-skill-grid button:hover { background: var(--surface-2); border-color: var(--accent); }
+.agent-skill-grid button > svg { color: var(--accent); margin-bottom: 5px; }
+.agent-skill-grid strong { font-size: 13px; font-weight: 600; }
+.agent-skill-grid small { font-size: 11px; line-height: 1.5; color: var(--text-3); }
+.agent-example-label { font-size: 10px; font-weight: 650; color: var(--text-3); letter-spacing: .1em; text-transform: uppercase; }
+:root[data-theme] .studio-chat .chat-suggestions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+:root[data-theme] .studio-chat .chat-suggestions button { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; padding: 12px 14px; text-align: left; border: 1px solid var(--hairline); border-radius: 11px; background: var(--surface-2); font-size: 12px; line-height: 1.5; color: var(--text-2); }
+:root[data-theme] #atlas-agent-dialog .agent-message { padding: 20px 0; border: 0; border-bottom: 1px solid var(--hairline); border-radius: 0; background: transparent; font-size: 14px; line-height: 1.7; box-shadow: none; max-width: 100%; }
+:root[data-theme] #atlas-agent-dialog .agent-message > strong { font-size: 10px; letter-spacing: .09em; text-transform: uppercase; color: var(--text-3); }
+:root[data-theme] #atlas-agent-dialog .agent-message.user { padding: 14px 18px; margin-left: auto; max-width: 88%; border-radius: 16px 16px 4px 16px; border: 1px solid var(--hairline); background: var(--surface-2); }
+:root[data-theme] #atlas-agent-dialog .agent-reply-headline { font-size: 20px; line-height: 1.4; letter-spacing: -.4px; font-weight: 600; }
+:root[data-theme] .studio-chat .agent-reply-kpi { padding: 14px; border-radius: 12px; }
+:root[data-theme] .studio-chat .agent-reply-kpi span { white-space: normal; font-size: 11px; }
+.agent-answer-basis { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text-3); border: 1px solid var(--hairline); background: var(--surface-2); border-radius: 6px; padding: 3px 7px; margin-block: 10px 0; }
+.agent-research-sources { display: flex; flex-wrap: wrap; gap: 8px; padding-block: 10px; }
+.agent-research-sources a { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--hairline); border-radius: 8px; padding: 7px 9px; font-size: 11px; max-width: 100%; overflow-wrap: anywhere; }
+:root[data-theme] #atlas-agent-dialog .chat-composer { margin: 0; padding: 18px 24px 14px; border-top: 1px solid var(--hairline); background: var(--surface-1); }
+:root[data-theme] #atlas-agent-dialog .chat-input-row { padding: 8px; background: var(--surface-2); border: 1px solid var(--hairline-strong); border-radius: 16px; align-items: flex-end; }
+:root[data-theme] #atlas-agent-dialog .chat-input-row:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 10%, transparent); }
+:root[data-theme] #atlas-agent-dialog textarea[aria-label="Ask studio intelligence"] { background: transparent; border: 0; font-size: 14px; line-height: 1.6; padding: 10px 6px; min-height: 44px; max-height: 160px; resize: none; color: var(--text-1); box-shadow: none; }
+:root[data-theme] #atlas-agent-dialog .chat-tool { width: 40px; height: 44px; flex-shrink: 0; border-radius: 10px; }
+:root[data-theme] #atlas-agent-dialog .chat-send { width: 44px; height: 44px; flex-shrink: 0; background: var(--text-1); color: var(--surface-1); border-radius: 12px; box-shadow: none; }
+:root[data-theme] #atlas-agent-dialog .chat-send:disabled { opacity: .35; }
+:root[data-theme] #atlas-agent-dialog .chat-composer-meta { margin-top: 10px; color: var(--text-3); font-size: 10px; }
+:root[data-theme] #atlas-agent-dialog .chat-error { margin: 8px 24px 16px; border-radius: 10px; padding: 12px; font-size: 12px; }
+:root[data-theme] #atlas-agent-dialog .agent-tool-log { margin: 0; padding: 9px 24px; border-bottom: 1px solid var(--hairline); font-size: 11px; flex-shrink: 0; max-height: 150px; overflow: auto; }
+:root[data-theme] #atlas-agent-dialog .chat-thinking { font-size: 12px; padding: 14px; border-radius: 12px; background: var(--surface-2); }
+:root[data-theme] #atlas-agent-dialog .chat-thinking-head { flex-wrap: wrap; }
+:root[data-theme] #atlas-agent-dialog .agent-message :is(th, td) { white-space: normal !important; height: auto !important; min-height: 0 !important; max-height: none !important; padding-block: 8px !important; vertical-align: top !important; }
+:root[data-theme] #atlas-agent-dialog .agent-message th { min-width: 100px; }
+:root[data-theme] #atlas-agent-dialog .agent-message .chat-result { max-width: 100%; overflow: auto; }
+:root[data-theme] #atlas-agent-dialog :is(button, a, summary):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@keyframes agent-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@media(max-width: 700px) {
+  :root[data-theme] .atlas-agent-surface .atlas-chat-launcher { right: 76px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+  :root[data-theme] #atlas-agent-dialog, :root[data-theme] #atlas-agent-dialog.maximized { inset: 8px !important; width: calc(100vw - 16px) !important; height: auto; max-width: none; transform: none; border-radius: 18px; }
+  :root[data-theme] #atlas-agent-dialog > header { padding: 15px; gap: 8px; }
+  :root[data-theme] #atlas-agent-dialog .atlas-chat-title > .atlas-chat-avatar { display: none; }
+  :root[data-theme] #atlas-agent-dialog .atlas-chat-title strong { font-size: 18px; }
+  :root[data-theme] #atlas-agent-dialog .atlas-chat-title small { font-size: 10px; max-width: 145px; }
+  :root[data-theme] #atlas-agent-dialog > header > div { gap: 3px; }
+  :root[data-theme] #atlas-agent-dialog > header > div button { width: 40px; height: 44px; }
+  :root[data-theme] #atlas-agent-dialog .chat-compact-bar { padding: 10px 12px; flex-wrap: wrap; gap: 8px; }
+  :root[data-theme] #atlas-agent-dialog .chat-compact-bar .chat-scope { order: 4; flex-basis: 100%; }
+  :root[data-theme] #atlas-agent-dialog .agent-messages { padding: 16px; }
+  :root[data-theme] #atlas-agent-dialog .agent-layout > aside { padding: 10px 16px; }
+  .agent-skill-grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+  .agent-skill-grid button { min-height: 96px; padding: 13px; }
+  :root[data-theme] .studio-chat .chat-suggestions { grid-template-columns: 1fr; }
+  :root[data-theme] #atlas-agent-dialog .chat-composer { padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px)); }
+  :root[data-theme] #atlas-agent-dialog .chat-composer-meta > span:last-child { display: none; }
+  :root[data-theme] #atlas-agent-dialog .agent-reply-headline { font-size: 18px; }
+}
+@media(prefers-reduced-motion: reduce) { .atlas-agent-backdrop, :root[data-theme] #atlas-agent-dialog { animation: none; } :root[data-theme] #atlas-agent-dialog .agent-messages { scroll-behavior: auto; } }
+@media print { .atlas-agent-surface { display: none !important; } }
+:root[data-theme] #atlas-agent-dialog .chat-composer { border-inline: 0; border-bottom: 0; border-radius: 0; box-shadow: none; }
+:root[data-theme] #atlas-agent-dialog .chat-composer:focus-within { border-color: var(--hairline); box-shadow: none; }
+:root[data-theme] #atlas-agent-dialog .chat-send { position: static; }
+:root[data-theme] #atlas-agent-dialog textarea[aria-label="Ask studio intelligence"] { width: auto; min-width: 0; outline: none; }
+.agent-code-block { min-width: 0; margin-block: 14px; overflow: hidden; border: 1px solid var(--hairline); border-radius: 12px; background: var(--surface-2); }
+.agent-code-block > span { display: block; padding: 7px 12px; border-bottom: 1px solid var(--hairline); color: var(--text-3); font-size: 10px; }
+.agent-code-block pre { margin: 0; padding: 14px; overflow-x: auto; font-size: 12px; line-height: 1.65; }
+.agent-code-block code { white-space: pre; background: transparent; color: var(--text-1); }
+:root[data-theme] .studio-chat .chat-send { position: static; }
+:root[data-theme] .studio-chat .chat-input-row textarea { width: auto; min-width: 0; }
+.agent-answer-basis { width: fit-content; }
+@media(max-width:700px) { :root[data-theme] #atlas-agent-dialog textarea[aria-label="Ask studio intelligence"] { min-height: 64px; } }
+:root[data-theme] .studio-chat .agent-reply-footer button { min-width: 40px; min-height: 40px; display: inline-grid; place-items: center; border-radius: 8px; }
+@media(max-width:700px) {
+  :root[data-theme] #atlas-agent-dialog > header > div button { width: 44px; }
+  :root[data-theme] #atlas-agent-dialog > header > div button:first-child { display: none; }
+  :root[data-theme] .studio-chat .agent-reply-footer button { min-width: 44px; min-height: 44px; }
+}

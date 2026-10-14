@@ -19,6 +19,8 @@ export type Presentation = {
   follow_ups: string[];
   actions: Action[];
   unverified?: string[];
+  basis?: "source" | "general" | "research" | "mixed" | "calculation";
+  sources?: { title: string; url: string }[];
 };
 
 const signed = (n: number, digits: number, unit: string) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n).toFixed(digits)}${unit}`;
@@ -48,7 +50,7 @@ function ReplyChart({ chart, rows }: { chart: NonNullable<Presentation["chart"]>
     const instance = echarts.init(ref.current, undefined, { renderer: "svg" });
     const accent = css("--accent", "#7c5cff"), accent2 = css("--accent-2", "#22c1c3"), text = css("--text-3", "#8a8f98"), line = css("--hairline", "rgba(128,128,128,.18)");
     const palette = [accent, accent2, "#f59e0b", "#ef4466"];
-    const series = chart.series.filter((s) => rows.some((r) => Number.isFinite(Number(r[s])))).slice(0, 4);
+    const series = chart.series.filter((s) => rows.some((r) => r[s] != null && r[s] !== "" && Number.isFinite(Number(r[s])))).slice(0, 4);
     const cats = rows.map((r) => String(r[chart.x] ?? "—"));
     const horizontal = chart.type === "horizontal_bar";
     const axisLabel = { color: text, fontSize: 10 };
@@ -184,6 +186,7 @@ export function AgentReply({ message, question, onAsk, onBuild, latest }: { mess
     <div className="agent-reply">
       {p ? (
         <>
+          <span className="agent-answer-basis"><Check size={11}/>{({ source: "Studio source evidence", general: "General guidance", research: "Public research", mixed: "Sources & calculations", calculation: "Calculated from stated inputs" } as Record<string, string>)[p.basis || "source"]}</span>
           <p className="agent-reply-headline">{p.headline}</p>
           {!!p.highlights?.length && (
             <div className="agent-reply-highlights">
@@ -197,6 +200,7 @@ export function AgentReply({ message, question, onAsk, onBuild, latest }: { mess
             </div>
           )}
           {p.answer && <ChatAnswer text={p.answer} />}
+          {!!p.sources?.length && <div className="agent-research-sources" aria-label="Research sources">{p.sources.filter(s => /^https?:\/\//i.test(s.url)).map(s => <a key={s.url} href={s.url} target="_blank" rel="noreferrer">{s.title}<ArrowUpRight size={11}/></a>)}</div>}
           {p.chart && chartRows.length > 0 && <ReplyChart chart={p.chart} rows={chartRows} />}
           {tableRows.length > 0 && <ReplyTable rows={tableRows} />}
           {(p.caveats?.length > 0 || p.unverified?.length) && (

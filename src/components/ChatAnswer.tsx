@@ -5,10 +5,11 @@ import { Fragment, type ReactNode } from "react";
 // grids, ranked findings and right-aligned numeric tables.
 function inline(text: string): ReactNode[] {
   return text
-    .split(/(\*\*[^*]+\*\*|`[^`]+`|(?<![*\w])\*[^*\n]+\*(?!\w))/g)
+    .split(/(\[[^\]\n]+\]\(https?:\/\/[^\s)]+\)|\*\*[^*]+\*\*|`[^`]+`|(?<![*\w])\*[^*\n]+\*(?!\w))/g)
     .filter(Boolean)
     .map((part, i) =>
-      part.startsWith("**") ? <b key={i}>{part.slice(2, -2)}</b>
+      /^\[[^\]]+\]\(https?:\/\//i.test(part) ? <a key={i} href={part.slice(part.indexOf("](") + 2, -1)} target="_blank" rel="noreferrer">{part.slice(1, part.indexOf("]("))}</a>
+      : part.startsWith("**") ? <b key={i}>{part.slice(2, -2)}</b>
       : part.startsWith("`") ? <code key={i}>{part.slice(1, -1)}</code>
       : part.startsWith("*") ? <em key={i}>{part.slice(1, -1)}</em>
       : <Fragment key={i}>{part}</Fragment>,
@@ -24,6 +25,11 @@ const isTable = (lines: string[]) =>
 const FIGURE = /^\s*[-*]?\s*\*\*([^*]+?):?\*\*[:\s]+(.+)$/;
 
 function Block({ lines }: { lines: string[] }) {
+  if (lines[0]?.startsWith("```")) {
+    const language = lines[0].slice(3).trim();
+    const code = lines.slice(1, lines.at(-1)?.startsWith("```") ? -1 : undefined).join("\n");
+    return <div className="agent-code-block">{language && <span>{language}</span>}<pre><code>{code}</code></pre></div>;
+  }
   if (isTable(lines)) {
     const head = cells(lines[0]);
     const body = lines.slice(2).map(cells);
@@ -84,11 +90,20 @@ export function ChatAnswer({ text }: { text: string }) {
   const sections: { heading?: string; level: number; body: string[][] }[] = [];
   let current: (typeof sections)[number] = { level: 0, body: [] };
   let block: string[] = [];
+  let fenced = false;
   const flush = () => {
     if (block.length) current.body.push(block);
     block = [];
   };
   for (const raw of text.replace(/\r/g, "").split("\n")) {
+    if (raw.startsWith("```")) {
+      if (!fenced) flush();
+      block.push(raw);
+      fenced = !fenced;
+      if (!fenced) flush();
+      continue;
+    }
+    if (fenced) { block.push(raw); continue; }
     const heading = raw.match(/^(#{1,6})\s+(.*)$/);
     if (heading) {
       flush();

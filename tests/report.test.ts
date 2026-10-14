@@ -80,7 +80,7 @@ test('the exported document keeps its markup as markup', () => {
   const source = readFileSync(new URL('../src/report/export.ts', import.meta.url), 'utf8');
   assert.match(source, /\n\s*clone\.outerHTML,/, 'the report body must be embedded unescaped');
   assert.doesNotMatch(source, /safeInStyle\(clone\.outerHTML\)/);
-  assert.match(source, /safeInStyle\(reportCSS\)/, 'stylesheet contents must still be escaped');
+  assert.match(source, /safeInStyle\(reportCSS(?:\s*\+|\))/, 'stylesheet contents must still be escaped');
 });
 
 test('an exported report fetches nothing: no remote fonts, images or stylesheets', () => {

@@ -113,6 +113,39 @@ export function elementSpecError(body: any, columns?: string[]): string | null {
   return null;
 }
 
+/** Validate the result itself, not just the shape of the model's configuration. */
+export function elementResultError(body: any, rows: Record<string, unknown>[], columns?: string[]): string | null {
+  const invalid = elementSpecError(body, columns || Object.keys(rows[0] || {}));
+  if (invalid) return invalid;
+  if (!rows.length) return "The element query returned no rows. Check source coverage and scope before saving an empty element.";
+  const s = elementSpec(body);
+  if (s.type === "kpi" && rows.length !== 1) return "KPI cards require exactly one aggregated row. Aggregate the requested scope before saving.";
+  const measures = [...s.series, ...s.y2, s.value, ...s.compare].filter((v): v is string => !!v);
+  if (s.type === "scatter") measures.push(s.x);
+  for (const field of new Set(measures)) {
+    const values = rows.map(r => r[field]).filter(v => v != null && v !== "");
+    if (!values.length) return `"${field}" has no measured values. Missing evidence cannot be plotted as zero.`;
+    if (values.some(v => typeof v === "boolean" || !["number", "string"].includes(typeof v) || !Number.isFinite(Number(v))))
+      return `"${field}" must contain numeric values; fix the query or select a numeric measure.`;
+  }
+  for (const field of [s.x, s.group].filter(Boolean))
+    if (rows.every(r => r[field] == null || r[field] === "")) return `"${field}" has no populated categories. Choose a populated grouping field.`;
+  if (["pie", "donut"].includes(s.type)) {
+    if (rows.length > 8) return "Pie and donut charts support at most 8 slices. Group small categories into Other or use a bar chart.";
+    if (rows.some(r => r[s.series[0]] != null && Number(r[s.series[0]]) < 0)) return "Pie and donut charts cannot show negative values. Use a bar chart.";
+    if (!rows.some(r => Number(r[s.series[0]]) > 0)) return "Pie and donut charts require a positive measured total.";
+  }
+  if (["pivot", "heatmap"].includes(s.type)) {
+    const seen = new Set<string>();
+    for (const row of rows) {
+      const key = JSON.stringify([row[s.x], row[s.group]]);
+      if (seen.has(key)) return "The result contains multiple rows per matrix cell. Aggregate to one row per dimension pair using the governed metric definition.";
+      seen.add(key);
+    }
+  }
+  return null;
+}
+
 /** Rates, averages and shares do not add up across cells, so they get no totals. */
 const nonAdditive = /(rate|pct|percent|avg|average|mean|median|per_|ratio|share|fill|aov|ltv|_size|yield)/i;
 
