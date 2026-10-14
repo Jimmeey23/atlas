@@ -1,3 +1,4 @@
+import { MetricFlip } from "../../MetricFlip";
 import {definition as def,reportFmt as fmtValue} from "../../../report/definitions";
 const definitionLabel=(id:string)=>def(id)?.label;
 import {useState} from "react";
@@ -46,10 +47,10 @@ export function ComponentRenderer({ spec, onRecord, model }: { spec: ReportCompo
       const source=Object.values(model?.chapters ?? {}).flatMap(d=>Object.keys(d.total).map(id=>({id,data:d}))).find(({id,data})=>definitionLabel(id)===item.label && fmtValue(id,data.total[id])===item.value);
       if(source)return <FlipMetricCard key={i} id={source.id} data={source.data} flipped={!!flipped[index]} onToggle={()=>setFlipped(v=>({...v,[index]:!v[index]}))}/>;
       const Arrow = item.tone === "up" ? ArrowUpRight : item.tone === "down" ? ArrowDownRight : Minus;
-      return <article className="metric-card" key={i}><div className="metric-label"><span>{item.label}</span></div>
+      return <MetricFlip key={i} label={item.label} front={<article className="metric-card"><div className="metric-label"><span>{item.label}</span></div>
         <div className="metric-reading"><span className="metric-value number">{item.value}</span></div>
         {item.delta && <div className={`metric-delta ${item.tone === "up" ? "positive" : item.tone === "down" ? "negative" : "muted"}`}><Arrow size={12}/>{item.delta}</div>}
-        {item.note && <div className="metric-footer"><span>{item.note}</span></div>}</article>;
+        {item.note && <div className="metric-footer"><span>{item.note}</span></div>}</article>} back={<article className="metric-card"><div className="metric-label"><span>{item.label} · details</span></div><dl className="metric-related"><div><dt>Reported value</dt><dd>{item.value}</dd></div>{item.delta && <div><dt>Reported comparison</dt><dd>{item.delta}</dd></div>}</dl><p className="metric-explanation">{item.note || "Additional source metrics are unavailable for this card."}</p></article>} />;
     }}/>}
     {spec.kind === "chart" && spec.chart && spec.chart.categories.length > 0 && <div className="chart-surface"><SpecChart chart={spec.chart} onRecord={onRecord}/><ReportChartControls model={model} title={spec.title} rows={spec.chart.categories.map((category,i)=>({category,...Object.fromEntries(spec.chart!.series.map(series=>[series.name,series.values[i]]))}))}/>{onRecord && <button className="button" onClick={()=>onRecord()}>Source records ↗</button>}</div>}
     {spec.kind === "table" && <div className="table-scroll deck-spec-table"><table><thead><tr>{spec.columns?.map((c, i) => <th key={i}>{c}</th>)}</tr></thead>

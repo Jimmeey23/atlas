@@ -1,0 +1,15 @@
+.metric-flip { position: relative; min-width: 0; perspective: 1200px; }
+.metric-flip-inner { display: grid; height: 100%; transform-style: preserve-3d; transition: transform 420ms ease; cursor: pointer; }
+.metric-flip[data-flipped=true] > .metric-flip-inner { transform: rotateY(180deg); }
+.metric-flip-face { grid-area: 1 / 1; min-width: 0; backface-visibility: hidden; }
+.metric-flip-back { transform: rotateY(180deg); }
+.metric-flip-face > article { box-sizing: border-box; height: 100%; padding-bottom: 30px; }
+.metric-flip-toggle { position: absolute; bottom: 7px; right: 12px; font-size: 10px; color: var(--text-2); background: none; border: 0; cursor: pointer; }
+.metric-flip-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.metric-related { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 8px 0; }
+.metric-related div { min-width: 0; }
+.metric-related dt { font-size: 10px; color: var(--text-2); }
+.metric-related dd { margin: 2px 0 0; font-size: 14px; font-weight: 650; overflow-wrap: anywhere; }
+.metric-flip-back .metric-explanation { font-size: 11px; margin: 6px 0; }
+@media (prefers-reduced-motion: reduce) { .metric-flip-inner { transition: none; } }
+@media (max-width: 600px) { .metric-related { gap: 8px 6px; }.metric-related dd { font-size: 12px; } }

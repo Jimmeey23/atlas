@@ -91,6 +91,7 @@ import { Filters } from "./components/Filters";
 import { Register } from "./components/Register";
 import { NestedTable, type TreeRow } from "./components/NestedTable";
 import { Chart, Pulse } from "./components/Charts";
+import { OverviewBoard } from "./components/overview/OverviewBoard";
 import { Rankings } from "./components/Rankings";
 import { Heatmap } from "./components/Heatmap";
 import { AcquisitionMainTables, AcquisitionDeepDive, AcquisitionTableView } from "./components/AcquisitionTables";
@@ -1012,6 +1013,7 @@ export default function App() {
                 </>
               )}
               {s.tab === 0 && <Pulse data={analysis} />}
+              {s.tab === 0 && <OverviewBoard data={analysis} version={version} />}
               {s.tab === 0 && <OverviewModules version={version} onDrill={setDrill} />}
               {s.tab === 6 && (
                 <>

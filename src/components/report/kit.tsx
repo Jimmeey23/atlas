@@ -1,3 +1,4 @@
+import { MetricFlip } from "../MetricFlip";
 import {ChartNoAxesCombined,CalendarDays,CalendarRange,Lightbulb,GitCompareArrows} from "lucide-react";
 import {AdaptiveGrid} from "./AdaptiveGrid";
 import { DropdownField } from "../ui/DropdownField";
@@ -63,7 +64,7 @@ export function MetricCards({
   if (!shown.length) return null;
   return (
     <CompleteMetricGrid className="r-cards" items={shown} render={id => (
-        <article className={`r-card ${tone(id,total[id],prior[id])}`} key={id}>
+        <MetricFlip key={id} label={label(id)} front={<article className={`r-card ${tone(id,total[id],prior[id])}`}>
           <div className="r-card-label">{label(id)}{currentSnapshotMetrics.has(id) && <small className="r-comparison">Current snapshot at report build</small>}</div>
           <div className="r-card-value">{fmt(id, total[id])}</div>
           <div className="r-card-deltas">
@@ -84,7 +85,16 @@ export function MetricCards({
           {definitions && metricNotes[id]?.definition && (
             <p className="r-card-def" title={metricNotes[id].definition}>{definition(id)?.description}</p>
           )}
-        </article>
+        </article>} back={<article className="r-card">
+          <div className="r-card-label">{label(id)} · details</div>
+          <dl className="metric-related">
+            <div><dt>Previous month</dt><dd>{fmt(id, prior[id])}</dd></div>
+            <div><dt>Same month last year</dt><dd>{fmt(id, priorYear[id])}</dd></div>
+            {data && <div><dt>Contributing records</dt><dd>{data.n.toLocaleString("en-IN")}</dd></div>}
+            {Object.keys(total).filter(key => key !== id && definition(key)?.domain === definition(id)?.domain && definition(key) && total[key] != null && !key.includes("__")).slice(0, 4).map(key => <div key={key}><dt>{label(key)}</dt><dd>{fmt(key, total[key])}</dd></div>)}
+          </dl>
+          {metricNotes[id]?.definition && <p className="r-note">{metricNotes[id].definition}</p>}
+        </article>} />
       )}/>
   );
 }

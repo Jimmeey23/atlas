@@ -53,7 +53,7 @@ export function topNWithOther(rows: MixRow[], n: number): MixRow[] {
   const sorted = rows.filter((r) => finite(r.value) && r.value !== 0).sort((a, b) => b.value - a.value);
   if (sorted.length <= n) return sorted;
   const rest = sorted.slice(n).reduce((sum, r) => sum + r.value, 0);
-  return [...sorted.slice(0, n), { label: "Other", value: rest }];
+  return [...sorted.slice(0, n), { label: "Everything else", value: rest }];
 }
 
 export type RankInput = { label: string; value: number | null; previous: number | null };

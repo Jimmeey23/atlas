@@ -76,6 +76,11 @@ export function FlipMetricCard({ id, data, target, flipped, onToggle }: { id: st
           <div><dt>Avg</dt><dd>{fmt(id, finite.reduce((a, b) => a + b, 0) / finite.length)}</dd></div>
           <div><dt>{monthLabel(String(data.history.at(-1)?.month ?? "")).split(" ")[0] || "Latest"}</dt><dd>{fmt(id, value)}</dd></div>
         </dl>}
+        <dl className="deck-flip-stats">
+          <div><dt>Previous month</dt><dd>{fmt(id, prior)}</dd></div>
+          <div><dt>Last year</dt><dd>{fmt(id, lastYear)}</dd></div>
+          {Object.keys(data.total).filter(key => key !== id && definition(key)?.domain === m?.domain && definition(key) && data.total[key] != null && !key.includes("__")).slice(0, 2).map(key => <div key={key}><dt>{definition(key)?.label}</dt><dd>{fmt(key, data.total[key])}</dd></div>)}
+        </dl>
       </article>}
     </div>
   </div>;

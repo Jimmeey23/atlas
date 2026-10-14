@@ -46,10 +46,10 @@ test("goal progress is unavailable without a positive target or a dated period",
   assert.equal(goalProgress({ value: 5, target: 10, from: "", to: "", today: "2026-10-14" }).status, "none");
   assert.equal(goalProgress({ value: null, target: 10, from: "2026-10-01", to: "2026-10-31", today: "2026-10-14" }).status, "none");
 });
-test("top N keeps the largest groups and folds the rest into Other without losing the total", () => {
+test("top N keeps the largest groups and folds the rest into Everything else without losing the total", () => {
   const rows = ["a", "b", "c", "d", "e"].map((label, i) => ({ label, value: (i + 1) * 10 }));
   const out = topNWithOther(rows, 3);
-  assert.deepEqual(out.map((r) => r.label), ["e", "d", "c", "Other"]);
+  assert.deepEqual(out.map((r) => r.label), ["e", "d", "c", "Everything else"]);
   assert.equal(out.reduce((n, r) => n + r.value, 0), 150);
   assert.equal(topNWithOther(rows, 5).length, 5);
   assert.deepEqual(topNWithOther([{ label: "x", value: 0 }, { label: "y", value: -3 }], 3).length, 1);

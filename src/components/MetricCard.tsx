@@ -1,3 +1,4 @@
+import { MetricFlip } from "./MetricFlip";
 import { createPortal } from "react-dom";
 import { useEffect, useId, useRef, useState } from "react";
 import { Info, TriangleAlert, X, ArrowUpRight, ArrowDownRight } from "lucide-react";
@@ -68,6 +69,7 @@ export function MetricCard({
   const numerator = evidence?.[`${id}__numerator`];
   const denominator = evidence?.[`${id}__denominator`];
 
+  const [flipped, setFlipped] = useState(false);
   const [info, setInfo] = useState(false);
   const anchor = useRef<HTMLButtonElement>(null);
   const [position, setPosition] = useState({ left: 16, top: 70 });
@@ -103,7 +105,7 @@ export function MetricCard({
   const positive = (Number(value) >= Number(previous)) === m.higherIsBetter;
   const unchanged = Number(value) === Number(previous);
   return (
-    <article
+    <MetricFlip label={m.label} flipped={flipped} onToggle={() => setFlipped(value => !value)} front={<article
       data-note-anchor={`metric-${id}`}
       className="metric-card"
       style={{ "--card-accent": `var(--accent, var(--${m.domain}))` } as React.CSSProperties}
@@ -128,8 +130,8 @@ export function MetricCard({
           padding: 0,
           textAlign: "left",
         }}
-        onClick={onDrill}
-        aria-label={`Drill into ${m.label}: ${fmt(id, value)}`}
+        onClick={() => setFlipped(true)}
+        aria-label={`Show related metrics for ${m.label}: ${fmt(id, value)}`}
       >
         {fmt(id, value)}
       </button>
@@ -201,6 +203,19 @@ export function MetricCard({
           </div>,
           document.body,
         )}
-    </article>
+    </article>} back={<article className="metric-card">
+      <div className="metric-label"><span>{m.label} · details</span></div>
+      <dl className="metric-related">
+        <div><dt>Selected scope</dt><dd>{fmt(id, value)}</dd></div>
+        <div><dt>{comparisonLabel(comparisonMode)}</dt><dd>{canCompare ? fmt(id, previous) : "Unavailable"}</dd></div>
+        <div><dt>Contributing records</dt><dd>{Number.isFinite(n) ? n.toLocaleString("en-IN") : "Unavailable"}</dd></div>
+        {numerator != null && <div><dt>{note?.numerator || "Numerator"}</dt><dd>{Number(numerator).toLocaleString("en-IN")}</dd></div>}
+        {denominator != null && <div><dt>{note?.denominator || "Denominator"}</dt><dd>{Number(denominator).toLocaleString("en-IN")}</dd></div>}
+        {trendValues.length > 1 && !isSnapshot && <><div><dt>History low</dt><dd>{fmt(id, Math.min(...trendValues))}</dd></div><div><dt>History high</dt><dd>{fmt(id, Math.max(...trendValues))}</dd></div></>}
+        {Object.keys(evidence ?? {}).filter(key => key !== id && metrics[key]?.domain === m.domain && evidence?.[key] != null && !key.includes("__")).slice(0, 3).map(key => <div key={key}><dt>{metrics[key].label}</dt><dd>{fmt(key, evidence![key])}</dd></div>)}
+      </dl>
+      {comparisonReason && <p className="metric-explanation">{comparisonReason}</p>}
+      {onDrill && <button className="button" onClick={onDrill}>Explore source records ↗</button>}
+    </article>} />
   );
 }

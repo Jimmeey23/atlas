@@ -12,8 +12,8 @@ export function OverviewBoard({ data, version }: { data: Analysis; version: numb
       <div className="board-grid">
         <GoalRings data={data} />
         <StudioLeaderboard version={version} />
-        <ConversionFunnel version={version} />
         <RevenueMix version={version} />
+        <ConversionFunnel version={version} />
       </div>
     </Register>
   );

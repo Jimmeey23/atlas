@@ -8,9 +8,11 @@ import { useStore } from "../../state/store";
 import { funnelSteps } from "../../data/overview-board";
 import { useBoardData } from "./useBoardData";
 
+// Lead stages follow one another. Converted and retained newcomers are separate outcomes of the same
+// cohort (a retained client need not have converted), so they are shown against the cohort, not step to step.
 const funnels = [
-  { title: "Leads to members", ids: ["leads", "trials_completed", "converted_leads"] },
-  { title: "New clients to retained", ids: ["new_clients", "new_converted", "new_retained"] },
+  { title: "Leads to members", ids: ["leads", "trials_completed", "converted_leads"], sequential: true },
+  { title: "New client outcomes", ids: ["new_clients", "new_converted", "new_retained"], sequential: false },
 ];
 
 /** Each funnel reads one governed source, so its steps match the figures on the other tabs. */
@@ -25,7 +27,8 @@ export function ConversionFunnel({ version }: { version: number }) {
           if (!table) throw new Error(`${f.title} has no source sheet.`);
           await ensureSource(table);
           const rows = await query(`SELECT ${metricSQL(f.ids, context(filters, transient))} FROM ${metricFacts(filters, table, transient)}`);
-          return funnelSteps(f.ids.map((id) => ({ id, label: metrics[id].label, value: rows[0]?.[id] == null ? null : Number(rows[0][id]) })));
+          const steps = funnelSteps(f.ids.map((id) => ({ id, label: metrics[id].label, value: rows[0]?.[id] == null ? null : Number(rows[0][id]) })));
+          return f.sequential ? steps : steps.map((s) => ({ ...s, ofPrevious: null, biggestDrop: false }));
         }),
       ),
     [filters, transient, version],
@@ -54,7 +57,9 @@ export function ConversionFunnel({ version }: { version: number }) {
                         <span className="board-funnel-label">{s.label}</span>
                         <strong className="number">{fmt(s.id, s.value)}</strong>
                         <small>
-                          {s.ofPrevious === null ? "" : `${(s.ofPrevious * 100).toFixed(0)}% of previous`}
+                          {f.sequential
+                            ? s.ofPrevious === null ? "" : `${(s.ofPrevious * 100).toFixed(0)}% of previous`
+                            : s.ofFirst === null || s === steps[0] ? "" : `${(s.ofFirst * 100).toFixed(0)}% of ${steps[0].label.toLowerCase()}`}
                           {s.biggestDrop ? " · biggest drop-off" : ""}
                         </small>
                       </li>
