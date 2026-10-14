@@ -6,3 +6,7 @@
 :root:is([data-theme]) .quick-filter-note { display: none; }
 .quick-date-others summary { white-space: nowrap; }
 .quick-date-others .quick-others-menu { min-width: 170px; }
+
+:root[data-theme] .quick-leads { display: flex; flex: 0 0 auto; align-items: center; gap: 4px; padding-right: 10px; border-right: 1px solid var(--hairline); }
+:root[data-theme] .quick-leads button { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; }
+:root[data-theme] .quick-leads button[aria-pressed=true] { background: var(--accent); color: var(--text-inverse); border-color: var(--accent); }

@@ -173,8 +173,8 @@ export const useStore = create<Store>((set, get) => ({
       });
   },
   view:
-    params.get("view") === "performance-marketing"
-      ? "performance-marketing"
+    ["performance-marketing", "website-leads"].includes(params.get("view") || "")
+      ? params.get("view") || ""
       : "",
   tab: parentTab(Math.min(15, Math.max(0, Number(params.get("tab") || 0)))),
   theme: localStorage.getItem("floor-theme") || "matte",
@@ -269,6 +269,7 @@ export const publishLayout = (
   layoutParams = read;
 };
 export const PERFORMANCE_MARKETING_VIEW = "performance-marketing";
+export const WEBSITE_LEADS_VIEW = "website-leads";
 export const savedPresets: { name: string; tab: number; view?: string }[] = [
   { name: "Monday review", tab: 0 },
   { name: "Schedule audit", tab: 2 },

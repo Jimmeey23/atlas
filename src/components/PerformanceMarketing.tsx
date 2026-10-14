@@ -16,7 +16,7 @@ import { MarketingChannelComparison } from "./MarketingChannelComparison";
 import type { TreeRow } from "./NestedTable";
 import "./PerformanceMarketing.css";
 
-export function PerformanceMarketing({ version, onDrill }: { version: string | number; onDrill: (entry: TreeRow) => void }) {
+export function PerformanceMarketing({ version, onDrill, websiteOnly = false }: { version: string | number; onDrill: (entry: TreeRow) => void; websiteOnly?: boolean }) {
   const [metaFilters,setMetaFilters] = useState<Record<string,string>>({account_id:"",campaign_id:"",publisher_platform:"",objective:""});
   const filters = useStore(s=>s.filters);
   const compare = useStore(s=>s.compare);
@@ -46,20 +46,21 @@ export function PerformanceMarketing({ version, onDrill }: { version: string | n
     onDrill(entry);
   }
   return <div className="pm-page">
-    <nav className="pm-section-nav" aria-label="Performance marketing sections"><a href="#marketing-website"><Globe2 size={15}/>Website journeys</a><a href="#marketing-channels"><UsersRound size={15}/>Channel comparison</a><a href="#marketing-meta"><Megaphone size={15}/>Meta campaigns</a><a href="#marketing-details"><ListFilter size={15}/>Lead details</a></nav>
+    <nav className="pm-section-nav" aria-label="Performance marketing sections"><a href="#marketing-website"><Globe2 size={15}/>Website journeys</a><a href="#website-lead-periods">Leads by period</a>{!websiteOnly && <><a href="#marketing-channels"><UsersRound size={15}/>Channel comparison</a><a href="#marketing-meta"><Megaphone size={15}/>Meta campaigns</a></>}<a href="#marketing-details"><ListFilter size={15}/>Lead details</a></nav>
     <div className="pm-scope"><strong>CRM source = Website</strong><span>Lead creation date {filters.from||"all time"}{filters.to?` → ${filters.to}`:""}</span>{prior&&<span>Compared with {prior.from} → {prior.to}</span>}<span>Studio, signature experience and other CRM filters apply.</span></div>
     <Register id="marketing-website" index="01" title="Website lead performance" subtitle="Recorded outcomes for the Website lead creation-date cohort">
       <MarketingStatus loading={totals.loading} error={totals.error} empty={!Number(current?.n)}/>
       {!totals.loading && current && <div className="metric-strip eight pm-metric-grid">{websiteKPIs.map(id=><MetricCard key={id} id={id} value={Number(current.n)>0?current[id]:null} previous={previous?.[id]} trend={trend.rows} n={Number(current.n)} compare={!!prior} onDrill={()=>inspectMetric(id,`Website · ${id.replaceAll('website_','').replaceAll('_',' ')}`)}/>)}</div>}
       <p className="pm-note">Trials use Trial Status “Trial Completed”; conversions use Conversion Status “Converted”; retention uses Retention Status “Retained”. These are the latest recorded outcomes, scoped by lead creation date. Card sparklines show the latest 14 months; cards use the selected period.</p>
     </Register>
+    <WebsiteLeadPeriods version={version} onDrill={onDrill} expanded/>
     <Register index="03" title="Website lead journey" subtitle="Select an outcome to inspect the member records behind it">
       <MarketingStatus loading={funnel.loading} error={funnel.error} empty={!Number(outcomes?.leads)}/>
       {!funnel.loading&&Number(outcomes?.leads)>0&&<div className="pm-funnel">{steps.map(step=><button className="pm-funnel-step" key={step.id} onClick={()=>inspectMetric(step.id,`Website · ${step.label}`)}><span>{step.label}</span><span className="pm-funnel-bar"><i style={{width:`${Number(outcomes[step.id])/Number(outcomes.leads)*100}%`}}/></span><small>{fmt(step.id,outcomes[step.id])} · {(Number(outcomes[step.id])/Number(outcomes.leads)*100).toFixed(1)}% of leads</small></button>)}</div>}
       <p className="pm-note">Follow-ups and outcomes are independently recorded. Trial-to-member rates count conversions among completed trials.</p>
     </Register>
-    <MarketingChannelComparison version={version} metaFilters={metaFilters} onDrill={onDrill}/>
-    <MetaMarketing version={version} onDrill={onDrill} selected={metaFilters} setSelected={setMetaFilters}/>
+    {!websiteOnly && <><MarketingChannelComparison version={version} metaFilters={metaFilters} onDrill={onDrill}/>
+    <MetaMarketing version={version} onDrill={onDrill} selected={metaFilters} setSelected={setMetaFilters}/></>}
     <Register index="08" title="Website monthly trend" subtitle="Latest 14 months by creation date · independent of the page period"><MarketingTable title="Website monthly trend" source="leads" scope={historyScope} initialGroups={["month"]} ids={websiteColumns} version={version} onDrill={onDrill} showChart chronological/></Register>
     <Register index="09" title="Website lead stages" subtitle="Current stages with recorded trial, conversion and retention outcomes"><MarketingTable title="Website lead stages" source="leads" scope={currentScope} initialGroups={["stage"]} ids={websiteColumns} version={version} onDrill={onDrill}/></Register>
     <Register index="10" title="Website campaign, studio and team breakdown" subtitle="Group by UTM campaign, studio, associate or any recorded outcome"><MarketingTable title="Website campaign breakdown" source="leads" scope={currentScope} initialGroups={["utm_campaign","location"]} ids={websiteColumns} version={version} onDrill={onDrill} showChart/><p className="pm-note">UTM campaign tags come from the Leads sheet. No campaign-level linkage to Meta is assumed without a shared campaign identifier. Untagged or expired attribution remains visible.</p></Register>
@@ -68,6 +69,5 @@ export function PerformanceMarketing({ version, onDrill }: { version: string | n
       <Register index="12" title="Website speed to first response" subtitle="Time from creation to the first logged follow-up"><MarketingTable title="Website response speed" source="leads" scope={currentScope} initialGroups={["speed"]} ids={websiteColumns} version={version} onDrill={onDrill}/></Register>
     </div>
     <Register id="marketing-details" index="13" title="Website lead details" subtitle="Search all matching community member records, group them or inspect original sheet rows"><MarketingRecords source="leads" scope={currentScope} version={version} onDrill={onDrill}/></Register>
-    <WebsiteLeadPeriods version={version} onDrill={onDrill}/>
   </div>;
 }

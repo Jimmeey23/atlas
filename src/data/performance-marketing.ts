@@ -1,7 +1,34 @@
 import { metricSQL, metrics, type QueryContext } from "../semantics/metrics";
 import { groupable, groupLabel, groupValueSQL, type GroupField } from "./group-fields";
+import { comparisonDates, relativePeriod } from "./periods";
+import { isGroup, type FilterRule, type FilterGroup } from "./advanced-controls";
+import type { Filters } from "../state/store";
 
 export const WEBSITE = "Website";
+/** A source preset replaces source conditions only; other selected dimensions survive. */
+export function leadSourceFilters(filters: Filters, websiteOnly: boolean): Filters {
+  const clearSource = (group: FilterGroup): FilterGroup => ({ ...group, rules: group.rules.flatMap<FilterRule | FilterGroup>(rule => {
+    if (isGroup(rule)) { const child = clearSource(rule); return child.rules.length ? [child] : []; }
+    return rule.field === "source" ? [] : [rule];
+  }) });
+  return { ...filters, source: websiteOnly ? [WEBSITE] : [], ...(filters.advanced ? { advanced: clearSource(filters.advanced) } : {}) };
+}
+
+export function websitePeriodWindows(asOf: string) {
+  const shift = (range: { from: string; to: string }, days: number) => Object.fromEntries(Object.entries(range).map(([key, date]) => [key, new Date(Date.parse(date + "T00:00:00Z") + days * 86400000).toISOString().slice(0, 10)])) as { from: string; to: string };
+  const week = relativePeriod("This week", asOf), month = relativePeriod("This month", asOf), quarter = relativePeriod("This quarter", asOf), rolling = relativePeriod("Last 30 days", asOf), year = relativePeriod("This year", asOf);
+  // Month-to-date compares the same calendar day count, clamped in shorter months.
+  const date = new Date(asOf + "T00:00:00Z");
+  const last = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 0)).getUTCDate();
+  const priorMonth = { from: new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() - 1, 1)).toISOString().slice(0, 10), to: new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() - 1, Math.min(date.getUTCDate(), last))).toISOString().slice(0, 10) };
+  return [
+    { key: "wow", title: "Week to date", current: week, prior: shift(week, -7) },
+    { key: "mom", title: "Month to date", current: month, prior: priorMonth },
+    { key: "qoq", title: "Quarter to date", current: quarter, prior: comparisonDates(quarter.from, quarter.to, "quarter") },
+    { key: "rolling", title: "Last 30 days", current: rolling, prior: shift(rolling, -30) },
+    { key: "yoy", title: "Year to date", current: year, prior: comparisonDates(year.from, year.to, "year") },
+  ];
+}
 // Exact source equality: Website Form and other Website-prefixed sources are
 // separate sources. Always apply this, even if source coverage is missing.
 export const websitePredicate = "lower(trim(source))='website'";

@@ -1,50 +1,25 @@
 import { DropdownField } from "./ui/DropdownField";
 import { useEffect, useMemo, useState } from "react";
-import { query, quote, type Row } from "../data/duckdb";
+import { query, quote, health, type Row } from "../data/duckdb";
+import { historicalTransient } from "../data/periods";
 import { metrics, contributorPredicate } from "../semantics/metrics";
 import { fmt, delta } from "../semantics/formats";
 import { useStore } from "../state/store";
 import { context, where, today } from "../data/analytics";
-import { comparisonDates, relativePeriod } from "../data/periods";
-import { blueprints } from "../data/blueprints";
 
-import { WEBSITE, websiteScope, marketingMetricSQL, marketingDimension, marketingDimensionOptions, marketingContributor } from "../data/performance-marketing";
+import { WEBSITE, websiteScope, marketingMetricSQL, marketingDimension, marketingDimensionOptions, marketingContributor, websitePeriodWindows, websiteColumns } from "../data/performance-marketing";
 import { useGroupFields } from "../data/group-registry";
-const iso = (d: Date) => d.toISOString().slice(0, 10);
-const shiftDays = (range: { from: string; to: string }, days: number) => ({
-  from: iso(new Date(Date.parse(range.from + "T00:00:00Z") + days * 86400000)),
-  to: iso(new Date(Date.parse(range.to + "T00:00:00Z") + days * 86400000)),
-});
-// Same calendar days one month back, clamped to that month's length.
-const previousMonth = (range: { from: string; to: string }) => {
-  const end = new Date(range.to + "T00:00:00Z");
-  const start = Date.UTC(end.getUTCFullYear(), end.getUTCMonth() - 1, 1);
-  const lastDay = new Date(
-    Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 0),
-  ).getUTCDate();
-  return {
-    from: iso(new Date(start)),
-    to: iso(
-      new Date(
-        Date.UTC(
-          end.getUTCFullYear(),
-          end.getUTCMonth() - 1,
-          Math.min(end.getUTCDate(), lastDay),
-        ),
-      ),
-    ),
-  };
-};
-const ids = blueprints[8].columns.map(id => ({ trials_completed: "website_trials", converted_leads: "website_members", lead_conversion_rate: "website_win_rate", untouched_leads: "website_untouched", open_leads: "website_open", pipeline_value: "website_pipeline_value" }[id] || id));
+const ids = [...websiteColumns, "website_contact_rate", "website_untouched", "website_open", "website_pipeline_value"];
 const label = (range: { from: string; to: string }) =>
   `${range.from} → ${range.to}`;
 
 import type { TreeRow } from "./NestedTable";
 import { marketingDrill } from "./MarketingAnalytics";
 
-export function WebsiteLeadPeriods({ version, onDrill }: { version: string | number; onDrill?: (entry: TreeRow) => void }) {
+export function WebsiteLeadPeriods({ version, onDrill, expanded = false }: { version: string | number; onDrill?: (entry: TreeRow) => void; expanded?: boolean }) {
   const s = useStore();
   const compareOff = s.compare === "none";
+  const sourceEmpty = health.leads?.recordsCount === 0;
   const [chosen, setGroup] = useState("");
   const registry = useGroupFields("leads", chosen ? [chosen] : []);
   // Date and month are the comparison windows themselves, so they are not segments here.
@@ -54,39 +29,12 @@ export function WebsiteLeadPeriods({ version, onDrill }: { version: string | num
   const [rows, setRows] = useState<Row[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-  const windows = useMemo(() => {
-    const now = today();
-    const year = relativePeriod("This year", now);
-    const week = relativePeriod("This week", now);
-    const month = relativePeriod("This month", now);
-    // Every current window is period-to-date, so each prior window covers the
-    // same elapsed span. Comparing two days against a full week would read as a
-    // collapse that never happened.
-    return [
-      {
-        key: "wow",
-        title: "Week on week",
-        current: week,
-        prior: shiftDays(week, -7),
-      },
-      {
-        key: "mom",
-        title: "Month on month",
-        current: month,
-        prior: previousMonth(month),
-      },
-      {
-        key: "yoy",
-        title: "Year on year",
-        current: year,
-        prior: comparisonDates(year.from, year.to, "year"),
-      },
-    ];
-  }, []);
+  const asOf = today();
+  const windows = useMemo(() => websitePeriodWindows(asOf), [asOf]);
   // The source dimension is pinned to Website here, so a source chosen
   // elsewhere must not narrow it further.
   const transient = useMemo(
-    () => s.transient.filter((t) => t.field !== "source"),
+    () => historicalTransient(s.transient).filter((t) => t.field !== "source"),
     [s.transient],
   );
   const sql = useMemo(
@@ -139,16 +87,17 @@ export function WebsiteLeadPeriods({ version, onDrill }: { version: string | num
     onDrill?.(entry);
   };
   return (
-    <details className="secondary">
+    <details id="website-lead-periods" className="secondary website-lead-periods" open={expanded || undefined}>
       <summary>
-        Website enquiries · WoW, MoM, YoY
+        Website leads received · weekly, monthly & other periods
         <span className="small">Source exactly “{WEBSITE}”</span>
       </summary>
       <div className="secondary-content">
         <div className="pm-controls"><label>Group comparisons <DropdownField aria-label="Group Website period comparisons" value={group} onChange={event=>setGroup(event.target.value)}><option value="">All Website leads</option>{options.map(o=><option key={o.field} value={o.field}>{o.label}</option>)}</DropdownField></label></div>
         {error && <p role="alert">{error}</p>}
         {loading && <p role="status">Loading website enquiry periods…</p>}
-        <div className="table-scroll">
+        {sourceEmpty && <p role="status">The latest Leads snapshot contains no rows. Period totals are unavailable until source data is loaded.</p>}
+        {!sourceEmpty && <div className="table-scroll">
           <table className="worklist-table">
             <thead>
               <tr>
@@ -202,11 +151,11 @@ export function WebsiteLeadPeriods({ version, onDrill }: { version: string | num
               </tr>)}
             </tbody>
           </table>
-        </div>
+        </div>}
         <p className="small">
-          Week and month windows are period-to-date and ignore the page date
-          filter; every other active filter applies. Year on year compares this
-          calendar year to date with the same span last year.
+          Week, month, quarter and year windows run to today and ignore the page
+          date filter; the 30-day window is rolling. Other filters still apply.
+          Outcomes are the latest recorded statuses for leads created in each window.
         </p>
       </div>
     </details>

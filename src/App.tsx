@@ -53,6 +53,7 @@ import {
   emptyFilters,
   savedPresets,
   PERFORMANCE_MARKETING_VIEW,
+  WEBSITE_LEADS_VIEW,
   linkedLayout,
   publishLayout,
   syncUrl,
@@ -175,7 +176,8 @@ export default function App() {
   const { preferences: prefs, page: updatePage } = usePreferences();
   const pagePrefs = prefs.page[s.tab] || {};
   const bp = blueprints[s.tab];
-  const marketingView = s.view === PERFORMANCE_MARKETING_VIEW && s.tab === 8;
+  const websiteMarketingView = s.view === WEBSITE_LEADS_VIEW && s.tab === 8;
+  const marketingView = (s.view === PERFORMANCE_MARKETING_VIEW || websiteMarketingView) && s.tab === 8;
   const workspaceHeading = useWorkspaceCopy(s.tab, bp.subtitle);
   const workspaceVersion = dependencies(s.tab)
     // Content, not fetch time: a re-check that finds identical rows must not recompute the page.
@@ -804,7 +806,7 @@ export default function App() {
           aria-busy={busy}
         >
           <div className="print-context">
-            <h2>Atlas / {s.view === "kra" ? "Jimmeey Gondaa · KRA performance" : marketingView ? "Performance Marketing" : tabs[s.tab]}</h2>
+            <h2>Atlas / {s.view === "kra" ? "Jimmeey Gondaa · KRA performance" : websiteMarketingView ? "Website lead performance" : marketingView ? "Performance Marketing" : tabs[s.tab]}</h2>
             <p>
               Filters: {JSON.stringify(s.filters)} / Cross-filters:{" "}
               {JSON.stringify(s.transient)} / Estimated instructor rate: ₹
@@ -813,8 +815,8 @@ export default function App() {
           </div>
           <div className="page-intro">
             <div>
-              <h1 key={s.tab}>{s.view === "kra" ? "Jimmeey Gondaa · KRA performance" : marketingView ? "Performance Marketing" : pagePrefs.heading || workspaceHeading.title || bp.title}</h1>
-              <p>{s.view === "kra" ? "Systems, sales & client servicing · June–November 2026" : marketingView ? "Website lead journeys, CRM acquisition channels and Meta campaign performance." : pagePrefs.subtitle ?? workspaceHeading.subtitle}</p>
+              <h1 key={s.tab}>{s.view === "kra" ? "Jimmeey Gondaa · KRA performance" : websiteMarketingView ? "Website lead performance" : marketingView ? "Performance Marketing" : pagePrefs.heading || workspaceHeading.title || bp.title}</h1>
+              <p>{s.view === "kra" ? "Systems, sales & client servicing · June–November 2026" : websiteMarketingView ? "Website leads received, period comparisons and recorded performance outcomes." : marketingView ? "Website lead journeys, CRM acquisition channels and Meta campaign performance." : pagePrefs.subtitle ?? workspaceHeading.subtitle}</p>
             </div>
             <div className="intro-meta">
               <span className="pill good">
@@ -847,7 +849,7 @@ export default function App() {
             </div>
           </div>
           {s.view !== "kra" && <SourceStatus
-            additionalSources={s.tab === 0 ? ["meta", "payroll"] : marketingView ? ["meta"] : []}
+            additionalSources={s.tab === 0 ? ["meta", "payroll"] : marketingView && !websiteMarketingView ? ["meta"] : []}
             tab={s.tab}
             version={version}
             onRetry={(key) => void ensureSource(key, true)}
@@ -924,7 +926,7 @@ export default function App() {
               <DataHealth version={version} onRefresh={() => void load(true)} />
             ) : null
           ) : !ready || configuredTab !== s.tab ? null : marketingView ? (
-            <PerformanceMarketing version={version} onDrill={setDrill} />
+            <PerformanceMarketing version={version} onDrill={setDrill} websiteOnly={websiteMarketingView} />
           ) : s.tab === 1 ? (
             <div className="studio-operations-page">
               <StudioOperationsOverview version={contentVersion} onDrill={setDrill} />

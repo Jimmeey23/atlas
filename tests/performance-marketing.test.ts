@@ -117,3 +117,27 @@ test('Meta nested groups preserve campaign identity and recalculate weighted cos
     assert.equal(empty.meta_spend,null); assert.equal(empty.meta_leads,null); assert.equal(empty.meta_cpl,null);
   } finally {c.closeSync(); db.closeSync();}
 });
+
+import { leadSourceFilters, websitePeriodWindows } from '../src/data/performance-marketing.ts';
+import type { Filters } from '../src/state/store.ts';
+test('PM source preset removes conflicting source rules and preserves other selections', () => {
+  const filters = { from:'2026-09-01',to:'2026-09-30',location:['Kenkere House'],source:['Instagram'],advanced:{id:'root',join:'and',rules:[{id:'source',field:'source',operator:'eq',value:'Instagram'},{id:'nested',join:'or',rules:[{id:'source2',field:'source',operator:'eq',value:'Social'},{id:'studio',field:'location',operator:'eq',value:'Kenkere House'}]}]}} as Filters;
+  const selected = leadSourceFilters(filters,true);
+  assert.deepEqual(selected.source,['Website']);
+  assert.equal(selected.from,filters.from);assert.deepEqual(selected.location,filters.location);
+  assert.deepEqual(selected.advanced?.rules,[{id:'nested',join:'or',rules:[{id:'studio',field:'location',operator:'eq',value:'Kenkere House'}]}]);
+  assert.deepEqual(leadSourceFilters(selected,false).source,[]);
+  assert.deepEqual(filters.source,['Instagram'],'preset never mutates existing scope');
+});
+test('Website period overview uses explicit current and matching prior windows', () => {
+  const windows=websitePeriodWindows('2026-10-14');
+  assert.equal(windows.length,5);
+  assert.deepEqual(windows.find(w=>w.key==='wow')?.current,{from:'2026-10-12',to:'2026-10-14'});
+  assert.deepEqual(windows.find(w=>w.key==='wow')?.prior,{from:'2026-10-05',to:'2026-10-07'});
+  assert.deepEqual(windows.find(w=>w.key==='mom')?.prior,{from:'2026-09-01',to:'2026-09-14'});
+  assert.deepEqual(windows.find(w=>w.key==='qoq')?.current,{from:'2026-10-01',to:'2026-10-14'});
+  assert.deepEqual(windows.find(w=>w.key==='qoq')?.prior,{from:'2026-07-01',to:'2026-07-14'});
+  assert.deepEqual(windows.find(w=>w.key==='rolling')?.current,{from:'2026-09-15',to:'2026-10-14'});
+  assert.deepEqual(windows.find(w=>w.key==='rolling')?.prior,{from:'2026-08-16',to:'2026-09-14'});
+  assert.deepEqual(websitePeriodWindows('2024-03-31').find(w=>w.key==='mom')?.prior,{from:'2024-02-01',to:'2024-02-29'});
+});

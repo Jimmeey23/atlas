@@ -1,9 +1,10 @@
 import "./QuickFilters.css";
 import { periods, relativePeriod } from "../data/periods";
-import { useStore } from "../state/store";
+import { WEBSITE_LEADS_VIEW, useStore } from "../state/store";
+import { leadSourceFilters } from "../data/performance-marketing";
 import { shortLocation } from "../data/normalise";
 import { useEffect, useRef } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Megaphone } from "lucide-react";
 
 const primaryPeriods = ["This week", "Last week", "This month", "Last month", "Last 30 days", "This quarter"];
 const mainStudios = [/kemps corner/i, /bandra/i, /kenkere/i];
@@ -46,6 +47,10 @@ export function QuickFilters({ locations }: { locations: string[] }) {
   );
   return (
     <div className="quick-filters">
+      {s.tab === 8 && <div className="quick-leads" role="group" aria-label="Lead performance view">
+        <button className={!s.view && !s.filters.source.length ? "selected" : ""} aria-pressed={!s.view && !s.filters.source.length} onClick={() => s.set({ view: "", filters: leadSourceFilters(s.filters, false), transient: s.transient.filter(t => t.field !== "source") })}>All leads</button>
+        <button className={s.view === WEBSITE_LEADS_VIEW ? "selected" : ""} aria-pressed={s.view === WEBSITE_LEADS_VIEW} aria-label="PM · Website lead performance" title="Performance Marketing · Source exactly Website" onClick={() => s.set({ view: WEBSITE_LEADS_VIEW, filters: leadSourceFilters(s.filters, true), transient: s.transient.filter(t => t.field !== "source") })}><Megaphone size={13} aria-hidden="true"/> PM</button>
+      </div>}
       <div className="quick-periods" aria-label="Quick date periods">
         <span className="quick-label" aria-hidden="true">Period</span>
         {primaryPeriods.map((name) => {
