@@ -12,6 +12,8 @@ import { ChartControls } from "./ChartControls";
 import { AgentSettings } from "./AgentSettings";
 import { usePreferences, hydratePreferences } from "../state/preferences";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { LabResult } from "./LabResult";
+import { labSQL } from "../data/data-lab";
 import * as echarts from "echarts";
 import { tabs, useStore } from "../state/store";
 import { DataInsightAction } from "./DataInsightAction";
@@ -580,13 +582,21 @@ export function Element({ doc, version, preview = false }: { doc: Doc; version: 
   const [rows, setRows] = useState<any[]>([]);
   const [error, setError] = useState("");
   const spec = useMemo(() => elementSpec(doc.body), [doc]);
+  const lab = doc.body.type === "lab";
   useEffect(() => {
     let active = true;
     setError("");
+    let sql: string = doc.body.sql;
+    try {
+      if (lab) sql = labSQL(doc.body.spec);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      return;
+    }
     api("query", {
       method: "POST",
       body: JSON.stringify({
-        sql: doc.body.sql,
+        sql,
         filters: undated(doc.body.pinnedScope || { ...filters, lateOnly: page === 12 }, spec.ignoreDates),
       }),
     })
@@ -613,7 +623,7 @@ export function Element({ doc, version, preview = false }: { doc: Doc; version: 
           detail="Saved chart/table artifact using the current workspace scope."
         />
       </div>
-      <ChartControls rows={rows} title={doc.title} />
+      {!lab && <ChartControls rows={rows} title={doc.title} />}
       <div className="small">
         Live query · {spec.ignoreDates ? (doc.body.pinnedScope ? "all dates · fixed studios and filters" : "all dates · ignores the page date filter") : doc.body.pinnedScope ? `fixed scope: ${doc.body.pinnedScope.from || "all dates"} → ${doc.body.pinnedScope.to || "latest"}` : "inherits dashboard filters"} · {preview ? "unsaved preview" : "saved in Supabase"}
       </div>
@@ -659,7 +669,7 @@ export function Element({ doc, version, preview = false }: { doc: Doc; version: 
             />{" "}
             Ignore the page date filter (show every month)
           </label>
-          <textarea
+          {!lab && <textarea
             aria-label="Data query"
             value={draft.body.sql}
             onChange={(e) =>
@@ -668,7 +678,7 @@ export function Element({ doc, version, preview = false }: { doc: Doc; version: 
                 body: { ...draft.body, sql: e.target.value },
               })
             }
-          />
+          />}
           <button
             className="button"
             onClick={() =>
@@ -694,8 +704,25 @@ export function Element({ doc, version, preview = false }: { doc: Doc; version: 
         </>
       )}
       {(error || notice) && <p role="alert">{error || notice}</p>}
+      {lab && (
+        <button
+          className="button"
+          onClick={() => {
+            try {
+              sessionStorage.setItem("atlas-data-lab-open", JSON.stringify({ ...doc.body.spec, id: crypto.randomUUID() }));
+            } catch {
+              /* The builder still opens; the analysis can be rebuilt from the element. */
+            }
+            useStore.getState().set({ tab: 16 });
+          }}
+        >
+          Open in builder
+        </button>
+      )}
       {!rows.length ? (
         !error && <p className="small" role="status">No rows for this scope.</p>
+      ) : lab ? (
+        <LabResult spec={doc.body.spec} rows={rows} />
       ) : chartTypes.includes(spec.type) ? (
         <ElementChart spec={spec} rows={rows} title={doc.title} />
       ) : spec.type === "kpi" ? (

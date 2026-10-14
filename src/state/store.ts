@@ -18,6 +18,7 @@ export const tabs = [
   "AI workspace",
   "Format comparison",
   "Monthly report",
+  "Data Lab",
 ];
 // Instructor economics (10) is consolidated with instructor performance (3), so
 // it keeps its index for saved views and insight links but leaves the nav.
@@ -32,7 +33,7 @@ export const parentTab = (tab: number) => {
     if (members.includes(tab)) return Number(parent);
   return tab;
 };
-export const navigationOrder = [0, 4, 8, 5, 6, 12, 1, 14, 3, 15, 13, 11];
+export const navigationOrder = [0, 4, 8, 5, 6, 12, 1, 14, 3, 15, 16, 13, 11];
 export interface Filters {
   advanced?: FilterGroup;
   from: string;
@@ -176,7 +177,7 @@ export const useStore = create<Store>((set, get) => ({
     ["performance-marketing", "website-leads"].includes(params.get("view") || "")
       ? params.get("view") || ""
       : "",
-  tab: parentTab(Math.min(15, Math.max(0, Number(params.get("tab") || 0)))),
+  tab: parentTab(Math.min(tabs.length - 1, Math.max(0, Number(params.get("tab") || 0)))),
   theme: localStorage.getItem("floor-theme") || "matte",
   density: localStorage.getItem("floor-density") || "compact",
   filters: {

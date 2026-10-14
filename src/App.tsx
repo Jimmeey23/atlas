@@ -1,3 +1,4 @@
+import { DataLab } from "./components/DataLab";
 import { missingPrivateScope } from "./state/store";
 import { AnalysisWorkbench } from "./components/AnalysisWorkbench";
 import { AnalysisNavigation } from "./components/AnalysisNavigation";
@@ -340,7 +341,7 @@ export default function App() {
   }, [prefs, pagePrefs]);
   useEffect(() => {
     if (configuredTab !== s.tab) return;
-    if (!ready || s.tab === 11 || s.tab === 13 || s.tab === 15 || marketingView) {
+    if (!ready || s.tab === 11 || s.tab === 13 || s.tab === 15 || s.tab === 16 || marketingView) {
       setBusy(
         !ready &&
           !dependencies(s.tab).some((k) => sourceStates[k].state === "error"),
@@ -856,7 +857,7 @@ export default function App() {
           />}
           {missingPrivateScope && <p className="notice">This link contains a member-specific scope saved in another browser. Open the saved analysis in its original browser to restore that scope.</p>}
           <AnalysisNavigation />
-          <AnalysisWorkbench key={s.tab + s.view} version={version} onDrill={setDrill} />
+          {s.tab !== 16 && <AnalysisWorkbench key={s.tab + s.view} version={version} onDrill={setDrill} />}
           {error && (
             <div className="notice">
               <TriangleAlert size={14} />
@@ -915,7 +916,9 @@ export default function App() {
             </div>
           )}
           {s.tab !== 15 && <ReportJobIndicator onOpen={() => s.set({ tab: 15 })} />}
-          {s.tab === 15 ? (
+          {s.tab === 16 ? (
+            <DataLab version={contentVersion} />
+          ) : s.tab === 15 ? (
             ready ? (
               <ReportBuilder version={version} />
             ) : null

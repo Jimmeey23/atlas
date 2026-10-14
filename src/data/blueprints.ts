@@ -587,3 +587,5 @@ blueprints.push({
   chartTitle: "Monthly report",
   secondary: [],
 });
+
+blueprints.push({ title: "Data Lab", subtitle: "Connect sheets. Explore relationships. Build your own view of the business.", source: "sales", domain: "revenue", kpis: [], columns: [], groups: [], chart: "trend", chartTitle: "Data Lab", secondary: [] });

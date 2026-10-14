@@ -16,6 +16,7 @@ import {
   Sparkles,
   ChartNoAxesCombined,
   FileText,
+  Database,
 } from "lucide-react";
 export const workspaceIcons = [
   LayoutDashboard,
@@ -34,6 +35,7 @@ export const workspaceIcons = [
   Sparkles,
   ChartNoAxesCombined,
   FileText,
+  Database,
 ];
 const titles = [
   [
@@ -186,7 +188,7 @@ const subtitles = [
 export function useWorkspaceCopy(tab: number, defaultSubtitle: string) {
   const last = useRef<Record<number, number>>({});
   const choose = (page: number) => {
-    const options = titles[page] ?? titles[0];
+    const options = page === 16 ? ["Data Lab"] : titles[page] ?? titles[0];
     const candidates = options
       .map((_, i) => i)
       .filter((i) => i !== last.current[page]);

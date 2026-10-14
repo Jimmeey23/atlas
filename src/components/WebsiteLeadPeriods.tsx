@@ -106,12 +106,25 @@ export function WebsiteLeadPeriods({ version, onDrill, expanded = false, website
         <span className="small">{websiteOnly ? `Source exactly “${WEBSITE}”` : "Selected lead sources"}</span>
       </summary>
       <div className="secondary-content">
-        <div className="pm-controls">
-          <label><input type="checkbox" checked={lastWeek} onChange={e=>setLastWeek(e.target.checked)}/> Last Week column</label>
-          <label><input type="checkbox" checked={custom} onChange={e=>setCustom(e.target.checked)}/> Custom period column</label>
-          {custom && <><label>Custom start<input type="date" value={customFrom} onChange={e=>setCustomFrom(e.target.value)}/></label><label>Custom end<input type="date" value={customTo} onChange={e=>setCustomTo(e.target.value)}/></label></>}
-          <label><input type="checkbox" checked={multiLocation} onChange={e=>setMultiLocation(e.target.checked)}/> Multi-location table</label>
-          <label>Group comparisons <DropdownField aria-label="Group Website period comparisons" disabled={multiLocation} value={group} onChange={event=>setGroup(event.target.value)}><option value="">All selected leads</option>{options.map(o=><option key={o.field} value={o.field}>{o.label}</option>)}</DropdownField></label></div>
+        <div className="pm-controls period-toolbar" aria-label="Period table options">
+          <div className="period-toolbar-section">
+            <span className="period-toolbar-caption">Columns</span>
+            <div className="period-toolbar-toggles">
+              <label className="period-toggle"><input type="checkbox" checked={lastWeek} onChange={e=>setLastWeek(e.target.checked)}/><span>Last week</span></label>
+              <label className="period-toggle"><input type="checkbox" checked={custom} onChange={e=>setCustom(e.target.checked)}/><span>Custom period</span></label>
+            </div>
+          </div>
+          {custom && <div className="period-date-range">
+            <label>Start date<input type="date" value={customFrom} onChange={e=>setCustomFrom(e.target.value)}/></label>
+            <span className="period-date-arrow" aria-hidden="true">→</span>
+            <label>End date<input type="date" value={customTo} onChange={e=>setCustomTo(e.target.value)}/></label>
+          </div>}
+          <div className="period-toolbar-section period-toolbar-view">
+            <span className="period-toolbar-caption">Table view</span>
+            <label className="period-toggle"><input type="checkbox" checked={multiLocation} onChange={e=>setMultiLocation(e.target.checked)}/><span>Multi-location</span></label>
+          </div>
+          <label className="period-group-field">Group by <DropdownField aria-label="Group period comparisons" disabled={multiLocation} value={group} onChange={event=>setGroup(event.target.value)}><option value="">All selected leads</option>{options.map(o=><option key={o.field} value={o.field}>{o.label}</option>)}</DropdownField></label>
+        </div>
         {custom && !customValid && <p role="alert">Choose a custom start and end date, with the end on or after the start.</p>}
         {multiLocation && <p className="small">Locations appear separately in one table. Selected studio filters still apply; select multiple studios or all studios to compare them.</p>}
         {error && <p role="alert">{error}</p>}
