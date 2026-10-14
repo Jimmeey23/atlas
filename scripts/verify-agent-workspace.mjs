@@ -47,6 +47,7 @@ try{
   }
   await page.setViewportSize({width:1440,height:1000});await launcher.click();
   await page.getByRole('button',{name:'Restore chat size',exact:true}).click();
+  await page.getByRole('button',{name:'Expand assistant',exact:true}).waitFor();
   assert.ok((await dialog.boundingBox()).width < 1040);
   await page.getByRole('button',{name:'Expand assistant',exact:true}).click();
   await page.getByRole('button',{name:'Restore chat size',exact:true}).focus();

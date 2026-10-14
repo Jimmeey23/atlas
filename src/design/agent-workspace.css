@@ -15,6 +15,7 @@
   border-radius: 24px; z-index: 1701; background: var(--surface-1); overflow: hidden;
   display: flex; flex-direction: column; box-shadow: 0 32px 100px #0004, 0 2px 12px #0001;
   animation: agent-fade-in 180ms ease-out;
+  transition: none; transform: none;
 }
 :root[data-theme] #atlas-agent-dialog[hidden] { display: none; }
 :root[data-theme] #atlas-agent-dialog.maximized { inset: 24px auto 24px 50%; transform: translateX(-50%); height: auto; }
