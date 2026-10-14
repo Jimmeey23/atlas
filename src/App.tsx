@@ -1157,6 +1157,7 @@ export default function App() {
               </Register> : null}
               {s.tab === 14 && <PerformanceScorecard dimension="format_group" index="08" version={version} onDrill={setDrill} />}
               {s.tab === 14 && <FormatComparison version={version} />}
+              {s.tab === 8 && <WebsiteLeadPeriods version={version} onDrill={setDrill} websiteOnly={false} expanded />}
               <MoMTable version={workspaceVersion} ids={[...new Set([...bp.columns, ...bp.kpis, ...Object.keys(metrics)])].filter(id => metricTable(id) === bp.source)} />
               {s.tab === 4 && <SalesScorecards version={version} onDrill={setDrill} />}
               {s.tab === 5 && <AcquisitionMainTables version={version} />}
@@ -1166,7 +1167,7 @@ export default function App() {
                 subtitle="Focused operational registers"
               >
                 {s.tab === 5 && <AcquisitionDeepDive version={version} />}
-                {s.tab === 8 && <WebsiteLeadPeriods version={version} />}
+
                 {bp.secondary.map((title, index) =>
                   s.tab === 0 && index === 2 ? (
                     <details className="secondary" key={title}>

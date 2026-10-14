@@ -131,7 +131,9 @@ test('PM source preset removes conflicting source rules and preserves other sele
 });
 test('Website period overview uses explicit current and matching prior windows', () => {
   const windows=websitePeriodWindows('2026-10-14');
-  assert.equal(windows.length,5);
+  assert.equal(windows.length,6);
+  assert.deepEqual(windows.find(w=>w.key==='last_week')?.current,{from:'2026-10-05',to:'2026-10-11'});
+  assert.deepEqual(windows.find(w=>w.key==='last_week')?.prior,{from:'2026-09-28',to:'2026-10-04'});
   assert.deepEqual(windows.find(w=>w.key==='wow')?.current,{from:'2026-10-12',to:'2026-10-14'});
   assert.deepEqual(windows.find(w=>w.key==='wow')?.prior,{from:'2026-10-05',to:'2026-10-07'});
   assert.deepEqual(windows.find(w=>w.key==='mom')?.prior,{from:'2026-09-01',to:'2026-09-14'});

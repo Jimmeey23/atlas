@@ -23,6 +23,7 @@ export function websitePeriodWindows(asOf: string) {
   const priorMonth = { from: new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() - 1, 1)).toISOString().slice(0, 10), to: new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() - 1, Math.min(date.getUTCDate(), last))).toISOString().slice(0, 10) };
   return [
     { key: "wow", title: "Week to date", current: week, prior: shift(week, -7) },
+    { key: "last_week", title: "Last week", current: relativePeriod("Last week", asOf), prior: shift(relativePeriod("Last week", asOf), -7) },
     { key: "mom", title: "Month to date", current: month, prior: priorMonth },
     { key: "qoq", title: "Quarter to date", current: quarter, prior: comparisonDates(quarter.from, quarter.to, "quarter") },
     { key: "rolling", title: "Last 30 days", current: rolling, prior: shift(rolling, -30) },
