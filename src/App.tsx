@@ -1,25 +1,16 @@
-import { DataLab } from "./components/DataLab";
 import { missingPrivateScope } from "./state/store";
-import { AnalysisWorkbench } from "./components/AnalysisWorkbench";
 import { AnalysisNavigation } from "./components/AnalysisNavigation";
 import { DropdownField } from "./components/ui/DropdownField";
 import { comparisonDates, comparisonLabel, comparisonOptions } from "./data/periods";
-import { StudioOperationsOverview } from "./components/StudioOperationsOverview";
-import { StudioOperationsDeepDive } from "./components/StudioOperationsDeepDive";
-import { StudioCommunityOperations } from "./components/StudioCommunityOperations";
-import { StudioOperations } from "./components/StudioOperations";
 import { SalesRankings } from "./components/SalesRankings";
 import { FloatingReviewTools } from "./components/FloatingReviewTools";
 import { StickyNotes } from "./components/StickyNotes";
 import { workspaceIcons, useWorkspaceCopy } from "./data/workspaceCopy";
 import { OverviewModules } from "./components/OverviewModules";
 import { OverviewAttention } from "./components/OverviewAttention";
-import { PerformanceMarketing } from "./components/PerformanceMarketing";
 import { EarnedRevenueChange } from "./components/EarnedRevenueChange";
 import { PresentationTools } from "./components/PresentationTools";
 import { motion } from "framer-motion";
-import { SqlElementBuilder } from "./components/SqlElementBuilder";
-import { AtlasSettings } from "./components/AtlasSettings";
 import { QuickFilters } from "./components/QuickFilters";
 import { FloatingAgent } from "./components/FloatingAgent";
 import {
@@ -28,7 +19,7 @@ import {
   themeOptions,
   sections,
 } from "./state/preferences";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import {
   Sun,
   Moon,
@@ -123,6 +114,7 @@ import { fmt } from "./semantics/formats";
 import { currentSnapshotMetrics } from "./semantics/evidence";
 import { metrics, contributorPredicate } from "./semantics/metrics";
 import "./design/app.css";
+import "./components/MetricFlip.css";
 import "./styles.css";
 import "./design/refinement.css";
 import "./design/acquisition.css";
@@ -149,6 +141,27 @@ const blank: Analysis = {
 
 // A drill-down is scoped to the cell that was clicked: the metric decides which
 // source table and which record predicate explain that single number.
+const DataLabLazy = lazy(() => import("./components/DataLab").then(module => ({ default: module.DataLab })));
+function DataLab(props: React.ComponentProps<typeof DataLabLazy>) { return <Suspense fallback={<p role="status">Loading workspace…</p>}><DataLabLazy {...props} /></Suspense>; }
+const AnalysisWorkbenchLazy = lazy(() => import("./components/AnalysisWorkbench").then(module => ({ default: module.AnalysisWorkbench })));
+function AnalysisWorkbench(props: React.ComponentProps<typeof AnalysisWorkbenchLazy>) { return <Suspense fallback={<p role="status">Loading workspace…</p>}><AnalysisWorkbenchLazy {...props} /></Suspense>; }
+const StudioOperationsOverviewLazy = lazy(() => import("./components/StudioOperationsOverview").then(module => ({ default: module.StudioOperationsOverview })));
+function StudioOperationsOverview(props: React.ComponentProps<typeof StudioOperationsOverviewLazy>) { return <Suspense fallback={<p role="status">Loading workspace…</p>}><StudioOperationsOverviewLazy {...props} /></Suspense>; }
+const StudioOperationsDeepDiveLazy = lazy(() => import("./components/StudioOperationsDeepDive").then(module => ({ default: module.StudioOperationsDeepDive })));
+function StudioOperationsDeepDive(props: React.ComponentProps<typeof StudioOperationsDeepDiveLazy>) { return <Suspense fallback={<p role="status">Loading workspace…</p>}><StudioOperationsDeepDiveLazy {...props} /></Suspense>; }
+const StudioCommunityOperationsLazy = lazy(() => import("./components/StudioCommunityOperations").then(module => ({ default: module.StudioCommunityOperations })));
+function StudioCommunityOperations(props: React.ComponentProps<typeof StudioCommunityOperationsLazy>) { return <Suspense fallback={<p role="status">Loading workspace…</p>}><StudioCommunityOperationsLazy {...props} /></Suspense>; }
+const StudioOperationsLazy = lazy(() => import("./components/StudioOperations").then(module => ({ default: module.StudioOperations })));
+function StudioOperations(props: React.ComponentProps<typeof StudioOperationsLazy>) { return <Suspense fallback={<p role="status">Loading workspace…</p>}><StudioOperationsLazy {...props} /></Suspense>; }
+const PerformanceMarketingLazy = lazy(() => import("./components/PerformanceMarketing").then(module => ({ default: module.PerformanceMarketing })));
+function PerformanceMarketing(props: React.ComponentProps<typeof PerformanceMarketingLazy>) { return <Suspense fallback={<p role="status">Loading workspace…</p>}><PerformanceMarketingLazy {...props} /></Suspense>; }
+const SqlElementBuilderLazy = lazy(() => import("./components/SqlElementBuilder").then(module => ({ default: module.SqlElementBuilder })));
+function SqlElementBuilder(props: React.ComponentProps<typeof SqlElementBuilderLazy>) { return <Suspense fallback={<p role="status">Loading workspace…</p>}><SqlElementBuilderLazy {...props} /></Suspense>; }
+const AtlasSettingsLazy = lazy(() => import("./components/AtlasSettings").then(module => ({ default: module.AtlasSettings })));
+function AtlasSettings() { return <Suspense fallback={<p role="status">Loading workspace…</p>}><AtlasSettingsLazy /></Suspense>; }
+const ConversionJourneysLazy = lazy(() => import("./components/ConversionJourneys").then(module => ({ default: module.ConversionJourneys })));
+function ConversionJourneys(props: React.ComponentProps<typeof ConversionJourneysLazy>) { return <Suspense fallback={<p role="status">Loading workspace…</p>}><ConversionJourneysLazy {...props} /></Suspense>; }
+
 function metricScope(
   tab: number,
   id: string,
@@ -1165,13 +1178,13 @@ export default function App() {
               {s.tab === 8 && <WebsiteLeadPeriods version={version} onDrill={setDrill} websiteOnly={false} expanded />}
               <MoMTable version={workspaceVersion} ids={[...new Set([...bp.columns, ...bp.kpis, ...Object.keys(metrics)])].filter(id => metricTable(id) === bp.source)} />
               {s.tab === 4 && <SalesScorecards version={version} onDrill={setDrill} />}
-              {s.tab === 5 && <AcquisitionMainTables version={version} />}
+              {s.tab === 5 && <><ConversionJourneys version={contentVersion} /><AcquisitionMainTables version={contentVersion} /></>}
               <Register
                 index="07"
                 title="Go one level deeper"
                 subtitle="Focused operational registers"
               >
-                {s.tab === 5 && <AcquisitionDeepDive version={version} />}
+                {s.tab === 5 && <AcquisitionDeepDive version={contentVersion} />}
 
                 {bp.secondary.map((title, index) =>
                   s.tab === 0 && index === 2 ? (

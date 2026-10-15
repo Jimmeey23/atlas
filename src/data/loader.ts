@@ -53,7 +53,6 @@ export const subscribeSources = (fn: () => void) => {
   };
 };
 const publish = () => {
-  clearAnalyses();
   listeners.forEach((fn) => fn());
 };
 export const dependencies = (tab: number) =>
@@ -62,7 +61,7 @@ export const dependencies = (tab: number) =>
     : [
         ...new Set([
           blueprints[tab].source,
-          ...(tab === 1 ? ["bookings", "checkins"] : tab === 0 ? ["new", "sales", "lapsed", "leads", "bookings", "checkins"] : tab === 3 ? ["payroll", "new", "bookings", "checkins"] : tab === 5 ? ["sales", "bookings"] : tab === 14 ? ["new", "bookings"] : tab === 8 ? ["new"] : tab === 9 ? ["sessions"] : tab === 6 ? ["new", "checkins"] : tab === 15 ? ["sales", "new", "lapsed", "leads", "payroll", "recurring", "bookings"] : []),
+          ...(tab === 1 ? ["bookings", "checkins"] : tab === 0 ? ["new", "sales", "lapsed", "leads", "bookings", "checkins"] : tab === 3 ? ["payroll", "new", "bookings", "checkins"] : tab === 5 ? ["sales", "bookings", "checkins"] : tab === 14 ? ["new", "bookings"] : tab === 8 ? ["new"] : tab === 9 ? ["sessions"] : tab === 6 ? ["new", "checkins"] : tab === 15 ? ["sales", "new", "lapsed", "leads", "payroll", "recurring", "bookings"] : []),
         ]),
       ];
 export const usable = (key: string) =>
@@ -109,7 +108,7 @@ export async function ensureSource(key: string, force = false, latest = false): 
     sourceStates[key] = { state: usable(key) ? "refreshing" : "loading" };
     publish();
     try {
-      if (!force && !usable(key) && (await restore(key))) publish();
+      if (!force && !usable(key) && (await restore(key))) { clearAnalyses(); publish(); }
       // With a Drive revision, the rows for it come from one CDN-cached URL and a copy that
       // already matches needs no request at all, however old it is.
       const revision = await currentRevision(key, force);
@@ -122,6 +121,7 @@ export async function ensureSource(key: string, force = false, latest = false): 
         const snapshot = await fetch(`/api/sheets/${key}?snapshot=true`);
         if (snapshot.ok) {
           await ingest(await snapshot.json());
+          clearAnalyses();
           publish();
         }
       }
@@ -158,7 +158,7 @@ export async function ensureSource(key: string, force = false, latest = false): 
         // Unchanged rows: record the newer check time without rebuilding the table, so the
         // workspace does not recompute (and flash its loader) for identical data.
         health[key] = { ...health[key], fetchedAt: data.fetchedAt, revision: data.revision ?? health[key].revision };
-      } else if (data.fetchedAt !== health[key]?.fetchedAt) await ingest(data);
+      } else if (data.fetchedAt !== health[key]?.fetchedAt) { await ingest(data); clearAnalyses(); }
       sourceStates[key] = { state: "ready" };
     } catch (e) {
       sourceStates[key] = { state: "error", error: String(e) };

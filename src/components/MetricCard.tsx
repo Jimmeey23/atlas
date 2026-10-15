@@ -1,4 +1,5 @@
 import { MetricFlip } from "./MetricFlip";
+import { metricFlipStore } from "../state/metric-flip";
 import { createPortal } from "react-dom";
 import { useEffect, useId, useRef, useState } from "react";
 import { Info, TriangleAlert, X, ArrowUpRight, ArrowDownRight } from "lucide-react";
@@ -69,7 +70,7 @@ export function MetricCard({
   const numerator = evidence?.[`${id}__numerator`];
   const denominator = evidence?.[`${id}__denominator`];
 
-  const [flipped, setFlipped] = useState(false);
+  const flipKey = useId();
   const [info, setInfo] = useState(false);
   const anchor = useRef<HTMLButtonElement>(null);
   const [position, setPosition] = useState({ left: 16, top: 70 });
@@ -105,7 +106,7 @@ export function MetricCard({
   const positive = (Number(value) >= Number(previous)) === m.higherIsBetter;
   const unchanged = Number(value) === Number(previous);
   return (
-    <MetricFlip label={m.label} flipped={flipped} onToggle={() => setFlipped(value => !value)} front={<article
+    <MetricFlip label={m.label} flipKey={flipKey} front={<article
       data-note-anchor={`metric-${id}`}
       className="metric-card"
       style={{ "--card-accent": `var(--accent, var(--${m.domain}))` } as React.CSSProperties}
@@ -130,7 +131,7 @@ export function MetricCard({
           padding: 0,
           textAlign: "left",
         }}
-        onClick={() => setFlipped(true)}
+        onClick={() => metricFlipStore.set(flipKey, true)}
         aria-label={`Show related metrics for ${m.label}: ${fmt(id, value)}`}
       >
         {fmt(id, value)}

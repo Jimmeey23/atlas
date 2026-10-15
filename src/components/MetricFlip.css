@@ -1,8 +1,8 @@
 .metric-flip { position: relative; min-width: 0; perspective: 1200px; }
-.metric-flip-inner { display: grid; height: 100%; transform-style: preserve-3d; transition: transform 420ms ease; cursor: pointer; }
+.metric-flip-inner { position: relative; height: 100%; transform-style: preserve-3d; transition: transform 420ms ease; cursor: pointer; }
 .metric-flip[data-flipped=true] > .metric-flip-inner { transform: rotateY(180deg); }
 .metric-flip-face { grid-area: 1 / 1; min-width: 0; backface-visibility: hidden; }
-.metric-flip-back { transform: rotateY(180deg); }
+.metric-flip-back { position: absolute; inset: 0; overflow: auto; box-sizing: border-box; transform: rotateY(180deg); }
 .metric-flip-face > article { box-sizing: border-box; height: 100%; padding-bottom: 30px; }
 .metric-flip-toggle { position: absolute; bottom: 7px; right: 12px; font-size: 10px; color: var(--text-2); background: none; border: 0; cursor: pointer; }
 .metric-flip-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }

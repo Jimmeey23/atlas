@@ -1,5 +1,6 @@
-import { useRef, type CSSProperties } from "react";
+import { useId, useRef, type CSSProperties } from "react";
 import { ArrowDownRight, ArrowUpRight, Minus, RotateCcw, Target, ChartColumnBig } from "lucide-react";
+import { useMetricFlipState } from "../../MetricFlip";
 import { Sparkline } from "../../Sparkline";
 import { definition, reportFmt as fmt, reportDelta as delta } from "../../../report/definitions";
 import { monthLabel, monthShort } from "../../../report/period";
@@ -40,7 +41,7 @@ function MetricHistoryChart({ id, data, active, onDrill }: { id: string; data: C
 }
 
 /** The app's metric card; clicking flips it to its 14-month history. */
-export function FlipMetricCard({ id, data, target, flipped, onToggle }: { id: string; data: ChapterData; target?: number; flipped: boolean; onToggle: () => void }) {
+export function FlipMetricCard({ id, data, target }: { id: string; data: ChapterData; target?: number; flipped: boolean; onToggle: () => void }) {
   const m = definition(id);
   const value = data.total[id], prior = data.prior[id], lastYear = data.priorYear[id];
   const mom = direction(id, value, prior), yoy = direction(id, value, lastYear);
@@ -49,13 +50,14 @@ export function FlipMetricCard({ id, data, target, flipped, onToggle }: { id: st
   const hit = target == null || value == null ? null : (Number(value) >= target) === (m?.higherIsBetter ?? true);
   const Arrow = mom === "flat" ? Minus : Number(value) >= Number(prior) ? ArrowUpRight : ArrowDownRight;
   const YearArrow = yoy === "flat" ? Minus : Number(value) >= Number(lastYear) ? ArrowUpRight : ArrowDownRight;
-  const toggle = onToggle;
+  const flipKey = useId();
+  const [flipped, toggle] = useMetricFlipState(flipKey);
   const drilled = useRef(false);
   return <div className="deck-flip" data-flipped={flipped}
     style={{ "--card-accent": `var(--accent, var(--${m?.domain ?? "accent"}))` } as CSSProperties}>
     <div className="deck-flip-inner">
       {!flipped ? <article className="deck-kpi deck-flip-face deck-flip-front" role="button" tabIndex={0} aria-pressed={false} aria-label={`${m?.label}: ${fmt(id, value)}. Show 14-month history`}
-        title="Click for 14 months of history" onClick={toggle} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } }}>
+        title="Click for 14 months of history" onClick={() => toggle()} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } }}>
         <div className="deck-kpi-label"><span title={m?.label}>{m?.label ?? id}</span><ChartColumnBig size={13} aria-hidden="true" className="deck-flip-hint"/></div>
         <div className="deck-kpi-reading">
           <span className="deck-kpi-value">{fmt(id, value)}</span>

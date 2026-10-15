@@ -230,3 +230,12 @@
 .acq-client-types .acq-sticky { min-width: 225px; width: 225px; max-width: 225px; }
 .acq-client-types .acq-sticky .acq-expand > span { max-width: 190px; }
 .acq-individual-table .secondary-content { padding: 14px 0; }
+
+.conversion-journeys { padding: 20px; margin-block: 20px; border-radius: 14px; min-width: 0; }
+.conversion-journeys h2 { margin: 0 0 12px; }
+.conversion-journeys .metric-related { gap: 16px; margin-block: 20px; }
+.conversion-journeys .metric-related > div { padding: 14px; border: 1px solid var(--hairline); border-radius: 10px; }
+.conversion-journeys .metric-related dd { font-size: 24px; color: var(--accent); }
+.conversion-journeys .acq-table-scroll { margin-top: 14px; }
+.conversion-journeys .acq-table th:first-child, .conversion-journeys .acq-table td:first-child { text-align: left; white-space: normal; min-width: 260px; width: 70%; }
+@media (max-width: 600px) { .conversion-journeys { padding: 12px; }.conversion-journeys .metric-related { grid-template-columns: 1fr; } }
