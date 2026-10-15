@@ -53,3 +53,38 @@
 @media(min-width:821px) and (max-width:1100px){.report-page.deck[data-report-design=analytical] .deck-body>.deck-tabs{flex-basis:205px;padding-inline:10px}}
 @media(max-width:820px){.report-page.deck[data-report-design=analytical] .deck-body>.deck-tabs{flex:0 0 58px;padding:6px 10px;gap:5px;border-right:0;border-bottom:1px solid #293c58}.rp-rail-heading,.rp-rail-caption,.rp-rail-footer{display:none}.report-page.deck[data-report-design=analytical] .deck-tabs button{width:auto;flex:none;min-height:44px;padding:8px 12px;gap:8px}.report-page.deck[data-report-design=analytical] .deck-tabs button[aria-current=page]{box-shadow:inset 0 -2px #b5acff}.rp-nav-chevron{display:none}.report-page.deck[data-report-design=analytical] .deck-tabs .rp-nav-number{width:21px;height:21px;font-size:9px}}
 @media(prefers-reduced-motion:reduce){.report-page.deck[data-report-design=analytical] .deck-tabs button{transition:none}}
+/* Snapshot identity accents remain stable when a report is reopened or saved. */
+.report-page.deck[data-report-design=analytical] .deck-tabs{--rail-accent:#c1baff;--rail-tint:#293b57;--rail-border:#405575;--rail-number:#3c4368}
+.report-page.deck[data-report-design=analytical] .rp-rail-heading{border-top:3px solid var(--rail-accent);padding-top:17px}
+.report-page.deck[data-report-design=analytical] .deck-tabs button[aria-current=page]{background:var(--rail-tint);border-color:var(--rail-border);box-shadow:inset 3px 0 var(--rail-accent)}
+.report-page.deck[data-report-design=analytical] .deck-tabs button[aria-current=page] .rp-nav-number{background:var(--rail-number);border-color:var(--rail-border);color:var(--rail-accent)}
+.report-page.deck[data-report-design=analytical] .deck-tabs button:focus-visible{outline-color:var(--rail-accent)}
+.report-page.deck[data-report-design=analytical] .deck-tabs .rp-nav-chevron{color:var(--rail-accent)}
+.report-page.deck[data-report-design=analytical] .rp-rail-dot{background:var(--rail-accent)}
+@media(max-width:820px){.report-page.deck[data-report-design=analytical] .deck-tabs button[aria-current=page]{box-shadow:inset 0 -2px var(--rail-accent)}}
+/* One fact, one place: shared-population pointer, month-by-month register and per-segment table. */
+.cr-elsewhere{margin:18px 0 0;padding:12px 16px;border-left:3px solid var(--rail-accent,#8f84ff);background:#f4f6fb;color:#33415a;font-size:13px;line-height:1.55;border-radius:0 6px 6px 0}
+.cr-elsewhere b{color:#1b2a44}
+.cr-mom-register{margin-top:28px}.cr-mom-register>header{margin-bottom:10px}.cr-mom-register h3{margin:2px 0 0}
+.cr-segment-table{margin-top:24px}.cr-segment-table>header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px}.cr-segment-table h3{margin:2px 0 0}
+.cr-segment-table th[scope=row]{text-align:left;white-space:nowrap}
+/* Performance at a glance: status-led scorecard. Colour carries meaning (good, adverse, flat); the chapter accent only frames it. */
+.cr-report .dk-scorecard,.dk-scorecard{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:14px;border-top:0}
+.cr-report .dk-score,.dk-score{position:relative;display:flex;flex-direction:column;gap:14px;padding:18px 18px 16px 20px;border:1px solid var(--d-line,#dfe4ee);border-radius:10px;background:var(--d-card,#fff);box-shadow:0 1px 2px #14243b0f;overflow:hidden;transition:border-color .18s,box-shadow .18s,transform .18s}
+.cr-report .dk-score::before,.dk-score::before{content:"";display:block;position:absolute;inset:0 auto 0 0;width:4px;background:var(--score-tone,#9aa6bd)}
+.dk-score[data-tone=good]{--score-tone:#1f9d63}.dk-score[data-tone=bad]{--score-tone:#d1493f}.dk-score[data-tone=flat]{--score-tone:#9aa6bd}
+.cr-report .dk-score:hover,.dk-score:hover,.dk-score:focus-visible{background:var(--d-card,#fff);border-color:color-mix(in srgb,var(--score-tone) 45%,var(--d-line,#dfe4ee));box-shadow:0 6px 18px #14243b1a;transform:translateY(-2px)}
+.dk-score-head{display:flex;align-items:center;gap:10px}.dk-score-head b{font-size:14px;font-weight:650;letter-spacing:-.005em}.dk-score-head svg{margin-left:auto;color:var(--text-3);opacity:.55;transition:.18s}.dk-score:hover .dk-score-head svg{opacity:1;color:var(--score-tone);transform:translate(1px,-1px)}
+.dk-score-index{display:inline-grid;place-items:center;min-width:26px;height:22px;padding:0 6px;border-radius:6px;font-size:10.5px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--score-tone);background:color-mix(in srgb,var(--score-tone) 12%,transparent)}
+.cr-report .dk-score-metrics,.dk-score-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:16px;margin:0}
+.dk-score-metrics>span{display:grid;align-content:start;gap:3px;min-width:0}
+.dk-score-metrics small{font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;color:var(--text-3)}
+.cr-report .dk-score-metrics strong,.dk-score-metrics strong{font-size:26px;line-height:1.1;font-weight:650;letter-spacing:-.025em;font-variant-numeric:tabular-nums;color:var(--text-1)}
+.dk-score-deltas{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+.dk-score-metrics .dk-score-deltas em{display:inline-flex;align-items:baseline;gap:4px;padding:2px 7px;border-radius:999px;font-style:normal;font-size:11.5px;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap;color:#5b667c;background:#eef1f6}
+.dk-score-deltas em i{font-style:normal;font-size:9.5px;font-weight:600;letter-spacing:.05em;opacity:.7}
+.dk-score-deltas em[data-tone=good]{color:#14774a;background:#e2f5ec}.dk-score-deltas em[data-tone=bad]{color:#b3342b;background:#fde9e7}
+.dk-score-verdict{margin-top:auto;padding-top:12px;border-top:1px dashed var(--d-line,#dfe4ee);font-size:12.5px;line-height:1.5;color:var(--text-2)}
+@media(prefers-color-scheme:dark){.dk-score-deltas em[data-tone=good]{color:#6fe0a8;background:#12382a}.dk-score-deltas em[data-tone=bad]{color:#ff9d94;background:#43201d}.dk-score-metrics .dk-score-deltas em{color:#b3bdd0;background:#232f43}}
+.report-doc[data-report-theme=dark] .dk-score-deltas em[data-tone=good]{color:#6fe0a8;background:#12382a}.report-doc[data-report-theme=dark] .dk-score-deltas em[data-tone=bad]{color:#ff9d94;background:#43201d}.report-doc[data-report-theme=dark] .dk-score-metrics .dk-score-deltas em{color:#b3bdd0;background:#232f43}
+@media(prefers-reduced-motion:reduce){.dk-score,.dk-score-head svg{transition:none}.dk-score:hover{transform:none}}

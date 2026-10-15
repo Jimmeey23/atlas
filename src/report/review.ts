@@ -1,16 +1,26 @@
 import { definition, reportFmt, reportDelta } from './definitions';
 import type { ChapterData, ReportModel } from './model';
 import { chapters } from './chapters';
+import { ownedMetricIds, reportedElsewhere } from './ownership';
 
-/** Every governed headline/history metric remains available, including unavailable values. */
+/**
+ * Measures the chapter's written analysis must cover: its own headline and
+ * history measures, minus those a sibling chapter of the same population reports.
+ */
 export function reviewMetricIds(chapter: string, data?: ChapterData): string[] {
   const spec = chapters.find(c => c.id === chapter);
-  return [...new Set([...(spec?.metrics ?? []), ...(spec?.history ?? []), ...Object.keys(data?.total ?? {})])]
-    .filter(id => !!definition(id));
+  return [...new Set([...(spec?.metrics ?? []), ...(spec?.history ?? [])])]
+    .filter(id => !!definition(id) && !(spec && reportedElsewhere(spec, id)));
+}
+/** Every measure of the chapter's app tab that this chapter owns, including unavailable values. */
+export function registerMetricIds(chapter: string, data?: ChapterData): string[] {
+  const spec = chapters.find(c => c.id === chapter);
+  const owned = spec ? ownedMetricIds(spec) : [];
+  return [...new Set([...owned, ...(spec ? [] : Object.keys(data?.total ?? {}))])].filter(id => !!definition(id));
 }
 export function reviewRows(chapter: string, data: ChapterData) {
   const available = (v: unknown) => v != null && v !== '' && Number.isFinite(Number(v)) ? v : null;
-  return reviewMetricIds(chapter, data).map(id => {
+  return registerMetricIds(chapter, data).map(id => {
     const current = data.n > 0 ? available(data.total[id]) : null;
     const prior = available(data.prior[id]), year = available(data.priorYear[id]);
     const ytd = Number(data.yearToDate?.n) > 0 ? available(data.yearToDate?.[id]) : null;

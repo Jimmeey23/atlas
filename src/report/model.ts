@@ -61,6 +61,17 @@ export interface ChapterData {
   diagnostics?: string[];
   /** One row per month, trailing 14 months inclusive. */
   history: Row[];
+  /** The same measures month by month for each segment (instructor, format…), so chapters that share a population add a dimension rather than repeating totals. */
+  segmentHistory?: SegmentHistory;
+}
+export interface SegmentHistory {
+  field: string;
+  title: string;
+  metrics: string[];
+  /** Segments ranked by the selected month's sessions; the ranking is not a quality judgement. */
+  segments: string[];
+  /** One row per month and segment: { month, g, ...metrics }. */
+  rows: Row[];
 }
 /**
  * How an insight is framed. Each lens answers a different leadership question,
@@ -157,6 +168,8 @@ export interface ChapterNarrative {
   analysisKey?: string;
   /** Provider tokens and cost for this chapter in the run that produced it. */
   usage?: ChapterUsage;
+  /** Independent audit of the written cards; cards it rejected are listed, never shown. */
+  verification?: { checked: number; removed: { headline: string; verdict: string; reason: string }[]; unavailable?: boolean };
 }
 export interface ReportCustomization {
   title: string; subtitle: string; preparedFor: string; preparedBy: string;

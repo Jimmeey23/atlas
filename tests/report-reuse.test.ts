@@ -24,7 +24,7 @@ const usage = { input_tokens: 1200, input_tokens_details: { cached_tokens: 200 }
 test('retry preserves successful chapters; durable reuse survives fresh browser and server sessions', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'atlas-reuse-'));
   const originalFetch = globalThis.fetch, originalStorage = (globalThis as any).localStorage, originalModel = process.env.OPENAI_MODEL;
-  process.env.OPENAI_MODEL = 'gpt-5';
+  process.env.OPENAI_MODEL = 'gpt-5'; process.env.REPORT_VERIFY = 'off';
   const documents = new Map<string, any>();
   // Exercise the actual database-backed createStore contract without live credentials.
   const cloud = { from: () => ({ select: () => ({ eq: (_field: string, key: string) => ({ maybeSingle: async () => ({ data: documents.has(key) ? { value: documents.get(key) } : null, error: null }) }) }),

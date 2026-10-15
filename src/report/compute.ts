@@ -6,13 +6,15 @@ import { currentSnapshotMetrics } from "../semantics/evidence";
 import { context, metricFacts, today, where } from "../data/analytics";
 import { emptyFilters, type Filters } from "../state/store";
 import { chapters, type ChapterSpec, type GroupSpec } from "./chapters";
-import type { ChapterData, GroupTable, ReportModel, ReportScope } from "./model";
+import type { ChapterData, GroupTable, ReportModel, ReportScope, SegmentHistory } from "./model";
+import { ownedMetricIds } from "./ownership";
 import { renewalFactsSQL, renewalMeasuresSQL } from '../data/renewals';
 import { definition, reportFmt } from './definitions';
 import { diagnosticFacts } from "./diagnostics";
 import { analyseGroup } from "./findings";
 import { evaluateRules } from "../insights/engine";
 import { groupQuery, rankedRows } from './group-query';
+import { sqlTypes } from '../data/normalise';
 import { HISTORY_MONTHS, figuresHash, monthBounds, shiftMonth } from "./period";
 export { HISTORY_MONTHS, figuresHash, monthBounds, monthLabel, shiftMonth } from "./period";
 
@@ -102,6 +104,26 @@ async function historyFor(spec: ChapterSpec, scope: ReportScope, ids: string[]) 
   });
 }
 
+/** Month-by-month figures per segment, for chapters whose population a sibling chapter reports in total. */
+async function segmentHistoryFor(spec: ChapterSpec, scope: ReportScope): Promise<SegmentHistory | undefined> {
+  const cfg = spec.segmentHistory;
+  if (!cfg || !carries(spec.source, cfg.field) || !sqlTypes[cfg.field]) return undefined;
+  const ids = usableMetrics(cfg.metrics).filter(id => !currentSnapshotMetrics.has(id));
+  if (!ids.length) return undefined;
+  const start = shiftMonth(scope.month, -(HISTORY_MONTHS - 1));
+  const filters: Filters = { ...scopeFilters(scope), ...(spec.network ? { location: [] } : {}), from: monthBounds(start).from, to: monthBounds(scope.month).to };
+  const facts = factsFor(spec, filters), month = monthColumn(spec.source), scoped = where(filters, spec.source, []);
+  const conjunction = spec.renewal || ["sessions", "sales", "checkins"].includes(spec.source) || !scoped ? "WHERE" : "AND";
+  const rows = await query(`SELECT ${month} AS month,COALESCE("${cfg.field}",'Unspecified') AS g,${measuresFor(spec, ids, filters)},COUNT(*) AS n FROM ${facts} ${conjunction} ${month} IS NOT NULL AND ${month}>=${quote(start)} GROUP BY 1,2 ORDER BY 1,2`);
+  const ranked = rows.filter(r => String(r.month) === scope.month && Number(r.n) >= 3 && r.g !== "Unspecified" && (!ids.includes("sessions") || Number(r.sessions) >= 5))
+    .sort((a, b) => Number(b.sessions ?? b.n) - Number(a.sessions ?? a.n) || String(a.g).localeCompare(String(b.g))).slice(0, cfg.limit).map(r => String(r.g));
+  if (!ranked.length) return undefined;
+  return { field: cfg.field, title: cfg.title, metrics: ids, segments: ranked, rows: rows.filter(r => ranked.includes(String(r.g))) };
+}
+
+/** Extra measures from the app tab's own table are additive: if they cannot be computed the chapter keeps its core figures. */
+const optionalRows = (task: Promise<Row[]>) => task.catch(() => [] as Row[]);
+
 async function computeChapter(spec: ChapterSpec, scope: ReportScope): Promise<ChapterData> {
   const ids = usableMetrics(spec.metrics);
   const scoped = (month = scope.month) => ({...scopeFilters(scope,month),...(spec.network ? {location:[]} : {})});
@@ -111,6 +133,10 @@ async function computeChapter(spec: ChapterSpec, scope: ReportScope): Promise<Ch
   // print a number that was never true.
   const comparable = ids.filter((id) => !currentSnapshotMetrics.has(id));
   const snapshot = ids.filter((id) => currentSnapshotMetrics.has(id));
+  // The app tab's complete measure list, minus what a sibling chapter already reports.
+  const extra = usableMetrics(ownedMetricIds(spec)).filter(id => !ids.includes(id));
+  const extraComparable = extra.filter(id => !currentSnapshotMetrics.has(id));
+  const extraSnapshot = extra.filter(id => currentSnapshotMetrics.has(id));
   const [total, snapshotTotal, prior, priorYear, history, ytd, priorYtd, ...groups] = await Promise.all([
     totalsFor(spec, current, comparable),
     totalsFor(spec, { ...current, from: "", to: "" }, snapshot),
@@ -121,16 +147,27 @@ async function computeChapter(spec: ChapterSpec, scope: ReportScope): Promise<Ch
     totalsFor(spec,{...scoped(shiftMonth(scope.month,-12)),from:String(Number(scope.month.slice(0,4))-1)+"-01-01"},comparable),
     ...spec.groups.map((group) => groupTable(spec, group, current)),
   ]);
+  const [xTotal, xSnapshot, xPrior, xPriorYear, xHistory, xYtd, xPriorYtd, segmentHistory] = await Promise.all([
+    optionalRows(totalsFor(spec, current, extraComparable)), optionalRows(totalsFor(spec, { ...current, from: "", to: "" }, extraSnapshot)),
+    optionalRows(totalsFor(spec, scoped(shiftMonth(scope.month, -1)), extraComparable)), optionalRows(totalsFor(spec, scoped(shiftMonth(scope.month, -12)), extraComparable)),
+    optionalRows(historyFor(spec, scope, extraComparable)),
+    optionalRows(totalsFor(spec, { ...current, from: scope.month.slice(0, 4) + "-01-01" }, extraComparable)),
+    optionalRows(totalsFor(spec, { ...scoped(shiftMonth(scope.month, -12)), from: String(Number(scope.month.slice(0, 4)) - 1) + "-01-01" }, extraComparable)),
+    segmentHistoryFor(spec, scope).catch(() => undefined),
+  ]);
+  const withExtra = (base: Row, more?: Row[]) => ({ ...(more?.[0] ?? {}), ...base });
+  const byMonth = new Map(xHistory.map(row => [String(row.month), row]));
   return {
     id: spec.id,
-    total: { ...(total[0] ?? {}), ...(snapshotTotal[0] ?? {}) },
-    prior: prior[0] ?? {},
-    priorYear: priorYear[0] ?? {},
-    yearToDate:ytd[0] ?? {}, priorYearToDate:priorYtd[0] ?? {},
+    total: { ...(xTotal[0] ?? {}), ...(xSnapshot[0] ?? {}), ...(total[0] ?? {}), ...(snapshotTotal[0] ?? {}) },
+    prior: withExtra(prior[0] ?? {}, xPrior),
+    priorYear: withExtra(priorYear[0] ?? {}, xPriorYear),
+    yearToDate: withExtra(ytd[0] ?? {}, xYtd), priorYearToDate: withExtra(priorYtd[0] ?? {}, xPriorYtd),
     n: Number(total[0]?.n ?? 0),
     groups: (groups as (GroupTable | null)[]).filter((g): g is GroupTable => !!g),
     notes: spec.groups.filter((_, index) => !groups[index]).map(g => `${g.title}: no eligible ranked rows or a grouping field is unavailable. This does not establish zero activity.`),
-    history,
+    history: history.map(row => ({ ...(byMonth.get(String(row.month)) ?? {}), ...row })),
+    ...(segmentHistory ? { segmentHistory } : {}),
   };
 }
 

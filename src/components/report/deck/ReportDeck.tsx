@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { ChevronLeft, ChevronRight, Mic, Lock, LockOpen, PencilLine, Save, Undo2, Pin, PinOff, Download, Printer, Maximize, Minimize, Palette, Loader2, KeyRound, X, TriangleAlert, Gauge, Lightbulb, ChartLine, Database, ListChecks, BookOpen, CircleDot, Medal, Telescope, Table2 } from "lucide-react";
 import logo from "../../../assets/report/logo.png";
 import { ActionPlan } from "../Glance";
@@ -9,9 +9,10 @@ import { PresentationTools } from "../../PresentationTools";
 import { StickyNotes } from "../../StickyNotes";
 import { definition } from "../../../report/definitions";
 import { findingsFor, ledger } from "../../../report/findings";
+import { sidebarAccent } from "../../../report/sidebar-accent";
 import { monthLabel } from "../../../report/period";
 import { reportOptions } from "../../../report/options";
-import { chapterMetrics, deckPages, deckTabs, SECTION_META, sectionMeta, verdictOf, type DeckSection, type DeckTab } from "../../../report/deck";
+import { chapterMetrics, tableMetrics, deckPages, deckTabs, SECTION_META, sectionMeta, verdictOf, type DeckSection, type DeckTab } from "../../../report/deck";
 import { downloadReport, printReport } from "../../../report/export";
 import { adminStatus, adminToken, lockAdmin, pinReport, saveReport, unlockAdmin, updateReport } from "../../../report/storage";
 import type { ReportComponentSpec, ReportModel } from "../../../report/model";
@@ -25,7 +26,8 @@ import { Performers } from "./Performers";
 import { KeyTables } from "./KeyTables";
 import { Outlook } from "./Outlook";
 import { InsightsSection } from "./Insights";
-import { DeckRegister, ReportMoMTable, TrendChartPanel } from "./ReportTrends";
+import { DeckRegister, ReportMoMTable, ReportedElsewhere, SegmentMoMTable, TrendChartPanel } from "./ReportTrends";
+import { reportedElsewhere } from "../../../report/ownership";
 import { DataExplorer } from "./DataExplorer";
 import { CompleteMetricGrid } from "./CompleteMetricGrid";
 import { RecordDrilldownProvider } from "./RecordDrilldown";
@@ -180,10 +182,13 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
     if (s === "performers") return <Slot id={slot("performers")} tab={tab.id} section={s} kind="evidence" describe="leaders and laggards"><Performers model={model} chapter={cid} /></Slot>;
     if (s === "outlook" && tab.spec) return <Slot id={slot("outlook")} tab={tab.id} section={s} kind="trends" describe="outlook scenarios"><Outlook model={model} spec={tab.spec} ids={ids} /></Slot>;
     if (s === "trends" && data) {
-      const historyIds = [...new Set([...(tab.spec?.history ?? []), ...ids])];
+      const trendIds = [...new Set([...(tab.spec?.history ?? []), ...ids])].filter(id => !tab.spec || !reportedElsewhere(tab.spec, id));
+      const tableIds = tableMetrics(tab.spec, data);
       return <DeckRegister index="MoM" title="Month by month" subtitle={`${data.history.length} months frozen at report build · ${tab.label}`}>
-        <Slot id={slot("chart")} tab={tab.id} section={s} kind="trends" describe="monthly trend chart"><TrendChartPanel history={data.history.slice(-14)} ids={historyIds} selected={selectedMonth} onSelect={setSelectedMonth} title={`${tab.label} trend`} /></Slot>
-        <Slot id={slot("table")} tab={tab.id} section={s} kind="trends" describe="month-on-month table"><ReportMoMTable history={data.history.slice(-14)} ids={historyIds} selected={selectedMonth} onSelect={setSelectedMonth} title={tab.label} /></Slot>
+        {!!trendIds.length && <Slot id={slot("chart")} tab={tab.id} section={s} kind="trends" describe="monthly trend chart"><TrendChartPanel history={data.history.slice(-14)} ids={trendIds} selected={selectedMonth} onSelect={setSelectedMonth} title={`${tab.label} trend`} /></Slot>}
+        {!!tableIds.length && <Slot id={slot("table")} tab={tab.id} section={s} kind="trends" describe="month-on-month table"><ReportMoMTable history={data.history.slice(-14)} ids={tableIds} selected={selectedMonth} onSelect={setSelectedMonth} title={tab.label} /></Slot>}
+        <SegmentMoMTable data={data} selected={selectedMonth} onSelect={setSelectedMonth} />
+        <ReportedElsewhere spec={tab.spec} />
       </DeckRegister>;
     }
     if (s === "tables") return <>{data && <MetricRegister chapter={cid} data={data} month={model.scope.month}/>}<Slot id={slot("tables")} tab={tab.id} section={s} kind="evidence" describe="key tables"><KeyTables model={model} chapter={cid} /></Slot></>;
@@ -213,7 +218,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
           </div>
       </header>
       <div className="deck-body">
-        <nav className="deck-tabs" aria-label="Report chapters">
+        <nav className="deck-tabs" aria-label="Report chapters" style={sidebarAccent(model) as CSSProperties}>
           <div className="rp-rail-heading"><span>Monthly review</span><strong>{monthLabel(model.scope.month)}</strong><small>{model.scope.studio}</small></div>
           <div className="rp-rail-caption" aria-hidden="true">Report contents <span>{tabs.length}</span></div>
           {tabs.map((t, i) => <button key={t.id} type="button" aria-current={t.id === tab.id ? "page" : undefined} data-tone={tone(model, t)} onClick={() => open(t.id)} title={verdictOf(model, t.chapter)?.headline ?? t.title}>

@@ -16,6 +16,8 @@ export interface ChapterSpec {
   id: string; nav: string; title: string; eyebrow: string; deck: string;
   source: string; metrics: string[]; groups: GroupSpec[]; history: string[]; derived?: boolean;
   renewal?: boolean; network?: boolean; website?: boolean; optional?: boolean;
+  /** Month-by-month table per segment, for chapters whose population is reported in full by a sibling chapter. */
+  segmentHistory?: { field: string; title: string; metrics: string[]; limit: number };
 }
 const group = (field: string, title: string, columns: string[], extra: Partial<GroupSpec> = {}): GroupSpec => ({
   field, title, deck: 'Selected-month results. Rankings use eligible samples; comparisons refer to the same group in the previous month and previous year.', columns, limit: 10, ...extra,
@@ -68,7 +70,8 @@ export const chapters: ChapterSpec[] = [
   { id: 'instructors', nav: 'Instructors', title: 'Instructor scorecards & rankings', eyebrow: 'Performance with context',
     deck: 'Criterion-based scorecards, with no invented composite score. Rankings require at least five sessions and should be read alongside timetable mix.', source: 'sessions',
     metrics: ['sessions', 'attendance', 'avg_class_size_incl', 'fill_rate', 'revenue_per_session', 'draw_premium_pp'],
-    history: ['avg_class_size_incl', 'fill_rate', 'revenue_per_session', 'draw_premium_pp'], groups: [
+    history: ['avg_class_size_incl', 'fill_rate', 'revenue_per_session', 'draw_premium_pp'],
+    segmentHistory: { field: 'trainer', title: 'Instructor month-by-month comparison', metrics: ['sessions', 'attendance', 'fill_rate', 'avg_class_size_incl', 'revenue_per_session'], limit: 12 }, groups: [
       group('trainer', 'Instructor performance scorecards', [...demand, 'draw_premium_pp'], { limit: 20, minMetric: 'sessions', minValue: 5, compare: 'fill_rate' }),
       group('trainer', 'Top and bottom instructors by fill rate', demand, { id: 'trainer-fill', rankBy: 'fill_rate', tails: true, minMetric: 'sessions', minValue: 5, compare: 'fill_rate' }),
       group('trainer', 'Top and bottom instructors by class average', demand, { id: 'trainer-size', compare: 'avg_class_size_incl', rankBy: 'avg_class_size_incl', tails: true, minMetric: 'sessions', minValue: 5 }),
@@ -84,7 +87,8 @@ export const chapters: ChapterSpec[] = [
   { id: 'formats', nav: 'Formats', title: 'Format comparison & demand mix', eyebrow: 'Barre · PowerCycle · Strength Lab',
     deck: 'Class averages, fill and yield across the three formats, with class, instructor and time comparisons.', source: 'sessions',
     metrics: ['sessions', 'attendance', 'avg_class_size_incl', 'fill_rate', 'revenue_per_session', 'late_cancel_rate'],
-    history: ['sessions', 'attendance', 'fill_rate', 'avg_class_size_incl'], groups: [
+    history: ['sessions', 'attendance', 'fill_rate', 'avg_class_size_incl'],
+    segmentHistory: { field: 'format_group', title: 'Format month-by-month comparison', metrics: ['sessions', 'attendance', 'fill_rate', 'avg_class_size_incl', 'revenue_per_session', 'late_cancel_rate'], limit: 3 }, groups: [
       group('format_group', 'Format comparison with MoM and YoY', demand, { compare: 'fill_rate', limit: 3 }),
       group('format', 'Format metrics by class', demand, { compare: 'fill_rate', limit: 15 }),
       group('format_group', 'Format and instructor combinations', demand, { id: 'format-trainer', fields: ['format_group', 'trainer'], compare: 'fill_rate', minMetric: 'sessions', minValue: 5, limit: 12 }),
@@ -97,7 +101,6 @@ export const chapters: ChapterSpec[] = [
       group('format', 'Best and worst performing scheduled classes', demand, { rankBy: 'fill_rate', tails: true, minMetric: 'sessions', minValue: 5, compare: 'fill_rate' }),
       group('time', 'Best and worst class times', demand, { rankBy: 'fill_rate', tails: true, minMetric: 'sessions', minValue: 5, compare: 'fill_rate' }),
       group('day', 'Day-of-week demand', demand, { compare: 'fill_rate', limit: 7 }),
-      group('trainer', 'Schedule performance by instructor', demand, { id: 'schedule-trainer', minMetric: 'sessions', minValue: 3, compare: 'fill_rate', limit: 20 }),
       group('format', 'Best class, instructor, day and time combinations', demand, { id: 'slot-combinations', fields: ['format', 'trainer', 'day', 'time'], rankBy: 'fill_rate', tails: true, minMetric: 'sessions', minValue: 5, compare: 'fill_rate' }),
     ] },
   { id: 'recurring', nav: 'Recurring', title: 'Recurring class performance', eyebrow: 'Consistency across repeated slots',

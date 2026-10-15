@@ -1,14 +1,15 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import type { ReportModel } from "../../../report/model";
-import { chapterMetrics, type DeckTab } from "../../../report/deck";
+import { chapterMetrics, tableMetrics, type DeckTab } from "../../../report/deck";
 import { reportOptions } from "../../../report/options";
 import { BriefingPanel, DecisionPanel } from "./Briefing";
 import { CompleteMetricGrid } from "./CompleteMetricGrid";
 import { FlipMetricCard } from "./FlipMetricCard";
 import { InsightsSection } from "./Insights";
 import { KeyTables } from "./KeyTables";
-import { TrendChartPanel, ReportMoMTable } from "./ReportTrends";
+import { TrendChartPanel, ReportMoMTable, ReportedElsewhere, SegmentMoMTable } from "./ReportTrends";
+import { reportedElsewhere } from "../../../report/ownership";
 import { RecordDrilldownProvider } from "./RecordDrilldown";
 import { DataExplorer } from "./DataExplorer";
 import { Slot } from "./editing";
@@ -39,7 +40,8 @@ function ReportChapter({ model, tab, number, exporting = false }: { model: Repor
   const data = model.chapters[tab.chapter], narrative = model.narratives[tab.chapter];
   const options = reportOptions(model.customization);
   const ids = tab.spec ? chapterMetrics(tab.spec, data) : [];
-  const historyIds = [...new Set([...(tab.spec?.history ?? []), ...ids])];
+  const historyIds = [...new Set([...(tab.spec?.history ?? []), ...ids])].filter(id => !tab.spec || !reportedElsewhere(tab.spec, id));
+  const tableIds = tableMetrics(tab.spec, data);
   const plan = tab.chapter === "recommendations";
   const evidence = curatedBreakdowns(data?.groups ?? [], 1)[0];
   return <RecordDrilldownProvider model={model} chapterId={tab.chapter}>
@@ -69,10 +71,13 @@ function ReportChapter({ model, tab, number, exporting = false }: { model: Repor
       {plan && options.showActionPlan && <ActionPlan cards={narrative?.cards ?? []}/>}
       {data && <MetricRegister chapter={tab.chapter} data={data} month={model.scope.month} exporting={exporting}/>}
       {/* Chapter-wide context is supporting evidence; insight-specific proof stays with each finding. */}
-      {options.showCharts && data && data.history.length > 1 && <Disclosure exporting={exporting} title="Supporting evidence · monthly trends"><div className="cr-trend">{exporting ? historyIds.slice(0, 3).map(id => <FocusTrend key={id} id={id} history={data.history.slice(-options.historyMonths)}/>) : <TrendChartPanel history={data.history.slice(-options.historyMonths)} ids={historyIds} selected={selected} onSelect={setSelected} title={`${tab.label} · monthly trend`}/>}</div></Disclosure>}
+      {options.showCharts && data && data.history.length > 1 && !!historyIds.length && <Disclosure exporting={exporting} title="Supporting evidence · monthly trends"><div className="cr-trend">{exporting ? historyIds.slice(0, 3).map(id => <FocusTrend key={id} id={id} history={data.history.slice(-options.historyMonths)}/>) : <TrendChartPanel history={data.history.slice(-options.historyMonths)} ids={historyIds} selected={selected} onSelect={setSelected} title={`${tab.label} · monthly trend`}/>}</div></Disclosure>}
       {options.showInlineEvidence && evidence && <Disclosure exporting={exporting} title={`Supporting evidence · ${evidence.title}`}><div className="cr-evidence"><EvidenceBlock table={evidence} full initialView={options.showCharts ? "chart" : "table"} showCharts={options.showCharts}/></div></Disclosure>}
       {!!data?.groups.length && <Disclosure exporting={exporting} title="Complete evidence tables · sort, search and export"><Slot id={`${tab.id}:tables:tables`} tab={tab.id} section="tables" kind="evidence" describe="key tables">{exporting ? data.groups.map((group, i) => <EvidenceBlock key={i} table={group} full initialView="table" showCharts={false}/>) : <KeyTables model={model} chapter={tab.chapter}/>}</Slot></Disclosure>}
-      {data && !!data.history.length && <Disclosure exporting={exporting} title="Month-by-month comparison register"><ReportMoMTable exporting={exporting} history={data.history.slice(-options.historyMonths)} ids={historyIds} selected={selected} onSelect={setSelected} title={tab.label}/></Disclosure>}
+      {data && (!!tableIds.length || !!data.segmentHistory) && <section className="cr-mom-register" aria-label="Month-by-month comparison register"><header><span className="deck-eyebrow">Complete tab coverage</span><h3>Month-by-month comparison register</h3></header>
+        {!!tableIds.length && <ReportMoMTable exporting={exporting} history={data.history.slice(-options.historyMonths)} ids={tableIds} selected={selected} onSelect={setSelected} title={tab.label}/>}
+        <SegmentMoMTable data={data} selected={selected} onSelect={setSelected} exporting={exporting}/></section>}
+      <ReportedElsewhere spec={tab.spec}/>
       {!exporting && data && tab.spec && !tab.spec.derived && <Disclosure exporting={exporting} title="Item-level source records"><DataExplorer model={model} spec={tab.spec}/></Disclosure>}
       {options.showSources && <details className="cr-source"><summary>Source, coverage & interpretation limits</summary><p>{tab.spec?.source || "Frozen report chapters"}</p>{[...(data?.notes ?? []), ...(data?.diagnostics ?? [])].map((note, i) => <p key={i}>{note}</p>)}<p>Monthly figures are frozen at report generation. {sourceBasis(model, tab.chapter)}. Missing values are unavailable. Arithmetic drivers and associations do not establish cause.</p></details>}
     </section>

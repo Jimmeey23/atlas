@@ -2,6 +2,7 @@ import { chapters, type ChapterSpec } from "./chapters";
 import { definition, reportFmt as fmt, reportDelta as delta } from "./definitions";
 import { monthLabel } from "./period";
 import type { ChapterData, InsightCard, ReportModel, SpeakerNotes } from "./model";
+import { ownedMetricIds, reportedElsewhere } from "./ownership";
 import { decisionOf, extremes, movers, questionBank, rankPerformers, scenariosFor, yearPosition } from "./brief";
 
 /** The pages a report is presented as: an overview tab (cover + executive brief), then one tab per chapter. */
@@ -40,7 +41,12 @@ export const PRIORITY_METRICS: Record<string, string[]> = {
   'late-cancellations': ['bookings', 'booking_late_cancelled', 'booking_late_rate', 'booking_no_shows', 'booking_no_show_rate'],
 };
 export function chapterMetrics(spec: ChapterSpec, data?: ChapterData) {
-  return [...new Set([...(PRIORITY_METRICS[spec.id] ?? []), ...spec.metrics])].filter(id => definition(id) && data?.total[id] != null);
+  return [...new Set([...(PRIORITY_METRICS[spec.id] ?? []), ...spec.metrics])].filter(id => definition(id) && data?.total[id] != null && !reportedElsewhere(spec, id));
+}
+/** Every measure of this chapter's app tab that has monthly values, for the month-by-month table. */
+export function tableMetrics(spec: ChapterSpec | undefined, data?: ChapterData) {
+  if (!spec || !data) return [];
+  return [...new Set([...spec.history, ...ownedMetricIds(spec)])].filter(id => definition(id) && !reportedElsewhere(spec, id) && data.history.some(row => row[id] != null));
 }
 export const verdictOf = (model: ReportModel, id: string): InsightCard | undefined => {
   const cards = model.narratives[id]?.cards ?? [];

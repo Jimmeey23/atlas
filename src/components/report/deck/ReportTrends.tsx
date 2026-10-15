@@ -10,6 +10,9 @@ import type { Row } from "../../../data/duckdb";
 import { axisStyle, chartPalette, tooltipStyle, useChart } from "./useChart";
 
 import { useRecordDrilldown } from "./RecordDrilldown";
+import type { ChapterSpec } from "../../../report/chapters";
+import type { ChapterData } from "../../../report/model";
+import { homeChapter, reportedElsewhere } from "../../../report/ownership";
 const label = (id: string) => definition(id)?.label ?? id;
 const shift = (key: string, months: number) => { const d = new Date(`${key}-01T00:00:00Z`); return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - months, 1)).toISOString().slice(0, 7); };
 
@@ -144,4 +147,32 @@ export function ReportMoMTable({ history, ids, selected, onSelect, title, export
     {!visible.length && <p className="empty-state">No measures match this selection.</p>}
     <p className="ranking-foot"><CalendarRange size={12}/> Frozen at report build. Rates use percentage points; Index 100 uses the first available month. Click a value to explore item-level records and pin the month on the chart.</p>
   </>;
+}
+
+/** The measures a sibling chapter already reports, named once so the report never repeats them. */
+export function ReportedElsewhere({ spec }: { spec?: ChapterSpec }) {
+  if (!spec) return null;
+  const moved = [...new Set([...spec.metrics, ...spec.history])].filter(id => definition(id) && reportedElsewhere(spec, id));
+  const home = moved.length ? homeChapter(spec) : undefined;
+  if (!moved.length || !home || home.id === spec.id) return null;
+  return <p className="cr-elsewhere" role="note"><b>Reported once, in {home.nav}.</b> {moved.slice(0, 8).map(label).join(", ")}{moved.length > 8 ? ` and ${moved.length - 8} more` : ""} read the same session records, so their totals and month-by-month table appear only in the {home.nav} chapter. This chapter shows what they say about {spec.nav.toLowerCase()}.</p>;
+}
+
+/** Month-by-month values for each segment (instructor, format…): the dimension this chapter adds to a shared population. */
+export function SegmentMoMTable({ data, selected, onSelect, exporting = false }: { data: ChapterData; selected: string; onSelect: (month: string) => void; exporting?: boolean }) {
+  const seg = data.segmentHistory;
+  const [measure, setMeasure] = useState(seg?.metrics[0] ?? "");
+  if (!seg || !seg.rows.length) return null;
+  const months = [...new Set(seg.rows.map(r => String(r.month)))].sort().reverse();
+  const value = (g: string, m: string, id: string) => seg.rows.find(r => r.g === g && String(r.month) === m)?.[id];
+  const shown = exporting ? seg.metrics : [measure];
+  return <section className="cr-segment-table" aria-label={seg.title}>
+    <header><div><span className="deck-eyebrow">Month by month · by {seg.field.replace("_group", "").replace("_", " ")}</span><h3>{seg.title}</h3></div>
+      {!exporting && <label>Measure<DropdownField aria-label="Segment measure" value={measure} onChange={e => setMeasure(e.target.value)}>{seg.metrics.map(id => <option key={id} value={id}>{label(id)}</option>)}</DropdownField></label>}</header>
+    {shown.map(id => <div className="table-scroll mom monthly-table compact" tabIndex={0} key={id} aria-label={`${label(id)} by month`}>
+      <table><thead><tr><th>{exporting ? label(id) : seg.field.replace("_group", "")}</th>{months.map(m => <th key={m} className={m === selected ? "deck-selected-month" : undefined}>{monthShort(m)}</th>)}</tr></thead>
+        <tbody>{seg.segments.map(g => <tr key={g}><th scope="row">{g}</th>{months.map(m => <td key={m} className={m === selected ? "deck-selected-month" : undefined}><button className="monthly-value" onClick={() => onSelect(m)} title={`${monthLabel(m)}: ${fmt(id, value(g, m, id))}`}>{fmt(id, value(g, m, id))}</button></td>)}</tr>)}</tbody></table>
+    </div>)}
+    <p className="ranking-foot"><CalendarRange size={12}/> Segments with at least five sessions in the report month, ranked by sessions; earlier months show — where a segment had too few records. Rate changes are in percentage points.</p>
+  </section>;
 }

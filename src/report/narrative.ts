@@ -1,15 +1,19 @@
 import { reportFmt as fmt, reportDelta as delta, definition } from "./definitions";
-import { metricNotes } from "../semantics/evidence";
 import { chapters, type ChapterSpec } from "./chapters";
 import { monthLabel, shiftMonth } from "./period";
 import { findingsFor, findingsPayload, ledger, seasonalScenario, type Finding } from "./findings";
 import { INSIGHT_LENSES, type ChapterData, type ChapterNarrative, type InsightCard, type ReportModel } from "./model";
+import { metricContract, readingGuide } from "./metric-contract";
+import { coveredDigest, uniqueNarrative } from "./dedupe";
+import { homeChapter, reportedElsewhere } from "./ownership";
+import { BUSINESS_CONTEXT } from "../semantics/business-context";
 import { reportOptions } from "./options";
 import { validateNarrativeCards } from "./quality";
+import { directionIssues } from "./audit";
 import { reviewMetricIds } from "./review";
 import { addCall, type CallUsage, type ChapterUsage } from "./usage";
 
-const CACHE_PREFIX = "atlas-report-narrative:v16:";
+const CACHE_PREFIX = "atlas-report-narrative:v18:";
 /** Exact evidence and request identity, independent of presentation settings. */
 async function analysisKey(value: unknown) {
   const bytes = new TextEncoder().encode(JSON.stringify(value));
@@ -44,7 +48,8 @@ export function chapterPayload(spec: ChapterSpec, data: ChapterData, model: Repo
     `Contributing records: ${data.n.toLocaleString("en-IN")}.`,
     ...data.diagnostics ?? [],
     ...data.notes ?? [],
-    "Definitions: " + [...new Set([...spec.metrics, ...spec.history, ...data.groups.flatMap(g => g.columns)])].map(id => `${id}: ${definition(id)?.label ?? id}. Format: ${definition(id)?.format ?? "unavailable"}. ${metricNotes[id]?.definition ?? ""} Governed calculation: ${definition(id)?.description ?? "unavailable"}. ${metricNotes[id]?.caveat ?? ""}`).join("; "),
+    "Metric contracts (governed definitions; follow them exactly):\n" + [...new Set([...spec.metrics, ...spec.history, ...data.groups.flatMap(g => g.columns)])].map(metricContract).join("\n"),
+    readingGuide([...spec.metrics, ...spec.history, ...data.groups.flatMap(g => g.columns)], data.n),
     "Membership revenue share is a share of gross collected payments, not net revenue. Newcomer lifetime value and return counts are observed to the source snapshot date: recent cohorts have less time to mature, so lower observed values do not prove weaker eventual outcomes. Churn outcomes can mature as renewals are recorded. Current-snapshot metrics cannot reconstruct historical member counts. Ranked tables omit groups below three contributing records and may be truncated; totals include all groups. Earned revenue is attendance attribution, not cash sales.",
   ];
   parts.push("Headline figures (raw values; percent format uses a 0–1 ratio):\n" + JSON.stringify({
@@ -209,6 +214,8 @@ function insightRules(model: ReportModel, spec: ChapterSpec) {
 
 /** Analytical depth contract informed by the reference report structure; figures come only from this snapshot. */
 const DEEP_REVIEW_RULES = [
+  "METRIC DISCIPLINE: the Metric contracts and reading guide are the only definitions. Name a measure by its governed label, respect its Direction (an adverse rise is never an improvement), its Basis (cash, earned, cohort, snapshot, network) and its Aggregation (never average or add ratios). Where a contract lists a 'Not the same as' lookalike, do not substitute one for the other. If a claim needs a measure that has no contract in this prompt, say it is unavailable rather than defining it yourself.",
+  "WORK BEFORE WRITING: for every card, first locate the supplied figure, its comparison and the breakdown row that carries it; then check the opposing explanation; then write. A card whose evidence you cannot point to in the supplied figures must not be written. Prefer fewer, deeper cards over breadth, and rank by value at stake.",
   "DEEP REVIEW: write an argument, not a metric recap. For each material finding connect signal → quantified driver → counter-evidence → consequence → decision. Use supplied engine-derived group analysis for full-population movers, rate/mix bridges, concentration and median-lift benchmarks; never infer all-group contributions from a truncated table.",
   "Test competing explanations where evidence exists: demand versus supplied capacity; transaction volume versus average ticket; channel mix versus within-channel conversion; member reach versus repeat frequency. State which explanation the evidence supports, which it weakens and what remains untested. If a required measure or matched comparison is missing, say so rather than inventing the test.",
   "Use comparisons to separate scale from efficiency: absolute attendance versus fill; total revenue versus revenue per session; acquired leads versus conversion. A leader by volume need not lead by yield. Name exact denominators, source periods and eligible sample sizes when supplied. Do not equate repeated visits or package utilisation with a new purchase.",
@@ -252,6 +259,14 @@ const ACCURACY_RULES = [
   'Do not invent causes, policy thresholds, uplift promises or certainty from small samples. Every causal idea is a hypothesis paired with the check that would confirm or reject it. Valuations are indicative and must say so where the basis is an average.',
   'Future figures may use only the supplied conditional scenario arithmetic. Never call scenarios likely outcomes or add probabilities or ranges.',
 ].join('\n');
+
+/** Chapters reading the same records as a sibling must not restate the sibling's totals. */
+function sharedPopulationRule(spec: ChapterSpec) {
+  const moved = [...new Set([...spec.metrics, ...spec.history])].filter(id => definition(id) && reportedElsewhere(spec, id));
+  const home = homeChapter(spec);
+  if (!moved.length || home.id === spec.id) return "ONE FACT, ONE PLACE: earlier chapters' claims are listed under 'Already reported'. Do not restate them; add only what is new in this chapter.";
+  return `ONE FACT, ONE PLACE: these measures read the same records as the "${home.title}" chapter and are reported there: ${moved.map(id => `${id} (${definition(id)?.label})`).join(", ")}. Do not write cards, takeaways or metric commentary about their month totals, MoM, YoY or trend. You may use them only inside this chapter's own breakdowns (by ${spec.groups.map(g => g.field).filter((f, i, all) => all.indexOf(f) === i).join(", ") || "its own dimensions"}). Earlier chapters' claims are listed under 'Already reported'; do not restate them.`;
+}
 
 const cardCount = (model: ReportModel, derived = false) => {
   const n = reportOptions(model.customization).insightsPerChapter;
@@ -439,6 +454,24 @@ function chapterPrompt(rules: string[], sections: { label: string; text: string 
   })].join("\n\n");
 }
 
+type Verdict = { index: number; verdict: string; reason: string };
+/** A second reader checks the cards against the same evidence. A failed audit never blocks the report. */
+async function verifyCards(cards: InsightCard[], figures: string, earlier: string, signal: AbortSignal | undefined, onUsage: (usage: CallUsage) => void): Promise<Verdict[] | null> {
+  const message = [`FIGURES (the only evidence, with metric contracts):\n${boundedEvidence(figures, 80000)}`, earlier ? `EARLIER CHAPTERS (claims already made):\n${earlier}` : "",
+    "CARDS:\n" + JSON.stringify(cards.map((c, index) => ({ index, headline: c.headline, meaning: c.meaning, evidence: c.evidence, driver: c.driver, trend: c.trend, concentration: c.concentration, offset: c.offset, impact: c.impact, metrics: c.metrics, confidence: c.confidence })))].filter(Boolean).join("\n\n");
+  try {
+    const response = await fetch("/api/reports/verify", { method: "POST", signal, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message }) });
+    const payload = await response.json();
+    if (payload?.usage) onUsage(payload.usage as CallUsage);
+    if (!response.ok) return null;
+    const parsed = JSON.parse(String(payload.answer || "{}"));
+    return Array.isArray(parsed.verdicts) ? parsed.verdicts.filter((v: Verdict) => Number.isInteger(v.index) && typeof v.verdict === "string") : null;
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    return null;
+  }
+}
+
 export async function generateNarratives(
   model: ReportModel,
   onProgress?: (done: number, total: number, label: string) => void,
@@ -452,16 +485,20 @@ export async function generateNarratives(
   // If status is unavailable, the server can still safely reuse its exact-request cache.
   let providerModel = "";
   let providerPolicy = "";
+  let verifies = false;
   try {
     const response = await fetch("/api/intelligence/status", { signal });
     const status = await response.json();
     if (response.ok && status.openai && typeof status.model === "string" && typeof status.reportNarrativeVersion === "string") {
       providerModel = status.model;
       providerPolicy = status.reportNarrativeVersion;
+      verifies = status.reportVerification === true;
     }
   } catch (error) { if (signal?.aborted) throw error; }
   let done = 0;
-  const finish = (spec: ChapterSpec, narrative: ChapterNarrative) => {
+  const finish = (spec: ChapterSpec, written: ChapterNarrative) => {
+    // Each fact is stated once: drop what earlier chapters already carry.
+    const narrative = uniqueNarrative(spec, written, out);
     out[spec.id] = narrative;
     onChapter?.(spec.id, narrative);
     done++;
@@ -492,7 +529,9 @@ export async function generateNarratives(
         const message = chapterPrompt([
           ANALYST_ROLE,
           ACCURACY_RULES,
+          "BUSINESS CONTEXT (fixed facts; they override any assumption):\n" + BUSINESS_CONTEXT,
           insightRules(model, spec),
+          sharedPopulationRule(spec),
           `You are writing the "${spec.title}" chapter of the monthly management report for ${model.scope.studio}, ${monthLabel(model.scope.month)}.`,
           DERIVED_RULES[spec.id]?.(model) ?? `Return ${cardCount(model)} cards: one "kpis" verdict card, ${data?.history.length ? "at most one \"trend\" card if the history shows something the findings do not, " : ""}and the rest as ranked insights built from the analyst findings. Breakdown IDs available for focus: ${focusIds.join(", ") || "none"}. Most breakdowns should not get their own card.`,
           "AVAILABLE METRIC IDS (id: label): " + metricIds.map(id => `${id}: ${definition(id)?.label ?? id}`).join("; "),
@@ -501,11 +540,12 @@ export async function generateNarratives(
           ...(spec.id === "predictions" ? [{ label: "Use only the following numeric what-if scenarios for future values. Do not invent forecast ranges, confidence bands, probabilities or additional numeric forecasts.", text: forwardScenarios(model) }] : []),
           // Derived chapters already reason over the portfolio; send it once.
           ...(!spec.derived ? [{ label: "Figures:", text: figures }] : []),
+          { label: "Already reported in earlier chapters (state each fact once: do not repeat these claims or their figures; refer to them only to build on them):", text: spec.derived ? "" : coveredDigest(out, spec.id) },
           { label: "All-tab performance context (independent of visible chapter selection):", text: portfolio },
         ]);
         const extra = { insightVersion: 4, metricIds, lenses: spec.id === "recommendations" ? ["next_step"] : o.lenses.filter(l => l !== "next_step") };
         // Include complete pre-budget evidence: changes to omitted records must invalidate reuse too.
-        const fingerprint = await analysisKey({ version: 16, providerModel, providerPolicy, message, focusIds, extra,
+        const fingerprint = await analysisKey({ version: 18, providerModel, providerPolicy, message, focusIds, extra,
           figures, portfolio, preferences, scenarios: spec.id === "predictions" ? forwardScenarios(model) : "" });
         const key = `${CACHE_PREFIX}${model.scope.studio}:${model.scope.month}:${spec.id}:${fingerprint}`;
         const previous = model.narratives[spec.id];
@@ -536,8 +576,27 @@ export async function generateNarratives(
             throw new Error("The model returned no complete chapter analysis. Retry writing insights.");
           // The verdict leads; a model that forgot to mark one has its first card promoted.
           if (!cards.some(c => c.focus === "kpis")) cards[0] = { ...cards[0], focus: "kpis" };
-          const narrative: ChapterNarrative = { summary: parsed.summary.trim(), cards, generated: true, usage, analysisKey: fingerprint,
-            ...chapterExtras(parsed) };
+          // Deterministic direction audit: a card that contradicts its own cited figures is removed; a contradicting verdict fails the chapter.
+          const directional = cards.map(c => directionIssues(c, model, spec.id));
+          const verdictIssue = cards.findIndex((c, i) => c.focus === "kpis" && directional[i].length);
+          if (verdictIssue >= 0) throw new Error(`The chapter verdict contradicts its own figures. ${directional[verdictIssue][0]} Rewrite insights to retry.`);
+          let checked = cards.filter((_, i) => !directional[i].length);
+          const removed = cards.flatMap((c, i) => directional[i].length ? [{ headline: c.headline, verdict: "contradicted", reason: directional[i][0] }] : []);
+          let verification: ChapterNarrative["verification"];
+          if (verifies) {
+            const verdicts = await verifyCards(checked, figures + "\n\n" + portfolio, spec.derived ? "" : coveredDigest(out, spec.id), signal, (call) => { usage = addCall(usage, call); });
+            if (!verdicts) verification = { checked: 0, removed, unavailable: true };
+            else {
+              const flagged = new Map(verdicts.filter(v => v.verdict !== "supported" && checked[v.index]).map(v => [v.index, v]));
+              const lead = checked.findIndex(c => c.focus === "kpis");
+              if (lead >= 0 && flagged.has(lead)) throw new Error(`The independent audit rejected the chapter verdict (${flagged.get(lead)!.verdict}): ${flagged.get(lead)!.reason} Rewrite insights to retry.`);
+              removed.push(...[...flagged].map(([i, v]) => ({ headline: checked[i].headline, verdict: v.verdict, reason: v.reason })));
+              checked = checked.filter((_, i) => !flagged.has(i));
+              verification = { checked: verdicts.length, removed };
+            }
+          } else if (removed.length) verification = { checked: 0, removed };
+          const narrative: ChapterNarrative = { summary: parsed.summary.trim(), cards: checked, generated: true, usage, analysisKey: fingerprint,
+            ...(verification ? { verification } : {}), ...chapterExtras(parsed) };
           if (providerModel) writeCache(key, narrative);
           finish(spec, narrative);
         } catch (error) {

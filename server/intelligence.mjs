@@ -8,6 +8,7 @@ import { agentSkills, capabilityToolDefs, calculate, dataQualitySQL, publicResea
 import { agentIntent } from "../src/semantics/agent-intent.ts";
 import { fmt, formatField } from "../src/semantics/formats.ts";
 import { metrics } from "../src/semantics/metrics.ts";
+import { BUSINESS_CONTEXT } from "../src/semantics/business-context.ts";
 import { rankEntities, resolveMentions, resolveQuestionScope, simpleSalesQuestion, studioAliases, toolScope } from "./agent-scope.mjs";
 import { credentialStore } from "./credentials.mjs";
 import { createClient } from "@supabase/supabase-js";
@@ -69,7 +70,7 @@ const kinds = new Set([
 ]);
 // Bump when report instructions or output policy changes, so browser/saved
 // chapters cannot bypass the server's exact-request cache invalidation.
-const REPORT_NARRATIVE_VERSION = "1";
+const REPORT_NARRATIVE_VERSION = "3";
 /** Streams text into a gzip file; write() resolves once the chunk is accepted. */
 function gzipWriter(file) {
   const gzip = createGzip({ level: 1 });
@@ -192,6 +193,7 @@ export function intelligenceRoutes(
       openai: !!ai,
       model,
       reportNarrativeVersion: REPORT_NARRATIVE_VERSION,
+      reportVerification: process.env.REPORT_VERIFY !== "off",
       keyStorage: saved.apiKey
         ? "Encrypted server file"
         : process.env.OPENAI_API_KEY
@@ -703,6 +705,37 @@ export function intelligenceRoutes(
     }
     return { ...result, cacheStatus };
   }));
+  /**
+   * An independent audit of a finished chapter. A second reader checks each card
+   * against the same supplied figures and governed definitions and flags claims
+   * the evidence does not carry. The writer never grades its own work.
+   */
+  app.post("/api/reports/verify", route(async (req) => {
+    await provider();
+    if (!ai) throw new Error("OpenAI is not configured. Add a key in Agent settings to verify report analysis.");
+    const { message } = req.body;
+    if (typeof message !== "string" || !message.trim() || message.length > 120000)
+      throw new Error("A verification prompt up to 120,000 characters is required.");
+    const textField = { type: "string" };
+    const request = {
+      model: process.env.REPORT_VERIFY_MODEL || model,
+      ...(/^(o\d|gpt-5)/i.test(process.env.REPORT_VERIFY_MODEL || model) ? { reasoning: { effort: "medium" } } : {}),
+      instructions: "You are a strict analytical auditor. You are given FIGURES (the only evidence), METRIC CONTRACTS (the only definitions), EARLIER CHAPTERS and CARDS written by another analyst. For every card decide whether each claim is carried by the figures. Flag a card as: unsupported (a number, ranking or fact absent from the figures); contradicted (the figures show the opposite, including a favourable/adverse reading that ignores the metric's stated Direction); misdefined (a measure used outside its contract, a lookalike substituted, cash and earned revenue mixed, or ratios added); causal (a cause asserted as fact without a stated check); repeated (the claim restates an earlier chapter); or supported. Judge only against the supplied text; never use outside knowledge. Quote the exact clause at fault in reason. When in doubt between supported and a flag, flag only if you can point to the supplied figure that disagrees.",
+      input: message,
+      max_output_tokens: 8000,
+      text: { format: { type: "json_schema", name: "report_verification", strict: true, schema: {
+        type: "object", additionalProperties: false, required: ["verdicts"],
+        properties: { verdicts: { type: "array", items: { type: "object", additionalProperties: false, required: ["index", "verdict", "reason"],
+          properties: { index: { type: "integer" }, verdict: { type: "string", enum: ["supported", "unsupported", "contradicted", "misdefined", "causal", "repeated"] }, reason: textField } } } },
+      } } },
+    };
+    if (req.agentSignal.aborted) throw new DOMException("Aborted", "AbortError");
+    const started = Date.now();
+    const response = await ai.responses.create(request, { timeout: 180000, signal: req.agentSignal });
+    const usage = reportUsage(response, request.model, Date.now() - started);
+    if (response.status === "incomplete" || !response.output_text) throw Object.assign(new Error("Verification was incomplete."), { usage });
+    return { answer: response.output_text, model: request.model, usage };
+  }));
   /** Structured JSON from the report model, for admin component replacement and talk tracks. */
   async function reportJSON(req, name, instructions, schema, maxTokens = 8000, contextLimit = 60000) {
     await provider();
@@ -1103,7 +1136,7 @@ BUILD MODE — the user wants one or more elements saved on page ${page}. Get th
         const present = {type:"function",name:"present_answer"};
         response = await ai.responses.create({
           model,
-          instructions: instructions + legacyInstructions + buildInstructions,
+          instructions: instructions + legacyInstructions + buildInstructions + "\n\nBUSINESS CONTEXT (fixed facts shared with the report writer):\n" + BUSINESS_CONTEXT,
           input,
           tools,
           // Tools stay required so the reply always arrives through present_answer. A build keeps
