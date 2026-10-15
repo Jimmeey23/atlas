@@ -1,3 +1,4 @@
+import { GitBranch } from "lucide-react";
 import { query } from "../../data/duckdb";
 import { ensureSource } from "../../data/loader";
 import { context, metricFacts } from "../../data/analytics";
@@ -35,7 +36,7 @@ export function ConversionFunnel({ version }: { version: number }) {
   );
   return (
     <article className="board-card board-funnel">
-      <header><h3>Conversion funnels</h3></header>
+      <header><div className="board-heading"><span className="board-kicker"><GitBranch size={14} aria-hidden="true" />Acquisition & progression</span><h3>Conversion funnels</h3><p>Follow each stage of the journey</p></div></header>
       {error ? (
         <p className="board-state board-error" role="alert">{error}</p>
       ) : loading && !data ? (
@@ -45,8 +46,8 @@ export function ConversionFunnel({ version }: { version: number }) {
           {funnels.map((f, i) => {
             const steps = data?.[i] || [];
             return (
-              <section key={f.title}>
-                <h4>{f.title}</h4>
+              <section className="board-funnel-panel" key={f.title}>
+                <h4>{f.title}</h4><p className="board-funnel-caption">{f.sequential ? "Progression between recorded lead stages" : "Independent outcomes of the first-visit cohort"}</p>
                 {!steps[0] || !steps[0].value ? (
                   <p className="board-state" role="status">No {metrics[f.ids[0]].label.toLowerCase()} in this period.</p>
                 ) : (

@@ -1,3 +1,4 @@
+import { ChartPie } from "lucide-react";
 import { query } from "../../data/duckdb";
 import { ensureSource } from "../../data/loader";
 import { context, metricFacts } from "../../data/analytics";
@@ -25,13 +26,13 @@ export function RevenueMix({ version }: { version: number }) {
   let offset = 0;
   return (
     <article className="board-card board-mix">
-      <header><h3>Revenue mix</h3></header>
+      <header><div className="board-heading"><span className="board-kicker"><ChartPie size={14} aria-hidden="true" />Sales composition</span><h3>Revenue mix</h3><p>Where recorded sales come from</p></div></header>
       {error ? (
         <p className="board-state board-error" role="alert">{error}</p>
       ) : loading && !data ? (
         <p className="board-state" role="status">Splitting revenue…</p>
       ) : !data?.length || total <= 0 ? (
-        <p className="board-state" role="status">No collected revenue in this period.</p>
+        <p className="board-state" role="status">No recorded sales revenue in this period.</p>
       ) : (
         <div className="board-mix-body" aria-busy={loading}>
           <svg viewBox="0 0 140 140" role="img" aria-label={`Revenue by category, total ${fmt("gross_revenue", total)}`}>
@@ -48,13 +49,13 @@ export function RevenueMix({ version }: { version: number }) {
               return el;
             })}
             <text x="70" y="66" textAnchor="middle" className="board-donut-total">{fmt("gross_revenue", total)}</text>
-            <text x="70" y="82" textAnchor="middle" className="board-donut-sub">collected</text>
+            <text x="70" y="82" textAnchor="middle" className="board-donut-sub">sales revenue</text>
           </svg>
           <ul>
             {data.map((r, i) => (
               <li key={r.label}>
                 <i style={{ background: palette[i % palette.length] }} aria-hidden="true" />
-                <span>{r.label}</span>
+                <span title={r.label}>{r.label}</span>
                 <strong className="number">{((r.value / total) * 100).toFixed(1)}%</strong>
               </li>
             ))}

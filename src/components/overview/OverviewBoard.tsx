@@ -8,7 +8,7 @@ import "./OverviewBoard.css";
 
 export function OverviewBoard({ data, version }: { data: Analysis; version: number }) {
   return (
-    <Register index="06" title="Performance board" subtitle="Studios, funnels, revenue mix and goals under the selected filters">
+    <Register id="performance-board" index="06" title="Performance board" subtitle="Studios, funnels, revenue mix and goals under the selected filters">
       <div className="board-grid">
         <GoalRings data={data} />
         <StudioLeaderboard version={version} />

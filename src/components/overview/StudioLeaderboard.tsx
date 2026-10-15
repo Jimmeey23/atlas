@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Building2 } from "lucide-react";
 import { query } from "../../data/duckdb";
 import { ensureSource } from "../../data/loader";
 import { comparison, context, metricFacts } from "../../data/analytics";
@@ -46,7 +46,7 @@ export function StudioLeaderboard({ version }: { version: number }) {
   return (
     <article className="board-card board-leaderboard">
       <header>
-        <h3>Studio leaderboard</h3>
+        <div className="board-heading"><span className="board-kicker"><Building2 size={14} aria-hidden="true" />Studio comparison</span><h3>Studio leaderboard</h3><p>Ranked by the selected measure</p></div>
         <div className="board-tabs" role="tablist" aria-label="Leaderboard metric">
           {options.map((o) => (
             <button key={o} role="tab" aria-selected={o === id} onClick={() => setId(o)}>

@@ -41,7 +41,7 @@ export function GoalRings({ data }: { data: Analysis }) {
   return (
     <article className="board-card board-goals">
       <header>
-        <h3>Goals for this period</h3>
+        <div className="board-heading"><span className="board-kicker"><Target size={14} aria-hidden="true" />Period targets</span><h3>Goals for this period</h3><p>Track the outcomes that matter</p></div>
         <span className="board-hint">Targets are saved in this browser</span>
       </header>
       {!filters.from || !filters.to ? <p className="board-state" role="status">Select a start and end date to track progress.</p> : null}
@@ -76,8 +76,9 @@ export function GoalRings({ data }: { data: Analysis }) {
                     {targets[id] ? `Target ${fmt(id, targets[id])}` : "Set target"}
                   </button>
                 )}
+                {p.status === "none" && <small className="board-goal-status">{targets[id] ? "Awaiting source data or date range" : "No target set"}</small>}
                 {p.status !== "none" && (
-                  <small>
+                  <small className="board-goal-status">
                     {p.status === "met" ? "Target met" : p.status === "ahead" ? "Ahead of pace" : "Behind pace"}
                     {p.elapsed < 1 ? ` · ${Math.round(p.elapsed * 100)}% of period elapsed` : ""}
                   </small>
