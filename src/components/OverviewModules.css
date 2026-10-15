@@ -257,3 +257,9 @@
 .overview-table td .overview-drill { display: block; width: calc(100% + 8px); text-align: inherit; padding: 2px 4px; margin: -2px -4px; }
 .overview-table td .overview-drill:hover, button.overview-row-name:hover { background: color-mix(in srgb, var(--accent) 9%, transparent); }
 button.overview-row-name { display: block; width: 100%; text-align: left; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Pink chrome for the overview: module colours keep their identity, interaction accents are pink */
+.overview-module-nav a:hover { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, var(--hairline)); background: color-mix(in srgb, var(--accent) 8%, var(--surface-1)); }
+.overview-module { box-shadow: 0 1px 0 color-mix(in srgb, var(--accent) 35%, transparent) inset; }
+.overview-module .overview-table tbody tr:hover > * { background: color-mix(in srgb, var(--accent) 8%, var(--surface-1)); }
+.overview-drill:hover { color: var(--accent); }

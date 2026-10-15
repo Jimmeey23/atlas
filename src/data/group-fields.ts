@@ -52,6 +52,6 @@ export function sortGroupFields(fields: string[]): GroupField[] {
 }
 /** Registry fields plus any already-chosen fields, so a saved grouping always renders. */
 export function withChosen(fields: GroupField[], chosen: readonly string[]) {
-  const missing = chosen.filter((f) => f && !fields.some((x) => x.field === f));
+  const missing = [...new Set(chosen)].filter((f) => f && !fields.some((x) => x.field === f));
   return missing.length ? [...fields, ...missing.map((field) => ({ field, label: groupLabel(field) }))] : fields;
 }

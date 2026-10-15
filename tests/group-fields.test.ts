@@ -21,3 +21,7 @@ test('group-by labels prefer sheet headers and keep chosen fields visible',()=>{
  assert.deepEqual(withChosen(sorted,['month']).at(-1),{field:'month',label:'Month'});
  assert.equal(withChosen(sorted,['location']),sorted);
 });
+test('chosen fields that repeat are listed once so option keys stay unique',()=>{
+ const out=withChosen([],['product','month','product','month']);
+ assert.deepEqual(out.map(f=>f.field),['product','month']);
+});

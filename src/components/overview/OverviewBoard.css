@@ -77,3 +77,12 @@
 @media (max-width: 1100px) { .board-leaderboard, .board-mix { grid-column: span 12; }.board-mix-body { grid-template-columns: 160px minmax(0, 1fr); }.board-ring { grid-template-columns: 62px minmax(0,1fr); gap: 10px; padding: 16px 12px; }.board-ring > svg { width: 62px; height: 62px; } }
 @media (max-width: 760px) { .board-rings, .board-funnels { grid-template-columns: 1fr; }.board-ring { grid-template-columns: 78px minmax(0,1fr); padding: 18px; }.board-ring > svg { width: 78px; height: 78px; }.board-card { padding: 18px; gap: 20px; }.board-grid { gap: 14px; }.board-card > header { align-items: flex-start; }.board-hint { border: 0; padding: 0; }.board-tabs { width: 100%; }.board-tabs button { flex: 1; min-height: 44px; }.board-set, .board-ring form button, .board-ring input { min-height: 44px; }.board-funnel-panel { padding: 16px; } }
 @media (max-width: 480px) { .board-row { grid-template-columns: 24px minmax(80px, 1fr) auto; gap: 10px; }.board-bar { display: none; }.board-delta { grid-column: 3; }.board-name { grid-row: span 2; }.board-rank { grid-row: span 2; }.board-mix-body { grid-template-columns: 1fr; justify-items: center; }.board-mix-body svg { max-width: 180px; }.board-mix ul { width: 100%; }.board-card h3 { font-size: 17px; } }
+
+/* Pink identity for the overview board */
+#performance-board .board-card { border-top: 2px solid color-mix(in srgb, var(--accent) 70%, transparent); background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 7%, transparent), transparent 38%), var(--surface-1); }
+#performance-board .board-goals { background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 14%, transparent), color-mix(in srgb, var(--accent-2) 6%, transparent) 55%, transparent), var(--surface-1); }
+#performance-board .board-kicker { padding: 3px 9px; width: fit-content; border-radius: 99px; background: color-mix(in srgb, var(--accent) 14%, transparent); }
+#performance-board .board-tabs button[aria-selected="true"] { background: linear-gradient(120deg, var(--accent), color-mix(in srgb, var(--accent) 72%, #6d1048)); color: #fff; border-color: transparent; box-shadow: 0 3px 10px color-mix(in srgb, var(--accent) 35%, transparent); }
+#performance-board .board-ring-value { stroke: var(--accent); filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent) 45%, transparent)); }
+#performance-board .board-funnel-bar { background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+#performance-board .board-funnels li.drop .board-funnel-bar { background: var(--warn); }
