@@ -6,6 +6,7 @@ import deckCSS from "../design/report-deck.css?raw";
 import sourceCSS from "../design/report-source.css?raw";
 import continuousCSS from "../design/report-continuous.css?raw";
 import modernCSS from "../design/report-modern.css?raw";
+import premiumCSS from "../design/report-premium.css?raw";
 const sourceExportCSS = deckCSS + "\n" + continuousCSS + "\n" + sourceCSS + `
 .report-doc.deck{--surface-1:#fff;--surface-2:#f5f7fb;--surface-3:#fff;--canvas:#fff;--text-1:#142440;--text-2:#465777;--text-3:#62718c;--hairline:#e3e8f0;--accent:#6350e8;--pos:#087d70;--neg:#b43253;--warn:#a66a20;--font-ui:Arial,Helvetica,sans-serif;--font-display:Arial,Helvetica,sans-serif;padding:24px;min-height:0}
 .report-doc.deck[data-report-theme=dark]{--surface-1:#122139;--surface-2:#192c48;--surface-3:#213653;--canvas:#122139;--text-1:#edf2fc;--text-2:#c1cee3;--text-3:#a4b5d0;--hairline:#31435e;--d-line:#31435e;--accent:#b6acff;--pos:#6fdbbf;--neg:#ff9eb5}
@@ -102,7 +103,7 @@ export async function serialiseReport(element: HTMLElement, model: ReportModel) 
     "html{scroll-behavior:smooth}body{margin:0;background:#f4f6fa;padding:24px}",
     "@media(max-width:768px){body{padding:0}}",
     "@media print{body{padding:0;background:#fff}}",
-    safeInStyle(reportCSS + "\n" + sourceExportCSS + "\n" + modernCSS),
+    safeInStyle(reportCSS + "\n" + sourceExportCSS + "\n" + modernCSS + "\n" + premiumCSS),
     "</style>",
     "</head>",
     "<body>",

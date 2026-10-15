@@ -22,6 +22,7 @@ import { chapters } from "../../report/chapters";
 import { estimateSeconds, persistReport, retained, startReport, stopReport, useReportJob } from "../../report/job";
 import "../../design/report-studio.css";
 import "../../design/report-modern.css";
+import "../../design/report-premium.css";
 
 /** Measures leadership most often sets a monthly target for. Rates are entered as percentages. */
 const TARGETS_KEY = 'atlas-report-targets';

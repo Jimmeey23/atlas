@@ -35,6 +35,7 @@ import { SpeakerDrawer } from "./SpeakerDrawer";
 import "../../../design/report-deck.css";
 import "../../../design/report-continuous.css";
 import "../../../design/report-modern.css";
+import "../../../design/report-premium.css";
 import { SourceReportChapter } from "./SourceReportChapter";
 
 const DRAWER_KEY = "atlas-deck-drawer-v2";

@@ -1,0 +1,126 @@
+/* Monthly report: premium finish. Loaded last by the reader, builder preview and HTML export,
+   so it only restyles; it never changes structure or content. */
+.report-doc{
+  --pm-ink:#0f1b2e;--pm-ink-2:#3b4a63;--pm-ink-3:#6b788f;
+  --pm-paper:#fff;--pm-mist:#f4f5f8;--pm-line:#e4e7ee;--pm-line-2:#cfd5e0;
+  --pm-brass:#a88447;--pm-brass-soft:#f3ecdf;
+  --pm-navy:#0f1b2e;--pm-navy-2:#17263d;
+  --pm-up:#0b7a62;--pm-down:#b3304f;--pm-amber:#a4691d;
+  --pm-sans:Inter,"Helvetica Neue",Arial,sans-serif;
+  --pm-serif:Newsreader,"Iowan Old Style",Georgia,serif;
+  font-family:var(--pm-sans);color:var(--pm-ink);
+  font-feature-settings:"tnum" 1,"cv11" 1;font-variant-numeric:tabular-nums;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+.report-doc[data-report-theme=dark]{
+  --pm-ink:#edf1f9;--pm-ink-2:#bfcbe0;--pm-ink-3:#93a3bf;
+  --pm-paper:#142238;--pm-mist:#0f1a2c;--pm-line:#26364f;--pm-line-2:#33455f;
+  --pm-brass:#d2b277;--pm-brass-soft:#2a2a2a;--pm-navy:#0a1423;--pm-navy-2:#101e33;
+  --pm-up:#4cc2a4;--pm-down:#f08aa3;--pm-amber:#e0b36a;
+}
+
+/* Reader surface */
+:root .report-page.deck[data-report-design=analytical] .deck-main{background:var(--pm-mist,#f4f5f8);padding:36px clamp(20px,4vw,64px) 96px}
+.report-doc.deck-doc,.report-doc.deck{max-width:1080px;margin-inline:auto}
+.report-doc p,.report-doc li{line-height:1.62}
+
+/* Cover: the brief opens like a letter, not a form */
+.report-doc .leadership-front{padding:56px clamp(24px,5vw,72px) 40px;background:var(--pm-paper);border:1px solid var(--pm-line);border-radius:6px;box-shadow:0 1px 0 var(--pm-line),0 24px 60px -32px #0f1b2e33;position:relative}
+.report-doc .leadership-front::before{content:"";position:absolute;left:clamp(24px,5vw,72px);top:0;width:56px;height:3px;background:var(--pm-brass)}
+.report-doc .leadership-front>header{padding-bottom:28px;margin-bottom:8px;border-bottom:1px solid var(--pm-line)}
+.report-doc .leadership-front h1{font-family:var(--pm-serif);font-weight:500;font-size:clamp(34px,4.4vw,54px);line-height:1.05;letter-spacing:-.022em;color:var(--pm-ink);margin:10px 0 12px;max-width:26ch;text-wrap:balance}
+.report-doc .leadership-front>header p{color:var(--pm-ink-3);font-size:13px;margin:0}
+.report-doc .deck-eyebrow,.report-doc .r-eyebrow{font-family:var(--pm-sans);font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:none;color:var(--pm-brass)}
+
+/* Verdicts: numbered because they are ranked, one reading column, no repeated boxes */
+.report-doc .leadership-verdicts{list-style:none;counter-reset:verdict;margin:0;padding:0;display:grid}
+.report-doc .leadership-verdicts>li{counter-increment:verdict;display:grid;grid-template-columns:44px minmax(0,1fr);column-gap:20px;padding:28px 0;border-bottom:1px solid var(--pm-line)}
+.report-doc .leadership-verdicts>li::before{content:counter(verdict);grid-row:1/span 4;font-family:var(--pm-serif);font-size:30px;line-height:1;color:var(--pm-brass);font-weight:400;padding-top:3px}
+.report-doc .leadership-verdicts>li>*{grid-column:2}
+.report-doc .leadership-verdicts h2{font-family:var(--pm-serif);font-weight:500;font-size:clamp(21px,2.1vw,26px);line-height:1.22;letter-spacing:-.012em;color:var(--pm-ink);margin:0 0 10px;max-width:46ch}
+.report-doc .leadership-verdicts p{font-size:14.5px;color:var(--pm-ink-2);max-width:68ch;margin:0 0 6px}
+.report-doc .leadership-verdicts p b{color:var(--pm-ink);font-weight:600;margin-right:4px}
+.report-doc .leadership-verdicts strong{font-weight:600;color:var(--pm-ink)}
+
+/* Scorecard and every table: sans, quiet rules, aligned numbers */
+.report-doc table{border-collapse:collapse;width:100%;font-family:var(--pm-sans);font-size:13px}
+.report-doc table caption{font-family:var(--pm-sans);font-size:13px;font-weight:600;color:var(--pm-ink);text-align:left;padding:28px 0 12px;caption-side:top}
+.report-doc th,.report-doc td{font-family:var(--pm-sans);padding:11px 14px;border:0;border-bottom:1px solid var(--pm-line);text-align:right;color:var(--pm-ink);background:transparent;line-height:1.35;white-space:nowrap}
+.report-doc th:first-child,.report-doc td:first-child,.report-doc tbody th{text-align:left;white-space:normal;font-weight:500;color:var(--pm-ink)}
+.report-doc thead th{font-size:11.5px;font-weight:600;color:var(--pm-ink-3);letter-spacing:.01em;border-bottom:1px solid var(--pm-line-2);background:transparent;position:static}
+.report-doc tbody tr:hover td,.report-doc tbody tr:hover th{background:var(--pm-mist)}
+.report-doc tbody tr:last-child td,.report-doc tbody tr:last-child th{border-bottom:0}
+.report-doc .r-table-wrap{border:0;border-radius:0;overflow-x:auto}
+.report-doc .leadership-front small{display:block;color:var(--pm-ink-3);font-size:12px;margin-top:12px}
+
+/* Chapter heads: one confident band, brass hairline, calm type */
+.report-doc.cr-report .cr-chapter-head,.report-doc .cr-report .cr-chapter-head,.cr-report .cr-chapter-head{background:linear-gradient(135deg,var(--pm-navy) 0%,var(--pm-navy-2) 100%);border:0;border-radius:6px;padding:40px clamp(24px,4vw,48px);margin:0 0 28px;gap:28px;position:relative;box-shadow:0 24px 50px -30px #0f1b2e99}
+.cr-report .cr-chapter-head::after{content:"";position:absolute;left:clamp(24px,4vw,48px);right:clamp(24px,4vw,48px);bottom:0;height:1px;background:linear-gradient(90deg,#d2b277 0,#d2b27700 70%)}
+.cr-report .cr-chapter-head .cr-number{font-family:var(--pm-serif);font-weight:300;font-size:56px;line-height:.9;color:#d2b277;padding:0}
+.cr-report .cr-chapter-head .deck-eyebrow{color:#d2b277}
+.cr-report .cr-chapter-head h2{font-family:var(--pm-serif);font-weight:500;font-size:clamp(28px,3vw,40px);line-height:1.1;letter-spacing:-.02em;color:#fff;max-width:24ch;margin:10px 0 12px}
+.cr-report .cr-chapter-head p{color:#c3cee0;font-size:15px;line-height:1.6;max-width:60ch}
+.cr-report .cr-chapter-head .cr-basis{color:#e6ecf7;font-size:12px;text-align:right}
+.cr-report .cr-chapter-head .cr-basis small{color:#9fb0cc;font-size:12px;display:block;margin-top:4px}
+.cr-report .cr-chapter{padding:56px 0 24px}
+
+/* KPI grid: figures on paper with hairline dividers instead of tinted tiles */
+.cr-report .deck-metric-grid{background:var(--pm-paper);border:1px solid var(--pm-line);border-radius:6px;padding:0;box-shadow:none;gap:0;overflow:hidden}
+.cr-report .deck-kpi{padding:24px 26px;background:transparent;border:0;border-radius:0;box-shadow:none;position:relative}
+.cr-report .deck-kpi::before,.cr-report .deck-kpi::after{display:none!important}
+.cr-report .deck-kpi-label{font-size:12.5px;font-weight:500;color:var(--pm-ink-3);letter-spacing:0;text-transform:none}
+.cr-report .deck-kpi-value{font-family:var(--pm-serif);font-weight:500;font-size:clamp(30px,3vw,38px);letter-spacing:-.02em;color:var(--pm-ink);line-height:1.05}
+.report-doc .deck-kpi-delta,.report-doc .metric-delta{font-size:12px;font-weight:600;border-radius:999px;padding:3px 9px;background:transparent;border:1px solid var(--pm-line)}
+.report-doc .metric-delta.positive{color:var(--pm-up);border-color:color-mix(in srgb,var(--pm-up) 30%,transparent);background:color-mix(in srgb,var(--pm-up) 7%,transparent)}
+.report-doc .metric-delta.negative{color:var(--pm-down);border-color:color-mix(in srgb,var(--pm-down) 30%,transparent);background:color-mix(in srgb,var(--pm-down) 7%,transparent)}
+.report-doc .deck-kpi-delta small{font-weight:500;opacity:.7;margin-left:4px}
+.cr-report .deck-kpi-foot{font-size:12px;color:var(--pm-ink-3);border-top:1px solid var(--pm-line);padding-top:12px;margin-top:14px}
+
+/* Section intros that were light-on-white: restore contrast, then restyle */
+.report-doc .dk-insights-intro .deck-eyebrow,.report-doc .dk-insights-intro .deck-eyebrow *{color:var(--pm-brass)}
+.report-doc .dk-insights-intro h2,.report-doc .dk-brief h2,.report-doc .dk-brief h3{font-family:var(--pm-serif);font-weight:500;font-size:clamp(23px,2.2vw,29px);line-height:1.18;letter-spacing:-.016em;color:var(--pm-ink);text-wrap:balance}
+.report-doc .dk-insights-intro p{color:var(--pm-ink-2);font-size:15px;max-width:62ch}
+
+/* Findings: one open card, a serif claim, evidence in a quiet side rail */
+.report-doc .rp-finding,.report-doc .deck-insight{background:var(--pm-paper);border:1px solid var(--pm-line);border-radius:6px;box-shadow:none;margin:0 0 20px;overflow:hidden}
+.report-doc .deck-insight-top{padding:16px 28px;border-bottom:1px solid var(--pm-line);background:transparent;gap:14px}
+.report-doc .rp-finding-number{font-family:var(--pm-serif);font-size:20px;font-weight:400;color:var(--pm-brass)}
+.report-doc .deck-insight-lens{font-size:12px;font-weight:600;color:var(--pm-ink-2)}
+.report-doc .rp-finding-meta{font-size:12px;color:var(--pm-ink-3)}
+.report-doc .rp-evidence-pair{grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr)}
+.report-doc .deck-claim-content,.report-doc .deck-insight-claim{padding:28px 32px}
+.report-doc .deck-insight-headline h3,.report-doc .r-insight-title{font-family:var(--pm-serif);font-weight:500;font-size:clamp(22px,2.2vw,28px);line-height:1.18;letter-spacing:-.014em;color:var(--pm-ink);text-align:left}
+.report-doc .deck-insight-claim p,.report-doc .rp-prose p{font-size:14.5px;line-height:1.65;color:var(--pm-ink-2);max-width:62ch}
+.report-doc .deck-insight-claim h4,.report-doc .rp-context-note strong{font-size:12.5px;font-weight:600;color:var(--pm-ink);margin:22px 0 4px}
+.report-doc .deck-insight-proof,.report-doc .rp-evidence-citation{background:var(--pm-mist);border-left:1px solid var(--pm-line);padding:28px 28px}
+.report-doc .deck-insight-proof{font-size:13px;color:var(--pm-ink-2)}
+.report-doc .rp-insight-points{border-top:1px solid var(--pm-line);padding:20px 32px 24px;margin:0}
+.report-doc .rp-insight-points .deck-eyebrow,.report-doc .rp-insight-points strong{color:var(--pm-ink)}
+.report-doc .rp-insight-points p{font-size:13.5px;color:var(--pm-ink-2)}
+
+/* Disclosure rows (supporting evidence, source records) */
+.report-doc .cr-disclosure,.report-doc details.cr-disclosure{background:var(--pm-paper);border:1px solid var(--pm-line);border-radius:6px;box-shadow:none;margin:10px 0}
+.report-doc .cr-disclosure>summary{padding:16px 22px;font-size:14px;font-weight:600;color:var(--pm-ink);letter-spacing:0}
+.report-doc .cr-disclosure>summary:hover{background:var(--pm-mist)}
+
+/* Recommendations */
+.report-doc .rp-recommendation{background:var(--pm-brass-soft);border:0;border-left:3px solid var(--pm-brass);border-radius:0 6px 6px 0;padding:22px 26px;margin:24px 0}
+.report-doc .rp-recommendation .deck-eyebrow{color:var(--pm-brass)}
+
+/* Notices should read as notes, not alarms */
+.report-doc .notice{background:var(--pm-mist);border:0;border-left:3px solid var(--pm-amber);border-radius:0 6px 6px 0;color:var(--pm-ink-2);font-size:13px;padding:12px 18px}
+
+/* Contents strip */
+.report-doc .cr-source,.report-doc .cr-toc{border-color:var(--pm-line)}
+
+@media(max-width:760px){
+  .report-doc .leadership-front{padding:36px 20px 24px}
+  .report-doc .leadership-verdicts>li{grid-template-columns:30px minmax(0,1fr);column-gap:12px}
+  .report-doc .rp-evidence-pair{grid-template-columns:1fr}
+  .report-doc .deck-insight-proof{border-left:0;border-top:1px solid var(--pm-line)}
+  .cr-report .cr-chapter-head{padding:28px 20px}
+  .cr-report .cr-chapter-head .cr-number{font-size:40px}
+}
+@media print{
+  .report-doc .leadership-front,.report-doc .rp-finding,.report-doc .deck-kpi{box-shadow:none;break-inside:avoid}
+}
