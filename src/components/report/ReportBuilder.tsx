@@ -8,7 +8,7 @@ import { definition } from "../../report/definitions";
 import { GenerationStats } from "./GenerationStats";
 import { DropdownField } from "../ui/DropdownField";
 import { useEffect, useMemo, useState } from "react";
-import { Sparkles, RefreshCw, TriangleAlert, ExternalLink, Clock3, Database, Square, CheckCircle2, Loader2, CircleDashed, FilePlus2, Building2, CalendarDays, Layers3, Pin, PinOff, FileText, Presentation, Mic, PencilLine, History, Lightbulb, ArrowUpRight } from "lucide-react";
+import { Sparkles, RefreshCw, TriangleAlert, ExternalLink, Clock3, Database, Square, CheckCircle2, Loader2, CircleDashed, FilePlus2, Building2, CalendarDays, Layers3, Pin, PinOff, FileText, Presentation, History, Lightbulb, ArrowUpRight } from "lucide-react";
 import { query } from "../../data/duckdb";
 import { useStore } from "../../state/store";
 import { themeOptions } from "../../state/preferences";
@@ -21,6 +21,7 @@ import { KEEP_RECENT, listReports, loadReport, pinReport } from "../../report/st
 import { chapters } from "../../report/chapters";
 import { estimateSeconds, persistReport, retained, startReport, stopReport, useReportJob } from "../../report/job";
 import "../../design/report-studio.css";
+import "../../design/report-modern.css";
 
 /** Measures leadership most often sets a monthly target for. Rates are entered as percentages. */
 const TARGETS_KEY = 'atlas-report-targets';
@@ -172,16 +173,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
 
   return (
     <div className="report-workspace rs" data-report-id={model?.id || ""}>
-      <header className="rs-hero">
-        <div className="rs-hero-mark"><Presentation size={22}/></div>
-        <div className="rs-hero-copy"><span className="eyebrow">Monthly report studio</span><h2>Turn the month into decisions.</h2>
-          <p>One continuous studio review: connect the month’s results to their drivers, evidence and decisions. Explore the report here or open it in a dedicated reader.</p></div>
-        <ul className="rs-hero-features">
-          <li><Lightbulb size={14}/>Drivers · counter-evidence · value at stake</li>
-          <li><Mic size={14}/>Distinct chapters · source-backed recommendations</li>
-          <li><PencilLine size={14}/>Admin edits & AI component swaps</li>
-        </ul>
-      </header>
+      <header className="rs-workspace-head"><div><span className="eyebrow">Physique 57 India · Studio intelligence</span><h1>Monthly reports</h1><p>Build a comprehensive review from the month’s evidence.</p></div><span className="rs-state" role="status">{running ? job.mode === "rewrite" ? "Rewriting analysis" : "Generating report" : status === "stopped" ? "Stopped · completed chapters retained" : job.storageError ? "Save failed · report retained" : job.narrativeError ? "Partial analysis · review required" : model ? model.id ? "Report saved" : "Unsaved report" : "Ready to build"}</span></header>
 
       <div className="rs-grid">
         <div className="rs-main">
@@ -198,10 +190,10 @@ export function ReportBuilder({ version }: { version: string | number }) {
                 </DropdownField></label>
             </div>
           </section>
-          <section className="rs-card rs-settings-card" aria-label="Report design">
-            <header className="rs-card-head"><span className="rs-step">2</span><div><h3>Shape the report</h3><p>Style, insight lenses, design and chapter order.</p></div></header>
+          <details className="rs-card rs-settings-card" aria-label="Report design">
+            <summary className="rs-card-head"><span className="rs-step">2</span><div><h3>Report settings & chapters</h3><p>{customization.chapterIds.length} chapters · {customization.detail} · expand to customize</p></div></summary>
             <ReportSettings value={customization} patch={patch} busy={busy} onTarget={setTarget} moveChapter={moveChapter}/>
-          </section>
+          </details>
         </div>
 
         <aside className="rs-side">
@@ -234,12 +226,12 @@ export function ReportBuilder({ version }: { version: string | number }) {
           </section>
 
           {model && !running && <section className="rs-card rs-ready" aria-label="Current report">
-            <div className="rs-ready-head"><span className="rs-ready-icon"><CheckCircle2 size={18}/></span><div><b>{model.customization?.title || "Monthly performance report"}</b><small>{model.scope.studio} · {monthLabel(model.scope.month)} · {model.savedAt ? `saved ${when(model.savedAt)}` : status === "stopped" ? "partial, unsaved" : "unsaved"}</small></div></div>
+            <div className="rs-ready-head"><span className="rs-ready-icon">{status === "stopped" || job.narrativeError || job.storageError ? <TriangleAlert size={18}/> : <CheckCircle2 size={18}/>}</span><div><b>{model.customization?.title || "Monthly performance report"}</b><small>{model.scope.studio} · {monthLabel(model.scope.month)} · {model.savedAt ? `saved ${when(model.savedAt)}` : status === "stopped" ? "partial, unsaved" : "unsaved"}</small></div></div>
             <button className="button primary rs-cta" disabled={busy} onClick={() => void open(model)}>{opening ? <Loader2 size={15} className="rb2-spin"/> : <ExternalLink size={15}/>}Open report in new tab</button>
             <div className="rs-ready-actions">
               {!model.importedChapters?.length && <button className="button" disabled={busy} title="Writes failed, missing or changed chapters and reuses unchanged analysis" onClick={() => void startReport({ regenerate: true })}><RefreshCw size={14} />Rewrite insights</button>}
               {!model.id && <button className="button" disabled={busy} onClick={() => void persistReport(model)}><Database size={14}/>{status === "stopped" ? "Save partial" : "Save"}</button>}
-              <button className="button" disabled={busy} onClick={() => job.set({ model: null, status: "idle", narrativeError: "", error: "" })}><FilePlus2 size={14}/>New</button>
+              <button className="button" disabled={busy} onClick={() => job.set({ model: null, status: "idle", narrativeError: "", error: "", storageError: "" })}><FilePlus2 size={14}/>New</button>
             </div>
             <GenerationStats model={model}/>
             {model.schemaVersion != null && model.schemaVersion <= 3 && <p className="rs-hint" data-tone="warn"><TriangleAlert size={13}/>Saved in an earlier report format. Rebuild for current definitions.</p>}
@@ -264,10 +256,10 @@ export function ReportBuilder({ version }: { version: string | number }) {
         </aside>
       </div>
       {model && <section className="rs-report-preview" aria-label="Monthly report preview">
-        <header><div><span className="eyebrow">Your studio review</span><h2>{model.scope.studio} · {monthLabel(model.scope.month)}</h2><p>{running ? "Chapters appear as their analysis completes." : "Frozen monthly evidence · open a metric or table row to examine its source."}</p></div><button className="button" onClick={() => void open(model)} disabled={busy}><ExternalLink size={14}/>Open reader</button></header>
+        <header><div><span className="eyebrow">Your studio review</span><h2>{model.scope.studio} · {monthLabel(model.scope.month)}</h2><p>{running ? "Chapters appear as their analysis completes." : "Frozen monthly figures · source links identify whether records are frozen or live."}</p></div><button className="button" onClick={() => void open(model)} disabled={busy}><ExternalLink size={14}/>Open reader</button></header>
         {(studio !== model.scope.studio || month !== model.scope.month) && <p className="notice">This preview is {model.scope.studio} · {monthLabel(model.scope.month)}. Generate a report to apply the newly selected scope.</p>}
-        <article className="report-doc r2 deck deck-doc cr-inline" data-report-theme={model.customization?.theme || "light"} data-accent={reportOptions(model.customization).accent}>
-          {model.importedChapters?.length ? <ImportedReport model={model}/> : <ContinuousReport model={model} tabs={previewTabs} ranked={previewFindings} onNavigate={id => document.getElementById(`chapter-${id}`)?.scrollIntoView({ block: "start" })}/>}
+        <article className="report-doc r2 deck deck-doc cr-inline" data-report-theme={model.customization?.theme || "light"} data-accent={reportOptions(model.customization).accent} data-surface={reportOptions(model.customization).surface} data-report-layout={reportOptions(model.customization).layout} data-typography={reportOptions(model.customization).typography} data-density={reportOptions(model.customization).density}>
+          {model.importedChapters?.length ? <ImportedReport model={model}/> : <ContinuousReport withNavigation model={model} tabs={previewTabs} ranked={previewFindings} onNavigate={id => document.getElementById(`chapter-${id}`)?.scrollIntoView({ block: "start" })}/>}
         </article>
       </section>}
     </div>

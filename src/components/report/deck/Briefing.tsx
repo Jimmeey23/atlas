@@ -20,7 +20,7 @@ const FIELDS: { key: Exclude<keyof ChapterBriefing, "takeaways">; label: string;
 ];
 
 /** The chapter's first page: headline verdict, numbered takeaways and six questions answered. */
-export function BriefingPanel({ model, chapter, ids }: { model: ReportModel; chapter: string; ids: string[] }) {
+export function BriefingPanel({ model, chapter, ids, showTakeaways = true }: { model: ReportModel; chapter: string; ids: string[]; showTakeaways?: boolean }) {
   const edit = useEdit();
   const narrative = model.narratives[chapter];
   if (!narrative) return null;
@@ -45,7 +45,7 @@ export function BriefingPanel({ model, chapter, ids }: { model: ReportModel; cha
         {!b.written && <span className="dk-chip" title="Assembled from the verdict card and frozen figures; regenerate the analysis for the full briefing.">From the verdict</span>}</div>
       {v && <EditableText path={["narratives", chapter, "cards", vIndex, "headline"]} value={v.headline} as="h2" multiline={false} placeholder="Verdict headline" />}
     </header>
-    {!!b.takeaways.length && <ol className="dk-takeaways dk-takeaways-flow">{b.takeaways.map((t, i) => <li key={i}><span>{String(i + 1).padStart(2, "0")}</span><p><Emphasis text={t}/></p></li>)}</ol>}
+    {showTakeaways && !!b.takeaways.length && <ol className="dk-takeaways dk-takeaways-flow">{b.takeaways.map((t, i) => <li key={i}><span>{String(i + 1).padStart(2, "0")}</span><p><Emphasis text={t}/></p></li>)}</ol>}
     {!!fields.length && <div className="dk-brief-grid">{fields.map((f, index) => <article key={f.key} className="dk-brief-tile" data-role={f.role} data-key={f.key}>
       <span className="dk-brief-index">{String(index + 1).padStart(2, "0")}</span>
       <header><f.icon size={14}/><b>{f.label}</b><small>{f.question}</small></header>
@@ -85,7 +85,7 @@ export function DecisionPanel({ model, chapter, ids }: { model: ReportModel; cha
   ] as const;
   return <section className="dk-decision" aria-label="Decision for leadership">
     <header>
-      <span className="dk-decision-badge"><Flag size={14}/>Decision for leadership</span>
+      <span className="dk-decision-badge"><Flag size={14}/>Proposed decision for leadership</span>
       <span className="dk-decision-meta">{d?.owner && <span><Users size={12}/>{d.owner}</span>}{d?.horizon && <span><CalendarClock size={12}/>{d.horizon}</span>}{d && !d.written && <span title="Built from the verdict card; regenerate for the full decision case."><Sparkles size={12}/>From the verdict</span>}</span>
     </header>
     <EditableText path={path("call")} value={d?.call} as="p" className="dk-decision-call" multiline={false} placeholder="The decision leadership should take" />
@@ -96,8 +96,8 @@ export function DecisionPanel({ model, chapter, ids }: { model: ReportModel; cha
       </div>
       {!!figures.length && <div className="dk-decision-figures" aria-label="Figures behind the decision">{figures.map(id => <EvidenceFigure key={id} id={id} model={model} chapter={chapter} />)}</div>}
     </div>
-    <dl className="dk-decision-facts">{facts.filter(f => edit?.editing || d?.[f.key]).map(f => <div key={f.key}>
-      <dt><f.icon size={13}/>{f.label}</dt><dd><EditableText path={path(f.key)} value={d?.[f.key]} as="span" placeholder={f.label} /></dd>
-    </div>)}</dl>
+    <table className="rp-decision-table" aria-label="Recommendation, success measure and guardrails"><tbody>{facts.filter(f => edit?.editing || d?.[f.key]).map(f => <tr key={f.key}>
+      <th scope="row"><f.icon size={13}/>{f.label}</th><td><EditableText path={path(f.key)} value={d?.[f.key]} as="span" placeholder={f.label} /></td>
+    </tr>)}</tbody></table>
   </section>;
 }

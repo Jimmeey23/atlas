@@ -93,7 +93,7 @@ export function TrendChartPanel({ history, ids, selected, onSelect, title }: { h
 }
 
 /** The dashboard's month-by-month table, read from the report's frozen 14-month history. */
-export function ReportMoMTable({ history, ids, selected, onSelect, title }: { history: Row[]; ids: string[]; selected: string; onSelect: (month: string) => void; title: string }) {
+export function ReportMoMTable({ history, ids, selected, onSelect, title, exporting = false }: { history: Row[]; ids: string[]; selected: string; onSelect: (month: string) => void; title: string; exporting?: boolean }) {
   const drill = useRecordDrilldown();
   const [controls, setControls] = useState<MonthlyTableState>({ periods: 14, newest: true, dense: true, mode: "absolute" });
   const [search, setSearch] = useState(""), [measure, setMeasure] = useState("all"), [baseline, setBaseline] = useState(false);
@@ -105,6 +105,10 @@ export function ReportMoMTable({ history, ids, selected, onSelect, title }: { hi
   const prior = (key: string) => shift(key, controls.mode === "year" ? 12 : 1);
   const usable = ids.filter(id => definition(id) && all.some(r => r[id] != null));
   const visible = usable.filter(id => (measure === "all" || id === measure) && label(id).toLowerCase().includes(search.toLowerCase()));
+  if (exporting) {
+    const chunks = Array.from({ length: Math.ceil(all.length / 7) }, (_, i) => all.slice(i * 7, i * 7 + 7));
+    return <div className="cr-history-export">{chunks.map((chunk, i) => <div className="cr-table-scroll" key={i}><table className="cr-history-table"><thead><tr><th scope="col">Performance measure</th>{chunk.map(row => <th scope="col" key={String(row.month)}>{monthLabel(String(row.month))}</th>)}</tr></thead><tbody>{usable.map(id => <tr key={id}><th scope="row">{label(id)}</th>{chunk.map(row => <td key={String(row.month)}>{fmt(id, row[id])}</td>)}</tr>)}</tbody></table></div>)}<p className="cr-register-note">Frozen monthly observations. Missing values remain unavailable. Each table continues the same history.</p></div>;
+  }
   const first = (id: string) => all.find(r => r[id] != null)?.[id];
   const cell = (id: string, key: string) => {
     const value = row(key)?.[id], prev = row(prior(key))?.[id];

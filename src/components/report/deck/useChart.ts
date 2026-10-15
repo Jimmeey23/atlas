@@ -3,7 +3,7 @@ import * as echarts from "echarts";
 
 /** App chart colours, read from the live theme so report charts match the dashboard. */
 export function chartPalette() {
-  const css = getComputedStyle(document.documentElement);
+  const css = getComputedStyle(document.querySelector(".report-doc[data-report-theme]") ?? document.documentElement);
   const v = (k: string) => css.getPropertyValue(`--${k}`).trim();
   return { accent: v("accent"), accent2: v("accent-2") || v("growth"), pos: v("pos"), neg: v("neg"), warn: v("warn"), text1: v("text-1"), text2: v("text-2"), text3: v("text-3"),
     hairline: v("hairline"), surface: v("surface-3"), series: [v("accent"), v("revenue"), v("growth"), v("people"), v("risk"), v("attendance")].filter(Boolean) };
@@ -26,6 +26,7 @@ export function tooltipStyle() {
 export function useChart(build: () => echarts.EChartsOption | null, deps: unknown[], onClick?: (params: { name: string; dataIndex: number; seriesName?: string }) => void) {
   const ref = useRef<HTMLDivElement>(null);
   const chart = useRef<echarts.ECharts | null>(null);
+  const latestBuild = useRef(build); latestBuild.current = build;
   const click = useRef(onClick); click.current = onClick;
   useEffect(() => {
     if (!ref.current) return;
@@ -34,7 +35,14 @@ export function useChart(build: () => echarts.EChartsOption | null, deps: unknow
     instance.on("click", params => click.current?.(params as never));
     const observer = new ResizeObserver(() => instance.resize());
     observer.observe(ref.current);
-    return () => { observer.disconnect(); instance.dispose(); chart.current = null; };
+    const themeObserver = new MutationObserver(() => {
+      const option = latestBuild.current();
+      if (option) instance.setOption({ ...option, animation: false }, true);
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    const report = ref.current.closest('.report-doc');
+    if (report) themeObserver.observe(report, { attributes: true, attributeFilter: ['data-report-theme', 'data-accent', 'data-surface'] });
+    return () => { observer.disconnect(); themeObserver.disconnect(); instance.dispose(); chart.current = null; };
   }, []);
   useEffect(() => {
     const option = build();

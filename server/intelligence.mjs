@@ -620,6 +620,7 @@ export function intelligenceRoutes(
     // v3 adds the chapter briefing, the leadership decision, performer commentary and likely questions.
     const owners = ['Leadership','Studio operations','Sales & front desk','Marketing','Instructor management','Member experience','Finance'];
     const chapterFields = version >= 3 ? {
+      ...(version >= 4 ? { metricCommentary: { type: "array", items: { type: "object", additionalProperties: false, properties: { metricIds: { type: "array", items: metricIds.length ? { type: "string", enum: metricIds } : textField }, text: textField }, required: ["metricIds", "text"] } } } : {}),
       briefing: { type: 'object', additionalProperties: false, properties: { takeaways: { type: 'array', items: textField }, whatChanged: textField, whyItMoved: textField, whereItSits: textField, whatHeldUp: textField, outlook: textField, soWhat: textField },
         required: ['takeaways', 'whatChanged', 'whyItMoved', 'whereItSits', 'whatHeldUp', 'outlook', 'soWhat'] },
       decision: { type: 'object', additionalProperties: false, properties: { call: textField, rationale: textField, evidence: { type: 'array', items: textField }, expectedImpact: textField, successMeasure: textField, risks: textField, alternative: textField,

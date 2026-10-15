@@ -33,12 +33,14 @@
     "openai": "^6.49.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "three": "^0.186.1",
     "ws": "^8.22.0",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
+    "@types/three": "^0.186.0",
     "@vitejs/plugin-react": "^4.3.4",
     "concurrently": "^9.1.2",
     "playwright": "^1.51.0",

@@ -178,7 +178,7 @@ test('failed recommendation generation retains calculated proposals and labels t
   assert.equal(fallback.cards[0].focus,'kpis');
 });
 
-test('v3 insights request lenses and metric ids, and drop cited metrics the chapter cannot show', async () => {
+test('v4 insights request lenses and metric ids, and reject unavailable evidence references', async () => {
   const originalFetch = globalThis.fetch, originalStorage = (globalThis as any).localStorage;
   (globalThis as any).localStorage = { getItem: () => null, setItem: () => {} };
   const bodies: any[] = [];
@@ -190,11 +190,11 @@ test('v3 insights request lenses and metric ids, and drop cited metrics the chap
   try {
     const sales = chapter('revenue-performance', { total: { gross_revenue: 1000, aov: 50 }, prior: { gross_revenue: 900 } });
     const out = await generateNarratives({ ...model({ 'revenue-performance': sales }), customization: { title: '', subtitle: '', preparedFor: '', preparedBy: '', audience: 'Executive board', tone: 'Professional', detail: 'Comprehensive', instructions: '', chapterIds: ['revenue-performance'], theme: 'light', lenses: ['risk', 'win'] } });
-    assert.equal(bodies[0].insightVersion, 3);
+    assert.equal(bodies[0].insightVersion, 4);
     assert.ok(bodies[0].metricIds.includes('gross_revenue'));
     assert.ok(!bodies[0].metricIds.includes('fill_rate'), 'only metrics this chapter holds are citable');
     assert.deepEqual(bodies[0].lenses, ['risk', 'win']);
-    assert.deepEqual(out['revenue-performance'].cards[0].metrics, ['gross_revenue']);
-    assert.equal(out['revenue-performance'].cards[0].lens, 'risk');
+    assert.equal(out['revenue-performance'].generated, false);
+    assert.match(out['revenue-performance'].error!, /unavailable metric/);
   } finally { globalThis.fetch = originalFetch; (globalThis as any).localStorage = originalStorage; }
 });

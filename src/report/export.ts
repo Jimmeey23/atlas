@@ -4,8 +4,10 @@ import v2CSS from "../design/report-v2.css?raw";
 import deckCSS from "../design/report-deck.css?raw";
 import sourceCSS from "../design/report-source.css?raw";
 import continuousCSS from "../design/report-continuous.css?raw";
+import modernCSS from "../design/report-modern.css?raw";
 const sourceExportCSS = deckCSS + "\n" + continuousCSS + "\n" + sourceCSS + `
-.report-doc.deck{--surface-1:var(--r-card);--surface-2:var(--r-bg-soft);--surface-3:var(--r-bg-soft);--canvas:var(--r-bg);--text-1:var(--r-text);--text-2:var(--r-muted);--text-3:var(--r-subtle);--hairline:var(--r-border);--accent:var(--r-primary-3);--pos:var(--r-good);--neg:var(--r-bad);--warn:#a66a20;--font-ui:Arial,Helvetica,sans-serif;--font-display:Arial,Helvetica,sans-serif;padding:24px;min-height:0}
+.report-doc.deck{--surface-1:#fff;--surface-2:#f5f7fb;--surface-3:#fff;--canvas:#fff;--text-1:#142440;--text-2:#465777;--text-3:#62718c;--hairline:#e3e8f0;--accent:#6350e8;--pos:#087d70;--neg:#b43253;--warn:#a66a20;--font-ui:Arial,Helvetica,sans-serif;--font-display:Arial,Helvetica,sans-serif;padding:24px;min-height:0}
+.report-doc.deck[data-report-theme=dark]{--surface-1:#122139;--surface-2:#192c48;--surface-3:#213653;--canvas:#122139;--text-1:#edf2fc;--text-2:#c1cee3;--text-3:#a4b5d0;--hairline:#31435e;--d-line:#31435e;--accent:#b6acff;--pos:#6fdbbf;--neg:#ff9eb5}
 .report-doc svg.lucide{width:16px;height:16px;min-width:16px;max-height:16px;flex:0 0 16px;display:inline-block;fill:none;stroke:currentColor}
 .report-doc .source-section-head{position:static}.report-doc .source-hero,.report-doc .source-hero-art i,.report-doc .source-hero-art svg,.report-doc .deck-flip-face{animation:none!important}
 .report-doc .deck-kpi{cursor:default}.report-doc .source-interactive-chart{overflow:hidden}.report-doc .source-interactive-chart svg{max-width:100%}
@@ -50,6 +52,14 @@ export async function serialiseReport(element: HTMLElement, model: ReportModel) 
   // The in-app chrome has no meaning in a file; the sticky contents rail does.
   clone.setAttribute("data-report-theme", model.customization?.theme ?? "light");
   clone.querySelectorAll("[data-export='omit']").forEach((node) => node.remove());
+  // Export is a durable document: native links and disclosures work offline; live controls do not.
+  clone.querySelectorAll<HTMLElement>('[data-report-link]').forEach(node => {
+    const anchor = document.createElement('a'); anchor.href = `#chapter-${node.dataset.reportLink}`;
+    anchor.className = node.className; anchor.innerHTML = node.innerHTML; node.replaceWith(anchor);
+  });
+  clone.querySelectorAll<HTMLElement>('.deck-flip-front').forEach(node => { node.removeAttribute('role'); node.removeAttribute('tabindex'); node.removeAttribute('aria-pressed'); node.removeAttribute('title'); });
+  clone.querySelectorAll<HTMLDetailsElement>('.cr-source,.deck-proof-definitions').forEach(node => { node.open = true; });
+  clone.querySelectorAll<HTMLButtonElement>('.dk-figure').forEach(button => { const figure = document.createElement('div'); figure.className = button.className; figure.innerHTML = button.innerHTML; button.replaceWith(figure); });
   const embedded = new Map<string, Promise<string>>();
   await Promise.all(Array.from(clone.querySelectorAll('img')).map(async img => {
     const source = img.src;
@@ -89,7 +99,7 @@ export async function serialiseReport(element: HTMLElement, model: ReportModel) 
     "html{scroll-behavior:smooth}body{margin:0;background:#f4f6fa;padding:24px}",
     "@media(max-width:768px){body{padding:0}}",
     "@media print{body{padding:0;background:#fff}}",
-    safeInStyle(reportCSS + (model.importedChapters?.length ? "\n" + sourceExportCSS : "")),
+    safeInStyle(reportCSS + "\n" + sourceExportCSS + "\n" + modernCSS),
     "</style>",
     "</head>",
     "<body>",

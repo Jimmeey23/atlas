@@ -27,7 +27,7 @@ function InsightEditor({ card, path, onRemove }: { card: InsightCard; path: (str
 }
 
 /** Insights as a focus board: a numbered rail of findings and one finding at a time, full width; or the whole list. */
-export function InsightsSection({ model, tab, plan = false, initialView = "focus" }: { model: ReportModel; tab: string; plan?: boolean; initialView?: "focus" | "list" }) {
+export function InsightsSection({ model, tab, plan = false, initialView = "focus", exporting = false }: { model: ReportModel; tab: string; plan?: boolean; initialView?: "focus" | "list"; exporting?: boolean }) {
   const edit = useEdit();
   const [lens, setLens] = useState<InsightLens | "all">("all");
   const [view, setView] = useState<"focus" | "list">(initialView);
@@ -47,14 +47,14 @@ export function InsightsSection({ model, tab, plan = false, initialView = "focus
     <button className="button deck-add" onClick={() => edit.set(["narratives", tab, "cards"], [...cards, { headline: "New insight", meaning: "", evidence: "", action: "", lens: plan ? "next_step" : "driver", focus: "cross", priority: "medium", confidence: "medium" } satisfies InsightCard])}><Plus size={14}/>Add insight</button>
   </div>;
   if (!indexed.length) return <p className="empty-state">No written insights for this chapter. The briefing and evidence pages carry the figures.</p>;
-  const card = (item: typeof shown[number], i: number) => <DeckInsightCard key={item.index} card={item.card} model={model} chapterId={tab} index={i} total={shown.length} plan={plan} confidence={options.showConfidence}
+  const card = (item: typeof shown[number], i: number) => <DeckInsightCard key={item.index} card={item.card} model={model} chapterId={tab} index={i} total={shown.length} plan={plan} confidence={options.showConfidence} exporting={exporting}
     onStep={view === "focus" ? step => setActive(Math.max(0, Math.min(shown.length - 1, i + step))) : undefined} />;
   return <div className="deck-insights dk-insights">
     <header className="dk-insights-intro">
-      <div><span className="deck-eyebrow">Evidence-led interpretation</span><h2>{plan ? "Decisions, owners and next moves" : "What changed, why it changed, and what matters now"}</h2></div>
+      <div><span className="deck-eyebrow">Evidence-led interpretation</span><h2>{plan ? "Decisions, owners and next moves" : "Detailed findings & interpretation"}</h2></div>
       <p>{plan ? "A prioritised decision register drawn from this chapter's findings." : "Each finding connects the observed signal to its driver, supporting evidence and recommended response."}</p>
     </header>
-    <div className="dk-insights-bar">
+    <div className="dk-insights-bar" data-export="omit">
       {lenses.length > 1 && <div className="deck-lens-filter" role="group" aria-label="Filter insights by lens">
         <ListFilter size={14}/>
         <button aria-pressed={lens === "all"} onClick={() => { setLens("all"); setActive(0); }}>All <b>{indexed.length}</b></button>

@@ -595,7 +595,7 @@ export default function App() {
   return (
     <div
       className="app"
-      data-workspace={s.tab === 5 ? "acquisition" : s.tab === 4 ? "sales" : undefined}
+      data-workspace={s.tab === 15 ? "monthly-reports" : s.tab === 5 ? "acquisition" : s.tab === 4 ? "sales" : undefined}
       style={{
         ...domainStyle,
         ...(prefs.contentWidth
@@ -751,7 +751,7 @@ export default function App() {
         </div>
       </header>
       <CloudSettings />
-      {s.view === "kra" ? <div className="kra-fixed-scope">June–November 2026 · All studios · fixed organisation-wide KRA review</div> : <><QuickFilters locations={Object.keys(choices.location || {})} /><Filters options={choices} /></>}
+      {s.view === "kra" ? <div className="kra-fixed-scope">June–November 2026 · All studios · fixed organisation-wide KRA review</div> : s.tab !== 15 && <><QuickFilters locations={Object.keys(choices.location || {})} /><Filters options={choices} /></>}
       <nav className="tabbar" aria-label="Performance workspaces">
         {navigationOrder
           .filter((i) => !prefs.page[i]?.hidden)
@@ -828,7 +828,7 @@ export default function App() {
               {s.rate}
             </p>
           </div>
-          <div className="page-intro">
+          {s.tab !== 15 && <div className="page-intro">
             <div>
               <h1 key={s.tab}>{s.view === "kra" ? "Jimmeey Gondaa · KRA performance" : websiteMarketingView ? "Website lead performance" : marketingView ? "Performance Marketing" : pagePrefs.heading || workspaceHeading.title || bp.title}</h1>
               <p>{s.view === "kra" ? "Systems, sales & client servicing · June–November 2026" : websiteMarketingView ? "Website leads received, period comparisons and recorded performance outcomes." : marketingView ? "Website lead journeys, CRM acquisition channels and Meta campaign performance." : pagePrefs.subtitle ?? workspaceHeading.subtitle}</p>
@@ -862,7 +862,7 @@ export default function App() {
                 </span>
               </span>
             </div>
-          </div>
+          </div>}
           {s.view !== "kra" && <SourceStatus
             additionalSources={s.tab === 0 ? ["meta", "payroll"] : marketingView && !websiteMarketingView ? ["meta"] : []}
             tab={s.tab}
@@ -870,8 +870,8 @@ export default function App() {
             onRetry={(key) => void ensureSource(key, true)}
           />}
           {missingPrivateScope && <p className="notice">This link contains a member-specific scope saved in another browser. Open the saved analysis in its original browser to restore that scope.</p>}
-          <AnalysisNavigation />
-          {s.tab !== 16 && <AnalysisWorkbench key={s.tab + s.view} version={version} onDrill={setDrill} />}
+          {s.tab !== 15 && <AnalysisNavigation />}
+          {s.tab !== 16 && s.tab !== 15 && <AnalysisWorkbench key={s.tab + s.view} version={version} onDrill={setDrill} />}
           {error && (
             <div className="notice">
               <TriangleAlert size={14} />

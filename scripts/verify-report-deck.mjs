@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import express from 'express';
+import { readFile } from 'node:fs/promises';
 import { createServer } from 'vite';
 import { chromium } from 'playwright';
 import { reportRoutes } from '../server/reports.mjs';
@@ -27,7 +28,22 @@ api.get('/api/sheets/:key', (req, res) => req.params.key === 'sessions'
   : res.status(404).json({ status: 'error', error: 'Not in the fixture' }));
 reportRoutes(api, store, cloud, env); presentationRoutes(api, store); stickyNoteRoutes(api, store, cloud);
 const http = api.listen(0, '127.0.0.1'); await new Promise(r => http.once('listening', r));
-const vite = await createServer({ logLevel: 'error', server: { host: '127.0.0.1', port: 5198, strictPort: true, proxy: { '/api': `http://127.0.0.1:${http.address().port}` } } });
+const vite = await createServer({ logLevel: 'error', plugins: [{ name: 'report-workspace-verification',
+  configureServer(server) { server.middlewares.use(async (req, res, next) => { if (req.url !== '/__report-audit') return next(); res.setHeader('Content-Type', 'text/html'); res.end(await server.transformIndexHtml(req.url, '<html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><div id="audit-root" style="max-width:1440px;margin:24px auto;padding:16px"></div><script type="module" src="/__report-audit-entry.js"></script></body></html>')); }); },
+  resolveId(id) { if (id === '/__report-audit-entry.js') return id; },
+  load(id) { if (id === '/__report-audit-entry.js') return `
+    import React from 'react'; import { createRoot } from 'react-dom/client';
+    import { ReportBuilder } from '/src/components/report/ReportBuilder.tsx';
+    import { useReportJob } from '/src/report/job.ts';
+    import { init, ingest } from '/src/data/duckdb.ts';
+    import '/src/design/app.css'; import '/src/styles.css'; import '/src/design/report.css'; import '/src/design/report-v2.css'; import '/src/design/report-builder.css';
+    document.documentElement.dataset.theme='gloss';
+    await init(); await ingest(await (await fetch('/api/sheets/sessions')).json());
+    const model=${JSON.stringify(model)};
+    useReportJob.getState().set({ model, studio:model.scope.studio, month:model.scope.month, customization:model.customization, status:'done' });
+    createRoot(document.getElementById('audit-root')).render(React.createElement(ReportBuilder,{version:'audit'}));
+  `; }
+}], server: { host: '127.0.0.1', port: 5198, strictPort: true, proxy: { '/api': `http://127.0.0.1:${http.address().port}` } } });
 
 const months = Array.from({ length: 14 }, (_, i) => new Date(Date.UTC(2025, 7 + i, 1)).toISOString().slice(0, 7));
 const wave = (base, amp, i) => Math.round(base + amp * Math.sin(i / 2.2) + i * base * .01);
@@ -69,6 +85,8 @@ const model = { scope: { studio: 'Kenkere House', month: months.at(-1) }, builtA
   },
 };
 
+model.narratives.sessions.metricCommentary = [{ metricIds: ['attendance', 'fill_rate'], text: 'WRITTEN_METRIC_REVIEW: Attendance and fill rate should be assessed together against the supplied monthly history. These frozen measures describe observed studio demand; the figures do not establish why demand changed. Review the format evidence and its source coverage before selecting an intervention.' }];
+model.narratives.sessions.cards[1].recommendation = 'RECOMMENDATION_DETAIL: Validate the slot pattern before changing the timetable. Treat this as a proposed action and monitor subsequent attendance.';
 let browser;
 const errors = [];
 try {
@@ -78,7 +96,7 @@ try {
   const saved = await (await fetch(`${url}/api/reports`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(model) })).json();
   assert.equal((await (await fetch(`${url}/api/reports`)).json()).length, 5, 'only the latest five reports are kept');
 
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({ headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   const context = await browser.newContext({ viewport: { width: 1440, height: 920 } });
   const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message)); page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|favicon/.test(m.text())) errors.push(m.text()); });
   await page.goto(`${url}/report?id=${saved.id}`);
@@ -92,6 +110,36 @@ try {
   await continuousChapter.getByRole('button', { name: 'Flip back' }).click();
   assert.equal(await continuousChapter.locator('.cr-disclosure[open]').count(), 0, 'chapter supporting evidence starts collapsed');
   assert.equal(await continuousChapter.locator('.cr-trend, .cr-evidence, .dk-tables, .monthly-table').count(), 0, 'unopened chapter evidence does not render charts or tables');
+  const story = continuousChapter.locator('.rp-chapter-story');
+  await story.scrollIntoViewIfNeeded();
+  await story.locator('canvas[data-chart3d]').waitFor();
+  const cameraBefore = await story.locator('canvas').getAttribute('data-camera');
+  await story.getByRole('button', { name: 'Rotate chart left', exact: true }).click();
+  assert.notEqual(await story.locator('canvas').getAttribute('data-camera'), cameraBefore, '3D rotation changes the actual camera');
+  await story.getByRole('button', { name: 'Zoom into 3D chart', exact: true }).click();
+  await story.getByRole('button', { name: 'Reset 3D camera', exact: true }).click();
+  assert.equal(await story.locator('canvas').getAttribute('data-camera'), cameraBefore, 'camera reset restores the original view');
+  await story.getByLabel('Evidence measure', { exact: true }).selectOption('attendance');
+  await story.locator('.rp-exact-details>summary').click();
+  await story.getByRole('button', { name: /Barre · September 2026: 420/ }).click();
+  assert.ok((await story.locator('.rp-3d-inspect').innerText()).includes('420'), 'exact-value selection updates 3D inspection');
+  await story.locator('.rp-exact-details>summary').click();
+  const sceneBounds = await story.locator('canvas').boundingBox();
+  let raySelected = false;
+  for (const x of [.28, .4, .52, .64, .76]) {
+    for (const y of [.38, .52, .66, .8]) {
+      await story.locator('canvas').click({ position: { x: sceneBounds.width * x, y: sceneBounds.height * y } });
+      if (/PowerCycle|Strength Lab/.test(await story.locator('.rp-3d-inspect').innerText())) { raySelected = true; break; }
+    }
+    if (raySelected) break;
+  }
+  assert.ok(raySelected, 'clicking rendered 3D geometry selects an actual source group');
+  await story.screenshot({ path: `${shots}/report-modern-3d.png` });
+  await story.getByRole('button', { name: '2D', exact: true }).click();
+  await story.locator('.rp-flat-chart svg').waitFor();
+  await story.getByRole('button', { name: 'Table', exact: true }).click();
+  assert.equal(await story.locator('.rp-exact tbody tr').count(), 3, 'table view retains the same source groups');
+  await story.getByRole('button', { name: '3D', exact: true }).click();
   const trendDisclosure = continuousChapter.locator('.cr-disclosure').filter({ hasText: 'Supporting evidence · monthly trends' });
   await trendDisclosure.locator('summary').click();
   await trendDisclosure.locator('.cr-trend').waitFor();
@@ -104,8 +152,53 @@ try {
   await page.screenshot({ path: `${shots}/report-continuous.png` });
   await page.setViewportSize({ width: 390, height: 844 });
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'single page has no mobile document overflow');
+  await continuousChapter.evaluate(el => el.scrollIntoView({ block: 'start' }));
+  assert.ok((await page.locator('.deck-main').boundingBox()).height > 600, 'closed notes leave the full mobile reading height');
   await page.screenshot({ path: `${shots}/report-continuous-mobile.png` });
+  const briefingWidth = await continuousChapter.locator('.dk-brief-tile').first().evaluate(el => el.getBoundingClientRect().width);
+  assert.ok(briefingWidth > 280, 'mobile briefing uses the full reading width');
   await page.setViewportSize({ width: 1440, height: 920 });
+  await page.getByRole('navigation', { name: 'Report chapters' }).getByRole('button', { name: 'Overview', exact: true }).click();
+  const railBounds = await page.locator('.deck-tabs').boundingBox();
+  const contentBounds = await page.locator('.deck-main').boundingBox();
+  assert.ok(railBounds.x + railBounds.width <= contentBounds.x + 1, 'nav reserves space beside the report');
+  await page.getByRole('navigation', { name: 'Report chapters' }).getByRole('button', { name: 'Schedule' }).click();
+  await continuousChapter.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `${shots}/report-analytical-chapter.png` });
+  assert.ok(await continuousChapter.locator('.rp-analysis-panel').getByText(/WRITTEN_METRIC_REVIEW/).count(), 'grouped written metric commentary is visible');
+  assert.ok(await continuousChapter.getByText(/RECOMMENDATION_DETAIL/).count(), 'recommendation rationale is displayed');
+  const paired = continuousChapter.locator('.rp-finding').first();
+  const proseBounds = await paired.locator('.deck-insight-claim').boundingBox(); const proofBounds = await paired.locator('.deck-insight-proof').boundingBox();
+  assert.ok(Math.abs(proseBounds.y - proofBounds.y) < 2, 'finding text and corresponding evidence align at their top edge');
+  assert.ok(await paired.locator('.rp-insight-points li').count() >= 3, 'drivers and implications are readable bullet points');
+  await paired.screenshot({ path: `${shots}/report-modern-finding.png` });
+  await continuousChapter.getByLabel('Search chapter metrics').fill('attendance');
+  assert.equal(await continuousChapter.locator('[data-metric-register] tbody tr').count(), 1, 'metric search filters only its chapter');
+  await continuousChapter.getByLabel('Search chapter metrics').fill('');
+  const downloadEvent = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download HTML', exact: true }).click();
+  const download = await downloadEvent;
+  const htmlPath = `${shots}/monthly-report-analytical.html`; await download.saveAs(htmlPath);
+  const html = await readFile(htmlPath, 'utf8');
+  assert.ok(html.includes('WRITTEN_METRIC_REVIEW') && html.includes('RECOMMENDATION_DETAIL'), 'export retains rich narrative');
+  assert.ok(html.includes('Barre') && html.includes('Performance comparison register'), 'export mounts supporting evidence and all metric registers');
+  assert.ok(!/<link[^>]+stylesheet|<script[^>]+src=|<img[^>]+src=["']https?:/i.test(html), 'standalone export has no external assets');
+  const offline = await context.newPage();
+  await offline.route('**/*', route => route.abort());
+  await offline.setContent(html); await offline.evaluate(() => document.fonts.ready);
+  assert.equal(await offline.locator('.cr-chapter').count(), 3, 'offline export retains all selected chapters');
+  assert.ok(await offline.locator('.rp-flat-chart svg').count(), 'offline export includes static vector trends');
+  const exportColors = await offline.locator('.cr-export').evaluate(el => ({ color: getComputedStyle(el).color, background: getComputedStyle(el).backgroundColor }));
+  assert.notEqual(exportColors.color, exportColors.background, 'export text contrasts with its surface');
+  assert.equal(await offline.locator('[data-chapter="sessions"] .dk-decision-call').evaluate(el => getComputedStyle(el).color), 'rgb(20, 36, 64)', 'recommendation call has readable navy text');
+  await offline.locator('[data-chapter="sessions"]').evaluate(el => el.scrollIntoView({ block: 'start' }));
+  await offline.screenshot({ path: `${shots}/report-analytical-export.png`, animations: 'disabled', captureBeyondViewport: false });
+  await offline.pdf({ path: `${shots}/monthly-report-analytical.pdf`, format: 'A4', printBackground: true, margin: { top: '12mm', right: '10mm', bottom: '12mm', left: '10mm' } });
+  await offline.close();
+  // The original snapshot has not been rewritten by display or export.
+  const preserved = await (await fetch(`${url}/api/reports/${saved.id}`)).json();
+  assert.deepEqual(preserved.narratives, model.narratives);
+  assert.deepEqual(preserved.chapters, model.chapters);
   await page.getByRole('navigation', { name: 'Report chapters' }).getByRole('button', { name: 'Overview', exact: true }).click();
   await page.getByRole('button', { name: 'Presentation view', exact: true }).click();
   // Fixed navbar at the very top.
@@ -119,7 +212,7 @@ try {
   await page.getByRole('navigation', { name: 'Report chapters' }).getByRole('button', { name: 'Schedule' }).or(page.locator('.deck-tabs button', { hasText: /Sessions|Schedule|Classes/ })).first().click();
   await page.locator('.dk-brief').waitFor();
   for (const label of ['Performance movement', 'Primary drivers', 'Where change concentrated', 'What remained resilient', 'Near-term read', 'Business implication']) assert.ok(await page.locator('.dk-brief').getByText(label, { exact: true }).count(), `briefing shows ${label}`);
-  for (const label of ['Decision for leadership', 'Why this call', 'What the data says', 'Expected impact', 'Success measure', 'Risks & guardrail', 'Alternative considered']) assert.ok(await page.locator('.dk-decision').getByText(label, { exact: true }).count(), `decision shows ${label}`);
+  for (const label of ['Proposed decision for leadership', 'Why this call', 'What the data says', 'Expected impact', 'Success measure', 'Risks & guardrail', 'Alternative considered']) assert.ok(await page.locator('.dk-decision').getByText(label, { exact: true }).count(), `decision shows ${label}`);
   assert.ok((await page.locator('.deck-metric-grid').boundingBox()).y < (await page.locator('.dk-brief').boundingBox()).y, 'metric cards sit above the briefing');
   assert.ok(await page.locator('.dk-takeaways li').count() >= 3, 'briefing lists takeaways'); await page.waitForTimeout(500);
   await page.screenshot({ path: `${shots}/deck-verdict.png`, fullPage: false });
@@ -238,14 +331,46 @@ try {
   // Pin.
   await page.getByRole('button', { name: 'Pin report' }).click(); await page.getByText(/Pinned/).first().waitFor();
   // Dark theme: the same page reads correctly on the app's dark surfaces.
-  await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'midnight'));
+  await page.getByRole('button', { name: 'Appearance', exact: true }).click();
+  await page.getByLabel('Report theme', { exact: true }).selectOption('dark:paper');
+  await page.getByRole('button', { name: 'Appearance', exact: true }).click();
+  assert.equal(await page.locator('.deck-doc').getAttribute('data-report-theme'), 'dark');
+  assert.equal(await page.locator('.deck-main').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(18, 33, 57)', 'saved-report theme controls apply to the reading surface');
   await page.locator('.deck-tabs button', { hasText: 'Schedule' }).click(); await page.locator('.dk-decision').scrollIntoViewIfNeeded(); await page.waitForTimeout(400);
   await page.screenshot({ path: `${shots}/deck-dark.png` });
-  await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'gloss'));
+  await page.getByRole('button', { name: 'Appearance', exact: true }).click();
+  await page.getByLabel('Report theme', { exact: true }).selectOption('light:paper');
+  await page.getByRole('button', { name: 'Appearance', exact: true }).click();
   // Mobile.
   await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(300);
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'no horizontal overflow on mobile');
   await page.screenshot({ path: `${shots}/deck-mobile.png` });
+  const workspace = await context.newPage(); workspace.on('pageerror', e => errors.push(e.message));
+  await workspace.goto(`${url}/__report-audit`); await workspace.locator('.rs-workspace-head').waitFor().catch(error => { throw new Error(`${error.message} · ${errors.join(' · ')}`); });
+  assert.equal(await workspace.locator('.rs-settings-card').getAttribute('open'), null, 'advanced report settings start collapsed');
+  assert.equal(await workspace.locator('.rs-hero').count(), 0, 'duplicate report hero removed');
+  await workspace.getByLabel('Studio', { exact: true }).waitFor();
+  await workspace.screenshot({ path: `${shots}/monthly-report-workspace.png` });
+  await workspace.locator('.rs-settings-card>summary').click();
+  await workspace.getByRole('button', { name: 'Chapters', exact: true }).click();
+  assert.ok(await workspace.locator('.rs-settings-card[open]').count(), 'chapter selection remains available');
+  await workspace.locator('.rs-settings-card>summary').click();
+  await workspace.setViewportSize({ width: 390, height: 844 });
+  await workspace.screenshot({ path: `${shots}/monthly-report-workspace-mobile.png` });
+  const overflowing = await workspace.evaluate(() => [...document.querySelectorAll('body *')].filter(el => { const r = el.getBoundingClientRect(); return r.width > innerWidth && getComputedStyle(el).position !== 'absolute'; }).slice(0, 16).map(el => [el.tagName, el.className, Math.round(el.getBoundingClientRect().width)]));
+  assert.equal(await workspace.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `builder fits mobile: ${JSON.stringify(overflowing)}`);
+  await workspace.locator('.rs-report-preview').scrollIntoViewIfNeeded();
+  assert.ok(await workspace.getByRole('navigation', { name: 'Report chapter index' }).count(), 'preview has chapter navigation');
+  await workspace.close();
+  const fallback = await context.newPage();
+  await fallback.addInitScript(() => { const get = HTMLCanvasElement.prototype.getContext; HTMLCanvasElement.prototype.getContext = function(type, ...args) { return type === 'webgl2' ? null : get.call(this, type, ...args); }; });
+  await fallback.goto(`${url}/report?id=${saved.id}`);
+  await fallback.getByRole('navigation', { name: 'Report chapters' }).getByRole('button', { name: 'Schedule' }).click();
+  const fallbackStory = fallback.locator('[data-chapter="sessions"] .rp-chapter-story');
+  await fallbackStory.scrollIntoViewIfNeeded(); await fallbackStory.locator('.rp-3d-fallback').waitFor();
+  await fallbackStory.getByRole('button', { name: 'Table', exact: true }).click();
+  assert.equal(await fallbackStory.locator('.rp-exact tbody tr').count(), 3, 'WebGL fallback retains exact data');
+  await fallback.close();
   assert.deepEqual(errors, []);
-  console.log('PASS: fixed navbar, chapter/section tabs, verdict categories, flip cards, MoM table + chart, evidence, live + AI speaker notes, admin edit, AI component swap, DB persistence, pinning, retention, mobile.');
+  console.log('PASS: aligned evidence panels, real 3D rotation/zoom/reset and ray selection, equivalent 2D/exact-value tables, WebGL fallback, bullet insights, recommendation tables, offline HTML/PDF, saved-report preservation, mobile reading, presentation/admin tools and persistence.');
 } finally { await browser?.close(); await vite.close(); http.closeAllConnections(); await new Promise(r => http.close(r)); }

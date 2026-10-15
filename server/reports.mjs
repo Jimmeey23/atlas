@@ -19,6 +19,7 @@ function validate(report) {
       || !Array.isArray(narrative.cards) || narrative.cards.some(card => !card ||
         ["headline", "meaning", "evidence", "action"].some(field => typeof card[field] !== "string") || ["monthContext","yearContext","reasoning","recommendation","layout","concentration","offset"].some(field=>card[field]!=null && typeof card[field]!=="string")))
       throw fail("Report analysis is malformed.");
+    if (narrative.metricCommentary != null && (!Array.isArray(narrative.metricCommentary) || narrative.metricCommentary.some(item => !item || !Array.isArray(item.metricIds) || item.metricIds.some(id => typeof id !== "string") || typeof item.text !== "string"))) throw fail("Report metric commentary is malformed.");
   }
   for (const chapter of Object.values(report.chapters)) {
     if (!chapter || !chapter.total || !chapter.prior || !chapter.priorYear || !Array.isArray(chapter.groups)

@@ -154,6 +154,11 @@ test('v3 chapter analysis sends a strict schema with the briefing, decision, per
     // Strict mode: every object lists every property as required and forbids extras.
     const walk = (node: any) => { if (node?.type === 'object') { assert.equal(node.additionalProperties, false); assert.deepEqual([...node.required].sort(), Object.keys(node.properties).sort()); Object.values(node.properties).forEach(walk); } if (node?.items) walk(node.items); };
     walk(schema);
+    const v4 = await post(api.url + '/api/reports/narrative', { message: 'Rich chapter', editorial: true, insightVersion: 4, metricIds: ['attendance'] });
+    assert.equal(v4.status, 200);
+    assert.ok(call.text.format.schema.required.includes('metricCommentary'));
+    assert.deepEqual(call.text.format.schema.properties.metricCommentary.items.properties.metricIds.items.enum, ['attendance']);
+    walk(call.text.format.schema);
   } finally { await api.close(); }
 });
 

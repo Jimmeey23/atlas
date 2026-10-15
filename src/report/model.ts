@@ -141,6 +141,8 @@ export interface ChapterNarrative {
   /** Prose under the chapter header. Empty when no provider answered. */
   summary: string;
   cards: InsightCard[];
+  /** Grouped written coverage of chapter metrics; absent on older saved reports. */
+  metricCommentary?: { metricIds: string[]; text: string }[];
   /** v3 analysis; absent on reports written before it, which fall back to the verdict card. */
   briefing?: ChapterBriefing;
   decision?: LeadershipDecision;

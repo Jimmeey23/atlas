@@ -1,4 +1,3 @@
-import { chapterHeroStyle } from "./chapterHero";
 import { useState } from "react";
 import type { ReactNode } from "react";
 import type { ReportModel } from "../../../report/model";
@@ -18,16 +17,23 @@ import { curatedBreakdowns } from "../../../report/evidence";
 import { CoverPage } from "./CoverPage";
 import type { Finding } from "../../../report/findings";
 import { ActionPlan } from "../Glance";
+import { MetricRegister } from "./MetricRegister";
+import { sourceBasis } from "../../../report/review";
+import { FocusTrend } from "../Insight";
+import { EvidenceVisual } from "./EvidenceVisual";
+import { ReportProse } from "./ReportProse";
+import { MetricCommentary } from "./MetricCommentary";
 
 /** Expensive source explorers only mount when the reader opens them. */
-function Disclosure({ title, children }: { title: string; children: ReactNode }) {
+function Disclosure({ title, children, exporting = false }: { title: string; children: ReactNode; exporting?: boolean }) {
   const [open, setOpen] = useState(false);
+  if (exporting) return <section className="cr-export-evidence"><h3>{title}</h3>{children}</section>;
   return <details className="cr-disclosure" onToggle={event => setOpen(event.currentTarget.open)}>
     <summary>{title}<span>Explore evidence</span></summary>{open && children}
   </details>;
 }
 
-function ReportChapter({ model, tab, number }: { model: ReportModel; tab: DeckTab; number: number }) {
+function ReportChapter({ model, tab, number, exporting = false }: { model: ReportModel; tab: DeckTab; number: number; exporting?: boolean }) {
   const [flipped, setFlipped] = useState("");
   const [selected, setSelected] = useState(model.scope.month);
   const data = model.chapters[tab.chapter], narrative = model.narratives[tab.chapter];
@@ -38,37 +44,50 @@ function ReportChapter({ model, tab, number }: { model: ReportModel; tab: DeckTa
   const evidence = curatedBreakdowns(data?.groups ?? [], 1)[0];
   return <RecordDrilldownProvider model={model} chapterId={tab.chapter}>
     <section className="cr-chapter r-section" id={`chapter-${tab.id}`} data-chapter={tab.chapter}>
-      <header className="cr-chapter-head chapter-photo-hero" data-photo="chapter" style={chapterHeroStyle(number - 1, tab.title)}><span className="cr-number">{String(number).padStart(2, "0")}</span>
+      <header className="cr-chapter-head"><span className="cr-number">{String(number).padStart(2, "0")}</span>
         <div><span className="deck-eyebrow">{tab.spec?.eyebrow || "Leadership review"}</span><h2>{tab.title}</h2><p>{tab.spec?.deck}</p></div>
         <span className="cr-basis">{tab.spec?.network ? "Network scope" : "Selected studio"}<small>{data ? `${data.n.toLocaleString("en-IN")} contributing records` : "Cross-chapter synthesis"}</small></span>
       </header>
       {narrative?.error && <p className="notice" role="status">Analysis unavailable: {narrative.error}. The available source evidence is shown below.</p>}
-      {narrative?.summary && <p className="cr-summary">{narrative.summary}</p>}
-      {data && !!ids.length && <Slot id={`${tab.id}:summary:metrics`} tab={tab.id} section="summary" kind="metrics" describe="key metric cards">
+      {data?.n === 0 && <p className="notice">No contributing records are available for this chapter. Missing performance is unavailable, not zero.</p>}
+      {narrative && <p className="cr-analysis-basis">{narrative.generated ? "AI-written analysis · grounded in the frozen report" : "Calculated findings · rule-based analysis"}</p>}
+
+      {data && data.n > 0 && !!ids.length && <Slot id={`${tab.id}:summary:metrics`} tab={tab.id} section="summary" kind="metrics" describe="key metric cards">
         <CompleteMetricGrid items={ids.slice(0, 6)} render={id => <FlipMetricCard key={id} id={id} data={data} target={model.customization?.targets?.[id]} flipped={flipped === id} onToggle={() => setFlipped(current => current === id ? "" : id)}/>}/>
       </Slot>}
-      <Slot id={`${tab.id}:summary:verdict`} tab={tab.id} section="summary" kind="verdict" describe="chapter briefing"><BriefingPanel model={model} chapter={tab.chapter} ids={ids}/></Slot>
+      {data && <section className="rp-chapter-story rp-evidence-pair" aria-label="Chapter overview and corresponding evidence">
+        <div className="rp-panel-prose"><span className="deck-eyebrow">Chapter overview</span><h3>The performance story</h3><ReportProse text={narrative?.summary}/>{!!narrative?.briefing?.takeaways.length && <><h4>Key readings</h4><ul className="rp-takeaways">{narrative.briefing.takeaways.map((text, i) => <li key={i}>{text}</li>)}</ul></>}<div className="rp-reading-basis"><b>Reading basis</b><p>Selected month, previous month and the same month last year, wherever recorded. Missing observations remain unavailable.</p></div></div>
+        <EvidenceVisual data={data} table={evidence} metrics={evidence?.compare ? [evidence.compare, ...historyIds] : historyIds} month={model.scope.month} title={evidence?.title || `${tab.label} · monthly performance`} exporting={exporting} initialView="3d" showCharts={options.showCharts}/>
+      </section>}
+      {!data && narrative?.summary && <section className="rp-synthesis-prose"><ReportProse text={narrative.summary}/></section>}
+      <Slot id={`${tab.id}:summary:verdict`} tab={tab.id} section="summary" kind="verdict" describe="chapter briefing"><BriefingPanel model={model} chapter={tab.chapter} ids={ids} showTakeaways={false}/></Slot>
+      <MetricCommentary model={model} chapter={tab.chapter} exporting={exporting}/>
+      {narrative?.performers && <section className="cr-metric-commentary" aria-label="Breakdown interpretation">{Object.entries(narrative.performers).filter(([, text]) => text).map(([key, text]) => <div key={key}><h4>{key === "leaders" ? "Leading segments" : key === "laggards" ? "Segments needing attention" : "Pattern across the evidence"}</h4><p>{text}</p></div>)}</section>}
       {!narrative && <p className="empty-state">No written analysis is available for this chapter. Review its source evidence or rewrite insights in Monthly reports.</p>}
-      {!!narrative?.cards.length && <Slot id={`${tab.id}:insights:insights`} tab={tab.id} section="insights" kind="insights" describe="insight list"><InsightsSection model={model} tab={tab.chapter} plan={plan} initialView="list"/></Slot>}
+      {!!narrative?.cards.length && <Slot id={`${tab.id}:insights:insights`} tab={tab.id} section="insights" kind="insights" describe="insight list"><InsightsSection model={model} tab={tab.chapter} plan={plan} initialView="list" exporting={exporting}/></Slot>}
       {options.showActionPlan && <Slot id={`${tab.id}:summary:decision`} tab={tab.id} section="summary" kind="verdict" describe="leadership decision"><DecisionPanel model={model} chapter={tab.chapter} ids={ids}/></Slot>}
       {plan && options.showActionPlan && <ActionPlan cards={narrative?.cards ?? []}/>}
+      {data && <MetricRegister chapter={tab.chapter} data={data} month={model.scope.month} exporting={exporting}/>}
       {/* Chapter-wide context is supporting evidence; insight-specific proof stays with each finding. */}
-      {options.showCharts && data && data.history.length > 1 && <Disclosure title="Supporting evidence · monthly trends"><div className="cr-trend"><TrendChartPanel history={data.history.slice(-options.historyMonths)} ids={historyIds} selected={selected} onSelect={setSelected} title={`${tab.label} · monthly trend`}/></div></Disclosure>}
-      {options.showInlineEvidence && evidence && <Disclosure title={`Supporting evidence · ${evidence.title}`}><div className="cr-evidence"><EvidenceBlock table={evidence} full initialView={options.showCharts ? "chart" : "table"} showCharts={options.showCharts}/></div></Disclosure>}
-      {!!data?.groups.length && <Disclosure title="Complete evidence tables · sort, search and export"><Slot id={`${tab.id}:tables:tables`} tab={tab.id} section="tables" kind="evidence" describe="key tables"><KeyTables model={model} chapter={tab.chapter}/></Slot></Disclosure>}
-      {data && !!data.history.length && <Disclosure title="Month-by-month comparison register"><ReportMoMTable history={data.history.slice(-options.historyMonths)} ids={historyIds} selected={selected} onSelect={setSelected} title={tab.label}/></Disclosure>}
-      {data && tab.spec && !tab.spec.derived && <Disclosure title="Item-level source records"><DataExplorer model={model} spec={tab.spec}/></Disclosure>}
-      {options.showSources && <details className="cr-source"><summary>Source, coverage & interpretation limits</summary><p>{tab.spec?.source || "Frozen report chapters"}</p>{[...(data?.notes ?? []), ...(data?.diagnostics ?? [])].map((note, i) => <p key={i}>{note}</p>)}<p>Monthly figures are frozen at report generation. Item-level drilldowns read the live source and may have changed since. Missing values are unavailable. Arithmetic drivers and associations do not establish cause.</p></details>}
+      {options.showCharts && data && data.history.length > 1 && <Disclosure exporting={exporting} title="Supporting evidence · monthly trends"><div className="cr-trend">{exporting ? historyIds.slice(0, 3).map(id => <FocusTrend key={id} id={id} history={data.history.slice(-options.historyMonths)}/>) : <TrendChartPanel history={data.history.slice(-options.historyMonths)} ids={historyIds} selected={selected} onSelect={setSelected} title={`${tab.label} · monthly trend`}/>}</div></Disclosure>}
+      {options.showInlineEvidence && evidence && <Disclosure exporting={exporting} title={`Supporting evidence · ${evidence.title}`}><div className="cr-evidence"><EvidenceBlock table={evidence} full initialView={options.showCharts ? "chart" : "table"} showCharts={options.showCharts}/></div></Disclosure>}
+      {!!data?.groups.length && <Disclosure exporting={exporting} title="Complete evidence tables · sort, search and export"><Slot id={`${tab.id}:tables:tables`} tab={tab.id} section="tables" kind="evidence" describe="key tables">{exporting ? data.groups.map((group, i) => <EvidenceBlock key={i} table={group} full initialView="table" showCharts={false}/>) : <KeyTables model={model} chapter={tab.chapter}/>}</Slot></Disclosure>}
+      {data && !!data.history.length && <Disclosure exporting={exporting} title="Month-by-month comparison register"><ReportMoMTable exporting={exporting} history={data.history.slice(-options.historyMonths)} ids={historyIds} selected={selected} onSelect={setSelected} title={tab.label}/></Disclosure>}
+      {!exporting && data && tab.spec && !tab.spec.derived && <Disclosure exporting={exporting} title="Item-level source records"><DataExplorer model={model} spec={tab.spec}/></Disclosure>}
+      {options.showSources && <details className="cr-source"><summary>Source, coverage & interpretation limits</summary><p>{tab.spec?.source || "Frozen report chapters"}</p>{[...(data?.notes ?? []), ...(data?.diagnostics ?? [])].map((note, i) => <p key={i}>{note}</p>)}<p>Monthly figures are frozen at report generation. {sourceBasis(model, tab.chapter)}. Missing values are unavailable. Arithmetic drivers and associations do not establish cause.</p></details>}
     </section>
   </RecordDrilldownProvider>;
 }
 
-export function ContinuousReport({ model, tabs, ranked, onNavigate }: { model: ReportModel; tabs: DeckTab[]; ranked: Finding[]; onNavigate: (id: string) => void }) {
+export function ContinuousReport({ model, tabs, ranked, onNavigate, exporting = false, withNavigation = false }: { model: ReportModel; tabs: DeckTab[]; ranked: Finding[]; onNavigate: (id: string) => void; exporting?: boolean; withNavigation?: boolean }) {
   const options = reportOptions(model.customization);
-  return <div className="cr-report">
-    <section id="chapter-overview"><CoverPage model={model} tabs={tabs} ranked={ranked} onNavigate={onNavigate}/>{!!model.narratives["executive-summary"]?.cards.length && <RecordDrilldownProvider model={model} chapterId="executive-summary"><Disclosure title="Executive synthesis · the connections across chapters"><InsightsSection model={model} tab="executive-summary" initialView="list"/></Disclosure></RecordDrilldownProvider>}</section>
-    {options.showContents && <nav className="cr-contents" aria-label="Report contents"><span className="deck-eyebrow">Inside this review</span>{tabs.filter(tab => tab.id !== "overview").map((tab, i) => <button key={tab.id} onClick={() => onNavigate(tab.id)}><span>{String(i + 1).padStart(2, "0")}</span>{tab.label}<span aria-hidden="true">↗</span></button>)}</nav>}
-    {tabs.filter(tab => tab.id !== "overview").map((tab, i) => <ReportChapter key={tab.id} model={model} tab={tab} number={i + 1}/>)}
+  return <div className={withNavigation ? "cr-layout" : "cr-layout-plain"}>
+    {withNavigation && <nav className="cr-rail" aria-label="Report chapter index"><b>Atlas<span>Physique 57 India</span></b>{tabs.map((tab, i) => <a key={tab.id} href={`#chapter-${tab.id}`} onClick={event => { if (!exporting) { event.preventDefault(); onNavigate(tab.id); } }}><span>{String(i).padStart(2, '0')}</span>{tab.label}</a>)}<small>{model.scope.studio}<br/>{model.scope.month}</small></nav>}
+    <div className="cr-report">
+    <section id="chapter-overview"><CoverPage model={model} tabs={tabs} ranked={ranked} onNavigate={onNavigate}/>{model.narratives["executive-summary"]?.summary && <section className="cr-executive-summary" aria-label="Executive summary"><span className="deck-eyebrow">Executive summary</span><h2>The month in context</h2><ReportProse text={model.narratives["executive-summary"].summary}/></section>}{!!model.narratives["executive-summary"]?.cards.length && <RecordDrilldownProvider model={model} chapterId="executive-summary"><section className="cr-executive-insights"><InsightsSection model={model} tab="executive-summary" initialView="list" exporting={exporting}/></section></RecordDrilldownProvider>}</section>
+    {options.showContents && <nav className="cr-contents" aria-label="Report contents"><span className="deck-eyebrow">Inside this review</span>{tabs.filter(tab => tab.id !== "overview").map((tab, i) => <a key={tab.id} href={`#chapter-${tab.id}`} onClick={e => { if (!exporting) { e.preventDefault(); onNavigate(tab.id); } }}><span>{String(i + 1).padStart(2, "0")}</span>{tab.label}<span aria-hidden="true">↗</span></a>)}</nav>}
+    {tabs.filter(tab => tab.id !== "overview").map((tab, i) => <ReportChapter key={tab.id} model={model} tab={tab} number={i + 1} exporting={exporting}/>)}
+    {options.showActionPlan && <section className="cr-closing" aria-label="Closing synthesis"><span className="deck-eyebrow">Next review</span><h2>Priorities to carry forward</h2><p>{model.narratives.recommendations?.summary || "Use the evidence and proposed actions in each chapter to agree priorities for the next studio review. Conditional opportunities may overlap and should not be added together."}</p><ol>{tabs.filter(t => t.id !== "overview" && t.chapter !== "recommendations").flatMap(t => { const d = model.narratives[t.chapter]?.decision; const c = model.narratives[t.chapter]?.cards.find(c => c.action && c.priority === "high"); return d?.call || c ? [<li key={t.id}><b>{t.label}</b><p>{d?.call || c?.action}</p><small>Proposed owner: {d?.owner || c?.ownerArea || "To be agreed"} · Review: {d?.horizon || c?.horizon || "To be agreed"}</small>{(d?.successMeasure || c?.watch) && <p>Measure to review: {d?.successMeasure || c?.watch}</p>}</li>] : []; }).slice(0, 5)}</ol></section>}
     {options.showSources && <footer className="cr-method"><h2>Evidence & reading basis</h2><p>Cash collections and attendance-attributed revenue measure different populations. Newcomer and lead outcomes depend on observation time; current stages do not reconstruct historical transitions. Membership snapshots describe the build date. Conditional value at stake can overlap across recommendations and must not be added together.</p>{model.sources?.map(source => <p key={source.key}><b>{source.title}</b> · {source.status}{source.stale ? " · stale snapshot" : ""} · {source.fetchedAt ? new Date(source.fetchedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "Refresh time unavailable"}</p>)}</footer>}
-  </div>;
+  </div></div>;
 }

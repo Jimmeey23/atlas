@@ -5,9 +5,11 @@ import { monthLabel, shiftMonth } from "./period";
 import { findingsFor, findingsPayload, ledger, seasonalScenario, type Finding } from "./findings";
 import { INSIGHT_LENSES, type ChapterData, type ChapterNarrative, type InsightCard, type ReportModel } from "./model";
 import { reportOptions } from "./options";
+import { validateNarrativeCards } from "./quality";
+import { reviewMetricIds } from "./review";
 import { addCall, type CallUsage, type ChapterUsage } from "./usage";
 
-const CACHE_PREFIX = "atlas-report-narrative:v14:";
+const CACHE_PREFIX = "atlas-report-narrative:v16:";
 /** Exact evidence and request identity, independent of presentation settings. */
 async function analysisKey(value: unknown) {
   const bytes = new TextEncoder().encode(JSON.stringify(value));
@@ -169,7 +171,7 @@ function insightRules(model: ReportModel, spec: ChapterSpec) {
   const recs = spec.id === "recommendations";
   const lenses = INSIGHT_LENSES.filter(l => recs ? l.id === "next_step" : l.id !== "next_step" && o.lenses.includes(l.id));
   return [
-    "Return JSON with summary and cards. Every card has headline, meaning, evidence, driver, trend, impact, action, watch, concentration, offset, recommendation, lens, focus, metrics, highlight, priority, ownerArea, horizon and confidence.",
+    "Return JSON with summary, metricCommentary and cards. Every card has headline, meaning, evidence, driver, trend, impact, action, watch, concentration, offset, recommendation, lens, focus, metrics, highlight, priority, ownerArea, horizon and confidence.",
     "PURPOSE: a practical, decision-led review of the SELECTED MONTH. Every card answers exactly one leadership question, named by its lens. Do not repeat the same movement across cards, and do not write cards that merely restate a table.",
     "Lenses allowed in this chapter:\n" + lenses.map(l => `- ${l.id} (${l.label}): ${l.question}`).join("\n"),
     recs ? "Every card uses lens next_step." : "Use a mix of lenses where the evidence supports it; skip a lens rather than force it. The kpis verdict card may use any lens.",
@@ -188,13 +190,17 @@ function insightRules(model: ReportModel, spec: ChapterSpec) {
       : "action and watch: empty strings.",
     recs
       ? "recommendation: 40–70 words — why this move is preferred to the obvious alternative, the trade-off, and the guardrail that limits it."
-      : "recommendation: empty string.",
+      : "recommendation: 40–70 words explaining why the proposed response fits this evidence, its trade-off, and what to verify before acting; empty only when no action is justified.",
     `metrics: 1–4 ids from AVAILABLE METRIC IDS that prove the claim. The page shows each one's value, MoM, YoY and monthly trend beside the card, so choose the ids a sceptical reader would check.`,
     "focus: kpis for the single chapter verdict card, trend when the claim rests on the monthly history, cross for cross-chapter context, otherwise the breakdown ID whose chart proves the claim.",
     "highlight: up to 4 exact group labels, copied character-for-character from the focus breakdown table, that the claim names. Empty array when none.",
     "priority: high when the item is material to the month's result or its value at stake; medium otherwise; low for context. ownerArea: the team best placed to act. horizon: when to act or review.",
     "confidence: high, medium or low, justified by source coverage, sample size and consistency across comparisons.",
-    "summary: 90–140 words — the chapter's verdict: what happened, the largest quantified driver, the offset, whether it is durable, and the one thing leadership should take from it.",
+    "summary: 160–220 words in 2–3 coherent paragraphs — the chapter's verdict: what happened, the largest quantified driver, the offset, whether it is durable, and the one thing leadership should take from it.",
+    `METRIC COVERAGE: Review every available chapter metric in grouped metricCommentary paragraphs. Required metric IDs: ${spec.derived ? 'none; use an empty metricCommentary array for cross-chapter synthesis' : reviewMetricIds(spec.id, model.chapters[spec.id]).filter(id => model.chapters[spec.id]?.total[id] != null).join(', ')}. Each item has metricIds (exact available IDs) and text (70–120 words). Discuss related measures together: observed movement, prior-month and same-month-last-year comparisons, governed YTD where available, interpretation and evidence limitations. Discuss material changes individually; group stable measures. Do not manufacture significance, unavailable comparisons or causal explanations. All required metric IDs must be covered.`,
+    "Evidence text must quote exact supplied numeric values or displayed metric comparisons. Keep newly calculated scenarios in impact with the arithmetic shown, never present them as observed evidence. Any new target, owner assignment or timing is a proposal, not an existing commitment.",
+    "Avoid repeating the same observation in overview, briefing, metric commentary and findings: overview synthesises; commentary covers related measures; findings develop the material arguments; recommendations identify proposed responses.",
+    "READING STRUCTURE: Separate prose paragraphs with blank lines. For genuinely parallel drivers, caveats or recommended steps, use a short plain-text bullet list with each item prefixed by - on its own line. Keep precise metric IDs and evidence focus aligned with the claim; the report pairs the commentary with that exact table or metric history. Do not return Markdown tables or HTML; the report renders comparison tables from governed figures.",
     "Exactly one card has focus kpis: the chapter verdict.",
     ...DEEP_REVIEW_RULES,
     ...CHAPTER_RULES,
@@ -258,12 +264,13 @@ const DERIVED_RULES: Record<string, (model: ReportModel) => string> = {
   predictions: () => 'Explain only the supplied conditional scenarios, assumptions and their connection to selected-month performance. These are not forecasts. No probabilities, deadlines or task lists.',
 };
 
-type ParsedChapter = { summary?: string; cards?: InsightCard[] } & Partial<Pick<ChapterNarrative, "briefing" | "decision" | "performers" | "questions">>;
+type ParsedChapter = { summary?: string; cards?: InsightCard[] } & Partial<Pick<ChapterNarrative, "metricCommentary" | "briefing" | "decision" | "performers" | "questions">>;
 /** Keeps only well-formed v3 sections; a malformed one is dropped and the page falls back to the verdict card. */
 function chapterExtras(parsed: ParsedChapter): Partial<ChapterNarrative> {
   const text = (v: unknown) => typeof v === "string" ? v.trim() : "";
   const list = (v: unknown) => Array.isArray(v) ? v.map(text).filter(Boolean) : [];
   const out: Partial<ChapterNarrative> = {};
+  if (Array.isArray(parsed.metricCommentary)) out.metricCommentary = parsed.metricCommentary.filter(item => item && Array.isArray(item.metricIds) && item.metricIds.every(id => typeof id === 'string') && text(item.text)).map(item => ({ metricIds: item.metricIds, text: text(item.text) }));
   const b = parsed.briefing;
   if (b && list(b.takeaways).length) out.briefing = { takeaways: list(b.takeaways), whatChanged: text(b.whatChanged), whyItMoved: text(b.whyItMoved), whereItSits: text(b.whereItSits), whatHeldUp: text(b.whatHeldUp), outlook: text(b.outlook), soWhat: text(b.soWhat) };
   const d = parsed.decision;
@@ -496,9 +503,9 @@ export async function generateNarratives(
           ...(!spec.derived ? [{ label: "Figures:", text: figures }] : []),
           { label: "All-tab performance context (independent of visible chapter selection):", text: portfolio },
         ]);
-        const extra = { insightVersion: 3, metricIds, lenses: spec.id === "recommendations" ? ["next_step"] : o.lenses.filter(l => l !== "next_step") };
+        const extra = { insightVersion: 4, metricIds, lenses: spec.id === "recommendations" ? ["next_step"] : o.lenses.filter(l => l !== "next_step") };
         // Include complete pre-budget evidence: changes to omitted records must invalidate reuse too.
-        const fingerprint = await analysisKey({ version: 14, providerModel, providerPolicy, message, focusIds, extra,
+        const fingerprint = await analysisKey({ version: 16, providerModel, providerPolicy, message, focusIds, extra,
           figures, portfolio, preferences, scenarios: spec.id === "predictions" ? forwardScenarios(model) : "" });
         const key = `${CACHE_PREFIX}${model.scope.studio}:${model.scope.month}:${spec.id}:${fingerprint}`;
         const previous = model.narratives[spec.id];
@@ -518,8 +525,13 @@ export async function generateNarratives(
               )
             : [];
           const valid = cards.every(c => [c.meaning,c.evidence].every(v => typeof v === "string" && !!v.trim()) && !!c.focus && !!(c.lens || c.category) && !!c.confidence);
-          // Cited ids outside this chapter's figures would render as blank evidence.
-          for (const c of cards) c.metrics = (Array.isArray(c.metrics) ? c.metrics : []).filter(id => metricIds.includes(id)).slice(0, 4);
+          validateNarrativeCards(cards, metricIds, focusIds, model, spec.id, [figures, portfolio, model.scope.month, spec.id === "predictions" ? forwardScenarios(model) : ""].join("\n"), [parsed?.summary, ...(parsed?.metricCommentary?.map(item => item.text) ?? []), ...Object.values(parsed?.briefing ?? {}).filter((v): v is string => typeof v === "string"), ...(parsed?.decision?.evidence ?? [])].filter((v): v is string => typeof v === "string"));
+          if (parsed?.metricCommentary) {
+            const covered = parsed.metricCommentary.flatMap(item => item.metricIds ?? []);
+            if (covered.some(id => !metricIds.includes(id))) throw new Error("Metric commentary cited an unavailable metric.");
+            const required = !spec.derived ? reviewMetricIds(spec.id, data).filter(id => data?.total[id] != null) : [];
+            if (required.some(id => !covered.includes(id))) throw new Error("Metric commentary omitted available chapter measures. Rewrite insights to retry.");
+          }
           if (!valid || !cards.length || typeof parsed?.summary !== "string" || !parsed.summary.trim())
             throw new Error("The model returned no complete chapter analysis. Retry writing insights.");
           // The verdict leads; a model that forgot to mark one has its first card promoted.

@@ -1,4 +1,3 @@
-import { chapterHeroStyle } from "./chapterHero";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Mic, Lock, LockOpen, PencilLine, Save, Undo2, Pin, PinOff, Download, Printer, Maximize, Minimize, Palette, Loader2, KeyRound, X, TriangleAlert, Gauge, Lightbulb, ChartLine, Database, ListChecks, BookOpen, CircleDot, Medal, Telescope, Table2 } from "lucide-react";
 import logo from "../../../assets/report/logo.png";
@@ -10,7 +9,7 @@ import { PresentationTools } from "../../PresentationTools";
 import { StickyNotes } from "../../StickyNotes";
 import { definition } from "../../../report/definitions";
 import { findingsFor, ledger } from "../../../report/findings";
-import { builtLabel, monthLabel } from "../../../report/period";
+import { monthLabel } from "../../../report/period";
 import { reportOptions } from "../../../report/options";
 import { chapterMetrics, deckPages, deckTabs, SECTION_META, sectionMeta, verdictOf, type DeckSection, type DeckTab } from "../../../report/deck";
 import { downloadReport, printReport } from "../../../report/export";
@@ -21,7 +20,7 @@ import { FlipMetricCard } from "./FlipMetricCard";
 import { BriefingPanel, DecisionPanel } from "./Briefing";
 import { CoverPage } from "./CoverPage";
 import { ContinuousReport } from "./ContinuousReport";
-import "../../../design/report-continuous.css";
+import { MetricRegister } from "./MetricRegister";
 import { Performers } from "./Performers";
 import { KeyTables } from "./KeyTables";
 import { Outlook } from "./Outlook";
@@ -32,6 +31,8 @@ import { CompleteMetricGrid } from "./CompleteMetricGrid";
 import { RecordDrilldownProvider } from "./RecordDrilldown";
 import { SpeakerDrawer } from "./SpeakerDrawer";
 import "../../../design/report-deck.css";
+import "../../../design/report-continuous.css";
+import "../../../design/report-modern.css";
 import { SourceReportChapter } from "./SourceReportChapter";
 
 const DRAWER_KEY = "atlas-deck-drawer-v2";
@@ -147,7 +148,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
     setExportMounted(true);
     // The full document mounts only for export; wait for it to commit and paint.
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    try { if (!exportRef.current) throw new Error("The export view is not ready. Retry."); await (print ? printReport : downloadReport)(exportRef.current, model); } catch (e) { setMessage((e as Error).message); } finally { setBusy(""); }
+    try { if (!exportRef.current) throw new Error("The export view is not ready. Retry."); await (print ? printReport : downloadReport)(exportRef.current, model); } catch (e) { setMessage((e as Error).message); } finally { setBusy(""); setExportMounted(false); }
   }
 
   const options = reportOptions(model.customization);
@@ -167,6 +168,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
         <CompleteMetricGrid items={ids} render={id => <FlipMetricCard key={id} id={id} data={data} target={model.customization?.targets?.[id]}
           flipped={flipped === id} onToggle={() => setFlipped(current => current === id ? "" : id)} />}/>
       </Slot>}
+      <div className="cr-summary">{model.narratives[cid]?.summary && <><span className="deck-eyebrow">Chapter overview</span><p>{model.narratives[cid].summary}</p></>}</div>
       <Slot id={slot("verdict")} tab={tab.id} section={s} kind="verdict" describe="chapter briefing"><BriefingPanel model={model} chapter={cid} ids={ids} /></Slot>
       <Slot id={slot("decision")} tab={tab.id} section={s} kind="verdict" describe="leadership decision"><DecisionPanel model={model} chapter={cid} ids={ids} /></Slot>
       {!!data?.groups.length && <Slot id={slot("evidence-preview")} tab={tab.id} section={s} kind="evidence" describe="curated evidence tables">
@@ -184,13 +186,13 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
         <Slot id={slot("table")} tab={tab.id} section={s} kind="trends" describe="month-on-month table"><ReportMoMTable history={data.history.slice(-14)} ids={historyIds} selected={selectedMonth} onSelect={setSelectedMonth} title={tab.label} /></Slot>
       </DeckRegister>;
     }
-    if (s === "tables") return <Slot id={slot("tables")} tab={tab.id} section={s} kind="evidence" describe="key tables"><KeyTables model={model} chapter={cid} /></Slot>;
+    if (s === "tables") return <>{data && <MetricRegister chapter={cid} data={data} month={model.scope.month}/>}<Slot id={slot("tables")} tab={tab.id} section={s} kind="evidence" describe="key tables"><KeyTables model={model} chapter={cid} /></Slot></>;
     if (s === "data" && tab.spec) return <DataExplorer model={model} spec={tab.spec} />;
     return <p className="empty-state">Nothing recorded for this page.</p>;
   }
 
   return <EditContext.Provider value={edit}><RecordDrilldownProvider model={model} chapterId={cid}>
-    <div className="report-page deck" data-report-id={model.id || ""} data-drawer={drawer} data-editing={edit.editing} data-full={full} data-continuous={continuous}>
+    <div className="report-page deck" data-report-id={model.id || ""} data-drawer={drawer} data-editing={edit.editing} data-full={full} data-continuous={continuous} data-report-design="analytical">
       <header className="deck-nav" data-export="omit">
           <a className="deck-brand" href="#overview/cover" onClick={e => { e.preventDefault(); open("overview"); }}><img src={logo} alt="Physique 57"/><span><b>{model.customization?.title || "Monthly performance report"}</b><small>{model.scope.studio} · {monthLabel(model.scope.month)}{model.editedAt ? " · edited" : ""}</small></span></a>
           <div className="deck-nav-actions">
@@ -204,19 +206,22 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
             <button className="icon-button" title={model.pinned ? "Unpin report" : "Pin report (kept beyond the latest five)"} aria-label={model.pinned ? "Unpin report" : "Pin report"} aria-pressed={!!model.pinned} disabled={!model.id || !!busy} onClick={() => void togglePin()}>{model.pinned ? <PinOff size={16}/> : <Pin size={16}/>}</button>
             <div className="deck-menu"><button className="icon-button" aria-label="Appearance" aria-expanded={appearance} onClick={() => setAppearance(a => !a)}><Palette size={16}/></button>
               {appearance && <div className="deck-menu-panel"><ReportViewControls model={model} onChange={next => { setModel(next); setSaved(s => ({ ...s, customization: next.customization })); }} /></div>}</div>
-            <button className="icon-button" title="Download HTML" aria-label="Download HTML" disabled={!!busy} onClick={() => void exportReport(false)}><Download size={16}/></button>
+            <button className="button primary rp-export-button" title="Download HTML" aria-label="Download HTML" disabled={!!busy} onClick={() => void exportReport(false)}><Download size={16}/><span className="rp-export-label">Export report</span></button>
             <button className="icon-button" title="Print or save PDF" aria-label="Print or save PDF" disabled={!!busy} onClick={() => void exportReport(true)}><Printer size={16}/></button>
             <button className="icon-button" title="Fullscreen (F)" aria-label="Toggle fullscreen" onClick={() => void toggleFull()}>{full ? <Minimize size={16}/> : <Maximize size={16}/>}</button>
             <button className="button deck-notes-toggle" aria-pressed={drawer} title="Speaker notes (N)" onClick={() => setDrawer(d => !d)}><Mic size={14}/>Notes</button>
           </div>
-        <nav className="deck-tabs" aria-label="Report chapters">
-          {tabs.map(t => <button key={t.id} type="button" aria-current={t.id === tab.id ? "page" : undefined} data-tone={tone(model, t)} onClick={() => open(t.id)} title={verdictOf(model, t.chapter)?.headline ?? t.title}>
-            <i aria-hidden="true"/>{t.label}</button>)}
-        </nav>
       </header>
       <div className="deck-body">
+        <nav className="deck-tabs" aria-label="Report chapters">
+          <div className="rp-rail-heading"><span>Monthly review</span><strong>{monthLabel(model.scope.month)}</strong><small>{model.scope.studio}</small></div>
+          <div className="rp-rail-caption" aria-hidden="true">Report contents <span>{tabs.length}</span></div>
+          {tabs.map((t, i) => <button key={t.id} type="button" aria-current={t.id === tab.id ? "page" : undefined} data-tone={tone(model, t)} onClick={() => open(t.id)} title={verdictOf(model, t.chapter)?.headline ?? t.title}>
+            <span className="rp-nav-number" aria-hidden="true">{String(i).padStart(2, "0")}</span><span className="rp-nav-label">{t.label}</span><ChevronRight className="rp-nav-chevron" size={14} aria-hidden="true"/></button>)}
+          <div className="rp-rail-footer"><span className="rp-rail-dot"/>Frozen report evidence<small>Figures reflect this report’s saved snapshot.</small></div>
+        </nav>
         <main className="deck-main" ref={main} id="main">
-          {!continuous && <div className={`deck-page-head${tab.id !== "overview" && !model.importedChapters?.length ? " chapter-photo-hero" : ""}`} style={tab.id !== "overview" && !model.importedChapters?.length ? chapterHeroStyle(Math.max(0, tabs.findIndex(t => t.id === tab.id) - 1), tab.title) : undefined} data-export="omit">
+          {!continuous && <div className="deck-page-head" data-export="omit">
             {page.section === "cover" ? <span className="deck-eyebrow">Report overview</span>
               : <div><span className="deck-eyebrow">{tab.spec?.eyebrow ?? "Report overview"} · {sectionMeta(page.section).display}</span><h1>{tab.id === "overview" ? tab.spec?.title ?? tab.title : tab.title}</h1>{tab.spec?.deck && <p>{tab.spec.deck}</p>}</div>}
             <div className="deck-sections segmented" role="tablist" aria-label="Sections">
@@ -226,8 +231,8 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
           }
           {message && <p className="deck-message" role="status">{message}<button className="icon-button" aria-label="Dismiss" onClick={() => setMessage("")}><X size={13}/></button></p>}
           {edit.editing && <p className="deck-edit-banner"><PencilLine size={14}/>Editing — click any text to rewrite it. Use <b>✦</b> on a component to replace just that component with AI. Save writes to the database.</p>}
-          <article className="report-doc r2 deck-doc" data-report-theme={model.customization?.theme || "light"} data-accent={options.accent} data-surface={options.surface} data-typography={options.typography} data-card-style={options.cardStyle} data-density={options.density} data-section={page.section} key={continuous ? "continuous" : `${page.tab}:${page.section}`}>
-            {model.importedChapters?.length ? <SourceReportChapter key={tab.id} model={model} chapterId={tab.id} section={continuous ? "summary" : page.section} /> : continuous ? <ContinuousReport model={model} tabs={tabs} ranked={ranked} onNavigate={open}/> : body()}
+          <article className="report-doc r2 deck-doc" data-report-theme={model.customization?.theme || "light"} data-accent={options.accent} data-surface={options.surface} data-report-layout={options.layout} data-typography={options.typography} data-card-style={options.cardStyle} data-density={options.density} data-section={page.section} key={continuous ? "continuous" : `${page.tab}:${page.section}`}>
+            {model.importedChapters?.length ? <SourceReportChapter key={tab.id} model={model} chapterId={tab.id} section={continuous ? "summary" : page.section} /> : continuous ? <ContinuousReport model={model} tabs={tabs} ranked={ranked} onNavigate={open}/> : <div className="cr-report cr-presentation">{body()}</div>}
           </article>
           <div className="deck-chapter-markers" hidden>{tabs.filter(t => t.spec || model.importedChapters?.length).map(t => <section key={t.id} className="r-section" id={t.id}><span className="r-section-topic">{t.label}</span></section>)}</div>
           {!continuous && <footer className="deck-pager-bar" data-export="omit">

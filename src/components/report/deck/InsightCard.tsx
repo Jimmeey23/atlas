@@ -1,88 +1,54 @@
-import { useEffect, useRef, useState } from "react";
-import { TrendingUp, TriangleAlert, GitBranch, Lightbulb, Radar, ArrowRightCircle, Crosshair, IndianRupee, ShieldCheck, Users, CalendarClock, ChevronRight, ChevronLeft, ChartNoAxesColumn, Eye, Activity, Database } from "lucide-react";
-import { EvidenceBlock } from "../ReportEvidence";
-import { InsightDrilldown } from "../InsightDrilldown";
-import { FocusTrend, lensLabel, lensOf, metricSource, Spark } from "../Insight";
-import { useRecordDrilldown } from "./RecordDrilldown";
-import { chapters } from "../../../report/chapters";
-import { definition, reportFmt as fmt, reportDelta as delta } from "../../../report/definitions";
-import type { ChapterData, InsightCard, InsightLens, ReportModel } from "../../../report/model";
-import { durability } from "./Verdict";
+import { TrendingUp, TriangleAlert, GitBranch, Lightbulb, Radar, ArrowRightCircle, ShieldCheck, Users, CalendarClock, ChevronRight, ChevronLeft, Database } from 'lucide-react';
+import { InsightDrilldown } from '../InsightDrilldown';
+import { lensLabel, lensOf, metricSource } from '../Insight';
+import { useRecordDrilldown } from './RecordDrilldown';
+import { chapters } from '../../../report/chapters';
+import { definition, reportFmt as fmt, reportDelta as delta } from '../../../report/definitions';
+import type { ChapterData, InsightCard, InsightLens, ReportModel } from '../../../report/model';
+import { EvidenceVisual } from './EvidenceVisual';
+import { ReportProse } from './ReportProse';
 
 const LENS_ICON: Record<InsightLens, typeof TrendingUp> = { win: TrendingUp, risk: TriangleAlert, driver: GitBranch, opportunity: Lightbulb, watch: Radar, next_step: ArrowRightCircle };
-const tone = (id: string, value: unknown, prior: unknown) => value == null || prior == null || Number(value) === Number(prior) ? "flat" : (Number(value) > Number(prior)) === (definition(id)?.higherIsBetter ?? true) ? "up" : "down";
 
-/**
- * An insight read top to bottom as an argument: the claim, the causal chain
- * (cause → where → worth), the move, and the proof beside it.
- */
-export function DeckInsightCard({ card, model, chapterId, index, total, plan = false, confidence = true, onStep }: { card: InsightCard; model: ReportModel; chapterId: string; index: number; total?: number; plan?: boolean; confidence?: boolean; onStep?: (step: number) => void }) {
+/** One argument and its corresponding evidence share the same panel and reading order. */
+export function DeckInsightCard({ card, model, chapterId, index, total, plan = false, confidence = true, exporting = false, onStep }: { card: InsightCard; model: ReportModel; chapterId: string; index: number; total?: number; plan?: boolean; confidence?: boolean; exporting?: boolean; onStep?: (step: number) => void }) {
   const drill = useRecordDrilldown();
-  const claim = useRef<HTMLDivElement>(null);
-  const [claimHeight, setClaimHeight] = useState(0);
-  useEffect(() => { const el = claim.current; if (!el) return; const observer = new ResizeObserver(([entry]) => setClaimHeight(entry.contentRect.height)); observer.observe(el); return () => observer.disconnect(); }, []);
-  const [chart, setChart] = useState(false);
-  const lens = lensOf(card);
-  const Icon = LENS_ICON[lens];
+  const lens = lensOf(card), Icon = LENS_ICON[lens];
   const table = model.chapters[chapterId]?.groups.find(g => (g.id ?? g.field) === card.focus);
   const cited = (card.metrics?.length ? card.metrics : [table?.compare, ...(chapters.find(c => c.id === chapterId)?.metrics ?? [])].filter((id): id is string => !!id).slice(0, 2))
     .map(id => ({ id, data: metricSource(model, chapterId, id) })).filter((m): m is { id: string; data: ChapterData } => !!m.data && m.data.total[m.id] != null).slice(0, 3);
-  const fullVisual = claimHeight < 520 || !!(table && table.columns.length > 4);
-  const visual = chart && <div className="deck-proof-visual" data-full={fullVisual}>{table ? <EvidenceBlock table={table} full initialView="chart"/> : cited[0] && <FocusTrend id={cited[0].id} history={cited[0].data.history.slice(-14)} />}</div>;
-  const cause = card.driver || card.reasoning;
-  const chain = [
-    cause && { key: "cause", icon: GitBranch, label: plan ? "Why this move" : "Driver", text: plan && card.recommendation ? card.recommendation : cause },
-    card.concentration && { key: "where", icon: Crosshair, label: "Where", text: card.concentration },
-    card.impact && { key: "worth", icon: IndianRupee, label: "Worth", text: card.impact },
-  ].filter(Boolean) as { key: string; icon: typeof GitBranch; label: string; text: string }[];
-  const levels = { high: 3, medium: 2, low: 1 } as const;
-  return <article className="deck-insight" data-lens={lens} data-priority={card.priority ?? "medium"}>
-    <header className="deck-insight-top">
-      <span className="deck-insight-lens"><Icon size={14}/>{lensLabel(lens)}</span>
-      {(card.priority || (confidence && card.confidence)) && <span className="deck-insight-rating" data-priority={card.priority}
-        title={[card.priority && `${card.priority} priority`, confidence && card.confidence && `${card.confidence} confidence`].filter(Boolean).join(" · ")}>
-        {card.priority && <b>{card.priority} priority</b>}
-        {confidence && card.confidence && <span className="deck-insight-confidence" aria-label={`${card.confidence} confidence`}>{[1, 2, 3].map(n => <i key={n} data-on={n <= levels[card.confidence!]} />)}</span>}
-      </span>}
-      <span className="deck-insight-no">{String(index + 1).padStart(2, "0")}{total ? <small> of {String(total).padStart(2, "0")}</small> : null}</span>
-      {onStep && <span className="dk-stepper"><button type="button" className="icon-button" aria-label="Previous insight" disabled={index === 0} onClick={() => onStep(-1)}><ChevronLeft size={15}/></button>
-        <button type="button" className="icon-button" aria-label="Next insight" disabled={!!total && index >= total - 1} onClick={() => onStep(1)}><ChevronRight size={15}/></button></span>}
+  const evidenceData = cited[0]?.data ?? model.chapters[chapterId];
+  const showCharts = model.customization?.showCharts !== false;
+  const points = [
+    { label: plan ? 'Why this move' : 'Observed drivers', text: card.driver || card.reasoning },
+    { label: 'Where it concentrates', text: card.concentration },
+    { label: 'Conditional value at stake', text: card.impact },
+    { label: 'Trend & durability', text: card.trend },
+    { label: 'Counter-evidence', text: card.offset },
+  ].filter(point => point.text);
+  return <article className="deck-insight rp-finding" data-lens={lens} data-priority={card.priority ?? 'medium'}>
+    <header className="deck-insight-top"><span className="rp-finding-number">{String(index + 1).padStart(2, '0')}</span><span className="deck-insight-lens"><Icon size={14}/>{lensLabel(lens)}</span>
+      <span className="rp-finding-meta">{card.priority && <b>{card.priority} priority</b>}{confidence && card.confidence && <span>{card.confidence} confidence</span>}{total && <span>{index + 1} / {total}</span>}</span>
+      {onStep && <span className="dk-stepper"><button type="button" className="icon-button" aria-label="Previous insight" disabled={index === 0} onClick={() => onStep(-1)}><ChevronLeft size={15}/></button><button type="button" className="icon-button" aria-label="Next insight" disabled={!!total && index >= total - 1} onClick={() => onStep(1)}><ChevronRight size={15}/></button></span>}
     </header>
-    <div className="deck-insight-body">
-      <div className="deck-insight-claim"><div ref={claim} className="deck-claim-content">
-        <div className="deck-insight-headline"><InsightDrilldown modal model={model} chapterId={chapterId} headline={card.headline} metrics={cited} table={table}>{card.headline}</InsightDrilldown></div>
-        {card.meaning && <p className="deck-insight-meaning">{card.meaning}</p>}
-        {!!chain.length && <ol className="deck-chain">{chain.map((step, i) => <li key={step.key} data-step={step.key}>
-          <span className="deck-chain-label"><step.icon size={12}/>{step.label}</span><p>{step.text}</p>
-          {i < chain.length - 1 && <ChevronRight className="deck-chain-arrow" size={16} aria-hidden="true"/>}
-        </li>)}</ol>}
-        {(card.action || (plan && card.recommendation)) && <div className="deck-insight-move">
-          <ArrowRightCircle size={18}/>
-          <div><b>{plan ? "The move" : "Recommended move"}</b><p>{card.action || card.recommendation}</p>
-            {(card.ownerArea || card.horizon) && <span className="deck-insight-owner">{card.ownerArea && <span><Users size={12}/>{card.ownerArea}</span>}{card.horizon && <span><CalendarClock size={12}/>{card.horizon}</span>}</span>}</div>
-        </div>}
-        {(card.offset || card.trend || card.watch) && <footer className="deck-insight-foot">
-          {card.trend && !plan && <span title={card.trend}><Activity size={12}/>{durability(card.trend)}</span>}
-          {card.offset && <span title={card.offset}><ShieldCheck size={12}/>Held up: {card.offset}</span>}
-          {card.watch && <span title={card.watch}><Eye size={12}/>Watch: {card.watch}</span>}
-        </footer>}
+    <div className="deck-insight-body rp-evidence-pair">
+      <div className="deck-insight-claim"><div className="deck-claim-content">
+        <div className="deck-insight-headline">{exporting ? <h3>{card.headline}</h3> : <InsightDrilldown modal model={model} chapterId={chapterId} headline={card.headline} metrics={cited} table={table}>{card.headline}</InsightDrilldown>}</div>
+        <ReportProse text={card.meaning}/>
+        {card.monthContext && <section className="cr-insight-context"><h4>Selected-month context</h4><ReportProse text={card.monthContext}/></section>}
+        {card.yearContext && <section className="cr-insight-context"><h4>Year & comparison context</h4><ReportProse text={card.yearContext}/></section>}
+        {!!points.length && <ul className="rp-insight-points">{points.map(point => <li key={point.label}><b>{point.label}</b><ReportProse text={point.text}/></li>)}</ul>}
+        {card.reasoning && card.reasoning !== card.driver && card.driver && <ReportProse text={card.reasoning}/>}
+        {(card.action || card.recommendation) && <section className="rp-recommendation"><span className="deck-eyebrow"><ArrowRightCircle size={14}/>Proposed recommendation</span><ReportProse text={card.action}/>{card.recommendation !== card.action && <ReportProse text={card.recommendation}/>}<div className="rp-action-meta">{card.ownerArea && <span><Users size={13}/>{card.ownerArea}</span>}{card.horizon && <span><CalendarClock size={13}/>{card.horizon}</span>}</div>{card.watch && <p className="rp-watch"><b>Review measure</b>{card.watch}</p>}</section>}
+        {!card.action && !card.recommendation && card.watch && <p className="rp-watch"><b>Watch next</b>{card.watch}</p>}
       </div></div>
       {(cited.length > 0 || table || card.evidence) && <aside className="deck-insight-proof" aria-label="Evidence">
-        <span className="deck-eyebrow"><ShieldCheck size={13}/>Evidence & comparisons</span><small className="deck-proof-source">{model.scope.studio} · {model.scope.month} · saved report</small>
-        {card.evidence && <p className="deck-insight-evidence">{card.evidence}</p>}
-        {cited.map(({ id, data }) => <div className="deck-proof-metric" key={id} data-tone={tone(id, data.total[id], data.prior[id])}>
-          <span>{definition(id)?.label ?? id}</span><strong>{fmt(id, data.total[id])}</strong>
-          <Spark id={id} history={data.history.slice(-12)} width={120} height={24} />
-          <small>Previous month {fmt(id, data.prior[id])} · Last year {fmt(id, data.priorYear[id])}</small><em>MoM {delta(id, data.total[id], data.prior[id])}</em><em>YoY {delta(id, data.total[id], data.priorYear[id])}</em>
-        </div>)}
-        <div className="dk-proof-actions">
-        {cited[0] && drill && <button type="button" className="deck-proof-toggle" onClick={() => drill({ metric: cited[0].id, chapterId: chapterId, table, group: card.highlight?.[0] })}><Database size={13}/>Explore records</button>}
-        {(table || cited[0]) && <button type="button" className="deck-proof-toggle" aria-expanded={chart} onClick={() => setChart(c => !c)}><ChartNoAxesColumn size={13}/>{chart ? "Hide chart" : table ? `Show ${table.title.toLowerCase()}` : "Show trend"}</button>}
-        </div>
+        <div className="rp-evidence-citation"><span className="deck-eyebrow"><ShieldCheck size={13}/>Evidence for this finding</span><ReportProse text={card.evidence}/><small>{model.scope.month} · frozen report figures{chapters.find(c => c.id === evidenceData?.id)?.network ? ' · network scope' : ` · ${model.scope.studio}`}</small></div>
+        {(table || cited.length > 0) && <EvidenceVisual data={evidenceData} table={table} metrics={cited.map(c => c.id)} month={model.scope.month} highlights={card.highlight} exporting={exporting} showCharts={showCharts}/>}
+        {!!cited.length && <div className="rp-cited-metrics"><table><thead><tr><th>{table ? "Chapter context" : "Supporting measure"}</th><th>{table ? "Chapter aggregate" : "Selected month"}</th><th>MoM</th><th>YoY</th></tr></thead><tbody>{cited.map(({ id, data }) => <tr key={id}><th scope="row">{definition(id)?.label}</th><td>{fmt(id, data.total[id])}</td><td>{delta(id, data.total[id], data.prior[id])}</td><td>{delta(id, data.total[id], data.priorYear[id])}</td></tr>)}</tbody></table>{table && <p className="rp-context-note">Chapter aggregates cover the full scope. The chart and exact-value table above show the cited breakdown groups.</p>}</div>}
+        {cited[0] && drill && !exporting && <button type="button" className="deck-proof-toggle rp-source-button" data-export="omit" onClick={() => drill({ metric: cited[0].id, chapterId, table, group: card.highlight?.[0] })}><Database size={13}/>Explore source records</button>}
         {!!cited.length && <details className="deck-proof-definitions"><summary>Definitions & source coverage</summary>{cited.map(({ id, data }) => <p key={id}><b>{definition(id)?.label}</b> · {definition(id)?.description}<br/>{data.n.toLocaleString('en-IN')} contributing records · {data.history.length} months. {data.notes?.join(' ')}</p>)}</details>}
-        {!fullVisual && visual}
       </aside>}
-      {fullVisual && visual}
     </div>
   </article>;
 }

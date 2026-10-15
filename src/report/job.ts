@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { computeReport } from "./compute";
 import { chapters } from "./chapters";
 import { fallbackNarrative, generateNarratives } from "./narrative";
 import { findingsFor } from "./findings";
@@ -16,6 +15,7 @@ export type ReportRunStatus = "idle" | "running" | "done" | "stopped" | "failed"
  */
 interface ReportJob {
   status: ReportRunStatus;
+  mode: "generate" | "rewrite";
   stage: ReportStage;
   startedAt: number | null;
   finishedAt: number | null;
@@ -37,7 +37,7 @@ interface ReportJob {
 }
 
 export const useReportJob = create<ReportJob>((set) => ({
-  status: "idle", stage: null, startedAt: null, finishedAt: null, estimatedSeconds: 0, pending: [],
+  status: "idle", mode: "generate", stage: null, startedAt: null, finishedAt: null, estimatedSeconds: 0, pending: [],
   model: null, error: "", narrativeError: "", storageError: "", unseen: false, savedReports: [],
   studio: "", month: "", customization: null,
   set: (patch) => set(patch),
@@ -94,7 +94,7 @@ export async function startReport({ regenerate = false }: { regenerate?: boolean
   controller = run;
   const live = () => controller === run && !run.signal.aborted;
   job.set({
-    status: "running", error: "", narrativeError: "", storageError: "", unseen: false,
+    status: "running", mode: regenerate ? "rewrite" : "generate", error: "", narrativeError: "", storageError: "", unseen: false,
     model: regenerate ? previous : null, pending: [...customization.chapterIds],
     startedAt: Date.now(), finishedAt: null, estimatedSeconds: estimateSeconds(customization),
     stage: { label: "Reading the month", done: 0, total: 1 },
@@ -104,7 +104,7 @@ export async function startReport({ regenerate = false }: { regenerate?: boolean
   try {
     const reuse = regenerate && previous?.schemaVersion === 6 && previous.scope.studio === studio && previous.scope.month === month
       && chapters.filter(c => !c.derived).every(c => previous.chapters[c.id]);
-    const snapshot = reuse ? previous! : await computeReport({ studio, month }, (done, total, label) => {
+    const snapshot = reuse ? previous! : await (await import("./compute")).computeReport({ studio, month }, (done, total, label) => {
       if (live()) useReportJob.getState().set({ stage: { label, done, total: total + 1 } });
     });
     if (!live()) return;
