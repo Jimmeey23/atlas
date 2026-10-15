@@ -1,3 +1,4 @@
+import { assertReportRelease } from "../src/report/release-gate.mjs";
 import { randomUUID } from "node:crypto";
 import { adminConfigured, requireAdmin, unlockAdmin, verifyAdmin } from "./report-admin.mjs";
 const PREFIX = ".floor/reports/";
@@ -27,6 +28,7 @@ function validate(report) {
       throw fail("Report figures are malformed.");
   }
   validateExtras(report);
+  if (!report.importedChapters?.length) { try { assertReportRelease(report); } catch (error) { throw fail(error.message); } }
 }
 
 const plainRecord = value => value == null || (typeof value === "object" && !Array.isArray(value));

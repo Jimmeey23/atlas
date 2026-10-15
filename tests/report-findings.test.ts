@@ -61,8 +61,8 @@ test('history findings flag anomalies, streaks and the gap to the studio\'s own 
   assert.match(text, /fallen for 6 consecutive months/);
   const benchmark = found.find(f => f.kind === 'benchmark')!;
   assert.match(benchmark.text, /best month in the last year/);
-  // 18pp × (1100/0.55 capacity) × ₹500 per visit.
-  assert.ok(Math.abs(benchmark.inr! - 0.18 * 2000 * 500) < 1);
+  // Attributed revenue per visit does not price an incremental seat.
+  assert.equal(benchmark.inr, undefined);
   assert.equal(found.find(f => f.kind === 'streak')!.tone, 'risk');
 });
 
@@ -79,7 +79,7 @@ test('cross-chapter findings name popular instructors who convert poorly, and th
   assert.match(cross.find(f => f.tone === 'opportunity')!.text, /Chirag.*Dev/);
 });
 
-test('targets are reported once and the shortfall is valued', () => {
+test('targets are reported once without inventing marginal seat value', () => {
   const sessionsTotal = { fill_rate: 0.5, attendance: 1000, capacity: 2000 };
   const m = model({
     'executive-summary': chapter('executive-summary', { total: { ...sessionsTotal, revenue: 400000 } }),
@@ -88,8 +88,7 @@ test('targets are reported once and the shortfall is valued', () => {
   const targets = ledger(findingsFor(m)).filter(f => f.kind === 'target');
   assert.equal(targets.length, 1, 'fill rate appears in several chapters but its target is reported once');
   assert.equal(targets[0].tone, 'risk');
-  // 10pp × 2000 capacity × ₹400 per visit.
-  assert.ok(Math.abs(targets[0].inr! - 0.1 * 2000 * 400) < 1);
+  assert.equal(targets[0].inr, undefined);
 });
 
 test('valued findings rank first and the payload carries their value', () => {
@@ -178,7 +177,7 @@ test('failed recommendation generation retains calculated proposals and labels t
   assert.equal(fallback.cards[0].focus,'kpis');
 });
 
-test('v4 insights request lenses and metric ids, and reject unavailable evidence references', async () => {
+test('v5 insights request lenses and metric ids, and reject unavailable evidence references', async () => {
   const originalFetch = globalThis.fetch, originalStorage = (globalThis as any).localStorage;
   (globalThis as any).localStorage = { getItem: () => null, setItem: () => {} };
   const bodies: any[] = [];
@@ -190,7 +189,7 @@ test('v4 insights request lenses and metric ids, and reject unavailable evidence
   try {
     const sales = chapter('revenue-performance', { total: { gross_revenue: 1000, aov: 50 }, prior: { gross_revenue: 900 } });
     const out = await generateNarratives({ ...model({ 'revenue-performance': sales }), customization: { title: '', subtitle: '', preparedFor: '', preparedBy: '', audience: 'Executive board', tone: 'Professional', detail: 'Comprehensive', instructions: '', chapterIds: ['revenue-performance'], theme: 'light', lenses: ['risk', 'win'] } });
-    assert.equal(bodies[0].insightVersion, 4);
+    assert.equal(bodies[0].insightVersion, 5);
     assert.ok(bodies[0].metricIds.includes('gross_revenue'));
     assert.ok(!bodies[0].metricIds.includes('fill_rate'), 'only metrics this chapter holds are citable');
     assert.deepEqual(bodies[0].lenses, ['risk', 'win']);

@@ -615,7 +615,8 @@ export function intelligenceRoutes(
       highlight: { type: 'array', items: textField },
       priority: { type: 'string', enum: ['high','medium','low'] },
       ownerArea: { type: 'string', enum: ['Leadership','Studio operations','Sales & front desk','Marketing','Instructor management','Member experience','Finance'] },
-      horizon: { type: 'string', enum: ['Immediate','Next 30 days','Next quarter','Monitor'] },
+      horizon: version >= 5 ? textField : { type: 'string', enum: ['Immediate','Next 30 days','Next quarter','Monitor'] },
+      ...(version >= 5 ? { priorActionResult: textField } : {}),
       recommendation: textField,
       confidence: { type: 'string', enum: ['high','medium','low'] },
     } : null;

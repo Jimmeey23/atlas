@@ -1,3 +1,4 @@
+import { controlLimits } from "../../../report/statistics";
 import { useMemo, useState } from "react";
 import { ChartLine, ChartColumn, ChartArea, CalendarRange } from "lucide-react";
 import { DropdownField } from "../../ui/DropdownField";
@@ -43,10 +44,11 @@ export function TrendChartPanel({ history, ids, selected, onSelect, title }: { h
     const series = active.flatMap((id, n) => {
       const color = c.series[n % c.series.length];
       const values = history.map(r => r[id] == null ? null : Number(r[id]));
+      const limits = controlLimits(values);
       const yAxisIndex = axes.length > 1 && percent(id) ? 1 : 0;
       // Thin lines, no markers except the pinned month, which gets a ringed dot and its value.
       const pinned = months.indexOf(selected);
-      const main = { name: label(id), type: type === "bar" ? "bar" : "line", yAxisIndex, data: values, smooth: .25, showSymbol: false, symbol: "circle", symbolSize: 6, barMaxWidth: 18, itemStyle: { color, borderRadius: type === "bar" ? [3, 3, 0, 0] : 0 },
+      const main = { markLine: limits ? {silent:true,symbol:'none',label:{formatter:'{b}'},data:[{name:'Baseline mean',yAxis:limits.mean},{name:'Upper 3σ',yAxis:limits.upper},{name:'Lower 3σ',yAxis:percent(id)?Math.max(0,limits.lower):limits.lower}]} : undefined, name: label(id), type: type === "bar" ? "bar" : "line", yAxisIndex, data: values, smooth: .25, showSymbol: false, symbol: "circle", symbolSize: 6, barMaxWidth: 18, itemStyle: { color, borderRadius: type === "bar" ? [3, 3, 0, 0] : 0 },
         lineStyle: { width: 1.75, color }, areaStyle: type === "area" ? { color, opacity: .08 } : undefined,
         markPoint: pinned >= 0 && values[pinned] != null ? { symbol: "circle", symbolSize: 9, itemStyle: { color, borderColor: c.surface, borderWidth: 2 },
           label: { show: true, position: "top", distance: 8, color: c.text1, fontSize: 11, fontWeight: 600, formatter: () => fmt(id, values[pinned]) }, data: [{ coord: [pinned, values[pinned]] }] } : undefined };

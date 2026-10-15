@@ -44,10 +44,10 @@ export function DeckInsightCard({ card, model, chapterId, index, total, plan = f
       </div></div>
       {(cited.length > 0 || table || card.evidence) && <aside className="deck-insight-proof" aria-label="Evidence">
         <div className="rp-evidence-citation"><span className="deck-eyebrow"><ShieldCheck size={13}/>Evidence for this finding</span><ReportProse text={card.evidence}/><small>{model.scope.month} · frozen report figures{chapters.find(c => c.id === evidenceData?.id)?.network ? ' · network scope' : ` · ${model.scope.studio}`}</small></div>
-        {(table || cited.length > 0) && <EvidenceVisual data={evidenceData} table={table} metrics={cited.map(c => c.id)} month={model.scope.month} highlights={card.highlight} exporting={exporting} showCharts={showCharts}/>}
+        {(table || cited.length > 0) && <a href="#report-appendix">See the canonical chart and exact-value register in the appendix</a>}
         {!!cited.length && <div className="rp-cited-metrics"><table><thead><tr><th>{table ? "Chapter context" : "Supporting measure"}</th><th>{table ? "Chapter aggregate" : "Selected month"}</th><th>MoM</th><th>YoY</th></tr></thead><tbody>{cited.map(({ id, data }) => <tr key={id}><th scope="row">{definition(id)?.label}</th><td>{fmt(id, data.total[id])}</td><td>{delta(id, data.total[id], data.prior[id])}</td><td>{delta(id, data.total[id], data.priorYear[id])}</td></tr>)}</tbody></table>{table && <p className="rp-context-note">Chapter aggregates cover the full scope. The chart and exact-value table above show the cited breakdown groups.</p>}</div>}
         {cited[0] && drill && !exporting && <button type="button" className="deck-proof-toggle rp-source-button" data-export="omit" onClick={() => drill({ metric: cited[0].id, chapterId, table, group: card.highlight?.[0] })}><Database size={13}/>Explore source records</button>}
-        {!!cited.length && <details className="deck-proof-definitions"><summary>Definitions & source coverage</summary>{cited.map(({ id, data }) => <p key={id}><b>{definition(id)?.label}</b> · {definition(id)?.description}<br/>{data.n.toLocaleString('en-IN')} contributing records · {data.history.length} months. {data.notes?.join(' ')}</p>)}</details>}
+        {!!cited.length && <a className="deck-proof-definitions" href="#report-appendix">Definitions & source coverage · appendix</a>}
       </aside>}
     </div>
   </article>;

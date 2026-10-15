@@ -105,6 +105,7 @@ export function portfolioPayload(model: ReportModel, findings: Record<string, Fi
     chapter && !chapter.derived ? `The ${chapter.id} headline figures, definitions, full history and breakdowns are supplied in Figures; use those for this chapter.` : "",
     "Chapter headline figures (all tabs, including chapters omitted from display):\n" + headlinePayload(model, chapter && !chapter.derived ? chapter.id : undefined),
     "Additional connected context:\n" + JSON.stringify(model.additionalContext ?? []),
+    "Governed operational intelligence and explicit evidence gaps:\n" + JSON.stringify(model.intelligence ?? {}),
     "Different source populations must not be added or joined without verified keys; Meta and KRA are network/account context. n=0 indicates no contributing records, not demonstrated zero performance.\nSource freshness and coverage:\n" + JSON.stringify(model.sources ?? []),
   ].filter(Boolean).join("\n\n");
 }
@@ -173,24 +174,24 @@ const COMPARISON_FOCUS: Record<string, string> = {
 /** The v2 editorial contract: each card answers one leadership question and names the evidence that proves it. */
 function insightRules(model: ReportModel, spec: ChapterSpec) {
   const o = reportOptions(model.customization);
-  const recs = spec.id === "recommendations";
+  const recs = spec.id === "recommendations", executive = spec.id === "executive-summary";
   const lenses = INSIGHT_LENSES.filter(l => recs ? l.id === "next_step" : l.id !== "next_step" && o.lenses.includes(l.id));
   return [
-    "Return JSON with summary, metricCommentary and cards. Every card has headline, meaning, evidence, driver, trend, impact, action, watch, concentration, offset, recommendation, lens, focus, metrics, highlight, priority, ownerArea, horizon and confidence.",
+    "Return JSON with summary, metricCommentary and cards. Every card has headline, meaning, evidence, driver, trend, impact, action, watch, concentration, offset, recommendation, lens, focus, metrics, highlight, priority, ownerArea, horizon, priorActionResult and confidence.",
     "PURPOSE: a practical, decision-led review of the SELECTED MONTH. Every card answers exactly one leadership question, named by its lens. Do not repeat the same movement across cards, and do not write cards that merely restate a table.",
     "Lenses allowed in this chapter:\n" + lenses.map(l => `- ${l.id} (${l.label}): ${l.question}`).join("\n"),
     recs ? "Every card uses lens next_step." : "Use a mix of lenses where the evidence supports it; skip a lens rather than force it. The kpis verdict card may use any lens.",
     "headline: the verdict in at most 16 words, including the key number.",
-    "meaning (shown as 'Why it matters'): 45–80 words on the business consequence for members, revenue, capacity or the brand. Do not restate the figure.",
+    executive ? "meaning: at most 20 words stating the so-what for leadership." : "meaning (shown as 'Why it matters'): 45–80 words on the business consequence for members, revenue, capacity or the brand. Do not restate the figure.",
     "evidence: at most 40 words of exact supplied figures with their comparison periods.",
-    "driver (shown as 'Primary driver'): 30–60 words decomposing the movement: which breakdown rows or mix shifts contributed how much, and the offsetting force. Decompositions are arithmetic; label a causal idea as a hypothesis and name the check that would confirm it.",
+    executive ? "driver: at most 20 words stating why, from the supplied evidence." : "driver (shown as 'Primary driver'): 30–60 words decomposing the movement: which breakdown rows or mix shifts contributed how much, and the offsetting force. Decompositions are arithmetic; label a causal idea as a hypothesis and name the check that would confirm it.",
     "concentration (shown as 'Where it concentrates'): at most 30 words naming the specific segments, formats, slots, channels or instructors that carry most of the movement, with their share or contribution. Empty string when the movement is broad-based or no breakdown supports it.",
     "offset (shown as 'What held up'): at most 25 words on the strongest counter-signal: the metric or segment moving the other way, so the reading stays balanced. Empty string when nothing material offsets it.",
     `trend (shown as 'Structural or one-off?'): at most 35 words giving one verdict — new, persistent for n months, reversing, seasonal or one-off. ${COMPARISON_FOCUS[o.comparisonFocus]}`,
-    o.quantifyImpact
+    recs ? "impact: supported low–high conditional range with arithmetic and assumptions, or explicitly explain why it is unavailable; never empty." : o.quantifyImpact
       ? "impact (shown as 'Value at stake'): at most 30 words quantifying rupees, members, seats or sessions at stake with the arithmetic shown, labelled indicative where it rests on an average. Empty string when the evidence cannot be valued."
       : "impact: empty string.",
-    o.includeActions || recs
+    executive ? "action: at most 20 words naming the specific proposed change; ownerArea must name the responsible role. watch names the leading indicator." : o.includeActions || recs
       ? "action (shown as 'Recommended move'): at most 40 words — one concrete, practical move that follows from this evidence: what to change, where and for whom. No invented deadlines, named people, policies or promised uplift. watch (shown as 'Signal to watch'): at most 25 words naming the leading indicator and the threshold that would confirm or reject the reading next month."
       : "action and watch: empty strings.",
     recs
@@ -199,6 +200,7 @@ function insightRules(model: ReportModel, spec: ChapterSpec) {
     `metrics: 1–4 ids from AVAILABLE METRIC IDS that prove the claim. The page shows each one's value, MoM, YoY and monthly trend beside the card, so choose the ids a sceptical reader would check.`,
     "focus: kpis for the single chapter verdict card, trend when the claim rests on the monthly history, cross for cross-chapter context, otherwise the breakdown ID whose chart proves the claim.",
     "highlight: up to 4 exact group labels, copied character-for-character from the focus breakdown table, that the claim names. Empty array when none.",
+    "For every recommendation, action must name a specific change, ownerArea a responsible role, horizon an explicit proposed ISO date (YYYY-MM-DD) for the deadline or review, impact a supported low–high scenario range or an explicit unavailable reason, and watch a leading indicator. Include priorActionResult with last month’s measured action result or 'Not recorded'. Never use generic validate-the-cause filler. Executive cards: three to five distinct verdicts, each meaning explains so-what, driver explains why, action names the move and ownerArea names the owner.",
     "priority: high when the item is material to the month's result or its value at stake; medium otherwise; low for context. ownerArea: the team best placed to act. horizon: when to act or review.",
     "confidence: high, medium or low, justified by source coverage, sample size and consistency across comparisons.",
     "summary: 160–220 words in 2–3 coherent paragraphs — the chapter's verdict: what happened, the largest quantified driver, the offset, whether it is durable, and the one thing leadership should take from it.",
@@ -214,6 +216,7 @@ function insightRules(model: ReportModel, spec: ChapterSpec) {
 
 /** Analytical depth contract informed by the reference report structure; figures come only from this snapshot. */
 const DEEP_REVIEW_RULES = [
+  "LEADERSHIP DISCIPLINE: prefer revenue breadth, repeatability, discounting and demand over payment method mix. Cash surges are reconciliation controls. Do not rank hosted-event acquisition against paid/trial funnels or flag immature cohorts as deteriorating. Use readable labels, not raw field names. Treat legacy renewal and snapshot rates separately from whole-base logo churn; never price empty seats at average attributed revenue per visit.",
   "METRIC DISCIPLINE: the Metric contracts and reading guide are the only definitions. Name a measure by its governed label, respect its Direction (an adverse rise is never an improvement), its Basis (cash, earned, cohort, snapshot, network) and its Aggregation (never average or add ratios). Where a contract lists a 'Not the same as' lookalike, do not substitute one for the other. If a claim needs a measure that has no contract in this prompt, say it is unavailable rather than defining it yourself.",
   "WORK BEFORE WRITING: for every card, first locate the supplied figure, its comparison and the breakdown row that carries it; then check the opposing explanation; then write. A card whose evidence you cannot point to in the supplied figures must not be written. Prefer fewer, deeper cards over breadth, and rank by value at stake.",
   "DEEP REVIEW: write an argument, not a metric recap. For each material finding connect signal → quantified driver → counter-evidence → consequence → decision. Use supplied engine-derived group analysis for full-population movers, rate/mix bridges, concentration and median-lift benchmarks; never infer all-group contributions from a truncated table.",
@@ -274,7 +277,7 @@ const cardCount = (model: ReportModel, derived = false) => {
 };
 
 const DERIVED_RULES: Record<string, (model: ReportModel) => string> = {
-  'executive-summary': model => `Write the executive brief across all tabs. Return one kpis verdict card and ${cardCount(model,true)} cross-report insights, ranked by materiality: the biggest wins, the biggest risks, the movement that best explains the month and the largest opportunity. Connect chapters (cash versus attendance, acquisition quality versus volume, member continuity, instructor and schedule mix) where the evidence supports it. Do not treat historical LTV as future revenue at risk.`,
+  'executive-summary': model => `Write the executive brief across all tabs. Return three to five verdict cards (one kpis, the remainder cross-report), ranked by materiality: the biggest wins, the biggest risks, the movement that best explains the month and the largest opportunity. Connect chapters (cash versus attendance, acquisition quality versus volume, member continuity, instructor and schedule mix) where the evidence supports it. Do not treat historical LTV as future revenue at risk.`,
   recommendations: model => `Return ${cardCount(model,true)} evidence-led recommendations, ordered by priority. Each must follow from a material selected-month finding and its year context. action is the move; recommendation explains why it beats the alternative, the trade-off and its guardrail; watch is how leadership will know it is working. ownerArea is a team, never a person. Do not promise uplift. Keep valuations conditional and distinct from actual cash.`,
   predictions: () => 'Explain only the supplied conditional scenarios, assumptions and their connection to selected-month performance. These are not forecasts. No probabilities, deadlines or task lists.',
 };
@@ -532,7 +535,7 @@ export async function generateNarratives(
           "BUSINESS CONTEXT (fixed facts; they override any assumption):\n" + BUSINESS_CONTEXT,
           insightRules(model, spec),
           sharedPopulationRule(spec),
-          `You are writing the "${spec.title}" chapter of the monthly management report for ${model.scope.studio}, ${monthLabel(model.scope.month)}.`,
+          `Report evidence freeze: ${model.builtAt}. You are writing the "${spec.title}" chapter of the monthly management report for ${model.scope.studio}, ${monthLabel(model.scope.month)}.`,
           DERIVED_RULES[spec.id]?.(model) ?? `Return ${cardCount(model)} cards: one "kpis" verdict card, ${data?.history.length ? "at most one \"trend\" card if the history shows something the findings do not, " : ""}and the rest as ranked insights built from the analyst findings. Breakdown IDs available for focus: ${focusIds.join(", ") || "none"}. Most breakdowns should not get their own card.`,
           "AVAILABLE METRIC IDS (id: label): " + metricIds.map(id => `${id}: ${definition(id)?.label ?? id}`).join("; "),
           preferences ? `Editorial preferences (subject to the evidence and accuracy rules above): ${preferences.slice(0, 8000)}${preferences.length > 8000 ? " [Long editorial preferences shortened.]" : ""} Do not invent figures or change metric definitions to satisfy preferences.` : "",
@@ -543,9 +546,9 @@ export async function generateNarratives(
           { label: "Already reported in earlier chapters (state each fact once: do not repeat these claims or their figures; refer to them only to build on them):", text: spec.derived ? "" : coveredDigest(out, spec.id) },
           { label: "All-tab performance context (independent of visible chapter selection):", text: portfolio },
         ]);
-        const extra = { insightVersion: 4, metricIds, lenses: spec.id === "recommendations" ? ["next_step"] : o.lenses.filter(l => l !== "next_step") };
+        const extra = { insightVersion: 5, metricIds, lenses: spec.id === "recommendations" ? ["next_step"] : o.lenses.filter(l => l !== "next_step") };
         // Include complete pre-budget evidence: changes to omitted records must invalidate reuse too.
-        const fingerprint = await analysisKey({ version: 18, providerModel, providerPolicy, message, focusIds, extra,
+        const fingerprint = await analysisKey({ version: 19, providerModel, providerPolicy, message, focusIds, extra,
           figures, portfolio, preferences, scenarios: spec.id === "predictions" ? forwardScenarios(model) : "" });
         const key = `${CACHE_PREFIX}${model.scope.studio}:${model.scope.month}:${spec.id}:${fingerprint}`;
         const previous = model.narratives[spec.id];

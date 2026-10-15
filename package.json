@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx scripts/dev.mjs",
-    "build": "tsc -b && vite build && node scripts/build-api.mjs",
+    "build": "npm run check:report && tsc -b && vite build && node scripts/build-api.mjs",
     "start": "NODE_ENV=production tsx server/index.mjs",
     "test": "tsx --test tests/*.test.ts",
     "eval:agent": "tsx scripts/agent-eval.mjs",
@@ -14,7 +14,8 @@
     "verify:atlas": "node scripts/verify-atlas.mjs",
     "build:api": "node scripts/build-api.mjs",
     "verify:report-page": "node scripts/verify-report-page.mjs",
-    "verify:report-deck": "node scripts/verify-report-deck.mjs"
+    "verify:report-deck": "node scripts/verify-report-deck.mjs",
+    "check:report": "tsx --test tests/report-release-gate.test.ts"
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.30.0",

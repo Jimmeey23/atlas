@@ -49,7 +49,7 @@ export function RenewalCohorts({ version, onDrill }: { version: number; onDrill:
     };
   }, [filters, transient, version, field]);
   const cells = (r: Row, segment?: string) => <>
-    {["due", "renewed", "lapsed", "frozen"].map(
+    {["due", "renewed", "lapsed", "frozen", "pending"].map(
       (k) => (
         <td key={k}><button className="scorecard-cell" aria-label={`Inspect ${k} memberships for ${r.month}${segment ? ` · ${segment}` : ""}`} onClick={() => drill(r, k)}>{r[k]}</button></td>
       ),
@@ -68,10 +68,10 @@ export function RenewalCohorts({ version, onDrill }: { version: number; onDrill:
         14 completed months, independent of date filters. Other filters apply.
         One paid ongoing membership per member per expiry month; zero-value and
         restricted memberships (intro, 2 for 1, single class, private, credit)
-        are excluded. Total due = Renewed + Lapsed + Frozen. Lapsed means it
-        was the member's most recent membership and the sheet records a
-        Churned Date. Renewed means a later paid membership exists, or no churn
-        is recorded. Frozen is the membership's own status.
+        are excluded. Total due = Renewed + Expired/lapsed + Frozen + Pending.
+        Renewed requires a later observed paid membership. Expired/lapsed means
+        no renewal after a 14-day grace period or a recorded Churned Date.
+        Pending means expiry within grace. Frozen is the membership’s own status.
       </p>
       <GroupByPicker name="Renewals" label="Split months by" value={split} onChange={setSplit} fields={fields} defaults={[]} min={0} max={1} emptyLabel="No split" />
       {error ? (
@@ -85,8 +85,9 @@ export function RenewalCohorts({ version, onDrill }: { version: number; onDrill:
                   "Expiry month",
                   "Total due",
                   "Renewed",
-                  "Lapsed",
+                  "Expired / lapsed",
                   "Frozen",
+                  "Pending (14-day grace)",
                   "Renewal rate",
                 ].map((x) => (
                   <th key={x}>{x}</th>

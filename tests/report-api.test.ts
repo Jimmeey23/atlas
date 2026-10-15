@@ -16,7 +16,7 @@ async function serve(app: ReturnType<typeof express>) {
   return { url: `http://127.0.0.1:${(server.address() as any).port}`, close: () => new Promise<void>(r => { server.closeAllConnections(); server.close(() => r()); }) };
 }
 const snapshot = () => ({ scope: { studio: 'Kenkere House', month: '2026-09' }, builtAt: '2026-10-06T10:00:00Z',
-  chapters: {}, narratives: { overview: { summary: 'Recorded performance.', cards: [], generated: true } }, figuresHash: 'abc' });
+  chapters: {sessions:{id:'sessions',n:5,total:{attendance:100},prior:{attendance:90},priorYear:{},groups:[],history:[]}}, narratives: { sessions: { summary: 'Recorded performance.', cards: [{headline:'Demand rose',meaning:'Check demand.',evidence:'100 versus 90 visits.',action:'Review schedule.'}], generated: true } }, figuresHash: 'abc' });
 
 test('report database snapshots survive a new route instance and preserve immutable versions', async () => {
   const documents = new Map<string, any>();
@@ -63,6 +63,12 @@ test('report narration bypasses chat tools and returns a structured chapter', as
     assert.ok(schema.required.includes('plainLanguage')); assert.ok(schema.required.includes('confidence'));
     assert.ok(schema.required.includes('impact')); assert.ok(schema.required.includes('watch'));
     assert.match(call.instructions, /Session-attributed revenue is not cash collections/);
+    await fetch(api.url + '/api/reports/narrative', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'Write an actionable recommendation.',editorial:true,insightVersion:5})});
+    const v5=call.text.format.schema.properties.cards.items;
+    assert.ok(v5.required.includes('priorActionResult'));
+    assert.equal(v5.properties.horizon.type,'string');
+    assert.equal(v5.properties.horizon.enum,undefined,'ISO deadlines must be accepted');
+
   } finally { await api.close(); await rm(root, { recursive: true, force: true }); }
 });
 

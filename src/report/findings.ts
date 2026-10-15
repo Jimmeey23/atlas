@@ -130,7 +130,7 @@ export function valueContext(model: ReportModel): ValueContext {
   const exec = model.chapters["executive-summary"]?.total ?? {};
   const revenue = num(exec.revenue), visits = num(exec.attendance);
   return {
-    revPerVisit: revenue != null && visits ? revenue / visits : null,
+    revPerVisit: null, // Average attributed revenue is not marginal paid-seat yield.
     aov: num(model.chapters["revenue-performance"]?.total.aov),
     firstPurchase: num(model.chapters["conversion-funnel"]?.total.avg_first_purchase),
   };

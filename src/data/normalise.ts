@@ -470,8 +470,8 @@ export function normalise(
                     ? "Amount Paid"
                     : "Revenue",
       ),
-      net: n("Price Excluding VAT In Currency"),
-      vat: n("Payment VAT", "Vat"),
+      net: n("Price Excluding GST In Currency", "Price Excluding VAT In Currency"),
+      vat: n("Payment GST", "GST", "Payment VAT", "Vat"),
       discount: k === "sales"
         ? n("Sale Item Unit Discount Value") != null && n("Sale Item Quantity") != null
           ? n("Sale Item Unit Discount Value")! * n("Sale Item Quantity")!

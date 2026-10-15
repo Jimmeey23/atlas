@@ -1,3 +1,4 @@
+import { assertReportRelease, assertRenderedReport } from "./release-gate.mjs";
 import baseCSS from "../design/report.css?raw";
 import reviewCSS from "../design/report-review.css?raw";
 import v2CSS from "../design/report-v2.css?raw";
@@ -48,6 +49,8 @@ export const reportFileName = (model: ReportModel) =>
  * downloads is what was reviewed on screen.
  */
 export async function serialiseReport(element: HTMLElement, model: ReportModel) {
+  if (!model.importedChapters?.length) assertReportRelease(model);
+  assertRenderedReport(element);
   const clone = element.cloneNode(true) as HTMLElement;
   // The in-app chrome has no meaning in a file; the sticky contents rail does.
   clone.setAttribute("data-report-theme", model.customization?.theme ?? "light");

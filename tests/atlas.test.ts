@@ -62,13 +62,14 @@ test("renewal cohorts use expiry month instead of purchase month and have exhaus
     assert.equal(Number(august.renewed), 1);
     assert.equal(Number(august.lapsed), 1);
     const september = rows.find((r) => r.month === "2026-09")!;
-    assert.equal(Number(september.renewed), 1);
+    assert.equal(Number(september.renewed), 0);
+    assert.equal(Number(september.pending), 1);
     assert.equal(Number(september.frozen), 1);
     assert.equal(rows.find((r) => r.month === "2026-10"), undefined, "unexpired memberships are not yet due");
     for (const row of rows)
       assert.equal(
         Number(row.due),
-        ["renewed", "lapsed", "frozen"].reduce(
+        ["renewed", "lapsed", "frozen", "pending"].reduce(
           (s, k) => s + Number(row[k]),
           0,
         ),

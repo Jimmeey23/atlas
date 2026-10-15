@@ -260,7 +260,7 @@
   },
   {
     "id": "net_revenue",
-    "label": "Net of VAT",
+    "label": "Net of recorded GST",
     "expression": "SUM(revenue-vat) FILTER (WHERE revenue IS NOT NULL AND vat IS NOT NULL)",
     "sources": [
       "Sales.Payment Value",
@@ -274,7 +274,7 @@
   },
   {
     "id": "vat",
-    "label": "VAT",
+    "label": "Recorded GST",
     "expression": "SUM(vat)",
     "sources": [
       "Sales.Payment VAT"

@@ -1,3 +1,4 @@
+import { unsupportedReportMetrics } from "./policy";
 import { chapters, type ChapterSpec } from "./chapters";
 import { metrics } from "../semantics/metrics";
 import { metricTable } from "../semantics/catalogue";
@@ -51,7 +52,7 @@ export function ownedMetricIds(spec: ChapterSpec): string[] {
   const home = homeChapter(spec);
   const homeSet = new Set([...tabMetricIds(home), ...explicit(home)]);
   const mine = home.id === spec.id ? [...tabMetricIds(spec), ...explicit(spec)] : explicit(spec).filter(id => !homeSet.has(id));
-  return [...new Set(mine)];
+  return [...new Set(mine)].filter(id=>!unsupportedReportMetrics.has(id));
 }
 
 /** True when another chapter of the same population reports this measure. */

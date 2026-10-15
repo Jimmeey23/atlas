@@ -12,7 +12,7 @@ async function serve(app: ReturnType<typeof express>) {
   return { url: `http://127.0.0.1:${(server.address() as any).port}`, close: () => new Promise<void>(r => { server.closeAllConnections(); server.close(() => r()); }) };
 }
 const snapshot = (month = '2026-09') => ({ scope: { studio: 'Kenkere House', month }, builtAt: '2026-10-06T10:00:00Z',
-  chapters: {}, narratives: { overview: { summary: 'Recorded performance.', cards: [{ headline: 'Attendance fell', meaning: 'm', evidence: 'e', action: 'a', focus: 'kpis' }], generated: true } }, figuresHash: 'abc' });
+  chapters: {overview:{id:'overview',n:5,total:{attendance:100},prior:{attendance:120},priorYear:{},history:[],groups:[]}}, narratives: { overview: { summary: 'Recorded performance.', cards: [{ headline: 'Attendance fell', meaning: 'm', evidence: 'e', action: 'a', focus: 'kpis' }], generated: true } }, figuresHash: 'abc' });
 
 function harness() {
   const documents = new Map<string, any>();
@@ -63,7 +63,7 @@ test('admin edits need an unlocked session and persist in place; notes do not', 
     assert.equal(reloaded.id, saved.id);
     assert.equal(reloaded.narratives.overview.summary, 'Rewritten by an admin.');
     assert.equal(reloaded.replacements['overview:summary:metrics'].title, 'One takeaway');
-    assert.deepEqual(reloaded.chapters, {}, 'recorded figures stay frozen');
+    assert.deepEqual(reloaded.chapters, snapshot().chapters, 'recorded figures stay frozen');
     assert.ok(reloaded.editedAt);
     await post(`${api.url}/api/reports/${saved.id}/notes`, { presenterNotes: { 'overview:cover': 'Open with the dip.' }, speakerNotes: { 'overview:glance': { opener: 'Hi', points: [], numbers: [], questions: [], transition: '' } } }, {}, 'PATCH');
     await post(`${api.url}/api/reports/${saved.id}/notes`, { speakerNotes: { 'overview:glance': null } }, {}, 'PATCH');

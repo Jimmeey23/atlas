@@ -19,7 +19,7 @@ import type { ReportComponentSpec, ReportModel } from "../../../report/model";
 import { EditContext, setIn, Slot, type DeckEdit } from "./editing";
 import { FlipMetricCard } from "./FlipMetricCard";
 import { BriefingPanel, DecisionPanel } from "./Briefing";
-import { CoverPage } from "./CoverPage";
+import { LeadershipFront } from "./LeadershipFront";
 import { ContinuousReport } from "./ContinuousReport";
 import { MetricRegister } from "./MetricRegister";
 import { Performers } from "./Performers";
@@ -164,7 +164,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
 
   function body() {
     const s = page.section;
-    if (s === "cover") return <Slot id={slot("cover")} tab={tab.id} section={s} kind="glance" describe="cover scorecard"><CoverPage model={model} tabs={tabs} ranked={ranked} onNavigate={open} /></Slot>;
+    if (s === "cover") return <Slot id={slot("cover")} tab={tab.id} section={s} kind="glance" describe="cover scorecard"><LeadershipFront model={model} /></Slot>;
     if (s === "summary") return <>
       {!!ids.length && data && <Slot id={slot("metrics")} tab={tab.id} section={s} kind="metrics" describe="key metric cards">
         <CompleteMetricGrid items={ids} render={id => <FlipMetricCard key={id} id={id} data={data} target={model.customization?.targets?.[id]}

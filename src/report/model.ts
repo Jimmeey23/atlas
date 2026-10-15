@@ -45,6 +45,7 @@ export interface GroupAnalysis {
   medianLift?: { metric: string; median: number; groupsBelow: number; units: number };
 }
 export interface ChapterData {
+  populationKey?: string;
   id: string;
   /** Figures for the selected month. */
   total: Row;
@@ -117,6 +118,7 @@ export interface InsightCard {
   confidence?: 'high' | 'medium' | 'low';
   /** Money or volume at stake, with its arithmetic. */
   impact?: string;
+  priorActionResult?: string;
   /** The leading indicator and threshold to review next month. */
   watch?: string;
   /** Where the movement concentrates: the segments, slots or people that carry most of it. */
@@ -210,6 +212,7 @@ export interface ReportSignal {
   n: number;
 }
 export interface ReportModel {
+  intelligence?: import("./intelligence").OperationalIntelligence;
   /** Supplied source documents, frozen with this saved report. */
   importedChapters?: ImportedChapterSource[];
   recordSnapshots?: Record<string,Record<string,string>>;

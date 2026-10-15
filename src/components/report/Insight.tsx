@@ -1,3 +1,4 @@
+import { controlLimits } from "../../report/statistics";
 import { InsightDrilldown } from "./InsightDrilldown";
 import { TrendingUp, TriangleAlert, GitBranch, Lightbulb, Radar, ArrowRightCircle, Target, Gauge, Activity, Coins, Eye, Users, CalendarClock, Crosshair, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
@@ -102,14 +103,16 @@ export function FocusTrend({ id, history }: { id: string; history: Row[] }) {
   const values = history.map(row => row[id] == null ? null : Number(row[id]));
   const finite = values.filter((v): v is number => v != null && Number.isFinite(v));
   if (finite.length < 3) return null;
-  const W = 360, H = 120, peak = Math.max(...finite), floor = Math.min(...finite, 0), span = peak - floor || 1;
+  const limits = controlLimits(values);
+  const W = 360, H = 120, peak = Math.max(...finite, limits?.upper ?? -Infinity), floor = Math.min(...finite, limits?.lower ?? 0, 0), span = peak - floor || 1;
   const x = (i: number) => 34 + i / Math.max(values.length - 1, 1) * (W - 44);
   const y = (v: number) => H - 20 - (v - floor) / span * (H - 34);
   let d = '';
   values.forEach((v, i) => { if (v != null && Number.isFinite(v)) d += `${i === 0 || values[i - 1] == null ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)} `; });
-  return <figure className="r2-trend"><figcaption><span>{label(id)}</span><small>{history.length} months · selected month marked</small></figcaption>
+  return <figure className="r2-trend"><figcaption><span>{label(id)}</span><small>{history.length} months · {limits ? "exploratory 3σ limits" : "control limits need 12 prior observations"}</small></figcaption>
     <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${label(id)} monthly trend`}>
       {[floor, peak].map((v, i) => <g key={i}><line className="r2-grid" x1="34" x2={W - 10} y1={y(v)} y2={y(v)} /><text className="r2-axis" x="30" y={y(v) + 3} textAnchor="end">{fmt(id, v)}</text></g>)}
+      {limits && [limits.lower, limits.mean, limits.upper].map((v,i)=><line key={`limit-${i}`} x1="34" x2={W-10} y1={y(v)} y2={y(v)} stroke="currentColor" strokeDasharray="4 4" opacity={.35}><title>{i===0?'Lower 3σ':i===1?'Baseline mean':'Upper 3σ'}: {fmt(id,v)}</title></line>)}
       <path d={d} className="r2-trend-line" />
       {values.map((v, i) => v == null ? null : <circle key={i} cx={x(i)} cy={y(v)} r={i === values.length - 1 ? 4 : 2.2} className={i === values.length - 1 ? 'r2-trend-now' : 'r2-trend-dot'}><title>{String(history[i].month)}: {fmt(id, v)}</title></circle>)}
       {history.map((row, i) => i % 3 === 0 || i === history.length - 1 ? <text key={i} className="r2-axis" x={x(i)} y={H - 4} textAnchor="middle">{String(row.month).slice(2)}</text> : null)}

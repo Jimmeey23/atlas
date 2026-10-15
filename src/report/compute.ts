@@ -1,3 +1,5 @@
+import { unsupportedReportMetrics } from "./policy";
+import { operationalIntelligence } from "./intelligence";
 import { ensureSource } from "../data/loader";
 import { websiteScope } from "../data/performance-marketing";
 import { query, fieldPresence, health, quote, type Row } from "../data/duckdb";
@@ -15,7 +17,7 @@ import { analyseGroup } from "./findings";
 import { evaluateRules } from "../insights/engine";
 import { groupQuery, rankedRows } from './group-query';
 import { sqlTypes } from '../data/normalise';
-import { HISTORY_MONTHS, figuresHash, monthBounds, shiftMonth } from "./period";
+import { HISTORY_MONTHS, figuresHash, hashText, monthBounds, shiftMonth } from "./period";
 export { HISTORY_MONTHS, figuresHash, monthBounds, monthLabel, shiftMonth } from "./period";
 
 /** The report scopes itself: one studio, one month, every other filter cleared. */
@@ -24,7 +26,7 @@ export function scopeFilters(scope: ReportScope, month = scope.month): Filters {
 }
 
 /** A metric the registry does not define is dropped rather than queried into an error. */
-const usableMetrics = (ids: string[]) => ids.filter((id) => definition(id));
+const usableMetrics = (ids: string[]) => ids.filter((id) => definition(id) && !unsupportedReportMetrics.has(id));
 const tracked = new Set(['location','trainer','format','source','category','day','time','member','month','status','product','associate']);
 const carries = (source: string, field: string) => !tracked.has(field) || !fieldPresence[source] || fieldPresence[source].has(field);
 export const factsFor = (spec: ChapterSpec, filters: Filters) => spec.renewal
@@ -159,6 +161,7 @@ async function computeChapter(spec: ChapterSpec, scope: ReportScope): Promise<Ch
   const byMonth = new Map(xHistory.map(row => [String(row.month), row]));
   return {
     id: spec.id,
+    populationKey: `${scope.studio}|${scope.month}|${spec.source}|${!!spec.network}|${!!spec.renewal}|${!!spec.website}`,
     total: { ...(xTotal[0] ?? {}), ...(xSnapshot[0] ?? {}), ...(total[0] ?? {}), ...(snapshotTotal[0] ?? {}) },
     prior: withExtra(prior[0] ?? {}, xPrior),
     priorYear: withExtra(priorYear[0] ?? {}, xPriorYear),
@@ -208,9 +211,19 @@ export async function computeReport(
     const keys=['month','closed','cutoff','revenue','baselineRevenue','previousRevenue','revenueYoY','revenueMoM','churnRate','baselineChurnRate','churnReduction','leads','scheduled','completed'];
     additionalContext.push({title:'KRA performance',scope:'Network / role scorecard',status:month?'available':'outside selected-month coverage',data:month ? Object.fromEntries(keys.filter(k=>k in month).map(k=>[k,month[k]])) : undefined,limitations:`Source as of ${result.asOf ?? 'unknown'}. Network / role-level figures; do not attribute to ${scope.studio} or sum with studio revenue. Manual milestone evidence and different-period totals are excluded.`});
   } catch {additionalContext.push({title:'KRA performance',scope:'Network / role scorecard',status:'unavailable',limitations:'No verified selected-month KRA snapshot was available; do not infer performance.'});}
+  const intelligenceSources: Record<string, Row[]> = {};
+  await Promise.all(['new','checkins','sales','lapsed','sessions','payroll','leads'].map(async key => {
+    try {
+      await ensureSource(key);
+      intelligenceSources[key] = await query(`SELECT * EXCLUDE(raw_json) FROM ${metricFacts({ ...scopeFilters(scope), from: "", to: "" }, key, [])}`);
+    } catch { /* An absent source is explicitly unavailable in intelligence. */ }
+  }));
+  try { intelligenceSources.networkSessions = await query(`SELECT * EXCLUDE(raw_json) FROM sessions WHERE location<>${quote(scope.studio)} AND month=${quote(scope.month)}`); } catch { /* unavailable */ }
+  const intelligence = operationalIntelligence(intelligenceSources, scope.month, today());
   onProgress?.(done, queryable.length, "Figures complete");
   return {
     schemaVersion: 6,
+    intelligence,
     additionalContext,
     sources: Object.values(health).filter(s => queryable.some(spec => spec.source === s.key)).map(s => ({ key: s.key, title: s.title, fetchedAt: s.fetchedAt, stale: !!s.stale, status: s.status })),
     rate: context(scopeFilters(scope), []).rate,
@@ -219,6 +232,6 @@ export async function computeReport(
     chapters: data,
     narratives: {},
     signals: [...signals].sort((a, b) => ({critical:0,attention:1,opportunity:2,context:3}[a.severity] - {critical:0,attention:1,opportunity:2,context:3}[b.severity]) || b.impactINR - a.impactINR).slice(0, 12).map(({ rule, severity, entity, title, template, impactINR, n }) => ({ rule, severity, entity, title, text: template, impactINR: Number(impactINR) || 0, n: Number(n) || 0 })),
-    figuresHash: figuresHash(data),
+    figuresHash: hashText(figuresHash(data) + JSON.stringify(intelligence)),
   };
 }

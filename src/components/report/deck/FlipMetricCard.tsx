@@ -60,7 +60,7 @@ export function FlipMetricCard({ id, data, target }: { id: string; data: Chapter
         title="Click for 14 months of history" onClick={() => toggle()} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } }}>
         <div className="deck-kpi-label"><span title={m?.label}>{m?.label ?? id}</span><ChartColumnBig size={13} aria-hidden="true" className="deck-flip-hint"/></div>
         <div className="deck-kpi-reading">
-          <span className="deck-kpi-value">{fmt(id, value)}</span>
+          <span className="deck-kpi-value">{value == null ? "Unavailable" : fmt(id, value)}</span>
           <Sparkline values={values} color="var(--accent)" />
         </div>
         <div className="deck-kpi-comparisons"><span className={`deck-kpi-delta metric-delta ${mom === "flat" ? "muted" : mom}`} title="Month on month"><Arrow size={12}/>{delta(id, value, prior)}<small>MoM</small></span><span className={`deck-kpi-delta metric-delta ${yoy === "flat" ? "muted" : yoy}`} title="Year on year"><YearArrow size={12}/>{delta(id, value, lastYear)}<small>YoY</small></span></div>

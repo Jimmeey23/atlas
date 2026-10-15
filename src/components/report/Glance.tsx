@@ -101,7 +101,7 @@ export function ActionPlan({ cards }: { cards: InsightCard[] }) {
   return <div className="r2-plan">
     <div className="r2-plan-head"><span className="r-eyebrow">Action plan</span><h3>{rows.length} moves, in priority order</h3><p>Owner areas and horizons are proposals for discussion. Values at stake are indicative and can overlap; do not add them up.</p></div>
     <div className="r-table-wrap"><table className="r-table r2-plan-table">
-      <thead><tr><th>#</th><th>Move</th><th>Why</th><th>Owner</th><th>When</th><th>At stake</th><th>Signal to watch</th></tr></thead>
+      <thead><tr><th>#</th><th>Move</th><th>Why</th><th>Owner</th><th>When</th><th>At stake</th><th>Last month’s result</th><th>Signal to watch</th></tr></thead>
       <tbody>{rows.map((card, i) => <tr key={i} data-priority={card.priority ?? 'medium'}>
         <td><span className="r2-plan-no">{chapterNumber(i)}</span><small className="r2-tag" data-priority={card.priority ?? 'medium'}>{card.priority ?? 'medium'}</small></td>
         <td><b>{card.action || card.headline}</b></td>
@@ -109,6 +109,7 @@ export function ActionPlan({ cards }: { cards: InsightCard[] }) {
         <td>{card.ownerArea ? <span className="r2-inline"><Users size={11}/>{card.ownerArea}</span> : '—'}</td>
         <td>{card.horizon ? <span className="r2-inline"><CalendarClock size={11}/>{card.horizon}</span> : '—'}</td>
         <td>{card.impact || '—'}</td>
+        <td>{card.priorActionResult || 'Not recorded'}</td>
         <td>{card.watch ? <span className="r2-inline"><Eye size={11}/>{card.watch}</span> : '—'}</td>
       </tr>)}</tbody>
     </table></div>

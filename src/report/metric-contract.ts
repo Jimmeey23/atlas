@@ -8,8 +8,8 @@ import { currentSnapshotMetrics, metricNotes } from "../semantics/evidence";
  */
 const NOT_THE_SAME_AS: Record<string, [string, string][]> = {
   revenue: [["gross_revenue", "session revenue is earned, attributed to attended sessions; gross revenue is cash collected on sales"]],
-  gross_revenue: [["revenue", "cash collected by payment date, not revenue earned by attendance"], ["net_revenue", "gross includes VAT"]],
-  net_revenue: [["gross_revenue", "net is payment value less VAT"]],
+  gross_revenue: [["revenue", "cash collected by payment date, not revenue earned by attendance"], ["net_revenue", "gross includes recorded GST"]],
+  net_revenue: [["gross_revenue", "net is payment value less recorded GST"]],
   payroll_revenue: [["revenue", "monthly instructor attribution from Payroll, rounded; not Sessions"]],
   fill_rate: [["booking_fill_rate", "fill counts attendance, booking fill counts reservations"], ["show_up_rate", "show-up divides by booked seats, not capacity"]],
   booking_fill_rate: [["fill_rate", "bookings include no-shows and late cancels"]],

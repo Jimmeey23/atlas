@@ -1,3 +1,4 @@
+import { assertReportRelease } from "./release-gate.mjs";
 import { create } from "zustand";
 import { chapters } from "./chapters";
 import { fallbackNarrative, generateNarratives } from "./narrative";
@@ -59,6 +60,7 @@ export async function persistReport(report: ReportModel, signal?: AbortSignal) {
   const job = useReportJob.getState();
   job.set({ storageError: "" });
   try {
+    assertReportRelease(report);
     const saved = await saveReport(report, signal);
     if (signal?.aborted) return;
     const current = useReportJob.getState();
@@ -102,7 +104,7 @@ export async function startReport({ regenerate = false }: { regenerate?: boolean
   let computed: ReportModel | null = null;
   const written: Record<string, ChapterNarrative> = {};
   try {
-    const reuse = regenerate && previous?.schemaVersion === 6 && previous.scope.studio === studio && previous.scope.month === month
+    const reuse = regenerate && previous?.intelligence && previous?.schemaVersion === 6 && previous.scope.studio === studio && previous.scope.month === month
       && chapters.filter(c => !c.derived).every(c => previous.chapters[c.id]);
     const snapshot = reuse ? previous! : await (await import("./compute")).computeReport({ studio, month }, (done, total, label) => {
       if (live()) useReportJob.getState().set({ stage: { label, done, total: total + 1 } });
@@ -129,6 +131,7 @@ export async function startReport({ regenerate = false }: { regenerate?: boolean
     const completedAt = Date.now();
     const completed: ReportModel = { ...computed, narratives,
       generation: { startedAt: new Date(writingStarted).toISOString(), completedAt: new Date(completedAt).toISOString(), durationMs: completedAt - writingStarted } };
+    assertReportRelease(completed);
     const failures = Object.entries(narratives).filter(([, n]) => n.error);
     useReportJob.getState().set({ model: completed, pending: [],
       narrativeError: failures.map(([id, n]) => `${id}: ${n.error}`).join(" · "),
