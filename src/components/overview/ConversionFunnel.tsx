@@ -17,7 +17,7 @@ const funnels = [
 ];
 
 /** Each funnel reads one governed source, so its steps match the figures on the other tabs. */
-export function ConversionFunnel({ version }: { version: number }) {
+export function ConversionFunnel({ version }: { version: string }) {
   const filters = useStore((s) => s.filters);
   const transient = useStore((s) => s.transient);
   const { data, loading, error } = useBoardData(

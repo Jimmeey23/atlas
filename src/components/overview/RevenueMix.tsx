@@ -11,7 +11,7 @@ import { useBoardData } from "./useBoardData";
 const palette = ["var(--accent)", "var(--accent-2)", "#0ea5e9", "#e11d48", "#64748b", "#14b8a6", "#a3a3a3"];
 
 /** Gross revenue split by sales category: the six largest and the remainder as "Other". */
-export function RevenueMix({ version }: { version: number }) {
+export function RevenueMix({ version }: { version: string }) {
   const filters = useStore((s) => s.filters);
   const transient = useStore((s) => s.transient);
   const { data, loading, error } = useBoardData(async () => {

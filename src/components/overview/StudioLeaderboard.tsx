@@ -13,7 +13,7 @@ import { useBoardData } from "./useBoardData";
 const options = ["gross_revenue", "attendance", "fill_rate"];
 
 /** Studios ranked on one metric, with change against the comparison period and a click-through filter. */
-export function StudioLeaderboard({ version }: { version: number }) {
+export function StudioLeaderboard({ version }: { version: string }) {
   const filters = useStore((s) => s.filters);
   const transient = useStore((s) => s.transient);
   const compare = useStore((s) => s.compare);
