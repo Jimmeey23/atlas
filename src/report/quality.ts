@@ -18,6 +18,38 @@ function evidenceTokens(text: string): string[] {
   });
 }
 
+const unitScale: Record<string, number> = { l: 1e5, cr: 1e7 };
+/** A token's value in base units, plus half its last displayed digit: the rounding a correct restatement may carry. */
+function tokenValue(token: string) {
+  const [, digits, unit] = token.match(/^([\d.]+)(.*)$/) ?? [];
+  if (!digits) return null;
+  const scale = unitScale[unit] ?? (unit === '%' || unit === 'pp' ? 0.01 : 1);
+  const decimals = digits.split('.')[1]?.length ?? 0;
+  return { value: parseFloat(digits) * scale, tolerance: 0.5 * 10 ** -decimals * scale, unit };
+}
+/** Supplied values in base units, sorted for lookup. Percent figures also stand as plain numbers. */
+function suppliedValues(tokens: Iterable<string>) {
+  const values: number[] = [];
+  for (const token of tokens) {
+    const t = tokenValue(token);
+    if (!t) continue;
+    values.push(t.value);
+    if (t.unit === '%' || t.unit === 'pp') values.push(t.value * 100);
+  }
+  return values.sort((a, b) => a - b);
+}
+/** True when the claim is a rounding of a supplied value: ₹1.58Cr of 15812345, or 54.9% of a 0.5491 ratio. */
+function roundsSupplied(token: string, values: number[]) {
+  const t = tokenValue(token);
+  if (!t) return false;
+  const near = (target: number) => {
+    let lo = 0, hi = values.length;
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (values[mid] < target - t.tolerance) lo = mid + 1; else hi = mid; }
+    return lo < values.length && values[lo] <= target + t.tolerance * (1 + 1e-9);
+  };
+  return near(t.value) || ((t.unit === '%' || t.unit === 'pp') && near(t.value * 100));
+}
+
 /** Fail closed for malformed references and uncited numeric evidence. Does not infer causal truth from prose. */
 export function validateNarrativeCards(cards: InsightCard[], metricIds: string[], focusIds: string[], model: ReportModel, chapter: string, suppliedEvidence: string, observations: string[] = []) {
   const heads = new Set<string>();
@@ -49,7 +81,8 @@ export function validateNarrativeCards(cards: InsightCard[], metricIds: string[]
     }
     const allowed = new Set(evidenceTokens(suppliedEvidence + '\n' + formatted.join(' ')));
     const observedText = [card.headline, card.meaning, card.driver, card.trend, card.concentration, card.offset, card.monthContext, card.yearContext, card.reasoning, ...observations].filter((text): text is string => typeof text === 'string').join(' ').split(/(?<=[.!?])\s+/).filter(sentence => !/\b(propos(?:ed|al)|target|hypothesis|hypotheses|scenario|if |could |might |may )/i.test(sentence)).join(' ');
-    const unsupported = numberTokens(card.evidence + ' ' + observedText).filter(token => !allowed.has(token));
+    const values = suppliedValues(allowed);
+    const unsupported = numberTokens(card.evidence + ' ' + observedText).filter(token => !allowed.has(token) && !roundsSupplied(token, values));
     if (unsupported.length) throw new Error(`Analysis included a numeric evidence claim not present in the supplied figures: ${[...new Set(unsupported)].join(', ')}. Use exact supplied values and units; do not calculate new observed claims.`);
     const causal = [card.meaning, card.driver, card.reasoning].filter(Boolean).join(' ').split(/(?<=[.!?])\s+/);
     if (causal.some(sentence => /\b(caused by|because of|due to|resulted in)\b/i.test(sentence) && !/\b(hypothesis|hypotheses|may|might|could|cannot establish|does not establish|not establish|not prove|check|test|verify)\b/i.test(sentence))) throw new Error('Analysis asserted an unverified cause. Rewrite insights to retry.');

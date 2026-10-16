@@ -21,6 +21,8 @@ interface ReportJob {
   startedAt: number | null;
   finishedAt: number | null;
   estimatedSeconds: number;
+  /** Seconds each chapter took to write in this run; cached chapters are left out. */
+  chapterSeconds: number[];
   /** Chapters still waiting for the model in the current run. */
   pending: string[];
   model: ReportModel | null;
@@ -38,7 +40,7 @@ interface ReportJob {
 }
 
 export const useReportJob = create<ReportJob>((set) => ({
-  status: "idle", mode: "generate", stage: null, startedAt: null, finishedAt: null, estimatedSeconds: 0, pending: [],
+  status: "idle", mode: "generate", stage: null, startedAt: null, finishedAt: null, estimatedSeconds: 0, chapterSeconds: [], pending: [],
   model: null, error: "", narrativeError: "", storageError: "", unseen: false, savedReports: [],
   studio: "", month: "", customization: null,
   set: (patch) => set(patch),
@@ -48,8 +50,17 @@ let controller: AbortController | null = null;
 
 export const reportRunning = () => useReportJob.getState().status === "running";
 
+const PACE_KEY = "atlas-report-pace-v1";
+/** Seconds per chapter observed in the last completed run, if any. */
+function rememberedPace(): number | null {
+  try { const v = Number(localStorage.getItem(PACE_KEY)); return Number.isFinite(v) && v > 0 ? v : null; } catch { return null; }
+}
+function rememberPace(chapterSeconds: number[]) {
+  if (!chapterSeconds.length) return;
+  try { localStorage.setItem(PACE_KEY, String(Math.round(chapterSeconds.reduce((a, b) => a + b, 0) / chapterSeconds.length))); } catch { /* the default pace applies */ }
+}
 export function estimateSeconds(c: ReportCustomization) {
-  return 20 + c.chapterIds.length * (c.detail === "Concise" ? 45 : 60);
+  return 20 + c.chapterIds.length * (rememberedPace() ?? (c.detail === "Concise" ? 45 : 60));
 }
 
 /** Mirrors the server's retention: pinned reports plus the latest KEEP_RECENT. */
@@ -98,7 +109,7 @@ export async function startReport({ regenerate = false }: { regenerate?: boolean
   job.set({
     status: "running", mode: regenerate ? "rewrite" : "generate", error: "", narrativeError: "", storageError: "", unseen: false,
     model: regenerate ? previous : null, pending: [...customization.chapterIds],
-    startedAt: Date.now(), finishedAt: null, estimatedSeconds: estimateSeconds(customization),
+    startedAt: Date.now(), finishedAt: null, estimatedSeconds: estimateSeconds(customization), chapterSeconds: [],
     stage: { label: "Reading the month", done: 0, total: 1 },
   });
   let computed: ReportModel | null = null;
@@ -116,6 +127,7 @@ export async function startReport({ regenerate = false }: { regenerate?: boolean
     // Figures render at once; chapters fill in as each one is written.
     useReportJob.getState().set({ model: computed });
     const writingStarted = Date.now();
+    let lastChapterAt = writingStarted;
     const narratives = await generateNarratives(
       computed,
       (done, total, label) => { if (live()) useReportJob.getState().set({ stage: { label: `Writing: ${label}`, done, total } }); },
@@ -123,12 +135,16 @@ export async function startReport({ regenerate = false }: { regenerate?: boolean
       (id, narrative) => {
         written[id] = narrative;
         if (!live() || !computed) return;
+        const now = Date.now(), took = (now - lastChapterAt) / 1000;
+        lastChapterAt = now;
         const state = useReportJob.getState();
-        state.set({ pending: state.pending.filter(p => p !== id), model: { ...computed, narratives: { ...written } } });
+        state.set({ pending: state.pending.filter(p => p !== id), model: { ...computed, narratives: { ...written } },
+          chapterSeconds: narrative.usage?.fromCache ? state.chapterSeconds : [...state.chapterSeconds, took] });
       },
     );
     if (!live()) return;
     const completedAt = Date.now();
+    rememberPace(useReportJob.getState().chapterSeconds);
     const completed: ReportModel = { ...computed, narratives,
       generation: { startedAt: new Date(writingStarted).toISOString(), completedAt: new Date(completedAt).toISOString(), durationMs: completedAt - writingStarted } };
     assertReportRelease(completed);

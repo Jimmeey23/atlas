@@ -213,6 +213,8 @@
 :root .report-doc.r2.deck-doc.p57-report-surface{padding:24px clamp(28px,4vw,60px)!important}
 :root .report-page.deck[data-report-design=analytical] .deck-body>.deck-tabs{flex-basis:186px;background:#fff;color:#556174;border-right:1px solid #e6eaf0;padding:22px 10px;gap:4px}
 :root .report-page.deck[data-report-design=analytical] .deck-tabs button{color:#5b6675;border-radius:6px;font-size:12px;min-height:40px;padding:9px 11px;line-height:1.45}
+:root .report-page.deck[data-report-design=analytical] .deck-tabs button:is(:hover,:focus-visible){background:#edf1f6;color:#1b2a40;border-color:#dce3ed}
+:root .report-page.deck[data-report-design=analytical] .deck-tabs button:focus-visible{outline:2px solid var(--report-accent,#22314b);outline-offset:2px}
 :root .report-page.deck[data-report-design=analytical] .deck-tabs button[aria-current=page]{background:#f3f5f8;color:#1b2a40;box-shadow:inset 2px 0 #1b2a40;font-weight:650}
 :root .report-page.deck[data-report-design=analytical] .deck-nav{height:66px;background:#fff;border-bottom:1px solid #e6eaf0;box-shadow:none;padding-inline:20px;gap:16px}
 :root .report-page.deck[data-report-design=analytical] .deck-brand{max-width:none}.report-page .deck-brand b{font-size:13px}.report-page .deck-brand small{font-size:10px;color:#6d7785}

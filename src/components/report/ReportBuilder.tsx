@@ -23,6 +23,7 @@ import type { ReportModel, ReportCustomization } from "../../report/model";
 import { KEEP_RECENT, listReports, loadReport, pinReport } from "../../report/storage";
 import { chapters } from "../../report/chapters";
 import { estimateSeconds, persistReport, retained, startReport, stopReport, useReportJob } from "../../report/job";
+import { remainingSeconds } from "../../report/eta";
 import "../../design/report-studio.css";
 import "../../design/report-modern.css";
 import "../../design/report-premium.css";
@@ -169,6 +170,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
   const analysisPreferences = (c?: ReportCustomization) => JSON.stringify([c?.audience, c?.tone, c?.detail, c?.instructions, c?.focusAreas ?? [], c?.targets ?? {}, c?.lenses ?? [], c?.insightsPerChapter, c?.includeActions, c?.quantifyImpact, c?.comparisonFocus]);
   const needsRewrite = !!model && !running && (analysisPreferences(model.customization) !== analysisPreferences(customization) || customization.chapterIds.some(id => !model.narratives[id]));
   const estimate = estimateSeconds(customization);
+  const remaining = remainingSeconds({ estimatedSeconds: job.estimatedSeconds, elapsed, pending: pending.length, chapterSeconds: job.chapterSeconds });
   const options = reportOptions(customization);
   const progress = stage && stage.total ? Math.round((stage.done / stage.total) * 100) : 0;
   const runChapters = (model?.customization?.chapterIds ?? customization.chapterIds).flatMap(id => chapters.find(c => c.id === id) ?? []);
@@ -214,7 +216,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
             {running && stage && <div className="rs-progress" role="status" aria-label="Report generation progress">
               <div className="rs-progress-head"><Loader2 size={15} className="rb2-spin"/><b>{stage.label}</b><span>{progress}%</span></div>
               <div className="report-progress-bar"><span style={{ width: `${progress}%` }} /></div>
-              <small>{elapsed < job.estimatedSeconds ? `About ${clock(job.estimatedSeconds - elapsed)} remaining` : `Taking longer than estimated · ${clock(elapsed)} elapsed`} · continues if you switch tabs</small>
+              <small>{remaining > 0 ? `About ${clock(remaining)} remaining` : pending.length ? `Taking longer than estimated` : `Finishing up`} · {clock(elapsed)} elapsed · continues if you switch tabs</small>
               {model && <ol className="rb2-chapter-steps">{runChapters.map(spec => {
                 const done = !pending.includes(spec.id);
                 const failed = done && model.narratives[spec.id]?.error;

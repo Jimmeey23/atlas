@@ -78,11 +78,16 @@
 @media (max-width: 760px) { .board-rings, .board-funnels { grid-template-columns: 1fr; }.board-ring { grid-template-columns: 78px minmax(0,1fr); padding: 18px; }.board-ring > svg { width: 78px; height: 78px; }.board-card { padding: 18px; gap: 20px; }.board-grid { gap: 14px; }.board-card > header { align-items: flex-start; }.board-hint { border: 0; padding: 0; }.board-tabs { width: 100%; }.board-tabs button { flex: 1; min-height: 44px; }.board-set, .board-ring form button, .board-ring input { min-height: 44px; }.board-funnel-panel { padding: 16px; } }
 @media (max-width: 480px) { .board-row { grid-template-columns: 24px minmax(80px, 1fr) auto; gap: 10px; }.board-bar { display: none; }.board-delta { grid-column: 3; }.board-name { grid-row: span 2; }.board-rank { grid-row: span 2; }.board-mix-body { grid-template-columns: 1fr; justify-items: center; }.board-mix-body svg { max-width: 180px; }.board-mix ul { width: 100%; }.board-card h3 { font-size: 17px; } }
 
-/* Pink identity for the overview board */
-#performance-board .board-card { border-top: 2px solid color-mix(in srgb, var(--accent) 70%, transparent); background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 7%, transparent), transparent 38%), var(--surface-1); }
-#performance-board .board-goals { background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 14%, transparent), color-mix(in srgb, var(--accent-2) 6%, transparent) 55%, transparent), var(--surface-1); }
-#performance-board .board-kicker { padding: 3px 9px; width: fit-content; border-radius: 99px; background: color-mix(in srgb, var(--accent) 14%, transparent); }
-#performance-board .board-tabs button[aria-selected="true"] { background: linear-gradient(120deg, var(--accent), color-mix(in srgb, var(--accent) 72%, #6d1048)); color: #fff; border-color: transparent; box-shadow: 0 3px 10px color-mix(in srgb, var(--accent) 35%, transparent); }
-#performance-board .board-ring-value { stroke: var(--accent); filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent) 45%, transparent)); }
+/* Overview identity follows the active workspace palette. */
+#performance-board .board-card { background: var(--surface-1); box-shadow: none; border-radius: 12px; padding: 22px 24px; gap: 20px; }
+#performance-board .board-goals { background: var(--surface-1); }
+#performance-board .board-kicker { width: fit-content; }
+#performance-board .board-card > header { align-items: flex-start; padding-bottom: 16px; border-bottom: 1px solid var(--board-line); }
+#performance-board .board-heading p { font-size: 11.5px; }
+#performance-board .board-hint { border: 0; padding: 2px 0; }
+#performance-board .board-ring { border: 0; background: var(--surface-inset); padding: 18px 16px; }
+#performance-board .board-funnel-panel { border: 0; }
+#performance-board .board-tabs button[aria-selected="true"] { background: linear-gradient(120deg, var(--accent), var(--accent-2)); color: #fff; border-color: transparent; box-shadow: 0 3px 10px color-mix(in srgb, var(--accent) 35%, transparent); }
+#performance-board .board-ring-value { stroke: var(--accent); }
 #performance-board .board-funnel-bar { background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
 #performance-board .board-funnels li.drop .board-funnel-bar { background: var(--warn); }

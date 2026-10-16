@@ -5,7 +5,7 @@
    active workspace onto --accent / --accent-2 on the document root. */
 
 :root {
-  --tab-0: #ff5fae; --tab-0-2: #ffa3d1;  /* Business overview — hot pink → blush */
+  --tab-0: #8b5cf6; --tab-0-2: #a78bfa;  /* Business overview — deep violet */
   --tab-1: #38bdf8; --tab-1-2: #818cf8;  /* Studio operations — azure → periwinkle */
   --tab-2: #2dd4bf; --tab-2-2: #a3e635;  /* Schedule & capacity — turquoise → lime */
   --tab-3: #fbbf24; --tab-3-2: #fb7185;  /* Instructor performance — amber → rose */
@@ -26,7 +26,7 @@
 }
 /* Light themes use the saturated 600 step: vivid, but readable on white. Every tab's pair is unique. */
 :root:is([data-theme="gloss"], [data-theme="ivory"], [data-theme="porcelain"], [data-theme="light-glass"]) {
-  --tab-0: #d6246e; --tab-0-2: #f472b6;
+  --tab-0: #6d28d9; --tab-0-2: #7c3aed;
   --tab-1: #0284c7; --tab-1-2: #4f46e5;
   --tab-2: #0d9488; --tab-2-2: #65a30d;
   --tab-3: #d97706; --tab-3-2: #e11d48;

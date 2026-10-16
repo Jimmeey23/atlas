@@ -72,3 +72,16 @@ test('generation repairs invalid highlights once and keeps unsupported output fa
   assert.match(rejected.sessions.error!, /999999/);
  } finally { globalThis.fetch = original; }
 });
+
+test('narrative validation accepts correct roundings of supplied raw values and rejects wrong ones', () => {
+ const supplied = '{"figures":[["gross_revenue",15812345,502.7,0.5491]]}';
+ const validate = (evidence: string) => validateNarrativeCards([{ ...card, evidence }], ['attendance'], [], model, 'sessions', supplied);
+ assert.doesNotThrow(() => validate('Collections reached ₹1.58Cr.'));
+ assert.doesNotThrow(() => validate('Collections reached ₹158.1 lakh.'));
+ assert.doesNotThrow(() => validate('Collections reached ₹1.6Cr.'));
+ assert.doesNotThrow(() => validate('Membership share was 54.9%.'));
+ assert.doesNotThrow(() => validate('503 buyers.'));
+ assert.throws(() => validate('Collections reached ₹1.9Cr.'), /numeric evidence/);
+ assert.throws(() => validate('Membership share was 60%.'), /numeric evidence/);
+ assert.throws(() => validate('901 buyers.'), /numeric evidence/);
+});

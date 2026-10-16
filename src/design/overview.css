@@ -1,0 +1,71 @@
+/* Overview: white surfaces on light themes; chrome, tabs and controls come from the shared tab styling (chrome.css). */
+:root:is([data-theme=gloss],[data-theme=ivory],[data-theme=porcelain],[data-theme=light-glass])[data-workspace=overview]{--canvas:#fff;--surface-1:#fff;--surface-2:#f7f8fa;--surface-3:#f0f2f5;--surface-inset:#fafbfc;--raised:#fff;--hairline:#e3e6eb;--hairline-strong:#c9ced7;--text-1:#16181d;--text-2:#454b57;--text-3:#5f6672;--elev-1:0 1px 2px #10182810;--elev-2:0 8px 24px #1018280d}
+:root:is([data-theme=gloss],[data-theme=ivory],[data-theme=porcelain],[data-theme=light-glass])[data-workspace=overview] body,
+:root:is([data-theme=gloss],[data-theme=ivory],[data-theme=porcelain],[data-theme=light-glass])[data-workspace=overview] .app,
+:root:is([data-theme=gloss],[data-theme=ivory],[data-theme=porcelain],[data-theme=light-glass])[data-workspace=overview] .canvas{background:#fff}
+
+/* Cards: same radius, hairline and elevation language as the other workspaces. */
+.app[data-workspace=overview] :is(.page-intro,.overview-module,.attention-card){background:var(--raised);border:1px solid var(--sales-edge);border-radius:14px;box-shadow:var(--elev-1)}
+.app[data-workspace=overview] .page-intro{border-left:1px solid var(--hairline);padding:26px 28px}
+.app[data-workspace=overview] .page-intro h1{font-family:var(--font-display);font-weight:650;letter-spacing:-.03em}
+.app[data-workspace=overview] .metric-card::before{background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--accent) 55%,transparent),transparent)}
+.app[data-workspace=overview] .register-title h2{font-weight:650;letter-spacing:-.35px}
+.app[data-workspace=overview] .overview-module{--module-accent:var(--accent)!important}
+.app[data-workspace=overview] .overview-module-icon{background:color-mix(in srgb,var(--accent) 7%,var(--surface-1));color:var(--accent);border-color:color-mix(in srgb,var(--accent) 18%,var(--hairline))}
+.app[data-workspace=overview] .overview-module-nav a{--module-accent:var(--accent)!important}
+@media(prefers-reduced-motion:reduce){.app[data-workspace=overview] .metric-card:hover{transform:none}}
+
+/* Structure: sections number in reading order, whatever index each register was given. */
+.app[data-workspace=overview] main{counter-reset:overview-section}
+.app[data-workspace=overview] .register{counter-increment:overview-section}
+.app[data-workspace=overview] .register .register{counter-increment:none}
+.app[data-workspace=overview] .register-title .index{font-size:0}
+.app[data-workspace=overview] .register-title .index::after{content:counter(overview-section,decimal-leading-zero);font-size:11px}
+.app[data-workspace=overview] .register-head{align-items:center}
+.app[data-workspace=overview] .register-title{align-items:center;flex-wrap:wrap;row-gap:4px}
+.app[data-workspace=overview] .register-title h2{white-space:nowrap}
+
+/* Cards inside a section sit flat on it: hairline only, no second shadow. */
+.app[data-workspace=overview] .register :is(.overview-module,.attention-card,.chart-surface){box-shadow:none}
+.app[data-workspace=overview] .attention-card:hover,.app[data-workspace=overview] .attention-card:focus-within{box-shadow:var(--elev-1)}
+
+/* The trend sits in a card like every other section. */
+.app[data-workspace=overview] .pulse-wrapper{background:var(--raised);border:1px solid var(--hairline);border-radius:12px;box-shadow:var(--elev-1);padding:22px 24px 14px}
+.app[data-workspace=overview] .pulse-summary{padding-bottom:14px;margin-bottom:16px;border-bottom:1px solid var(--hairline)}
+.app[data-workspace=overview] .pulse-total{font-size:36px}
+
+/* Decisions read across the full width, then the monthly trend below them. */
+.app[data-workspace=overview] .overview-decision-pair{grid-template-columns:minmax(0,1fr)}
+.app[data-workspace=overview] .overview-attention .attention-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.app[data-workspace=overview] .attention-card footer button{color:var(--accent)}
+.app[data-workspace=overview] .attention-card footer button:hover{color:var(--text-1)}
+.app[data-workspace=overview] .attention-card footer button:focus-visible{outline-color:var(--accent)}
+.app[data-workspace=overview] .attention-live-dot{background:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 14%,transparent)}
+@media(max-width:1100px){.app[data-workspace=overview] .overview-attention .attention-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.app[data-workspace=overview] .overview-attention .attention-grid{grid-template-columns:minmax(0,1fr)}.app[data-workspace=overview] .register-title h2{white-space:normal}.app[data-workspace=overview] .pulse-wrapper{padding:18px 16px 10px}}
+
+/* Performance board: same edge language as the sections, with the accent carrying the data. */
+.app[data-workspace=overview] #performance-board{--board-line:color-mix(in srgb,var(--accent) 16%,var(--hairline))}
+.app[data-workspace=overview] #performance-board .board-card{border:1px solid var(--sales-edge);border-radius:14px;background:var(--surface-1);box-shadow:0 1px 2px #00000005}
+.app[data-workspace=overview] #performance-board .board-card>header{border-bottom-color:var(--board-line)}
+.app[data-workspace=overview] #performance-board .board-kicker{color:var(--accent);padding:3px 9px;border-radius:99px;background:color-mix(in srgb,var(--accent) 9%,var(--surface-1))}
+.app[data-workspace=overview] #performance-board .board-card h3{font-size:17px;letter-spacing:-.4px}
+.app[data-workspace=overview] #performance-board .board-tabs{background:color-mix(in srgb,var(--accent) 5%,var(--surface-1));border-color:var(--sales-edge)}
+.app[data-workspace=overview] #performance-board .board-tabs button[aria-selected=true]{background:linear-gradient(120deg,var(--accent),color-mix(in srgb,var(--accent) 60%,var(--accent-2)));color:#fff;border-color:transparent;box-shadow:0 3px 10px color-mix(in srgb,var(--accent) 30%,transparent);font-weight:650}
+.app[data-workspace=overview] :is(.metric-share-track i,#performance-board .board-bar i,#performance-board .board-funnel-bar){background:linear-gradient(90deg,var(--accent),var(--accent-2))}
+.app[data-workspace=overview] #performance-board .board-bar{height:6px;background:color-mix(in srgb,var(--accent) 9%,var(--surface-2))}
+.app[data-workspace=overview] #performance-board .board-row{padding-inline:8px;border-radius:9px}
+.app[data-workspace=overview] #performance-board .board-row:hover{background:color-mix(in srgb,var(--accent) 6%,var(--surface-1))}
+.app[data-workspace=overview] #performance-board .board-name{font-size:12.5px;font-weight:550}
+.app[data-workspace=overview] #performance-board .board-leaderboard li:first-child .board-rank{color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent-2))}
+.app[data-workspace=overview] #performance-board .board-ring{background:color-mix(in srgb,var(--accent) 4%,var(--surface-1));border:1px solid var(--board-line)}
+.app[data-workspace=overview] #performance-board .board-ring-value{stroke:var(--accent)}
+.app[data-workspace=overview] #performance-board .board-ring.behind .board-ring-value{stroke:var(--warn)}
+.app[data-workspace=overview] #performance-board .board-ring:is(.ahead,.met) .board-ring-value{stroke:var(--board-good)}
+.app[data-workspace=overview] #performance-board .board-set{color:var(--accent);border-bottom-color:color-mix(in srgb,var(--accent) 35%,transparent)}
+.app[data-workspace=overview] #performance-board .board-funnel-panel{background:color-mix(in srgb,var(--accent) 3%,var(--surface-1));border:1px solid var(--board-line);border-radius:12px}
+.app[data-workspace=overview] #performance-board .board-funnels li{border-bottom-width:6px;border-bottom-color:color-mix(in srgb,var(--accent) 8%,var(--surface-2));padding-bottom:16px}
+.app[data-workspace=overview] #performance-board .board-funnel-bar{height:6px;bottom:-6px;border-radius:99px}
+.app[data-workspace=overview] #performance-board .board-funnels li.drop .board-funnel-bar{background:var(--warn)}
+.app[data-workspace=overview] #performance-board .board-funnels .number{font-size:22px}
+.app[data-workspace=overview] .overview-module-icon{background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 12%,var(--surface-1)),color-mix(in srgb,var(--accent-2) 10%,var(--surface-1)))}

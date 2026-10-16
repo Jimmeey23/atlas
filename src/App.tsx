@@ -126,6 +126,7 @@ import "./design/chrome.css";
 import "./design/sales.css";
 import "./design/controls.css";
 import "./design/advanced-controls.css";
+import "./design/overview.css";
 import { sourceRows } from "./data/raw";
 const blank: Analysis = {
   total: {},
@@ -534,6 +535,7 @@ export default function App() {
   // Each workspace owns a two-stop accent (see design/chrome.css). It goes on the
   // document root so chrome outside the app shell — logo, Ask GPT, loader — follows it.
   const accentKey = marketingView ? "mk" : s.tab;
+  const overviewWorkspace = s.tab === 0 && !marketingView && s.view !== "kra";
   const domainStyle = {
     "--accent": pagePrefs.accent || `var(--tab-${accentKey})`,
     "--accent-2": pagePrefs.accent ? `color-mix(in srgb, ${pagePrefs.accent} 55%, #fff)` : `var(--tab-${accentKey}-2)`,
@@ -542,6 +544,11 @@ export default function App() {
     const root = document.documentElement.style;
     for (const [key, value] of Object.entries(domainStyle)) root.setProperty(key, String(value));
   }, [accentKey, pagePrefs.accent]);
+  useEffect(() => {
+    if (overviewWorkspace) document.documentElement.dataset.workspace = "overview";
+    else delete document.documentElement.dataset.workspace;
+    return () => { delete document.documentElement.dataset.workspace; };
+  }, [overviewWorkspace]);
   const commands = [
     {name:"Advanced analysis builder",kind:"Analysis",run:()=>window.dispatchEvent(new Event("atlas-open-analysis"))},
     {name:"Back / undo scope",kind:"Navigation",run:s.undo},
@@ -595,7 +602,7 @@ export default function App() {
   return (
     <div
       className="app"
-      data-workspace={s.tab === 15 ? "monthly-reports" : s.tab === 5 ? "acquisition" : s.tab === 4 ? "sales" : undefined}
+      data-workspace={overviewWorkspace ? "overview" : s.tab === 15 ? "monthly-reports" : s.tab === 5 ? "acquisition" : s.tab === 4 ? "sales" : undefined}
       style={{
         ...domainStyle,
         ...(prefs.contentWidth
@@ -1027,7 +1034,6 @@ export default function App() {
               )}
               {s.tab === 0 && <Pulse data={analysis} />}
               {s.tab === 0 && <OverviewBoard data={analysis} version={version} />}
-              {s.tab === 0 && <OverviewModules version={version} onDrill={setDrill} />}
               {s.tab === 6 && (
                 <>
                   <RenewalCohorts version={version} onDrill={setDrill} />
@@ -1173,6 +1179,7 @@ export default function App() {
                   <Chart tab={s.tab} data={analysis} />
                 )}
               </Register> : null}
+              {s.tab === 0 && <OverviewModules version={version} onDrill={setDrill} />}
               {s.tab === 14 && <PerformanceScorecard dimension="format_group" index="08" version={version} onDrill={setDrill} />}
               {s.tab === 14 && <FormatComparison version={version} />}
               {s.tab === 8 && <WebsiteLeadPeriods version={version} onDrill={setDrill} websiteOnly={false} expanded />}

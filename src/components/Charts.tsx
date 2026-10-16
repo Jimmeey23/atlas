@@ -413,7 +413,7 @@ export function Chart({
       );
     if (secondary && chartRows.length) {
       const measure = bp.columns.find(id => metrics[id].format === "currency") || bp.columns[0];
-      option = { ...option, tooltip: { trigger: "axis" }, xAxis: { type: "category", data: chartRows.map(r => String(r.month)), ...axis }, yAxis: { type: "value", name: metrics[measure].label, ...axis }, series: [{ name: metrics[measure].label, type: "bar", data: chartRows.map(r => r[measure] == null ? null : Number(r[measure])) }] };
+      option = { ...option, tooltip: { trigger: "axis" }, xAxis: { type: "category", data: chartRows.map(r => String(r.month)), ...axis }, yAxis: { type: "value", name: metrics[measure].label, ...axis, axisLabel: { ...axis.axisLabel, formatter: (v: number) => fmt(measure, v) } }, grid: { left: 56, right: 18, top: 44, bottom: 28 }, legend: { top: 0, right: 0, icon: "roundRect", itemWidth: 10, itemHeight: 10, textStyle: { color: c["text-2"], fontSize: 11 } }, series: [{ name: metrics[measure].label, type: "bar", barMaxWidth: 36, itemStyle: { borderRadius: [5, 5, 0, 0], ...(tab === 0 ? { color: c.accent } : {}) }, data: chartRows.map(r => r[measure] == null ? null : Number(r[measure])) }] };
     } else if (tab === 3 && chartRows.length) {
       const xMetric =
         tab === 3
