@@ -57,9 +57,9 @@ test('generation repairs invalid highlights once and keeps unsupported output fa
  const report = { ...model, customization: { chapterIds: ['sessions'] } } as ReportModel;
  try {
   const written = await generateNarratives(report);
-  assert.equal(calls, 2);
+  assert.equal(calls, 1, 'a highlight on a card without a breakdown table is cleared, not repaired');
   assert.equal(written.sessions.generated, true);
-  assert.match(messages[1], /CORRECTION REQUIRED:.*row absent/);
+  assert.deepEqual(written.sessions.cards[0].highlight, []);
   calls = 0;
   globalThis.fetch = async (_url, init) => {
    if (!init?.body) return new Response(JSON.stringify({ openai: false }));
@@ -74,7 +74,7 @@ test('generation repairs invalid highlights once and keeps unsupported output fa
 });
 
 test('narrative validation accepts correct roundings of supplied raw values and rejects wrong ones', () => {
- const supplied = '{"figures":[["gross_revenue",15812345,502.7,0.5491]]}';
+ const supplied = '{"figures":[["gross_revenue",15812345,502.7,0.5491,42812]]}';
  const validate = (evidence: string) => validateNarrativeCards([{ ...card, evidence }], ['attendance'], [], model, 'sessions', supplied);
  assert.doesNotThrow(() => validate('Collections reached ₹1.58Cr.'));
  assert.doesNotThrow(() => validate('Collections reached ₹158.1 lakh.'));
@@ -83,5 +83,31 @@ test('narrative validation accepts correct roundings of supplied raw values and 
  assert.doesNotThrow(() => validate('503 buyers.'));
  assert.throws(() => validate('Collections reached ₹1.9Cr.'), /numeric evidence/);
  assert.throws(() => validate('Membership share was 60%.'), /numeric evidence/);
+ assert.doesNotThrow(() => validate('Average order value was ₹42.8K.'), 'thousands shorthand');
+ assert.doesNotThrow(() => validate('Membership share was 54.9 per cent.'), 'percent in words');
+ assert.doesNotThrow(() => validate('Collections reached ₹158.1 lacs.'), 'lac spelling');
+ assert.throws(() => validate('Average order value was ₹71.0K.'), /numeric evidence/);
+ assert.throws(() => validate('Membership share was 60 percent.'), /60%.*in "Membership share was 60 percent\."/);
  assert.throws(() => validate('901 buyers.'), /numeric evidence/);
+});
+
+test('generation drops highlights that still name absent rows after one repair, and matches labels loosely', async () => {
+ const { generateNarratives } = await import('../src/report/narrative');
+ const original = globalThis.fetch;
+ const grouped: ChapterData = { ...data, groups: [{ id: 'studio', field: 'location', title: 'Studios', minimum: '', columns: ['attendance'], rows: [{ g: 'Kenkere House', attendance: 120 }] }] } as ChapterData;
+ const report = { ...model, chapters: { sessions: grouped }, customization: { chapterIds: ['sessions'] } } as ReportModel;
+ let calls = 0;
+ const reply = (highlight: string[], focus = 'studio') => new Response(JSON.stringify({ answer: JSON.stringify({ summary: 'Demand increased.', cards: [{ ...card }, { ...card, headline: 'Kenkere leads', action: 'Protect Kenkere House peak slots.', focus, highlight }] }) }));
+ try {
+  globalThis.fetch = async (_url, init) => { if (!init?.body) return new Response(JSON.stringify({ openai: false })); calls++; return reply(['kenkere  house']); };
+  const loose = await generateNarratives(report);
+  assert.equal(calls, 1, 'case and spacing differences do not cost a repair');
+  assert.deepEqual(loose.sessions.cards.find(c => c.focus === 'studio')!.highlight, ['Kenkere House']);
+  calls = 0;
+  globalThis.fetch = async (_url, init) => { if (!init?.body) return new Response(JSON.stringify({ openai: false })); calls++; return reply(['Absent row']); };
+  const kept = await generateNarratives(report);
+  assert.equal(calls, 2);
+  assert.equal(kept.sessions.generated, true, 'a cosmetic highlight never fails the chapter');
+  assert.deepEqual(kept.sessions.cards.find(c => c.focus === 'studio')!.highlight, []);
+ } finally { globalThis.fetch = original; }
 });

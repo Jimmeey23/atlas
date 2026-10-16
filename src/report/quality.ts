@@ -1,8 +1,8 @@
 import type { ChapterData, InsightCard, ReportModel } from './model';
 import { definition, reportFmt, reportDelta } from './definitions';
 
-const numberTokens = (text: string) => [...text.replace(/Physique\s*57|\bP57\b/gi, '').replaceAll(',', '').matchAll(/(?:₹\s*)?[-+−–]?\d+(?:\.\d+)?(?:\s*(?:%|pp|lakhs?(?![a-z])|crores?(?![a-z])|Cr(?![a-z])|L(?![a-z])))?/gi)].map(m => {
-  const token = m[0].replace(/\s|₹|[+−–-]/g, '').toLowerCase().replace(/lakhs?/, 'l').replace(/crores?/, 'cr');
+const numberTokens = (text: string) => [...text.replace(/Physique\s*57|\bP57\b/gi, '').replaceAll(',', '').matchAll(/(?:₹\s*)?[-+−–]?\d+(?:\.\d+)?(?:\s*(?:%|per\s*cent(?![a-z])|percent(?![a-z])|pp|lakhs?(?![a-z])|lacs?(?![a-z])|crores?(?![a-z])|Cr(?![a-z])|L(?![a-z])|K(?![a-z])))?/gi)].map(m => {
+  const token = m[0].replace(/\s|₹|[+−–-]/g, '').toLowerCase().replace(/lakhs?|lacs?/, 'l').replace(/crores?/, 'cr').replace(/percent/, '%');
   return String(parseFloat(token)) + token.replace(/^[\d.]+/, '');
 });
 /** Parse JSON records before tokenizing: commas between array values are not thousands separators. */
@@ -18,7 +18,7 @@ function evidenceTokens(text: string): string[] {
   });
 }
 
-const unitScale: Record<string, number> = { l: 1e5, cr: 1e7 };
+const unitScale: Record<string, number> = { k: 1e3, l: 1e5, cr: 1e7 };
 /** A token's value in base units, plus half its last displayed digit: the rounding a correct restatement may carry. */
 function tokenValue(token: string) {
   const [, digits, unit] = token.match(/^([\d.]+)(.*)$/) ?? [];
@@ -83,7 +83,15 @@ export function validateNarrativeCards(cards: InsightCard[], metricIds: string[]
     const observedText = [card.headline, card.meaning, card.driver, card.trend, card.concentration, card.offset, card.monthContext, card.yearContext, card.reasoning, ...observations].filter((text): text is string => typeof text === 'string').join(' ').split(/(?<=[.!?])\s+/).filter(sentence => !/\b(propos(?:ed|al)|target|hypothesis|hypotheses|scenario|if |could |might |may )/i.test(sentence)).join(' ');
     const values = suppliedValues(allowed);
     const unsupported = numberTokens(card.evidence + ' ' + observedText).filter(token => !allowed.has(token) && !roundsSupplied(token, values));
-    if (unsupported.length) throw new Error(`Analysis included a numeric evidence claim not present in the supplied figures: ${[...new Set(unsupported)].join(', ')}. Use exact supplied values and units; do not calculate new observed claims.`);
+    if (unsupported.length) {
+      // Quote the sentence so the repair call, and a reader of the error, can see what the number claimed.
+      const sentences = (card.evidence + ' ' + observedText).split(/(?<=[.!?])\s+/);
+      const cited = [...new Set(unsupported)].map(token => {
+        const sentence = sentences.find(text => numberTokens(text).includes(token))?.trim();
+        return sentence ? `${token} (in "${sentence.slice(0, 220)}")` : token;
+      });
+      throw new Error(`Analysis included a numeric evidence claim not present in the supplied figures: ${cited.join(', ')}. Use exact supplied values and units; do not calculate new observed claims.`);
+    }
     const causal = [card.meaning, card.driver, card.reasoning].filter(Boolean).join(' ').split(/(?<=[.!?])\s+/);
     if (causal.some(sentence => /\b(caused by|because of|due to|resulted in)\b/i.test(sentence) && !/\b(hypothesis|hypotheses|may|might|could|cannot establish|does not establish|not establish|not prove|check|test|verify)\b/i.test(sentence))) throw new Error('Analysis asserted an unverified cause. Rewrite insights to retry.');
   }

@@ -399,6 +399,21 @@ const wait = (ms: number, signal?: AbortSignal) =>
  */
 const RETRY_DELAYS_MS = [5000, 15000, 30000];
 
+const labelKey = (label: string) => label.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+/**
+ * Highlights are emphasis, not evidence. Labels are matched to their breakdown rows ignoring case,
+ * spacing and punctuation; cards without a breakdown table carry none. A label naming no row is
+ * kept on the first attempt so the validator asks for a repair, and dropped on the last one.
+ */
+function alignHighlights(card: InsightCard, data: ChapterData | undefined, final: boolean): InsightCard {
+  if (!Array.isArray(card.highlight)) return card;
+  const table = data?.groups.find(g => (g.id ?? g.field) === card.focus);
+  if (!table) return { ...card, highlight: [] };
+  const rows = new Map(table.rows.map(row => [labelKey(String(row.g)), String(row.g)]));
+  const aligned = card.highlight.map(label => rows.get(labelKey(String(label))) ?? (final ? null : String(label)));
+  return { ...card, highlight: aligned.filter((label): label is string => label !== null) };
+}
+
 async function askModel(message: string, focusIds: string[], signal?: AbortSignal, onUsage?: (usage: CallUsage) => void, extra: Record<string, unknown> = {}): Promise<string> {
   for (let attempt = 0; ; attempt++) {
     const response = await fetch("/api/reports/narrative", {
@@ -569,12 +584,12 @@ export async function generateNarratives(
               : message;
             const parsed = parseJson(await askModel(requestMessage, focusIds, signal, (call) => { usage = addCall(usage, call); },
               { ...extra, analysisKey: fingerprint, ...(repair ? { repairAttempt: repair } : {}) }));
-            const cards = Array.isArray(parsed?.cards)
+            const cards = (Array.isArray(parsed?.cards)
               ? parsed!.cards.filter(
                   (c): c is InsightCard =>
                     !!c && typeof c.headline === "string" && !!c.headline.trim(),
                 )
-              : [];
+              : []).map(c => alignHighlights(c, data, repair > 0));
             const valid = cards.every(c => [c.meaning,c.evidence].every(v => typeof v === "string" && !!v.trim()) && !!c.focus && !!(c.lens || c.category) && !!c.confidence);
             validateNarrativeCards(cards, metricIds, focusIds, model, spec.id, [figures, portfolio, model.scope.month, spec.id === "predictions" ? forwardScenarios(model) : ""].join("\n"), [parsed?.summary, ...(parsed?.metricCommentary?.map(item => item.text) ?? []), ...Object.values(parsed?.briefing ?? {}).filter((v): v is string => typeof v === "string"), ...(parsed?.decision?.evidence ?? [])].filter((v): v is string => typeof v === "string"));
             if (parsed?.metricCommentary) {
