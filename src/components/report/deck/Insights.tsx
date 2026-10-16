@@ -1,3 +1,4 @@
+import { EditorialFindings } from "./EditorialFindings";
 import { useState } from "react";
 import { TrendingUp, TriangleAlert, GitBranch, Lightbulb, Radar, ArrowRightCircle, Plus, Trash2, ListFilter, LayoutPanelTop, Rows3 } from "lucide-react";
 import { lensOf, lensLabel } from "../Insight";
@@ -27,7 +28,7 @@ function InsightEditor({ card, path, onRemove }: { card: InsightCard; path: (str
 }
 
 /** Insights as a focus board: a numbered rail of findings and one finding at a time, full width; or the whole list. */
-export function InsightsSection({ model, tab, plan = false, initialView = "focus", exporting = false }: { model: ReportModel; tab: string; plan?: boolean; initialView?: "focus" | "list"; exporting?: boolean }) {
+export function InsightsSection({ model, tab, plan = false, initialView = "focus", exporting = false, editorial = false, sectionNumber }: { model: ReportModel; tab: string; plan?: boolean; initialView?: "focus" | "list"; exporting?: boolean; editorial?: boolean; sectionNumber?: number }) {
   const edit = useEdit();
   const [lens, setLens] = useState<InsightLens | "all">("all");
   const [view, setView] = useState<"focus" | "list">(initialView);
@@ -36,7 +37,7 @@ export function InsightsSection({ model, tab, plan = false, initialView = "focus
   const cards = model.narratives[tab]?.cards ?? [];
   const verdictIndex = cards.findIndex(c => c.focus === "kpis");
   const order = { high: 0, medium: 1, low: 2 } as const;
-  const indexed = cards.map((card, index) => ({ card, index })).filter(({ index }) => index !== verdictIndex || cards.length === 1)
+  const indexed = cards.map((card, index) => ({ card, index })).filter(({ index }) => (editorial && plan) || index !== verdictIndex || cards.length === 1)
     .sort((a, b) => order[a.card.priority ?? "medium"] - order[b.card.priority ?? "medium"]);
   const lenses = [...new Set(indexed.map(({ card }) => lensOf(card)))];
   const shown = indexed.filter(({ card }) => lens === "all" || lensOf(card) === lens);
@@ -47,6 +48,7 @@ export function InsightsSection({ model, tab, plan = false, initialView = "focus
     <button className="button deck-add" onClick={() => edit.set(["narratives", tab, "cards"], [...cards, { headline: "New insight", meaning: "", evidence: "", action: "", lens: plan ? "next_step" : "driver", focus: "cross", priority: "medium", confidence: "medium" } satisfies InsightCard])}><Plus size={14}/>Add insight</button>
   </div>;
   if (!indexed.length) return <p className="empty-state">No written insights for this chapter. The briefing and evidence pages carry the figures.</p>;
+  if (editorial) return <EditorialFindings model={model} chapter={tab} items={indexed} exporting={exporting} sectionNumber={sectionNumber}/>;
   const card = (item: typeof shown[number], i: number) => <DeckInsightCard key={item.index} card={item.card} model={model} chapterId={tab} index={i} total={shown.length} plan={plan} confidence={options.showConfidence} exporting={exporting}
     onStep={view === "focus" ? step => setActive(Math.max(0, Math.min(shown.length - 1, i + step))) : undefined} />;
   return <div className="deck-insights dk-insights">

@@ -8,12 +8,13 @@ import { coveredDigest, uniqueNarrative } from "./dedupe";
 import { homeChapter, reportedElsewhere } from "./ownership";
 import { BUSINESS_CONTEXT } from "../semantics/business-context";
 import { reportOptions } from "./options";
+import { MONTHLY_EDITORIAL_RULES } from "./editorial";
 import { validateNarrativeCards } from "./quality";
 import { directionIssues } from "./audit";
 import { reviewMetricIds } from "./review";
 import { addCall, type CallUsage, type ChapterUsage } from "./usage";
 
-const CACHE_PREFIX = "atlas-report-narrative:v18:";
+const CACHE_PREFIX = "atlas-report-narrative:v19:";
 /** Exact evidence and request identity, independent of presentation settings. */
 async function analysisKey(value: unknown) {
   const bytes = new TextEncoder().encode(JSON.stringify(value));
@@ -204,13 +205,14 @@ function insightRules(model: ReportModel, spec: ChapterSpec) {
     "priority: high when the item is material to the month's result or its value at stake; medium otherwise; low for context. ownerArea: the team best placed to act. horizon: when to act or review.",
     "confidence: high, medium or low, justified by source coverage, sample size and consistency across comparisons.",
     "summary: 160–220 words in 2–3 coherent paragraphs — the chapter's verdict: what happened, the largest quantified driver, the offset, whether it is durable, and the one thing leadership should take from it.",
-    `METRIC COVERAGE: Review every available chapter metric in grouped metricCommentary paragraphs. Required metric IDs: ${spec.derived ? 'none; use an empty metricCommentary array for cross-chapter synthesis' : reviewMetricIds(spec.id, model.chapters[spec.id]).filter(id => model.chapters[spec.id]?.total[id] != null).join(', ')}. Each item has metricIds (exact available IDs) and text (70–120 words). Discuss related measures together: observed movement, prior-month and same-month-last-year comparisons, governed YTD where available, interpretation and evidence limitations. Discuss material changes individually; group stable measures. Do not manufacture significance, unavailable comparisons or causal explanations. All required metric IDs must be covered.`,
+    `METRIC COVERAGE: Review every available chapter metric in grouped metricCommentary paragraphs. Required metric IDs: ${spec.derived ? 'none; use an empty metricCommentary array for cross-chapter synthesis' : reviewMetricIds(spec.id, model.chapters[spec.id]).filter(id => model.chapters[spec.id]?.total[id] != null).join(', ')}. Each item has metricIds (exact available IDs) and text (55–90 words). Discuss related measures together: observed movement, prior-month and same-month-last-year comparisons, governed YTD where available, interpretation and evidence limitations. Discuss material changes individually; group stable measures. Do not manufacture significance, unavailable comparisons or causal explanations. All required metric IDs must be covered.`,
     "Evidence text must quote exact supplied numeric values or displayed metric comparisons. Keep newly calculated scenarios in impact with the arithmetic shown, never present them as observed evidence. Any new target, owner assignment or timing is a proposal, not an existing commitment.",
     "Avoid repeating the same observation in overview, briefing, metric commentary and findings: overview synthesises; commentary covers related measures; findings develop the material arguments; recommendations identify proposed responses.",
     "READING STRUCTURE: Separate prose paragraphs with blank lines. For genuinely parallel drivers, caveats or recommended steps, use a short plain-text bullet list with each item prefixed by - on its own line. Keep precise metric IDs and evidence focus aligned with the claim; the report pairs the commentary with that exact table or metric history. Do not return Markdown tables or HTML; the report renders comparison tables from governed figures.",
     "Exactly one card has focus kpis: the chapter verdict.",
     ...DEEP_REVIEW_RULES,
     ...CHAPTER_RULES,
+    MONTHLY_EDITORIAL_RULES,
   ].join("\n");
 }
 
@@ -548,7 +550,7 @@ export async function generateNarratives(
         ]);
         const extra = { insightVersion: 5, metricIds, lenses: spec.id === "recommendations" ? ["next_step"] : o.lenses.filter(l => l !== "next_step") };
         // Include complete pre-budget evidence: changes to omitted records must invalidate reuse too.
-        const fingerprint = await analysisKey({ version: 19, providerModel, providerPolicy, message, focusIds, extra,
+        const fingerprint = await analysisKey({ version: 20, providerModel, providerPolicy, message, focusIds, extra,
           figures, portfolio, preferences, scenarios: spec.id === "predictions" ? forwardScenarios(model) : "" });
         const key = `${CACHE_PREFIX}${model.scope.studio}:${model.scope.month}:${spec.id}:${fingerprint}`;
         const previous = model.narratives[spec.id];

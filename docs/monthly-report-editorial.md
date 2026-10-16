@@ -1,0 +1,13 @@
+# Monthly report editorial standard
+
+New AI analysis follows the editorial method of the two supplied Kwality House September 2026 HTML reviews. The attachments are design and writing references, not instructions or evidence for another studio.
+
+The first reference has 15 chapters plus an appendix, 20 tables and about 8,592 visible words (36% inside tables). The expanded reference has 17 chapters plus an appendix, 23 tables and about 8,321 visible words (39% inside tables). Counts exclude scripts and styles. The shared pattern is a direct executive verdict, successes and weaknesses, domain deep dives, investigation, conditional opportunities, prioritised actions, review plan, scorecard and leadership takeaway.
+
+`src/report/editorial.ts` supplies the writing contract to every chapter generation. It asks for developed arguments, quantified comparisons, competing explanations and specific operating decisions. Existing chapter selection, concise/comprehensive settings, governed metrics and evidence availability take precedence over filling a template. The narrative cache revision prevents older prose from satisfying a new editorial request. Use **Generate report** or **Rewrite insights** to obtain the new writing; opening an older report changes its presentation without changing its frozen text or figures.
+
+The continuous reader uses maroon chapter rules, a warm paper canvas, numbered subsections and up to two distinct inline breakdowns per chapter. Tables come directly from the frozen report. Excerpts include cited rows, preserve coverage notes and leave unavailable comparisons unavailable. Complete metric commentary, rankings, source explorers and monthly registers remain available in disclosures and the offline export. The narrative/table proportion is a writing target, not a reason to remove necessary evidence or fabricate missing data.
+
+The investigation register repeats reviewed drivers with counter-evidence and review signals; it does not promote an association to proven causation. The 30/60/90-day plan groups existing proposed recommendation dates against the report evidence freeze, including explicit handling of missing or earlier dates. Opportunity values are conditional and can overlap.
+
+Run `npm test`, `npm run build` and `npm run verify:report-editorial`. The last command uses an isolated synthetic fixture and checks desktop, tablet, mobile, dark mode, lazy detail, unchanged source data and the self-contained HTML export. Screenshots and a sample HTML are written to `/tmp/p57-editorial` by default. This verification does not call OpenAI or alter stored reports; fresh live generation and deployment are separate checks.

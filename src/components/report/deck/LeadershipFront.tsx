@@ -1,3 +1,6 @@
+import { ReportProse } from './ReportProse';
+import { lensOf } from '../Insight';
+import { monthLabel } from '../../../report/period';
 import type { ReportModel } from '../../../report/model';
 import { definition, reportFmt } from '../../../report/definitions';
 import { reportReleaseIssues } from '../../../report/release-gate.mjs';
@@ -12,9 +15,14 @@ export function LeadershipFront({ model }: { model: ReportModel }) {
   const bridge=model.intelligence?.tables.find(t=>t.title==='Member-base bridge')?.rows[0];
   const issues = reportReleaseIssues(model);
   return <section className="leadership-front" aria-label="One-page leadership brief">
-    <header><span className="deck-eyebrow">Leadership decision brief · {model.scope.month}</span><h1>{model.scope.studio}</h1><p>Evidence frozen {model.builtAt.slice(0,10)} · {issues.length ? 'Draft · quality gate blocked' : 'Quality gate passed'}</p></header>
+    <header><span className="deck-eyebrow">Leadership decision brief · {model.scope.month}</span><h1>{model.scope.studio} · {monthLabel(model.scope.month)}</h1><p>Physique 57 India · Business Performance Review</p><p>Evidence frozen {model.builtAt.slice(0,10)} · {issues.length ? 'Draft · quality gate blocked' : 'Quality gate passed'}</p></header>
+    <section className="p57-executive-verdict" aria-label="Executive performance verdict"><h2>Executive performance verdict</h2><ReportProse text={model.narratives['executive-summary']?.summary}/></section>
     {cards.length < 3 && <p role="status">Awaiting three to five complete leadership verdicts.</p>}
-    <ol className="leadership-verdicts">{cards.map((c,i)=><li key={i}><h2>{c.headline}</h2><p><b>So what:</b> {c.meaning}</p><p><b>Why:</b> {c.driver || c.evidence}</p><p><b>Action:</b> {c.action} <strong>Owner: {c.ownerArea || 'Unassigned'}</strong></p></li>)}</ol>
+    {[
+      { title: 'What worked well', items: cards.filter(c => lensOf(c) === 'win') },
+      { title: "What did not work / risks to address", items: cards.filter(c => lensOf(c) === 'risk') },
+      { title: 'Decisions and opportunities', items: cards.filter(c => !['win', 'risk'].includes(lensOf(c))) },
+    ].filter(group => group.items.length).map(group => <section key={group.title}><h2>{group.title}</h2><ol className="leadership-verdicts">{group.items.map((c,i)=><li key={i}><h3>{c.headline}</h3><p><b>So what:</b> {c.meaning}</p><p><b>Why:</b> {c.driver || c.evidence}</p><p><b>Action:</b> {c.action} <strong>Proposed owner: {c.ownerArea || 'Unassigned'}</strong></p></li>)}</ol></section>)}
     <div className="intelligence-scroll"><table><caption>KPI scorecard against approved targets</caption><thead><tr><th>KPI</th><th>Actual</th><th>Target</th><th>RAG</th></tr></thead><tbody>{scorecard.map(({id,data})=>{
       const target=model.customization?.targets?.[id],actual=data.total[id],known=actual!=null&&Number.isFinite(Number(actual));
       const favorable=known&&target!=null&&((Number(actual)>=target)===(definition(id)?.higherIsBetter??true));

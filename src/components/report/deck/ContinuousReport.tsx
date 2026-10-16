@@ -1,3 +1,4 @@
+import { EditorialSynthesis } from "./EditorialSynthesis";
 import { LeadershipFront, IntelligenceAppendix } from "./LeadershipFront";
 import { useState } from "react";
 import type { ReactNode } from "react";
@@ -41,9 +42,7 @@ function ReportChapter({ model, tab, number, exporting = false }: { model: Repor
   const options = reportOptions(model.customization);
   const ids = tab.spec ? chapterMetrics(tab.spec, data) : [];
   const historyIds = [...new Set([...(tab.spec?.history ?? []), ...ids])].filter(id => !tab.spec || !reportedElsewhere(tab.spec, id));
-  const tableIds = tableMetrics(tab.spec, data);
   const plan = tab.chapter === "recommendations";
-  const evidence = curatedBreakdowns(data?.groups ?? [], 1)[0];
   return <RecordDrilldownProvider model={model} chapterId={tab.chapter}>
     <section className="cr-chapter r-section" id={`chapter-${tab.id}`} data-chapter={tab.chapter}>
       <header className="cr-chapter-head"><span className="cr-number">{String(number).padStart(2, "0")}</span>
@@ -55,18 +54,18 @@ function ReportChapter({ model, tab, number, exporting = false }: { model: Repor
       {narrative && <p className="cr-analysis-basis">{narrative.generated ? "AI-written analysis · grounded in the frozen report" : "Calculated findings · rule-based analysis"}</p>}
 
       {data && data.n > 0 && !!ids.length && <Slot id={`${tab.id}:summary:metrics`} tab={tab.id} section="summary" kind="metrics" describe="key metric cards">
-        <CompleteMetricGrid items={ids.slice(0, 6)} render={id => <FlipMetricCard key={id} id={id} data={data} target={model.customization?.targets?.[id]} flipped={flipped === id} onToggle={() => setFlipped(current => current === id ? "" : id)}/>}/>
+        <CompleteMetricGrid full={exporting} items={ids.slice(0, 6)} render={id => <FlipMetricCard key={id} id={id} data={data} target={model.customization?.targets?.[id]} flipped={flipped === id} onToggle={() => setFlipped(current => current === id ? "" : id)}/>}/>
       </Slot>}
       {data && <section className="rp-chapter-story rp-evidence-pair" aria-label="Chapter overview and corresponding evidence">
         <div className="rp-panel-prose"><span className="deck-eyebrow">Chapter overview</span><h3>The performance story</h3><ReportProse text={narrative?.summary}/>{!!narrative?.briefing?.takeaways.length && <><h4>Key readings</h4><ul className="rp-takeaways">{narrative.briefing.takeaways.map((text, i) => <li key={i}>{text}</li>)}</ul></>}<div className="rp-reading-basis"><b>Reading basis</b><p>Selected month, previous month and the same month last year, wherever recorded. Missing observations remain unavailable.</p></div></div>
         <a href="#report-appendix">Inspect the chart, definitions and monthly register in the appendix</a>
       </section>}
       {!data && narrative?.summary && <section className="rp-synthesis-prose"><ReportProse text={narrative.summary}/></section>}
-      <Slot id={`${tab.id}:summary:verdict`} tab={tab.id} section="summary" kind="verdict" describe="chapter briefing"><BriefingPanel model={model} chapter={tab.chapter} ids={ids} showTakeaways={false}/></Slot>
-      <MetricCommentary model={model} chapter={tab.chapter} exporting={exporting}/>
+      <Slot id={`${tab.id}:summary:verdict`} tab={tab.id} section="summary" kind="verdict" describe="chapter briefing"><Disclosure exporting={exporting} title="Chapter briefing · drivers, durability and outlook"><BriefingPanel model={model} chapter={tab.chapter} ids={ids} showTakeaways={false}/></Disclosure></Slot>
+      {!!narrative?.metricCommentary?.length && <Disclosure exporting={exporting} title="Complete written metric review"><MetricCommentary model={model} chapter={tab.chapter} exporting={exporting}/></Disclosure>}
       {narrative?.performers && <section className="cr-metric-commentary" aria-label="Breakdown interpretation">{Object.entries(narrative.performers).filter(([, text]) => text).map(([key, text]) => <div key={key}><h4>{key === "leaders" ? "Leading segments" : key === "laggards" ? "Segments needing attention" : "Pattern across the evidence"}</h4><p>{text}</p></div>)}</section>}
       {!narrative && <p className="empty-state">No written analysis is available for this chapter. Review its source evidence or rewrite insights in Monthly reports.</p>}
-      {!!narrative?.cards.length && <Slot id={`${tab.id}:insights:insights`} tab={tab.id} section="insights" kind="insights" describe="insight list"><InsightsSection model={model} tab={tab.chapter} plan={plan} initialView="list" exporting={exporting}/></Slot>}
+      {!!narrative?.cards.length && <Slot id={`${tab.id}:insights:insights`} tab={tab.id} section="insights" kind="insights" describe="insight list"><InsightsSection model={model} tab={tab.chapter} plan={plan} initialView="list" exporting={exporting} editorial sectionNumber={number}/></Slot>}
       {options.showActionPlan && <Slot id={`${tab.id}:summary:decision`} tab={tab.id} section="summary" kind="verdict" describe="leadership decision"><DecisionPanel model={model} chapter={tab.chapter} ids={ids}/></Slot>}
       {plan && options.showActionPlan && <ActionPlan cards={narrative?.cards ?? []}/>}
 
@@ -85,11 +84,12 @@ export function ContinuousReport({ model, tabs, ranked, onNavigate, exporting = 
   const options = reportOptions(model.customization);
   return <div className={withNavigation ? "cr-layout" : "cr-layout-plain"}>
     {withNavigation && <nav className="cr-rail" aria-label="Report chapter index"><b>Atlas<span>Physique 57 India</span></b>{tabs.map((tab, i) => <a key={tab.id} href={`#chapter-${tab.id}`} onClick={event => { if (!exporting) { event.preventDefault(); onNavigate(tab.id); } }}><span>{String(i).padStart(2, '0')}</span>{tab.label}</a>)}<small>{model.scope.studio}<br/>{model.scope.month}</small></nav>}
-    <div className="cr-report">
+    <div className="cr-report p57-reference-review">
     <section id="chapter-overview"><LeadershipFront model={model}/></section>
     {options.showContents && <nav className="cr-contents" aria-label="Report contents"><span className="deck-eyebrow">Inside this review</span>{tabs.filter(tab => tab.id !== "overview").map((tab, i) => <a key={tab.id} href={`#chapter-${tab.id}`} onClick={e => { if (!exporting) { e.preventDefault(); onNavigate(tab.id); } }}><span>{String(i + 1).padStart(2, "0")}</span>{tab.label}<span aria-hidden="true">↗</span></a>)}</nav>}
     {tabs.filter(tab => tab.id !== "overview").map((tab, i) => <ReportChapter key={tab.id} model={model} tab={tab} number={i + 1} exporting={exporting}/>)}
-    {options.showActionPlan && <section className="cr-closing" aria-label="Closing synthesis"><span className="deck-eyebrow">Next review</span><h2>Priorities to carry forward</h2><p>{model.narratives.recommendations?.summary || "Use the evidence and proposed actions in each chapter to agree priorities for the next studio review. Conditional opportunities may overlap and should not be added together."}</p><ol>{tabs.filter(t => t.id !== "overview" && t.chapter !== "recommendations").flatMap(t => { const d = model.narratives[t.chapter]?.decision; const c = model.narratives[t.chapter]?.cards.find(c => c.action && c.priority === "high"); return d?.call || c ? [<li key={t.id}><b>{t.label}</b><p>{d?.call || c?.action}</p><small>Proposed owner: {d?.owner || c?.ownerArea || "To be agreed"} · Review: {d?.horizon || c?.horizon || "To be agreed"}</small>{(d?.successMeasure || c?.watch) && <p>Measure to review: {d?.successMeasure || c?.watch}</p>}</li>] : []; }).slice(0, 5)}</ol></section>}
+    <EditorialSynthesis model={model} tabs={tabs}/>
+    {options.showActionPlan && <section className="cr-closing" aria-label="Closing synthesis"><span className="deck-eyebrow">Next review</span><h2>Final leadership takeaway</h2><p>{model.narratives.recommendations?.summary || "Use the evidence and proposed actions in each chapter to agree priorities for the next studio review. Conditional opportunities may overlap and should not be added together."}</p><ol>{tabs.filter(t => t.id !== "overview" && t.chapter !== "recommendations").flatMap(t => { const d = model.narratives[t.chapter]?.decision; const c = model.narratives[t.chapter]?.cards.find(c => c.action && c.priority === "high"); return d?.call || c ? [<li key={t.id}><b>{t.label}</b><p>{d?.call || c?.action}</p><small>Proposed owner: {d?.owner || c?.ownerArea || "To be agreed"} · Review: {d?.horizon || c?.horizon || "To be agreed"}</small>{(d?.successMeasure || c?.watch) && <p>Measure to review: {d?.successMeasure || c?.watch}</p>}</li>] : []; }).slice(0, 5)}</ol></section>}
     <section className="cr-appendix" id="report-appendix"><h2>Appendix · registers, definitions & evidence</h2><IntelligenceAppendix model={model}/>{tabs.filter(t=>t.id!=="overview").map(tab=>{const data=model.chapters[tab.chapter];if(!data)return null;const ids=tableMetrics(tab.spec,data);return <RecordDrilldownProvider key={tab.id} model={model} chapterId={tab.chapter}><Disclosure exporting={exporting} title={`${tab.label} · metric and monthly registers`}><EvidenceVisual data={data} table={curatedBreakdowns(data.groups,1)[0]} metrics={ids.slice(0,3)} month={model.scope.month} title={`${tab.label} · evidence`} exporting={exporting} showCharts={options.showCharts}/><MetricRegister chapter={tab.chapter} data={data} month={model.scope.month} exporting={exporting}/>{!!ids.length&&<ReportMoMTable exporting={exporting} history={data.history.slice(-options.historyMonths)} ids={ids} selected={model.scope.month} onSelect={()=>{}} title={tab.label}/>}<SegmentMoMTable data={data} selected={model.scope.month} onSelect={()=>{}} exporting={exporting}/></Disclosure></RecordDrilldownProvider>;})}</section>
     {options.showSources && <footer className="cr-method"><h2>Evidence & reading basis</h2><p>Cash collections and attendance-attributed revenue measure different populations. Newcomer and lead outcomes depend on observation time; current stages do not reconstruct historical transitions. Membership snapshots describe the build date. Conditional value at stake can overlap across recommendations and must not be added together.</p>{model.sources?.map(source => <p key={source.key}><b>{source.title}</b> · {source.status}{source.stale ? " · stale snapshot" : ""} · {source.fetchedAt ? new Date(source.fetchedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "Refresh time unavailable"}</p>)}</footer>}
   </div></div>;

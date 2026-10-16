@@ -3,6 +3,7 @@ import { deckTabs } from "../../report/deck";
 import { findingsFor, ledger } from "../../report/findings";
 import "../../design/report-deck.css";
 import "../../design/report-continuous.css";
+import "../../design/report-editorial.css";
 import { ReportSettings } from "./ReportSettings";
 import { definition } from "../../report/definitions";
 import { GenerationStats } from "./GenerationStats";

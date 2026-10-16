@@ -59,7 +59,7 @@ test('large reports fit the API prompt limit without duplicating portfolio conte
   for(const message of requests){
    assert.ok(message.length<=90000,`prompt length ${message.length}`);
    assert.equal(message.split('Chapter headline figures (all tabs, including chapters omitted from display):').length-1,1);
-   assert.match(message,/Accuracy rules/);assert.match(message,/Long editorial preferences shortened/);
+   assert.match(message,/REFERENCE EDITORIAL STANDARD/);assert.match(message,/NARRATIVE \/ TABLE BALANCE/);assert.match(message,/Root-cause investigation|root-cause investigation/);assert.doesNotMatch(message,/₹30\.54|179 distinct paying customers/);assert.match(message,/Accuracy rules/);assert.match(message,/Long editorial preferences shortened/);
    assert.match(message,/Evidence omitted/);assert.match(message,/omitted evidence is unavailable, not zero/);
    assert.doesNotMatch(message,/COMPLETE_CONTEXT_START/,'oversized JSON record is omitted whole');
    assert.match(message,/Source freshness and coverage/);
