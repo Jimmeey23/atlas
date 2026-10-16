@@ -130,7 +130,7 @@ export function reportRoutes(app, store, cloud, env = process.env) {
     requireAdmin(req, env);
     const current = await readReport(req.params.id);
     const body = req.body ?? {};
-    const next = { ...current, narratives: body.narratives ?? current.narratives, customization: body.customization ?? current.customization,
+    const next = { ...current, documentEdits: body.documentEdits ?? current.documentEdits, narratives: body.narratives ?? current.narratives, customization: body.customization ?? current.customization,
       replacements: body.replacements ?? current.replacements, presenterNotes: body.presenterNotes ?? current.presenterNotes,
       speakerNotes: body.speakerNotes ?? current.speakerNotes, importedChapters: body.importedChapters ?? current.importedChapters, editedAt: new Date().toISOString() };
     validate(next);

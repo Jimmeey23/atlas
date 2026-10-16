@@ -52,7 +52,7 @@ test('admin edits need an unlocked session and persist in place; notes do not', 
   const api = await serve(app);
   try {
     const saved = await (await post(api.url + '/api/reports', snapshot())).json();
-    const edited = { ...saved, narratives: { overview: { ...saved.narratives.overview, summary: 'Rewritten by an admin.' } }, replacements: { 'overview:summary:metrics': { kind: 'callout', title: 'One takeaway', body: 'Fill fell.' } } };
+    const edited = { ...saved, documentEdits: {hidden:['overview:tables'],titles:{overview:'Edited overview'},metrics:{},blocks:{}}, narratives: { overview: { ...saved.narratives.overview, summary: 'Rewritten by an admin.' } }, replacements: { 'overview:summary:metrics': { kind: 'callout', title: 'One takeaway', body: 'Fill fell.' } } };
     assert.equal((await post(`${api.url}/api/reports/${saved.id}`, edited, {}, 'PUT')).status, 403);
     assert.equal((await post(api.url + '/api/reports/admin', { passcode: 'wrong' })).status, 401);
     const { token } = await (await post(api.url + '/api/reports/admin', { passcode: 'open-sesame' })).json();
@@ -63,6 +63,7 @@ test('admin edits need an unlocked session and persist in place; notes do not', 
     assert.equal(reloaded.id, saved.id);
     assert.equal(reloaded.narratives.overview.summary, 'Rewritten by an admin.');
     assert.equal(reloaded.replacements['overview:summary:metrics'].title, 'One takeaway');
+    assert.deepEqual(reloaded.documentEdits, edited.documentEdits, 'report assistant edits survive save and reload');
     assert.deepEqual(reloaded.chapters, snapshot().chapters, 'recorded figures stay frozen');
     assert.ok(reloaded.editedAt);
     await post(`${api.url}/api/reports/${saved.id}/notes`, { presenterNotes: { 'overview:cover': 'Open with the dip.' }, speakerNotes: { 'overview:glance': { opener: 'Hi', points: [], numbers: [], questions: [], transition: '' } } }, {}, 'PATCH');

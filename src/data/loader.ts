@@ -66,6 +66,11 @@ export const dependencies = (tab: number) =>
       ];
 export const usable = (key: string) =>
   !!health[key]?.fetchedAt && health[key].status !== "error";
+/** Initialise the local query engine without fetching or refreshing source sheets. */
+export async function ensureEngine(): Promise<void> {
+  engine ||= init().then(() => query(views)).then(() => undefined).catch(error => { engine = undefined; throw error; });
+  await engine;
+}
 export async function ensureWorkspace(tab: number, force = false) {
   engine ||= init()
     .then(() => query(views))

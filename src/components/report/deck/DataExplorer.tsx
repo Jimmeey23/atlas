@@ -1,3 +1,4 @@
+import { websitePredicate } from '../../../data/performance-marketing';
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight, Columns3, Database, Download, Layers, Loader2, Search, TriangleAlert, X } from "lucide-react";
 import { DropdownField } from "../../ui/DropdownField";
@@ -43,23 +44,28 @@ export function DataExplorer({ model, spec, selection }: { model: ReportModel; s
   const [columns, setColumns] = useState<string[]>([]);
   const [open, setOpen] = useState<Record<string, number>>({});
   // A clicked figure narrows to the rows that make it up; the presenter can widen to every record.
+  const [useLive, setUseLive] = useState(false);
   const [widen, setWiden] = useState(false);
   const focus = useMemo(() => widen ? null : metricRecordFocus(selection?.metric), [selection?.metric, widen]);
   const frozen=model.sourceRecords?.[spec.source];
   const archived=selection?.month ? model.recordSnapshots?.[spec.source]?.[selection.month] : undefined;
-  const frozenPeriod=!!frozen && (!selection?.month || selection.month===frozen.scope.month) || !!archived;
+  const frozenPeriod=!useLive && (!!frozen && (!selection?.month || selection.month===frozen.scope.month) || !!archived);
   useEffect(() => {
     let live = true;
     setState({ loading: true, rows: [] });
     void (async () => {
       try {
         let snapshot=frozen && (!selection?.month || selection.month===frozen.scope.month)?frozen:null;
-        if(archived && selection?.month){const response=await fetch(`/api/reports/${model.id}/records/${spec.source}?month=${selection.month}`);const result=await response.json();if(!response.ok)throw new Error(result.error);snapshot=result;}
+        if(!useLive && archived && selection?.month){const response=await fetch(`/api/reports/${model.id}/records/${spec.source}?month=${selection.month}`);const result=await response.json();if(!response.ok)throw new Error(result.error);snapshot=result;}
         if(frozenPeriod && snapshot) {
-          const fields=selection?.table?.fields ?? (selection?.table ? [selection.table.field] : []);
-          let rows=snapshot.rows.filter(r=>!selection?.group || !fields.length || fields.map(f=>String(r[f] ?? 'Unspecified')).join(' · ')===selection.group);
-          if(focus?.where && rows.some(r=>`__eligible_${selection?.metric}` in r))rows=rows.filter(r=>Boolean(r[`__eligible_${selection?.metric}`]));
-          if(focus?.flag)rows=rows.map(r=>({...r,counts_toward:r[`__flag_${selection?.metric}`] ? 'Yes':'No'}));
+          if (!spec.network && snapshot.scope.studio !== model.scope.studio) throw new Error('The saved rows belong to another studio.');
+          if (snapshot.scope.month !== (selection?.month ?? model.scope.month)) throw new Error('The saved rows belong to another reporting period.');
+          if (spec.renewal && snapshot.rows.some(row => !('renewal_state' in row))) throw new Error('This snapshot does not contain the governed renewal cohort. Current source rows are available separately.');
+          const [{ ensureEngine }, { query }, { snapshotRecordSQL }] = await Promise.all([import('../../../data/loader'), import('../../../data/duckdb'), import('../../../report/source-records')]);
+          const sql = snapshotRecordSQL(snapshot.rows, widen ? undefined : selection?.metric, selection?.table, selection?.group, spec.website ? websitePredicate : undefined);
+          let rows: Row[] = [];
+          if (sql) { await ensureEngine(); rows = await query(sql); }
+          if (!live) return;
           setState({loading:false,rows});
           const keys=Object.keys(rows[0] ?? {}).filter(k=>!HIDDEN.test(k)&&rows.some(r=>r[k]!=null&&r[k]!==''));
           const preset=[...new Set([...(focus?.flag?['counts_toward']:[]),...(focus?.columns ?? []),...(PRESETS[spec.source] ?? [])])].filter(k=>keys.includes(k));
@@ -86,7 +92,7 @@ export function DataExplorer({ model, spec, selection }: { model: ReportModel; s
       } catch (e) { if (live) setState({ loading: false, rows: [], error: (e as Error).message }); }
     })();
     return () => { live = false; };
-  }, [spec.id, model.scope.studio, model.scope.month, selection, focus, frozenPeriod, frozen, archived, model.id]);
+  }, [spec.id, model.scope.studio, model.scope.month, selection, focus, frozenPeriod, frozen, archived, model.id, useLive]);
   const available = useMemo(() => Object.keys(state.rows[0] ?? {}).filter(k => !HIDDEN.test(k) && state.rows.some(r => r[k] != null && r[k] !== "")), [state.rows]);
   const numeric = useMemo(() => columns.filter(c => isNumber(state.rows, c)), [columns, state.rows]);
   const breakdowns = useMemo(() => explorerBreakdowns(spec, available), [spec, available]);
@@ -138,9 +144,10 @@ export function DataExplorer({ model, spec, selection }: { model: ReportModel; s
       {focus?.flag && <small>Rows marked “yes” count toward the numerator.</small>}
       {selection.metric && metricRecordFocus(selection.metric)?.where != null && <button type="button" className="button" onClick={() => setWiden(w => !w)}>{widen ? `Back to ${metricRecordFocus(selection.metric)!.label.toLowerCase()} records` : "Show every record"}</button>}
     </div>}
+    {(frozen || archived) && <p className="ranking-foot">{useLive ? "Viewing current source data; it may differ from the frozen report." : "Using source rows saved with this report."} <button type="button" className="p57-data-link" onClick={() => setUseLive(value => !value)}>{useLive ? "Return to saved report rows" : "View current source rows instead"}</button></p>}
     {state.loading && <p className="deck-loading" role="status"><Loader2 size={15} className="rb2-spin"/>Loading source records…</p>}
     {state.error && <p className="notice" role="alert"><TriangleAlert size={13}/>Source records unavailable: {state.error}</p>}
-    {!state.loading && !state.error && (!state.rows.length ? <p className="empty-state dk-x-empty">No source records match {selection?.group ? `“${selection.group}” in ` : ""}{selection?.month ?? model.scope.month}. The report's frozen figures may cover rows the live source no longer holds.</p> : <>
+    {!state.loading && !state.error && (!state.rows.length ? <p className="empty-state dk-x-empty">No source records match {selection?.group ? `“${selection.group}” in ` : ""}{selection?.month ?? model.scope.month}. {frozenPeriod ? 'The saved evidence contains no matching rows.' : 'Live source data may have changed since report generation.'}</p> : <>
       <dl className="dk-x-summary">
         <div><dt>Records</dt><dd>{filtered.length.toLocaleString("en-IN")}<small>{state.truncated ? " of first 5,000" : filtered.length !== state.rows.length ? ` of ${state.rows.length.toLocaleString("en-IN")}` : ""}</small></dd></div>
         {group && <div><dt>{title(group)} groups</dt><dd>{groups.length.toLocaleString("en-IN")}</dd></div>}
@@ -171,7 +178,7 @@ export function DataExplorer({ model, spec, selection }: { model: ReportModel; s
         </table>
       </div>
       {pages > 1 && <div className="deck-pager"><button className="icon-button" aria-label="Previous page" disabled={!at} onClick={() => setPage(at - 1)}><ChevronLeft size={15}/></button><span>Page {at + 1} of {pages}</span><button className="icon-button" aria-label="Next page" disabled={at >= pages - 1} onClick={() => setPage(at + 1)}><ChevronRight size={15}/></button></div>}
-      <p className="ranking-foot">{frozenPeriod ? 'Audited source snapshot; reconciled with the report at' : 'Current source data; report figures frozen at'} {new Date(model.builtAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}{frozenPeriod ? '. These records are frozen with the report.' : ' and may differ if the sheet changed since.'}</p>
+      <p className="ranking-foot">{frozenPeriod ? 'Frozen source snapshot saved with this report at' : 'Current source data; report figures frozen at'} {new Date(model.builtAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}{frozenPeriod ? '. These records are frozen with the report.' : ' and may differ if the sheet changed since.'}</p>
     </>)}
   </div>;
 }

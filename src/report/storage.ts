@@ -34,7 +34,7 @@ export const loadReport = (id: string, signal?: AbortSignal) => request<ReportMo
 export const saveReport = (model: ReportModel, signal?: AbortSignal) => request<ReportModel>("/api/reports", json("POST", model, signal));
 /** Admin only: overwrite prose, design and replaced components of a saved version. */
 export const updateReport = (model: ReportModel) => request<ReportModel>(`/api/reports/${encodeURIComponent(model.id!)}`, json("PUT", {
-  importedChapters: model.importedChapters,
+  importedChapters: model.importedChapters, documentEdits: model.documentEdits,
   narratives: model.narratives, customization: model.customization, replacements: model.replacements ?? {},
   presenterNotes: model.presenterNotes ?? {}, speakerNotes: model.speakerNotes ?? {},
 }));

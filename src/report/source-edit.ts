@@ -1,3 +1,5 @@
+import { applyGeneratedOperation } from './generated-edits';
+import { monthLabel } from './period';
 import { definition } from './definitions';
 import type { ReportEvidenceBlock, ReportModel } from './model';
 /** Structural edits target stable IDs, so deletion never shifts another operation's target. */
@@ -9,13 +11,14 @@ export interface ReportEditOperation {
 export function applyReportOperations(model: ReportModel, operations: ReportEditOperation[]): ReportModel {
   const next = structuredClone(model);
   if (!operations.length || operations.length > 50) throw new Error('Choose between 1 and 50 changes.');
-  for (const op of operations) {
+  for (const op of structuredClone(operations)) {
     if(op.block) {
       const block=op.block;
       for(const key of Object.keys(block))if((block as unknown as Record<string,unknown>)[key]==null)delete (block as unknown as Record<string,unknown>)[key];
       if(block.kind!=='text') {
         const data=next.chapters[block.dataChapterId ?? ''];if(!data)throw new Error('Chart/table requires a governed dataset.');
-        const group=block.groupField && block.groupField!=='month'?data.groups.find(g=>g.field===block.groupField):null;
+        const group=block.groupField && block.groupField!=='month'?data.groups.find(g=>(g.id ?? g.field)===block.groupField) ?? data.groups.find(g=>g.field===block.groupField):null;
+        if(block.groupField && block.groupField!=='month' && !group)throw new Error('Choose an existing evidence grouping.');
         const sourceRows=block.groupField==='month'?data.history:group?.rows ?? [data.total];
         block.rows=sourceRows;
         if(!block.columns?.length)block.columns=block.groupField==='month'?['month',block.metricId!]:group?['g',...group.columns]:Object.keys(data.total).filter(k=>k!=='n'&&!k.includes('__'));
@@ -24,7 +27,8 @@ export function applyReportOperations(model: ReportModel, operations: ReportEdit
       }
     }
     if(!op.chapterId && op.action==='set' && ['title','subtitle'].includes(op.element)){next.customization={...next.customization,[op.element]:op.text} as ReportModel['customization'];continue;}
-    const chapters = next.importedChapters ?? [];
+    if (!next.importedChapters?.length) { applyGeneratedOperation(next, op); continue; }
+    const chapters = next.importedChapters;
     const ci = chapters.findIndex(c => c.id === op.chapterId);
     if(ci<0 && op.action==='add' && op.element==='chapter' && !op.sectionId) {
       if(!/^[a-z0-9-]+$/.test(op.chapterId))throw new Error('Use a unique chapter identifier.');
@@ -37,8 +41,8 @@ export function applyReportOperations(model: ReportModel, operations: ReportEdit
         const metricId=op.element.slice(7),dataChapterId=op.text, data=next.chapters[dataChapterId];
         chapter.metrics ??=[];
         if(op.action==='delete'){chapter.metrics=chapter.metrics.filter(m=>m.metricId!==metricId);continue;}
-        if(!data || data.total[metricId]==null || !Number.isFinite(Number(data.total[metricId])))throw new Error('Select a measured September metric.');
-        const m={label:metricId,value:String(data.total[metricId]),note:'September 2026',metricId,dataChapterId};
+        if(!data || data.total[metricId]==null || !Number.isFinite(Number(data.total[metricId])))throw new Error('Select a measured report metric.');
+        const m={label:definition(metricId)?.label ?? metricId,value:String(data.total[metricId]),note:monthLabel(model.scope.month),metricId,dataChapterId};
         const mi=chapter.metrics.findIndex(m=>m.metricId===metricId);if(mi>=0)chapter.metrics[mi]=m;else chapter.metrics.push(m);continue;
       }
       if (op.action === 'delete') { chapters.splice(ci, 1); continue; }
@@ -93,7 +97,7 @@ export function reportEditorContext(model:ReportModel, selection?:unknown) {
    return {...c,sections};
  });
  const metricDefinitions=Object.fromEntries([...new Set(Object.values(model.chapters).flatMap(d=>Object.keys(d.total)))].filter(k=>definition(k)).map(k=>[k,definition(k)]));
- const context=JSON.stringify({scope:model.scope,audit:model.dataAudit,selection,customization:model.customization,chapters,datasets,metricDefinitions});
+ const context=JSON.stringify({scope:model.scope,audit:model.dataAudit,selection,customization:model.customization,chapters:chapters ?? Object.entries(model.narratives).map(([id,narrative])=>({id,title:model.documentEdits?.titles[id] ?? id,summary:narrative.summary,sections:[{id:'findings',blocks:narrative.cards.map((card,index)=>({...card,id:card.id ?? `finding-${index}`}))},{id:'commentary',blocks:narrative.metricCommentary?.map((item,index)=>({...item,id:`commentary-${index}`}))},{id:'tables',blocks:model.chapters[id]?.groups.map(group=>({id:group.id ?? group.field,title:group.title,columns:group.columns,field:group.field,fields:group.fields}))}],briefing:narrative.briefing,decision:narrative.decision,metricCommentary:narrative.metricCommentary})),documentEdits:model.documentEdits,replacements:model.replacements,builtAt:model.builtAt,intelligence:model.intelligence,signals:model.signals,sources:model.sources,additionalContext:model.additionalContext,datasets,metricDefinitions});
  if(context.length>1000000)throw new Error('This report exceeds the editor context limit. The complete document must fit the report editor’s context budget.');
  return context;
 }

@@ -1,3 +1,4 @@
+import { useRecordDrilldown } from './RecordDrilldown';
 import { ReportProse } from './ReportProse';
 import { lensOf } from '../Insight';
 import { monthLabel } from '../../../report/period';
@@ -5,7 +6,8 @@ import type { ReportModel } from '../../../report/model';
 import { definition, reportFmt } from '../../../report/definitions';
 import { reportReleaseIssues } from '../../../report/release-gate.mjs';
 
-export function LeadershipFront({ model }: { model: ReportModel }) {
+export function LeadershipFront({ model, exporting = false }: { model: ReportModel; exporting?: boolean }) {
+  const drill = useRecordDrilldown();
   const cards = model.narratives['executive-summary']?.cards.slice(0,5) ?? [];
   const seen = new Set<string>();
   const scorecard = Object.values(model.chapters).flatMap(data => Object.keys(data.total).filter(id => {
@@ -28,7 +30,7 @@ export function LeadershipFront({ model }: { model: ReportModel }) {
       const favorable=known&&target!=null&&((Number(actual)>=target)===(definition(id)?.higherIsBetter??true));
       const gap=known&&target!=null?Math.abs(Number(actual)-target)/Math.max(Math.abs(target),.000001):null;
       const rag=!known||target==null?'Unrated':favorable?'Green':gap!=null&&gap<=.1?'Amber':'Red';
-      return <tr key={id}><th>{definition(id)?.label}</th><td>{known?reportFmt(id,actual):'Unavailable'}</td><td>{target==null?'Not set':reportFmt(id,target)}</td><td data-rag={rag}>{rag}</td></tr>;
+      return <tr key={id}><th>{definition(id)?.label}</th><td>{known && !exporting && drill ? <button type="button" className="p57-data-link" aria-label={`View ${definition(id)?.label} scorecard records`} onClick={() => drill({ chapterId: data.id, metric: id })}>{reportFmt(id,actual)}</button> : known ? reportFmt(id,actual) : 'Unavailable'}</td><td>{target==null?'Not set':reportFmt(id,target)}</td><td data-rag={rag}>{rag}</td></tr>;
     })}{bridge && <><tr><th>Closing paid active members</th><td>{bridge[4]}</td><td>Not set</td><td data-rag="Unrated">Unrated</td></tr><tr><th>Whole-base monthly logo churn</th><td>{typeof bridge[5]==='number'?`${(bridge[5]*100).toFixed(1)}%`:'Unavailable'}</td><td>Not set</td><td data-rag="Unrated">Unrated</td></tr></>}</tbody></table></div><small>Green: target met. Amber: adverse gap up to 10% of target. Red: larger adverse gap. Missing target or evidence is Unrated.</small>
   </section>;
 }

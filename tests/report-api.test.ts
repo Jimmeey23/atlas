@@ -127,3 +127,18 @@ test('custom report chapters, editorial preferences and narrative cache remain i
     assert.ok(progress.includes('Narratives complete'));
   } finally {globalThis.fetch=originalFetch;(globalThis as any).localStorage=originalStorage;}
 });
+
+test('report assistant receives all written chapters and frozen numeric evidence independently of live queries', async () => {
+ const root=await mkdtemp(path.join(tmpdir(),'atlas-report-agent-')); let call:any;
+ const ai={responses:{create:async(request:any)=>{call=request;return {output:[{type:'function_call',name:'present_answer',call_id:'report-answer',arguments:JSON.stringify({headline:'Frozen report reading',answer:'The report records 120 visits versus 100 in the prior month.',highlights:[],chart:{type:'none',title:'',evidence:0,x:'',series:[]},table_evidence:null,caveats:[],follow_ups:[],actions:[]})}]};}}};
+ const app=express();app.use(express.json());intelligenceRoutes(app,root,[],undefined,{ai});const api=await serve(app);
+ try{
+  const context=JSON.stringify({scope:{studio:'Test studio',month:'2026-09'},builtAt:'2026-10-16',chapters:[{id:'sessions',summary:'Full written chapter'}],datasets:{sessions:{total:{attendance:120},prior:{attendance:100},history:{columns:[],values:[]},groups:[]}}});
+  const response=await fetch(api.url+'/api/intelligence/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'Explain this report',reportContext:context,saveHistory:false,filters:{from:'2026-09-01',to:'2026-09-30',location:['Test studio']}})});
+  const result=await response.json();assert.equal(response.status,200,JSON.stringify(result));
+  assert.ok(call.input.some((item:any)=>item.content?.includes('Full written chapter')));
+  assert.match(call.instructions,/REPORT MODE/);
+  assert.match(result.answer,/120 visits/);
+  assert.equal(result.evidence[0].result[0].attendance,120);
+ }finally{await api.close();await rm(root,{recursive:true,force:true});}
+});

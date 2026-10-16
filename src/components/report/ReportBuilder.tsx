@@ -1,3 +1,5 @@
+import { ReportAssistant } from "./deck/ReportAssistant";
+import { reportAppearance } from "../../report/appearance";
 import { ContinuousReport } from "./deck/ContinuousReport";
 import { deckTabs } from "../../report/deck";
 import { findingsFor, ledger } from "../../report/findings";
@@ -260,7 +262,8 @@ export function ReportBuilder({ version }: { version: string | number }) {
       {model && <section className="rs-report-preview" aria-label="Monthly report preview">
         <header><div><span className="eyebrow">Your studio review</span><h2>{model.scope.studio} · {monthLabel(model.scope.month)}</h2><p>{running ? "Chapters appear as their analysis completes." : "Frozen monthly figures · source links identify whether records are frozen or live."}</p></div><button className="button" onClick={() => void open(model)} disabled={busy}><ExternalLink size={14}/>Open reader</button></header>
         {(studio !== model.scope.studio || month !== model.scope.month) && <p className="notice">This preview is {model.scope.studio} · {monthLabel(model.scope.month)}. Generate a report to apply the newly selected scope.</p>}
-        <article className="report-doc r2 deck deck-doc cr-inline" data-report-theme={model.customization?.theme || "light"} data-accent={reportOptions(model.customization).accent} data-surface={reportOptions(model.customization).surface} data-report-layout={reportOptions(model.customization).layout} data-typography={reportOptions(model.customization).typography} data-density={reportOptions(model.customization).density}>
+        <ReportAssistant model={model} onChange={next => job.set({ model: next })} inline/>
+        <article className="report-doc r2 deck deck-doc cr-inline p57-report-surface" style={reportAppearance(model)} data-report-theme={model.customization?.theme || "light"} data-accent={reportOptions(model.customization).accent} data-surface={reportOptions(model.customization).surface} data-report-layout={reportOptions(model.customization).layout} data-typography={reportOptions(model.customization).typography} data-density={reportOptions(model.customization).density}>
           {model.importedChapters?.length ? <ImportedReport model={model}/> : <ContinuousReport withNavigation model={model} tabs={previewTabs} ranked={previewFindings} onNavigate={id => document.getElementById(`chapter-${id}`)?.scrollIntoView({ block: "start" })}/>}
         </article>
       </section>}

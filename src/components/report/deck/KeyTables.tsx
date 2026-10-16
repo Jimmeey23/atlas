@@ -1,3 +1,4 @@
+import { readingSpan } from "../../../report/reader";
 import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ChevronDown, Download, Search, Table2 } from "lucide-react";
 import { exportCSV } from "../../exports";
@@ -33,7 +34,7 @@ function KeyTable({ table, chapter, open: initial, compact = false, rowLimit }: 
   const head = (key: string, text: string) => <th key={key} aria-sort={sort.key === key ? (sort.desc ? "descending" : "ascending") : undefined}>
     <button type="button" onClick={() => setSort(s => ({ key, desc: s.key === key ? !s.desc : true }))}>{text}{sort.key === key && (sort.desc ? <ArrowDown size={11}/> : <ArrowUp size={11}/>)}</button></th>;
   const total = table.total;
-  return <section className="dk-table" data-open={open} data-compact={compact || undefined}>
+  return <section data-reader-span={readingSpan({ columns: table.columns.length + 4, rows: visibleRows.length, longestLabel: Math.max(0, ...visibleRows.map(row => String(row.g).length)) })} className="dk-table" data-open={open} data-compact={compact || undefined}>
     <header>
       <button type="button" className="dk-table-toggle" aria-expanded={open} aria-disabled={compact || undefined} onClick={() => { if (!compact) setOpen(o => !o); }}>
         <Table2 size={15}/><span><b>{table.title}</b><small>{source.length} rows · ranked on {label(compare).toLowerCase()} · {table.minimum}</small></span><ChevronDown size={16} className="dk-chevron"/>
@@ -49,7 +50,7 @@ function KeyTable({ table, chapter, open: initial, compact = false, rowLimit }: 
         const g = String(r.g), prior = table.prior?.[g]?.[compare], ly = table.priorYear?.[g]?.[compare];
         return <tr key={g}>
           <th scope="row">{drill ? <button type="button" className="dk-row-drill" title="Open source records" onClick={() => drill({ chapterId: chapter, table, group: g, metric: compare })}>{g}</button> : g}</th>
-          {table.columns.map(c => <td key={c} data-lead={c === compare || undefined}>{fmt(c, r[c])}</td>)}
+          {table.columns.map(c => <td key={c} data-lead={c === compare || undefined}>{drill && r[c] != null ? <button type="button" className="p57-data-link" aria-label={`View ${label(c)} records for ${g}`} onClick={() => drill({ chapterId: chapter, metric: c, table, group: g })}>{fmt(c, r[c])}</button> : fmt(c, r[c])}</td>)}
           <td data-tone={tone(compare, r[compare], prior)}>{prior == null ? "—" : delta(compare, r[compare], prior)}</td>
           <td data-tone={tone(compare, r[compare], ly)}>{ly == null ? "—" : delta(compare, r[compare], ly)}</td>
           <td className="dk-muted-cell">{r.n == null ? "—" : Number(r.n).toLocaleString("en-IN")}</td>
@@ -63,8 +64,8 @@ function KeyTable({ table, chapter, open: initial, compact = false, rowLimit }: 
 }
 
 export function KeyTables({ model, chapter, mode = "full", tableLimit, rowLimit }: { model: ReportModel; chapter: string; mode?: "full" | "curated"; tableLimit?: number; rowLimit?: number }) {
-  const tables = distinctTables(model.chapters[chapter]?.groups ?? []);
+  const tables = distinctTables(model.chapters[chapter]?.groups ?? []).map(table => ({ ...table, title: model.documentEdits?.titles[`${chapter}:tables:${table.id ?? table.field}`] ?? table.title })).filter(table => !model.documentEdits?.hidden.includes(`${chapter}:tables:${table.id ?? table.field}`));
   if (!tables.length) return <p className="empty-state">No tables were stored for this chapter.</p>;
   const shown = mode === "curated" ? curatedBreakdowns(tables, tableLimit ?? 2) : tables.slice(0, tableLimit);
-  return <div className="dk-tables" data-mode={mode}>{shown.map((t, i) => <KeyTable key={t.id ?? t.field} table={t} chapter={chapter} open={mode === "curated" || i < 2} compact={mode === "curated"} rowLimit={mode === "curated" ? rowLimit ?? 6 : rowLimit} />)}</div>;
+  return <div className="dk-tables p57-adaptive-grid" data-mode={mode}>{shown.map((t, i) => <KeyTable key={t.id ?? t.field} table={t} chapter={chapter} open={mode === "curated" || i < 2} compact={mode === "curated"} rowLimit={mode === "curated" ? rowLimit ?? 6 : rowLimit} />)}</div>;
 }

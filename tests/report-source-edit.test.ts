@@ -20,7 +20,7 @@ test('AI chart and table additions resolve actual evidence and discard proposed 
 });
 test('metric selections require measured monthly values and can never produce unavailable placeholder cards',()=>{
  const next=applyReportOperations(model(),[operation({sectionId:'',blockId:'',element:'metric:attendance',text:'sessions'})]);assert.equal(next.importedChapters![0].metrics![0].metricId,'attendance');
- assert.throws(()=>applyReportOperations(model(),[operation({sectionId:'',blockId:'',element:'metric:invented',text:'sessions'})]),/measured September/);
+ assert.throws(()=>applyReportOperations(model(),[operation({sectionId:'',blockId:'',element:'metric:invented',text:'sessions'})]),/measured report/);
 });
 test('full-report AI context includes every element, definitions and frozen comparisons without dropping off-screen chapters',()=>{
  const m=model();const context=JSON.parse(reportEditorContext(m));assert.equal(context.chapters[0].sections[0].blocks[0].text,'Original prose');assert.equal(context.datasets.sessions.total.attendance,1404);assert.equal(context.metricDefinitions.attendance.label,'Attendance');
@@ -28,4 +28,27 @@ test('full-report AI context includes every element, definitions and frozen comp
 test('filtered distinct count drilldowns use the same membership and attended-record populations as their metrics',()=>{
  assert.match(metricRecordFocus('lapsed_members')!.where!,/latest_lapse/);
  assert.match(metricRecordFocus('unique_attendees')!.where!,/attended/);
+});
+
+test('generated reports support evidence-bound element and metric edits without changing frozen datasets', () => {
+ const m=model(); delete m.importedChapters;
+ m.customization={title:'Review',subtitle:'',preparedFor:'',preparedBy:'',audience:'Leadership',tone:'Professional',detail:'Comprehensive',instructions:'',chapterIds:['sessions'],theme:'light'};
+ m.narratives.sessions={generated:true,summary:'Original narrative',cards:[{headline:'Original verdict',meaning:'Observed demand',evidence:'Frozen figures',action:'',focus:'kpis'},{headline:'Original finding',meaning:'A specific pattern',evidence:'Frozen rows',action:'',focus:'trainer'}]};
+ const before=JSON.stringify(m.chapters);
+ const operations=[operation({chapterId:'sessions',sectionId:'',blockId:'',element:'summary',text:'Revised narrative'}),operation({chapterId:'sessions',sectionId:'findings',blockId:'finding-1',element:'meaning',text:'Revised interpretation'}),operation({chapterId:'sessions',sectionId:'',blockId:'',element:'metric:attendance',text:'sessions'}),operation({action:'add',chapterId:'sessions',sectionId:'additional',blockId:'',element:'',text:'',block:{id:'attendance-trend',kind:'chart',title:'Attendance history',dataChapterId:'sessions',groupField:'month',metricId:'attendance'}})];
+ const next=applyReportOperations(m,operations);
+ assert.equal(next.narratives.sessions.summary,'Revised narrative');
+ assert.equal(next.narratives.sessions.cards[1].meaning,'Revised interpretation');
+ assert.deepEqual(next.documentEdits?.metrics.sessions,[{metricId:'attendance',dataChapterId:'sessions'}]);
+ assert.equal(next.documentEdits?.blocks.sessions[0].rows?.[0].attendance,1404);
+ assert.equal(JSON.stringify(next.chapters),before);
+ assert.equal(m.narratives.sessions.summary,'Original narrative');
+ assert.equal(operations[3].block?.rows,undefined,'planning does not mutate the proposed operations');
+ const deleted=applyReportOperations(next,[operation({action:'delete',chapterId:'sessions',sectionId:'additional',blockId:'attendance-trend',element:'',text:''}),operation({action:'delete',chapterId:'sessions',sectionId:'',blockId:'',element:'metric:attendance',text:''})]);
+ assert.equal(deleted.documentEdits?.blocks.sessions.length,0);
+ assert.ok(deleted.documentEdits?.hidden.includes('sessions:metric:attendance'));
+ assert.equal(JSON.stringify(deleted.chapters),before);
+ const context=JSON.parse(reportEditorContext(next));
+ assert.equal(context.chapters[0].sections[0].blocks[1].meaning,'Revised interpretation');
+ assert.equal(context.documentEdits.blocks.sessions[0].id,'attendance-trend');
 });

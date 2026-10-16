@@ -88,6 +88,7 @@ export const INSIGHT_LENSES: { id: InsightLens; label: string; question: string 
   { id: 'next_step', label: 'Recommended move', question: 'What should leadership decide or change next?' },
 ];
 export interface InsightCard {
+  id?: string;
   /** v2 framing; cards written before lenses existed carry `category` instead. */
   lens?: InsightLens;
   /** Why it happened: the quantified driver and the offsetting force. */
@@ -242,6 +243,7 @@ export interface ReportModel {
   editedAt?: string;
   /** Admin replacements of individual components, keyed by slot id (chapter:section:component). */
   replacements?: Record<string, ReportComponentSpec>;
+  documentEdits?: import("./generated-edits").DocumentEdits;
   /** Presenter's own notes per page, keyed chapter:section. */
   presenterNotes?: Record<string, string>;
   /** AI-written talk tracks per page, keyed chapter:section. */

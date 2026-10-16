@@ -42,6 +42,7 @@ function MetricHistoryChart({ id, data, active, onDrill }: { id: string; data: C
 
 /** The app's metric card; clicking flips it to its 14-month history. */
 export function FlipMetricCard({ id, data, target }: { id: string; data: ChapterData; target?: number; flipped: boolean; onToggle: () => void }) {
+  const drill = useRecordDrilldown();
   const m = definition(id);
   const value = data.total[id], prior = data.prior[id], lastYear = data.priorYear[id];
   const mom = direction(id, value, prior), yoy = direction(id, value, lastYear);
@@ -78,6 +79,7 @@ export function FlipMetricCard({ id, data, target }: { id: string; data: Chapter
           <div><dt>Avg</dt><dd>{fmt(id, finite.reduce((a, b) => a + b, 0) / finite.length)}</dd></div>
           <div><dt>{monthLabel(String(data.history.at(-1)?.month ?? "")).split(" ")[0] || "Latest"}</dt><dd>{fmt(id, value)}</dd></div>
         </dl>}
+        {drill && <button type="button" className="p57-metric-records" data-export="omit" onClick={event => { event.stopPropagation(); drill({ metric: id, chapterId: data.id }); }}>View item-level records ↗</button>}
         <dl className="deck-flip-stats">
           <div><dt>Previous month</dt><dd>{fmt(id, prior)}</dd></div>
           <div><dt>Last year</dt><dd>{fmt(id, lastYear)}</dd></div>
@@ -85,5 +87,6 @@ export function FlipMetricCard({ id, data, target }: { id: string; data: Chapter
         </dl>
       </article>}
     </div>
+    {!flipped && drill && <button type="button" className="p57-metric-records" data-export="omit" aria-label={`View ${m?.label ?? id} item-level records`} onClick={() => drill({ metric: id, chapterId: data.id })}>View records ↗</button>}
   </div>;
 }

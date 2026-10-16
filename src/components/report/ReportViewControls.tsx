@@ -10,6 +10,7 @@ export function ReportViewControls({ model, onChange }: { model: ReportModel; on
     const customization: ReportCustomization = { title:'', subtitle:'', preparedFor:'', preparedBy:'', audience:'Studio leadership', tone:'Professional', detail:'Comprehensive', instructions:'', chapterIds:chapters.filter(c => model.chapters[c.id] || model.narratives[c.id]).map(c => c.id), theme:'light', ...model.customization, ...value };
     onChange({ ...model, customization });
   }
+  if (!model.importedChapters?.length) return <div className="report-view-controls"><p>White paper · accent unique to this report.</p><p>Use <b>Reading settings</b> above the report for adaptive layout, text size, spacing and supporting evidence controls.</p></div>;
   return <div className="report-view-controls" aria-label="Report appearance">
     <label>Layout<DropdownField aria-label="Report layout" value={options.layout} onChange={e => patch({layout:e.target.value as ReportCustomization['layout']})}>
       <option value="adaptive">Side-by-side</option><option value="full">Reading</option><option value="grid">Card grid</option>

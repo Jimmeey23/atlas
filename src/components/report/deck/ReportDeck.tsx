@@ -1,5 +1,7 @@
+import { ReportAssistant } from "./ReportAssistant";
+import { reportAppearance } from "../../../report/appearance";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { ChevronLeft, ChevronRight, Mic, Lock, LockOpen, PencilLine, Save, Undo2, Pin, PinOff, Download, Printer, Maximize, Minimize, Palette, Loader2, KeyRound, X, TriangleAlert, Gauge, Lightbulb, ChartLine, Database, ListChecks, BookOpen, CircleDot, Medal, Telescope, Table2 } from "lucide-react";
+import { Sparkles, ChevronLeft, ChevronRight, Mic, Lock, LockOpen, PencilLine, Save, Undo2, Pin, PinOff, Download, Printer, Maximize, Minimize, Palette, Loader2, KeyRound, X, TriangleAlert, Gauge, Lightbulb, ChartLine, Database, ListChecks, BookOpen, CircleDot, Medal, Telescope, Table2 } from "lucide-react";
 import logo from "../../../assets/report/logo.png";
 import { ActionPlan } from "../Glance";
 import { ReportDocument } from "../ReportDocument";
@@ -69,7 +71,7 @@ function AdminDialog({ onClose, onUnlocked }: { onClose: () => void; onUnlocked:
 export function ReportDeck({ initial, storageError }: { initial: ReportModel; storageError?: string }) {
   const [model, setModel] = useState(initial);
   const [saved, setSaved] = useState(initial);
-  const tabs = useMemo(() => deckTabs(model), [model.chapters, model.narratives, model.customization?.chapterIds, model.importedChapters]);
+  const tabs = useMemo(() => deckTabs(model), [model.chapters, model.narratives, model.customization?.chapterIds, model.importedChapters, model.documentEdits]);
   const pages = deckPages(tabs);
   const fromHash = () => { const [t, s] = decodeURIComponent(location.hash.slice(1)).split("/"); const found = tabs.find(x => x.id === t); return found ? { tab: found.id, section: (found.sections.includes(s as DeckSection) ? s : found.sections[0]) as DeckSection } : { tab: tabs[0].id, section: tabs[0].sections[0] }; };
   const [page, setPage] = useState(fromHash);
@@ -89,7 +91,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
   const [flipped, setFlipped] = useState("");
   const exportRef = useRef<HTMLElement>(null);
   const main = useRef<HTMLElement>(null);
-  const dirty = JSON.stringify([model.narratives, model.replacements ?? {}, model.importedChapters,model.customization]) !== JSON.stringify([saved.narratives, saved.replacements ?? {}, saved.importedChapters,saved.customization]);
+  const dirty = JSON.stringify([model.narratives, model.replacements ?? {}, model.importedChapters,model.customization,model.documentEdits]) !== JSON.stringify([saved.narratives, saved.replacements ?? {}, saved.importedChapters,saved.customization,saved.documentEdits]);
   const tab = tabs.find(t => t.id === page.tab) ?? tabs[0];
   const index = pages.findIndex(p => p.tab === page.tab && p.section === page.section);
 
@@ -199,10 +201,10 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
   }
 
   return <EditContext.Provider value={edit}><RecordDrilldownProvider model={model} chapterId={cid}>
-    <div className="report-page deck" data-report-id={model.id || ""} data-drawer={drawer} data-editing={edit.editing} data-full={full} data-continuous={continuous} data-report-design="analytical">
+    <div className="report-page deck" style={reportAppearance(model)} data-report-id={model.id || ""} data-drawer={drawer} data-editing={edit.editing} data-full={full} data-continuous={continuous} data-report-design="analytical">
       <header className="deck-nav" data-export="omit">
           <a className="deck-brand" href="#overview/cover" onClick={e => { e.preventDefault(); open("overview"); }}><img src={logo} alt="Physique 57"/><span><b>{model.customization?.title || "Monthly performance report"}</b><small>{model.scope.studio} · {monthLabel(model.scope.month)}{model.editedAt ? " · edited" : ""}</small></span></a>
-          <div className="deck-nav-actions">
+          <div className="deck-nav-actions"><button className="button primary" onClick={() => window.dispatchEvent(new Event("p57-open-report-assistant"))}><Sparkles size={14}/>Atlas AI</button>
             <button className="button" aria-pressed={continuous} onClick={() => setContinuous(value => !value)}>{continuous ? "Presentation view" : "Single-page report"}</button>
             {dirty && <span className="deck-unsaved"><CircleDot size={11}/>Unsaved changes</span>}
             {admin && dirty && <button className="button" onClick={() => setModel(saved)} disabled={!!busy}><Undo2 size={14}/>Discard</button>}
@@ -238,7 +240,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
           }
           {message && <p className="deck-message" role="status">{message}<button className="icon-button" aria-label="Dismiss" onClick={() => setMessage("")}><X size={13}/></button></p>}
           {edit.editing && <p className="deck-edit-banner"><PencilLine size={14}/>Editing — click any text to rewrite it. Use <b>✦</b> on a component to replace just that component with AI. Save writes to the database.</p>}
-          <article className="report-doc r2 deck-doc" data-report-theme={model.customization?.theme || "light"} data-accent={options.accent} data-surface={options.surface} data-report-layout={options.layout} data-typography={options.typography} data-card-style={options.cardStyle} data-density={options.density} data-section={page.section} key={continuous ? "continuous" : `${page.tab}:${page.section}`}>
+          <article className="report-doc r2 deck-doc p57-report-surface" style={reportAppearance(model)} data-report-theme={model.customization?.theme || "light"} data-accent={options.accent} data-surface={options.surface} data-report-layout={options.layout} data-typography={options.typography} data-card-style={options.cardStyle} data-density={options.density} data-section={page.section} key={continuous ? "continuous" : `${page.tab}:${page.section}`}>
             {model.importedChapters?.length ? <SourceReportChapter key={tab.id} model={model} chapterId={tab.id} section={continuous ? "summary" : page.section} /> : continuous ? <ContinuousReport model={model} tabs={tabs} ranked={ranked} onNavigate={open}/> : <div className="cr-report cr-presentation">{body()}</div>}
           </article>
           <div className="deck-chapter-markers" hidden>{tabs.filter(t => t.spec || model.importedChapters?.length).map(t => <section key={t.id} className="r-section" id={t.id}><span className="r-section-topic">{t.label}</span></section>)}</div>
@@ -248,6 +250,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
             <button className="button" disabled={index >= pages.length - 1} onClick={() => go(1)}>Next<ChevronRight size={15}/></button>
           </footer>}
         </main>
+        <ReportAssistant model={model} onChange={setModel} canEdit={admin} onOpen={() => setDrawer(false)}/>
         <SpeakerDrawer model={model} tabs={tabs} tab={tab.id} section={page.section} open={drawer} onNavigate={setPage} onClose={() => setDrawer(false)}
           onNotes={patch => { setModel(m => ({ ...m, ...patch })); setSaved(s => ({ ...s, ...patch })); }} />
       </div>

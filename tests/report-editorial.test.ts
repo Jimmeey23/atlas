@@ -14,3 +14,21 @@ test('proposed review windows use the evidence freeze and do not invent timing f
   assert.equal(actionReviewWindow('2026-10-15', freeze), 'Review date precedes evidence freeze');
   assert.equal(actionReviewWindow('2026-11-15', ''), 'Review timing to agree');
 });
+
+import { reportAppearance } from '../src/report/appearance';
+test('report accent is stable through saving and differs between generations', () => {
+  const model = { builtAt: '2026-10-16T00:00:00Z', scope: { studio: 'Kwality House', month: '2026-09' }, figuresHash: 'frozen-figures' };
+  assert.deepEqual(reportAppearance(model), reportAppearance({ ...model }));
+  const accents = Array.from({ length: 100 }, (_, index) => reportAppearance({ ...model, builtAt: new Date(Date.parse(model.builtAt) + index).toISOString() })['--report-accent' as keyof ReturnType<typeof reportAppearance>]);
+  assert.equal(new Set(accents).size, 100);
+});
+
+import { readingSpan, readerPreferences } from '../src/report/reader';
+test('adaptive rows protect wide evidence, long arguments and long labels', () => {
+  assert.equal(readingSpan({ columns: 5, rows: 8, words: 100 }), 'compact');
+  assert.equal(readingSpan({ columns: 6, rows: 2 }), 'full');
+  assert.equal(readingSpan({ columns: 3, rows: 9 }), 'full');
+  assert.equal(readingSpan({ words: 171 }), 'full');
+  assert.equal(readingSpan({ longestLabel: 49 }), 'full');
+  assert.deepEqual(readerPreferences({ layout: 'injected', textSize: 'giant', spacing: null }), { layout: 'adaptive', textSize: 'standard', spacing: 'compact' });
+});

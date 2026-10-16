@@ -101,7 +101,7 @@ export async function serialiseReport(element: HTMLElement, model: ReportModel) 
     `<meta name="generator" content="Atlas Studio Intelligence">`,
     `<meta name="description" content="${escapeHTML(title)}">`,
     "<style>",
-    "html{scroll-behavior:smooth}body{margin:0;background:#f4f6fa;padding:24px}",
+    "html{scroll-behavior:smooth}body{margin:0;background:#fff;padding:0}",
     "@media(max-width:768px){body{padding:0}}",
     "@media print{body{padding:0;background:#fff}}",
     safeInStyle(reportCSS + "\n" + sourceExportCSS + "\n" + modernCSS + "\n" + premiumCSS + "\n" + editorialCSS),

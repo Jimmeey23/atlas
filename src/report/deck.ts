@@ -69,7 +69,7 @@ export function deckTabs(model: ReportModel): DeckTab[] {
       if (data?.history.length) sections.push("trends");
       if (data?.groups.length) sections.push("tables");
       if (!spec.derived && data) sections.push("data");
-      return { id: spec.id, label: spec.nav, title: spec.title, chapter: spec.id, spec, sections };
+      return { id: spec.id, label: spec.nav, title: model.documentEdits?.titles[spec.id] ?? spec.title, chapter: spec.id, spec, sections };
     }),
   ];
 }
