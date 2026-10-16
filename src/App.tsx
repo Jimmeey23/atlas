@@ -1127,7 +1127,7 @@ export default function App() {
                   <Chart tab={s.tab} data={analysis} secondary />
                 </Register>
               </div>
-              {s.tab === 4 ? <SalesRankings version={version}/> : s.tab === 8 ? <LeadStageScorecard version={version} onDrill={setDrill} /> : includeWeeklyPattern && analysis.heat.length > 0 ? <Register
+              {s.tab === 4 ? <SalesRankings version={contentVersion}/> : s.tab === 8 ? <LeadStageScorecard version={version} onDrill={setDrill} /> : includeWeeklyPattern && analysis.heat.length > 0 ? <Register
                 index="05"
                 title={
                   includeWeeklyPattern && analysis.heat.length
@@ -1184,7 +1184,7 @@ export default function App() {
               {s.tab === 14 && <FormatComparison version={version} />}
               {s.tab === 8 && <WebsiteLeadPeriods version={version} onDrill={setDrill} websiteOnly={false} expanded />}
               <MoMTable version={workspaceVersion} ids={[...new Set([...bp.columns, ...bp.kpis, ...Object.keys(metrics)])].filter(id => metricTable(id) === bp.source)} />
-              {s.tab === 4 && <SalesScorecards version={version} onDrill={setDrill} />}
+              {s.tab === 4 && <SalesScorecards version={contentVersion} onDrill={setDrill} />}
               {s.tab === 5 && <><ConversionJourneys version={contentVersion} /><AcquisitionMainTables version={contentVersion} /></>}
               <Register
                 index="07"

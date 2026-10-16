@@ -199,3 +199,22 @@
 .worklist-table td { min-width:110px; max-width:320px; white-space:normal; overflow-wrap:anywhere; }
 .worklist-scope { color:var(--text-2); line-height:1.6; }
 @media(max-width:760px) { .renewal-cohorts,.retention-worklists { padding:14px; } .worklist-controls>* { flex:1 1 160px; } .renewal-cohorts table { min-width:850px; } }
+
+/* Expanded sales registers must retain their real height while scrolling.
+   Deferred rendering with a 350px placeholder causes blank panels and scroll jumps. */
+.app[data-workspace="sales"] .register {
+  content-visibility: visible;
+  contain-intrinsic-size: none;
+}
+.app[data-workspace="sales"] .register-title { flex-wrap: wrap; min-width: 0; }
+.app[data-workspace="sales"] .register-title > p { flex-basis: 100%; }
+.app[data-workspace="sales"] .sales-scorecard-table table { width: max-content; min-width: 100%; }
+.app[data-workspace="sales"] .sales-scorecard-table :is(th,td) { min-width: 115px; }
+.app[data-workspace="sales"] .sales-scorecard-table .sales-dimension { min-width: 180px; max-width: 300px; }
+.app[data-workspace="sales"] .sales-scorecard-table :is([data-metric="top_product"],[data-metric="bottom_product"]) { min-width: 200px; max-width: 280px; }
+.app[data-workspace="sales"] .sales-scorecard-table :is([data-metric="top_product"],[data-metric="bottom_product"]) .scorecard-cell { max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app[data-workspace="sales"] .sales-scorecard-table tbody td:first-child { background: var(--surface-1); }
+@media(max-width:760px) {
+  .app[data-workspace="sales"] .register-head { flex-wrap: wrap; }
+  .app[data-workspace="sales"] .register-actions { margin-left: auto; }
+}
