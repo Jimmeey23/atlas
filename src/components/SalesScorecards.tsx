@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ensureSource } from '../data/loader';
 import { query, quote, type Row } from '../data/duckdb';
-import { where, today } from '../data/analytics';
+import { where } from '../data/analytics';
 import { salesScorecardQuery, salesScorecardFactsSQL, salesScorecardDefaults, salesScorecardDims, salesScorecardTerms } from '../data/sales-scorecards';
 import { GroupByPicker, usePersistentGroups } from './ui/GroupByPicker';
 import { useGroupFields } from '../data/group-registry';
@@ -11,7 +10,7 @@ import { fmt } from '../semantics/formats';
 import { Register } from './Register';
 import { exportCSV } from './exports';
 import type { TreeRow } from './NestedTable';
-import { ArrowUpRight, Download, Search } from 'lucide-react';
+import { Download, Search } from 'lucide-react';
 const headings: Record<string,string> = { discount_code:'Discount code',previous_product:'Previous plan',month:'Purchase month',member:'Community member',product:'Purchased product' };
 const monetary = new Set(['gross_revenue','net_revenue','discount_value','arpu','aov']);
 const labels: Record<string,string> = { month:'Purchase month',mom_growth:'Collections MoM change',arpu:'Revenue / unique member',aov:'Average order value',purchase_frequency:'Purchases / member',product_breadth:'Products sold',top_product:'Top product · sales',bottom_product:'Bottom product · sales',purchase_count:'Purchases',transactions:'Sales',buyers:'Members',gross_revenue:'Collections',net_revenue:'Net collections',discount_value:'Discount value',discount_rate:'Discount rate',discount_penetration:'Discounted sale share',discounted_lines:'Discounted lines',payment_lines:'Payment lines' };
@@ -29,7 +28,6 @@ function text(id:string,value:unknown) { if(id==='mom_growth') return fmt('disco
 export function SalesScorecards({version,onDrill}:{version:number;onDrill:(entry:TreeRow)=>void}) {
   const filters=useStore(s=>s.filters),transient=useStore(s=>s.transient);
   const [rows,setRows]=useState<Record<Kind,Row[]>>({people:[],people_month:[],discounts:[],upgrades:[],annual:[],private:[]});
-  const [activeCounts,setActiveCounts]=useState<Row>({});
   const [controls,setControls]=useState<Partial<Record<Kind,{sort:string;minimum:number;pageSize:number}>>>({});
   const [totals,setTotals]=useState<Record<string,Row>>({});
   const [error,setError]=useState(''),[loading,setLoading]=useState(true);
@@ -52,15 +50,6 @@ export function SalesScorecards({version,onDrill}:{version:number;onDrill:(entry
     })).then(data=>{if(active){setRows(Object.fromEntries(data.map(d=>[d.kind,d.groups])) as Record<Kind,Row[]>);setTotals(Object.fromEntries(data.map(d=>[d.kind,d.total])));}}).catch(e=>{if(active)setError(String(e));}).finally(()=>{if(active)setLoading(false);});
     return()=>{active=false;};
   },[filters,transient,version,fieldKey]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(()=>{
-    let live=true;
-    setActiveCounts({});
-    ensureSource('lapsed').then(()=>{
-    const scope=where({...filters,from:'',to:''},'lapsed',transient);
-    return query(`SELECT COUNT(DISTINCT member_id) FILTER(WHERE regexp_matches(lower(COALESCE(product,'')),'annual|yearly|12 month|1 year')) AS annual,COUNT(DISTINCT member_id) FILTER(WHERE lower(COALESCE(category,''))='privates' OR regexp_matches(lower(COALESCE(product,'')),'private')) AS private FROM lapsed${scope}${scope?' AND ':' WHERE '}member_id IS NOT NULL AND revenue>0 AND start_date<='${today()}' AND end_date>='${today()}' AND lower(COALESCE(status,'')) NOT IN ('lapsed','not activated','frozen','cancelled','canceled','expired','inactive','voided') AND (remaining IS NULL OR remaining>0 OR session_limit IS NULL OR session_limit<=0)`);})
-      .then(r=>{if(live)setActiveCounts(r[0]||{});}).catch(()=>{if(live)setActiveCounts({});});
-    return()=>{live=false;};
-  },[filters,transient,version]);
   function drill(kind:Kind,row:Row|null,id:string) {
     const terms=[kind==='upgrades'?'is_upgrade':kind==='annual'?'is_annual':kind==='private'?'is_private':kind==='discounts'?'discount>0':'TRUE'];
     if(row) terms.push(...salesScorecardTerms(dimsOf(kind),row,quote));
@@ -78,20 +67,24 @@ export function SalesScorecards({version,onDrill}:{version:number;onDrill:(entry
     const search=searches[spec.kind]||'';
     const matching=rows[spec.kind].filter(row=>Number(row.transactions)>=minimum&&(!search||dims.some(d=>String(row[d]??'').toLowerCase().includes(search.toLowerCase())))).sort((a,b)=>sort==='month'?String(b.month??'').localeCompare(String(a.month??'')):Number(b[sort]??0)-Number(a[sort]??0));
     const page=Math.min(pages[spec.kind]||0,Math.max(0,Math.ceil(matching.length/pageSize)-1));
-    return <Register key={spec.kind} index={spec.index} title={spec.title} subtitle={spec.description} actions={<button className="button" disabled={loading||!matching.length} onClick={()=>exportCSV(spec.kind+'-scorecard',matching)}><Download size={12}/>Export CSV</button>}>
-      {(spec.kind==='annual'||spec.kind==='private')&&<div className="tracker-active"><span>Currently active {spec.kind} community members</span><strong>{fmt('buyers',activeCounts[spec.kind])}</strong><small>As of {today()} IST · distinct members with paid, dated, non-frozen access and available sessions where limited. Purchase-date filters excluded; other applicable filters retained. Source snapshot, not live availability.</small></div>}
-      <div className="sales-ranking-controls"><label>Sort by<select value={sort} onChange={e=>updateControl({sort:e.target.value})}>{['gross_revenue','transactions','buyers','arpu','purchase_frequency','month'].map(id=><option key={id} value={id}>{labels[id]}</option>)}</select></label><label>Minimum sales<input type="number" min="1" value={minimum} onChange={e=>updateControl({minimum:Math.max(1,Number(e.target.value))})}/></label><label>Rows per page<select value={pageSize} onChange={e=>{updateControl({pageSize:Number(e.target.value)});}}>{[10,25,50,100].map(n=><option key={n}>{n}</option>)}</select></label></div>
-      <GroupByPicker name={spec.title} value={dims} fields={fieldsFor(spec.kind)} defaults={initial} onChange={next=>{setDims(next.length?next:initial);setPages({...pages,[spec.kind]:0});}}/>
+    return <Register key={spec.kind} index={spec.index} title={spec.title} actions={<button className="button" disabled={loading||!matching.length} onClick={()=>exportCSV(spec.kind+'-scorecard',matching)}><Download size={12}/>Export CSV</button>}>
       {error?<p role="alert">{error}</p>:loading&&!totals[spec.kind]?<p role="status">Loading sales records…</p>:<>
         {loading&&<p role="status" className="small">Updating sales records…</p>}
-        <p className="small">Purchases / member = distinct sales with a known member ID ÷ unique members. Product ranks use distinct sales per product; ties sort alphabetically. Revenue / member includes all scoped collections.</p><div className="sales-summary-strip" aria-label={`${spec.title} full scope summary`}>
-          {['gross_revenue','transactions','buyers',spec.kind==='discounts'?'discount_value':'net_revenue'].map(id=><button key={id} className="sales-summary-stat" onClick={()=>drill(spec.kind,null,id)}><span>{labels[id]}<ArrowUpRight size={12}/></span><strong>{text(id,totals[spec.kind]?.[id])}</strong><small>Full active scope</small></button>)}
+        <div className="scorecard-toolbar">
+          <div className="scorecard-toolbar-main">
+            <label className="scorecard-search"><Search size={16} aria-hidden="true"/><input aria-label={`Search ${spec.title}`} placeholder={spec.kind==='people'||spec.kind==='people_month'?'Search salespeople…':spec.kind==='discounts'?'Search discount codes…':spec.kind==='upgrades'?'Search plans…':'Search members or products…'} value={search} onChange={e=>{setSearches({...searches,[spec.kind]:e.target.value});setPages({...pages,[spec.kind]:0});}}/></label>
+            <span className="scorecard-result-count">{matching.length.toLocaleString('en-IN')} groups</span>
+            <label className="scorecard-sort">Sort by<select value={sort} onChange={e=>updateControl({sort:e.target.value})}>{['gross_revenue','transactions','buyers','arpu','purchase_frequency','month'].map(id=><option key={id} value={id}>{labels[id]}</option>)}</select></label>
+          </div>
+          <details className="scorecard-options"><summary>Table options <span>Grouping, minimum sales & page size</span></summary><div className="scorecard-options-body">
+            <GroupByPicker name={spec.title} value={dims} fields={fieldsFor(spec.kind)} defaults={initial} onChange={next=>{setDims(next.length?next:initial);setPages({...pages,[spec.kind]:0});}}/>
+            <div className="scorecard-display-options"><label>Minimum sales<input type="number" min="1" value={minimum} onChange={e=>updateControl({minimum:Math.max(1,Number(e.target.value))})}/></label><label>Rows per page<select value={pageSize} onChange={e=>updateControl({pageSize:Number(e.target.value)})}>{[10,25,50,100].map(n=><option key={n}>{n}</option>)}</select></label></div>
+          </div></details>
         </div>
-        <div className="acq-toolbar sales-table-toolbar"><label className="acq-search"><Search size={14}/><input aria-label={`Search ${spec.title}`} placeholder={spec.kind==='discounts'?'Search discount codes…':spec.kind==='upgrades'?'Search plans…':'Search members or products…'} value={search} onChange={e=>{setSearches({...searches,[spec.kind]:e.target.value});setPages({...pages,[spec.kind]:0});}}/></label><span className="sales-group-count">{matching.length.toLocaleString('en-IN')} groups</span></div>
-        <div className="intelligence-table sales-scorecard-table" aria-busy={loading} tabIndex={0} role="region" aria-label={`${spec.title}. Scroll for all columns.`}><table><thead><tr>{dims.map(d=><th scope="col" className="sales-dimension" key={d}>{headings[d]??groupLabel(d)}</th>)}{ids.map(id=><th scope="col" data-metric={id} key={id}>{labels[id]}</th>)}</tr></thead><tbody>{matching.slice(page*pageSize,(page+1)*pageSize).map((row,i)=><tr key={i}>{dims.map(d=><td className="sales-dimension" key={d}><button className={`scorecard-cell${d==='discount_code'?' sales-code':''}`} title={String(row[d]??'—')} onClick={()=>drill(spec.kind,row,'transactions')}>{row[d]??'—'}</button></td>)}{ids.map(id=><td data-metric={id} key={id}><button className="scorecard-cell" onClick={()=>drill(spec.kind,row,id)}>{text(id,row[id])}</button></td>)}</tr>)}</tbody><tfoot><tr><th scope="row" colSpan={dims.length}>Full scope total</th>{ids.map(id=><td data-metric={id} key={id}><button className="scorecard-cell" onClick={()=>drill(spec.kind,null,id)}>{text(id,totals[spec.kind]?.[id])}</button></td>)}</tr></tfoot></table></div>
+        <div className="table-scroll sales-scorecard-table" aria-busy={loading} tabIndex={0} role="region" aria-label={`${spec.title}. Scroll for all columns.`}><table><thead><tr>{dims.map(d=><th scope="col" className="sales-dimension" key={d}>{headings[d]??groupLabel(d)}</th>)}{ids.map(id=><th scope="col" data-metric={id} key={id}>{labels[id]}</th>)}</tr></thead><tbody>{matching.slice(page*pageSize,(page+1)*pageSize).map((row,i)=><tr key={i}>{dims.map(d=><td className="sales-dimension" key={d}><button className={`scorecard-cell${d==='discount_code'?' sales-code':''}`} title={String(row[d]??'—')} onClick={()=>drill(spec.kind,row,'transactions')}>{row[d]??'—'}</button></td>)}{ids.map(id=><td data-metric={id} key={id}><button className="scorecard-cell" onClick={()=>drill(spec.kind,row,id)}>{text(id,row[id])}</button></td>)}</tr>)}</tbody><tfoot><tr><th scope="row" colSpan={dims.length}>Full scope total</th>{ids.map(id=><td data-metric={id} key={id}><button className="scorecard-cell" onClick={()=>drill(spec.kind,null,id)}>{text(id,totals[spec.kind]?.[id])}</button></td>)}</tr></tfoot></table></div>
         {!matching.length&&<p>{spec.kind==='upgrades'?'No observed upgrades match this scope. Comparable earlier purchases are required.':'No purchases match this scope.'}</p>}
         <div className="acq-pagination"><span>{matching.length} groups · page {page+1} of {Math.max(1,Math.ceil(matching.length/pageSize))} · totals cover all active filters</span><div><button disabled={!page} onClick={()=>setPages({...pages,[spec.kind]:page-1})}>Previous</button><button disabled={(page+1)*pageSize>=matching.length} onClick={()=>setPages({...pages,[spec.kind]:page+1})}>Next</button></div></div>
-        {spec.kind==='discounts'&&<p className="small">Discount amounts are present on {Number(totals.discounts?.discount_known||0).toLocaleString('en-IN')} of {Number(totals.discounts?.payment_lines||0).toLocaleString('en-IN')} payment lines. Missing discounts remain unavailable.</p>}
+
       </>}
     </Register>;
   })}</>;
