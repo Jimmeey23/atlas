@@ -45,7 +45,10 @@ test('large reports fit the API prompt limit without duplicating portfolio conte
   if(!init?.body)return new Response(JSON.stringify({openai:true,model:'gpt-4.1',reportNarrativeVersion:'1'}));
   const message=JSON.parse(String(init?.body)).message;requests.push(message);
   if(message.length>90000)return new Response(JSON.stringify({error:'A report chapter prompt up to 90,000 characters is required.'}),{status:400});
-  return new Response(JSON.stringify({answer:JSON.stringify({summary:'Recorded evidence.',cards:[{headline:'Recorded movement',meaning:'Conditional analysis.',evidence:'Supplied figures.',focus:'kpis',lens:'driver',confidence:'medium'}]})}));
+  const card={headline:'Recorded movement',meaning:'Conditional analysis.',driver:'Evidence is limited.',action:'Review the supplied evidence.',ownerArea:'Leadership',impact:'Unavailable: no supported scenario.',horizon:'2026-11-01',watch:'Source coverage',priorActionResult:'Not recorded',evidence:'Supplied figures.',focus:'kpis',lens:'driver',confidence:'medium'};
+  const cards=message.includes('writing the "Executive brief') || message.includes('writing the "Executive summary') ? [card,{...card,headline:'Coverage limits interpretation',action:'Confirm source coverage.'},{...card,headline:'Review the available comparisons',action:'Review the comparison periods.'}] : [card];
+  if(message.includes('Executive cards: three to five') && message.includes('meaning: at most 20 words')) cards.splice(0,cards.length,card,{...card,headline:'Coverage limits interpretation',action:'Confirm source coverage.'},{...card,headline:'Review the available comparisons',action:'Review the comparison periods.'});
+  return new Response(JSON.stringify({answer:JSON.stringify({summary:'Recorded evidence.',cards})}));
  };
  const model:ReportModel={scope:{studio:'Kenkere House',month:'2026-09'},builtAt:'',figuresHash:'large',narratives:{},
   chapters:{'executive-summary':data('executive-summary',{total:{attendance:120},prior:{attendance:100}}),sessions:data('sessions',{total:{attendance:120,sessions:10},prior:{attendance:100,sessions:8},groups:[{id:'formats',field:'format',title:'Format evidence',columns:['attendance'],minimum:'3 contributing records',rows:Array.from({length:4000},(_,i)=>({g:`Format ${i} with a detailed community session description`,attendance:i+3}))}]})},

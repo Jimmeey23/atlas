@@ -61,3 +61,16 @@
 @media(max-width:820px){.rs .rs-workspace-head{align-items:flex-start;flex-direction:column;gap:12px}.rs .rs-grid{grid-template-columns:minmax(0,1fr)}.rs .rs-scope-fields{grid-template-columns:minmax(0,1fr)}}
 /* Dashboard comparisons do not alter a frozen monthly report; its scope is chosen in the builder. */
 .app[data-workspace=monthly-reports] .toolbar-compare{display:none}
+
+/* Current report: clear actions and comfortable spacing within the sidebar. */
+.rs .rs-ready{padding:20px;min-width:0;border-radius:14px;border-color:var(--hairline)}
+.rs .rs-ready-head{align-items:flex-start;gap:12px;margin-bottom:18px}
+.rs .rs-ready-head>div{min-width:0}.rs .rs-ready-head b{font-size:15px;line-height:1.45;letter-spacing:-.015em}
+.rs .rs-ready-head small{display:block;margin-top:5px;font-size:12px;line-height:1.65;overflow-wrap:anywhere}
+.rs .rs-ready-icon{flex:none;width:36px;height:36px;border-radius:10px}
+.rs .rs-ready>.rs-cta{min-height:44px;border-radius:9px;font-size:13px}
+.rs .rs-ready-actions{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;margin:10px 0 0}
+.rs .rs-ready-actions .button{justify-content:center;min-width:0;min-height:44px;padding:8px 10px;border-radius:8px;font-size:12px;gap:6px;white-space:normal;line-height:1.4}
+.rs .rs-ready-actions .button svg{flex:none}
+.rs-side{min-width:0}
+@media(max-width:390px){.rs .rs-ready{padding:14px}.rs .rs-ready-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.rs .rs-ready-actions .button:first-child{grid-column:1/-1}}

@@ -109,7 +109,10 @@ test('custom report chapters, editorial preferences and narrative cache remain i
   globalThis.fetch = async (_url,init) => {
     if (!init?.body) return new Response(JSON.stringify({openai:true,model:'gpt-4.1',reportNarrativeVersion:'1'}));
     messages.push(JSON.parse(String(init?.body)).message);
-    return new Response(JSON.stringify({answer:JSON.stringify({summary:'A grounded decision brief.',cards:[{headline:'Review studio demand',meaning:'Check the mix.',evidence:'Recorded figures.',action:'Manager to review.',plainLanguage:'Review demand.',focus:'kpis',category:'meaning',confidence:'medium'}]})}));
+    const message = messages[messages.length - 1];
+    const base = { headline: 'Review studio demand', meaning: 'Check the mix.', driver: 'Supplied evidence limits interpretation.', evidence: 'Recorded figures.', action: 'Review demand.', ownerArea: 'Leadership', horizon: '2026-11-01', impact: 'Unavailable: no supported scenario.', watch: 'Source coverage', priorActionResult: 'Not recorded', focus: 'cross', lens: 'driver', confidence: 'medium' };
+    const cards = message.includes('meaning: at most 20 words') ? [base, { ...base, headline: 'Review coverage', action: 'Confirm coverage.' }, { ...base, headline: 'Review comparisons', action: 'Review comparison periods.' }] : [base];
+    return new Response(JSON.stringify({ answer: JSON.stringify({ summary: 'Verdict.', cards }) }));
   };
   const customization = {title:'Board pack',subtitle:'September',preparedFor:'Leadership',preparedBy:'Operations',audience:'Executive board',tone:'Plain language',detail:'Concise',instructions:'Prioritise retention',chapterIds:['recommendations','executive-summary'],theme:'dark' as const};
   const model = {...snapshot(),customization,chapters:{'executive-summary':{id:'executive-summary',n:5,total:{revenue:100},prior:{revenue:80},priorYear:{},history:[],groups:[]}}};

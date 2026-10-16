@@ -128,7 +128,10 @@ test('the chapter prompt is built on findings and no longer asks for one passage
   globalThis.fetch = async (_url, init) => {
     if (!init?.body) return new Response(JSON.stringify({openai:true,model:'gpt-4.1',reportNarrativeVersion:'1'}));
     messages.push(JSON.parse(String(init?.body)).message);
-    return new Response(JSON.stringify({ answer: JSON.stringify({ summary: 'Verdict.', cards: [{ headline: 'H', meaning: 'M', evidence: 'E', action: 'A', plainLanguage: 'P', impact: 'I', watch: 'W', focus: 'cross', category: 'meaning', confidence: 'medium' }] }) }));
+    const message = messages[messages.length - 1];
+    const base = { headline: 'Review studio demand', meaning: 'Check the mix.', driver: 'Supplied evidence limits interpretation.', evidence: 'Recorded figures.', action: 'Review demand.', ownerArea: 'Leadership', horizon: '2026-11-01', impact: 'Unavailable: no supported scenario.', watch: 'Source coverage', priorActionResult: 'Not recorded', focus: 'cross', lens: 'driver', confidence: 'medium' };
+    const cards = message.includes('meaning: at most 20 words') ? [base, { ...base, headline: 'Review coverage', action: 'Confirm coverage.' }, { ...base, headline: 'Review comparisons', action: 'Review comparison periods.' }] : [base];
+    return new Response(JSON.stringify({ answer: JSON.stringify({ summary: 'Verdict.', cards }) }));
   };
   try {
     const exec = chapter('executive-summary', { total: { fill_rate: 0.55, attendance: 1100, revenue: 550000 }, history: months([0.7, 0.72, 0.71, 0.73, 0.7, 0.55], 'fill_rate') });

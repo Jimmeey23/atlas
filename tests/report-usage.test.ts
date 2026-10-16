@@ -69,13 +69,13 @@ test('chapters carry usage, rejected calls count, and cache hits bill nothing', 
   const cache = new Map<string, string>();
   (globalThis as any).localStorage = { getItem: (k: string) => cache.get(k) ?? null, setItem: (k: string, v: string) => cache.set(k, v) };
   const used = { model: 'gpt-4.1', inputTokens: 1000, cachedInputTokens: 0, outputTokens: 500, reasoningTokens: 0, durationMs: 2000 };
-  const card = { headline: 'H', meaning: 'M', evidence: 'E', action: 'A', plainLanguage: 'P', impact: 'I', watch: 'W', focus: 'kpis', category: 'meaning', confidence: 'high' };
+  const card = { headline: 'H', meaning: 'M', evidence: 'E', action: 'A', plainLanguage: 'P', impact: 'Unavailable: no supported scenario.', ownerArea: 'Leadership', horizon: '2026-11-01', priorActionResult: 'Not recorded', watch: 'W', focus: 'kpis', category: 'meaning', confidence: 'high' };
   let calls = 0;
   globalThis.fetch = async (_url, init) => {
     if (!init?.body) return new Response(JSON.stringify({openai:true,model:'gpt-4.1',reportNarrativeVersion:'1'}));
     calls++;
     // The first answer is malformed and rejected client-side; it was still billed.
-    return new Response(JSON.stringify({ answer: JSON.stringify({ summary: calls === 1 ? '' : 'Verdict.', cards: [card] }), usage: used }));
+    return new Response(JSON.stringify({ answer: JSON.stringify({ summary: calls <= 2 ? '' : 'Verdict.', cards: [card] }), usage: used }));
   };
   const model: any = { scope: { studio: 'S', month: '2026-09' }, builtAt: '2026-10-01T00:00:00Z', figuresHash: 'x', narratives: {},
     customization: { title: '', subtitle: '', preparedFor: '', preparedBy: '', audience: '', tone: '', detail: 'Concise', instructions: '', chapterIds: ['recommendations'], theme: 'light' },
@@ -83,13 +83,13 @@ test('chapters carry usage, rejected calls count, and cache hits bill nothing', 
   try {
     const failed = await generateNarratives(model);
     assert.ok(failed.recommendations.error);
-    assert.equal(failed.recommendations.usage!.calls, 1);
-    assert.equal(failed.recommendations.usage!.costUsd, (1000 * 2 + 500 * 8) / 1e6);
+    assert.equal(failed.recommendations.usage!.calls, 2);
+    assert.equal(failed.recommendations.usage!.costUsd, 2 * (1000 * 2 + 500 * 8) / 1e6);
     const written = await generateNarratives(model);
     assert.equal(written.recommendations.generated, true);
     assert.equal(written.recommendations.usage!.fromCache, undefined);
     const reused = await generateNarratives(model);
-    assert.equal(calls, 2, 'the third run is served from cache');
+    assert.equal(calls, 3, 'the third run is served from cache');
     assert.equal(reused.recommendations.usage!.fromCache, true);
     assert.equal(summariseUsage(reused).costUsd, 0);
   } finally { globalThis.fetch = originalFetch; (globalThis as any).localStorage = originalStorage; }

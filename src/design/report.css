@@ -244,11 +244,31 @@
 @media(max-width:600px){.report-doc .r-flags li{grid-template-columns:1fr;gap:2px}.report-doc .r-flag-value{justify-self:start}}
 @media print{.report-doc .r-flags{padding:3mm;margin:3mm 0}.report-doc .r-flags li p{font-size:8pt}.report-doc .r-flag-value{font-size:8pt}}
 .report-targets{display:grid;gap:6px;margin-top:18px;font-size:13px}.report-targets>.small{margin:0}
-.report-usage{margin:0 0 16px;padding:16px 20px;border:1px solid var(--hairline);border-radius:12px;background:var(--surface);font-size:13px}
-.report-usage>header{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-bottom:12px}
-.report-usage dl{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin:0}
-.report-usage dl>div{display:grid;gap:2px;min-width:0}.report-usage dt{font-size:11px;opacity:.75}.report-usage dd{margin:0;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}.report-usage dl small{font-size:11px;opacity:.7}
-.report-usage details{margin-top:12px}.report-usage summary{cursor:pointer}
-.report-usage-table{overflow-x:auto;margin-top:8px}.report-usage table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}.report-usage th,.report-usage td{padding:5px 8px;border-bottom:1px solid var(--hairline);text-align:right;white-space:nowrap}.report-usage th:first-child,.report-usage td:first-child,.report-usage th:nth-child(2),.report-usage td:nth-child(2){text-align:left}
-.report-usage>.small{margin:10px 0 0}
-@media(max-width:1000px){.report-usage dl{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:600px){.report-usage dl{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Size the stats to their card, including the narrow builder sidebar. */
+.report-usage{container-type:inline-size;min-width:0;margin:16px 0 0;padding:18px;border:1px solid var(--hairline);border-radius:14px;background:var(--surface-1,var(--surface));color:var(--text-1);font-size:13px}
+.report-usage>header{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
+.report-usage>header>div{min-width:0}.report-usage>header .eyebrow{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-2)}
+.report-usage>header p{margin:4px 0 0;font-size:12px;line-height:1.5;color:var(--text-3)}
+.report-usage .report-usage-model{max-width:100%;padding:5px 8px;border:1px solid var(--hairline);border-radius:6px;background:var(--surface-2);font-family:var(--font-mono,ui-monospace,monospace);font-size:10px;font-weight:500;line-height:1.5;overflow-wrap:anywhere;color:var(--text-2)}
+.report-usage dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0}
+.report-usage dl>div{display:flex;flex-direction:column;gap:8px;min-width:0;padding:12px;background:var(--surface-2);border:1px solid var(--hairline);border-radius:9px}
+.report-usage dl>div[data-metric=cost]{background:color-mix(in srgb,var(--accent) 6%,var(--surface-1));border-color:color-mix(in srgb,var(--accent) 22%,var(--hairline))}
+.report-usage dt{margin:0;font-size:11px;font-weight:600;line-height:1.4;color:var(--text-2)}
+.report-usage dd{display:flex;flex:1;flex-direction:column;gap:8px;margin:0;font-size:clamp(18px,5.5cqi,25px);font-weight:650;letter-spacing:-.035em;line-height:1.2;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.report-usage dd small{display:block;margin-top:auto;font-size:11px;font-weight:400;letter-spacing:normal;line-height:1.6;color:var(--text-2);overflow-wrap:anywhere}
+.report-usage details{margin-top:14px;border-top:1px solid var(--hairline);padding-top:4px}
+.report-usage summary{cursor:pointer;padding:10px 0;min-height:44px;font-size:12px;font-weight:600;color:var(--text-1);line-height:1.6}
+.report-usage summary::marker{color:var(--text-3)}.report-usage summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.report-usage-table{max-width:100%;overflow-x:auto;margin-top:4px;border:1px solid var(--hairline);border-radius:8px}
+.report-usage table{width:100%;border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums}
+.report-usage th,.report-usage td{padding:10px;border-bottom:1px solid var(--hairline);text-align:right;white-space:nowrap}
+.report-usage th{background:var(--surface-2);font-size:10px;font-weight:600;color:var(--text-2)}.report-usage tr:last-child td{border-bottom:0}
+.report-usage th:first-child,.report-usage td:first-child,.report-usage th:nth-child(2),.report-usage td:nth-child(2){text-align:left}
+.report-usage-status{display:inline-flex;padding:3px 6px;border-radius:4px;background:var(--surface-2);color:var(--text-2);font-size:10px;font-weight:600}
+.report-usage-status[data-status=failed]{background:color-mix(in srgb,var(--warn) 12%,transparent);color:var(--warn)}
+.report-usage-status[data-status=written]{background:color-mix(in srgb,var(--pos) 12%,transparent);color:var(--pos)}
+.report-usage .report-usage-pricing{margin-top:0}.report-usage .report-usage-pricing summary{color:var(--text-2);font-weight:400}
+.report-usage .small{margin:0 0 8px;font-size:11px;line-height:1.7;color:var(--text-2)}
+@container (min-width:560px){.report-usage dl{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@container (min-width:1000px){.report-usage dl{grid-template-columns:repeat(6,minmax(0,1fr))}}
+@container (max-width:230px){.report-usage dl{grid-template-columns:1fr}}

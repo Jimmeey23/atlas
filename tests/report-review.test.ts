@@ -35,3 +35,40 @@ test('narrative validation accepts displayed arithmetic and rejects invented evi
   assert.doesNotThrow(() => validate([{ ...card, driver: 'Visits may have risen because of the instructor; verify this hypothesis.' }]));
   assert.equal(model.narratives.sessions, undefined, 'validation never mutates saved narratives');
 });
+
+test('JSON evidence keeps adjacent numbers separate and accepts cross-chapter displayed rates', () => {
+ const other = { ...data, id: 'leads', total: { fill_rate: .734 }, prior: {}, history: [], groups: [] };
+ const supplied = '["observed",123,456]';
+ const validate = (evidence: string) => validateNarrativeCards([{ ...card, evidence }], ['attendance','fill_rate'], [], { ...model, chapters: { sessions: data, leads: other } }, 'sessions', supplied);
+ assert.doesNotThrow(() => validate('123 and 456; 73.4%.'));
+ assert.throws(() => validate('123456 visits.'), /numeric evidence/);
+});
+
+test('generation repairs invalid highlights once and keeps unsupported output failed', async () => {
+ const { generateNarratives } = await import('../src/report/narrative');
+ const original = globalThis.fetch;
+ let calls = 0;
+ const messages: string[] = [];
+ globalThis.fetch = async (_url, init) => {
+  if (!init?.body) return new Response(JSON.stringify({ openai: false }));
+  const body = JSON.parse(String(init.body)); messages.push(body.message); calls++;
+  return new Response(JSON.stringify({ answer: JSON.stringify({ summary: 'Demand increased.', cards: [{ ...card, highlight: calls === 1 ? ['Absent row'] : [] }] }) }));
+ };
+ const report = { ...model, customization: { chapterIds: ['sessions'] } } as ReportModel;
+ try {
+  const written = await generateNarratives(report);
+  assert.equal(calls, 2);
+  assert.equal(written.sessions.generated, true);
+  assert.match(messages[1], /CORRECTION REQUIRED:.*row absent/);
+  calls = 0;
+  globalThis.fetch = async (_url, init) => {
+   if (!init?.body) return new Response(JSON.stringify({ openai: false }));
+   calls++;
+   return new Response(JSON.stringify({ answer: JSON.stringify({ summary: 'Demand increased.', cards: [{ ...card, evidence: '999999 visits.' }] }) }));
+  };
+  const rejected = await generateNarratives(report);
+  assert.equal(calls, 2);
+  assert.equal(rejected.sessions.generated, false);
+  assert.match(rejected.sessions.error!, /999999/);
+ } finally { globalThis.fetch = original; }
+});

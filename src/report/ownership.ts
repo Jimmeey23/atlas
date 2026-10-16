@@ -27,7 +27,7 @@ export function tabMetricIds(spec: ChapterSpec): string[] {
   if (spec.derived || NEVER_OWN.has(spec.id)) return [];
   if (spec.renewal) return Object.keys(renewalMeasures);
   const source = tabSource(spec);
-  return Object.keys(metrics).filter(id => id !== "records" && metricTable(id) === source
+  return Object.keys(metrics).filter(id => id !== "records" && !(spec.source === "recurring" && id === "draw_premium_pp") && metricTable(id) === source
     && (spec.website ? id.startsWith("website_") : !id.startsWith("website_")));
 }
 

@@ -38,6 +38,7 @@ test('shared-population siblings do not repeat the home chapter measures', () =>
   assert.ok(reportedElsewhere(instructors, 'fill_rate'));
   assert.ok(!reportedElsewhere(sessions, 'fill_rate'));
   const recurring = chapters.find(c => c.id === 'recurring')!;
+  assert.ok(!ownedMetricIds(recurring).includes('draw_premium_pp'), 'recurring facts have no independent slot baseline');
   assert.ok(ownedMetricIds(recurring).includes('fill_rate'), 'a different population keeps its own measures');
 });
 test('every measure is owned by one chapter per population', () => {
@@ -52,7 +53,7 @@ test('every measure is owned by one chapter per population', () => {
 import { generateNarratives } from '../src/report/narrative';
 import { chapters as allChapters } from '../src/report/chapters';
 const sessionsData = { id: 'sessions', n: 40, total: { attendance: 120, sessions: 10, fill_rate: 0.7 }, prior: { attendance: 100, sessions: 8, fill_rate: 0.6 }, priorYear: {}, groups: [], history: [] };
-const cardJson = (headline: string, focus: string) => ({ headline, meaning: 'Capacity demand.', evidence: '120 visits versus 100.', action: 'Review.', lens: 'driver', focus, confidence: 'medium', metrics: ['attendance'] });
+const cardJson = (headline: string, focus: string) => ({ headline, meaning: 'Capacity demand.', evidence: '120 visits versus 100.', action: `Review ${headline}.`, lens: 'driver', focus, confidence: 'medium', metrics: ['attendance'] });
 async function run(verdicts: { index: number; verdict: string; reason: string }[] | null) {
   const originalFetch = globalThis.fetch, storage = (globalThis as any).localStorage;
   (globalThis as any).localStorage = { getItem: () => null, setItem: () => {} };

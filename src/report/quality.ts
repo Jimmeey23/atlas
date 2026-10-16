@@ -5,6 +5,19 @@ const numberTokens = (text: string) => [...text.replace(/Physique\s*57|\bP57\b/g
   const token = m[0].replace(/\s|₹|[+−–-]/g, '').toLowerCase().replace(/lakhs?/, 'l').replace(/crores?/, 'cr');
   return String(parseFloat(token)) + token.replace(/^[\d.]+/, '');
 });
+/** Parse JSON records before tokenizing: commas between array values are not thousands separators. */
+function evidenceTokens(text: string): string[] {
+  const collect = (value: unknown): string[] => {
+    if (typeof value === 'number' || typeof value === 'string') return numberTokens(String(value));
+    if (Array.isArray(value)) return value.flatMap(collect);
+    if (value && typeof value === 'object') return Object.values(value).flatMap(collect);
+    return [];
+  };
+  return text.split('\n').flatMap(line => {
+    try { return collect(JSON.parse(line)); } catch { return numberTokens(line); }
+  });
+}
+
 /** Fail closed for malformed references and uncited numeric evidence. Does not infer causal truth from prose. */
 export function validateNarrativeCards(cards: InsightCard[], metricIds: string[], focusIds: string[], model: ReportModel, chapter: string, suppliedEvidence: string, observations: string[] = []) {
   const heads = new Set<string>();
@@ -21,7 +34,7 @@ export function validateNarrativeCards(cards: InsightCard[], metricIds: string[]
     if (card.highlight?.some(label => !table?.rows.some(row => String(row.g) === label))) throw new Error('Analysis highlighted a row absent from its cited evidence table.');
     // Raw evidence is supplemented with the exact displayed values and governed deltas, so INR abbreviations and rate changes are accepted.
     const formatted: string[] = [];
-    const datasets: ChapterData[] = card.focus === 'cross' || !data ? Object.values(model.chapters) : [data];
+    const datasets: ChapterData[] = Object.values(model.chapters);
     for (const d of datasets) {
       formatted.push(String(d.history.length), String(d.n));
       const ids = metricIds;
@@ -34,9 +47,10 @@ export function validateNarrativeCards(cards: InsightCard[], metricIds: string[]
         }
       }
     }
-    const allowed = new Set(numberTokens(suppliedEvidence + '\n' + formatted.join(' ')));
+    const allowed = new Set(evidenceTokens(suppliedEvidence + '\n' + formatted.join(' ')));
     const observedText = [card.headline, card.meaning, card.driver, card.trend, card.concentration, card.offset, card.monthContext, card.yearContext, card.reasoning, ...observations].filter((text): text is string => typeof text === 'string').join(' ').split(/(?<=[.!?])\s+/).filter(sentence => !/\b(propos(?:ed|al)|target|hypothesis|hypotheses|scenario|if |could |might |may )/i.test(sentence)).join(' ');
-    if (numberTokens(card.evidence + ' ' + observedText).some(token => !allowed.has(token))) throw new Error('Analysis included a numeric evidence claim not present in the supplied figures. Rewrite insights to retry.');
+    const unsupported = numberTokens(card.evidence + ' ' + observedText).filter(token => !allowed.has(token));
+    if (unsupported.length) throw new Error(`Analysis included a numeric evidence claim not present in the supplied figures: ${[...new Set(unsupported)].join(', ')}. Use exact supplied values and units; do not calculate new observed claims.`);
     const causal = [card.meaning, card.driver, card.reasoning].filter(Boolean).join(' ').split(/(?<=[.!?])\s+/);
     if (causal.some(sentence => /\b(caused by|because of|due to|resulted in)\b/i.test(sentence) && !/\b(hypothesis|hypotheses|may|might|could|cannot establish|does not establish|not establish|not prove|check|test|verify)\b/i.test(sentence))) throw new Error('Analysis asserted an unverified cause. Rewrite insights to retry.');
   }

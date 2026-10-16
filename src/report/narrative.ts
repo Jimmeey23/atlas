@@ -10,6 +10,7 @@ import { BUSINESS_CONTEXT } from "../semantics/business-context";
 import { reportOptions } from "./options";
 import { MONTHLY_EDITORIAL_RULES } from "./editorial";
 import { validateNarrativeCards } from "./quality";
+import { reportReleaseIssues } from "./release-gate.mjs";
 import { directionIssues } from "./audit";
 import { reviewMetricIds } from "./review";
 import { addCall, type CallUsage, type ChapterUsage } from "./usage";
@@ -200,7 +201,7 @@ function insightRules(model: ReportModel, spec: ChapterSpec) {
       : "recommendation: 40–70 words explaining why the proposed response fits this evidence, its trade-off, and what to verify before acting; empty only when no action is justified.",
     `metrics: 1–4 ids from AVAILABLE METRIC IDS that prove the claim. The page shows each one's value, MoM, YoY and monthly trend beside the card, so choose the ids a sceptical reader would check.`,
     "focus: kpis for the single chapter verdict card, trend when the claim rests on the monthly history, cross for cross-chapter context, otherwise the breakdown ID whose chart proves the claim.",
-    "highlight: up to 4 exact group labels, copied character-for-character from the focus breakdown table, that the claim names. Empty array when none.",
+    "highlight: up to 4 exact group labels, copied character-for-character from the focus breakdown table. For kpis, trend and cross ALWAYS return an empty array; these are not breakdown tables. For omitted diagnostic rows use an empty array too.",
     "For every recommendation, action must name a specific change, ownerArea a responsible role, horizon an explicit proposed ISO date (YYYY-MM-DD) for the deadline or review, impact a supported low–high scenario range or an explicit unavailable reason, and watch a leading indicator. Include priorActionResult with last month’s measured action result or 'Not recorded'. Never use generic validate-the-cause filler. Executive cards: three to five distinct verdicts, each meaning explains so-what, driver explains why, action names the move and ownerArea names the owner.",
     "priority: high when the item is material to the month's result or its value at stake; medium otherwise; low for context. ownerArea: the team best placed to act. horizon: when to act or review.",
     "confidence: high, medium or low, justified by source coverage, sample size and consistency across comparisons.",
@@ -550,7 +551,7 @@ export async function generateNarratives(
         ]);
         const extra = { insightVersion: 5, metricIds, lenses: spec.id === "recommendations" ? ["next_step"] : o.lenses.filter(l => l !== "next_step") };
         // Include complete pre-budget evidence: changes to omitted records must invalidate reuse too.
-        const fingerprint = await analysisKey({ version: 20, providerModel, providerPolicy, message, focusIds, extra,
+        const fingerprint = await analysisKey({ version: 21, providerModel, providerPolicy, message, focusIds, extra,
           figures, portfolio, preferences, scenarios: spec.id === "predictions" ? forwardScenarios(model) : "" });
         const key = `${CACHE_PREFIX}${model.scope.studio}:${model.scope.month}:${spec.id}:${fingerprint}`;
         const previous = model.narratives[spec.id];
@@ -560,53 +561,68 @@ export async function generateNarratives(
           continue;
         }
         let usage: ChapterUsage | undefined;
-        try {
-          const parsed = parseJson(await askModel(message, focusIds, signal, (call) => { usage = addCall(usage, call); },
-            { ...extra, analysisKey: fingerprint }));
-          const cards = Array.isArray(parsed?.cards)
-            ? parsed!.cards.filter(
-                (c): c is InsightCard =>
-                  !!c && typeof c.headline === "string" && !!c.headline.trim(),
-              )
-            : [];
-          const valid = cards.every(c => [c.meaning,c.evidence].every(v => typeof v === "string" && !!v.trim()) && !!c.focus && !!(c.lens || c.category) && !!c.confidence);
-          validateNarrativeCards(cards, metricIds, focusIds, model, spec.id, [figures, portfolio, model.scope.month, spec.id === "predictions" ? forwardScenarios(model) : ""].join("\n"), [parsed?.summary, ...(parsed?.metricCommentary?.map(item => item.text) ?? []), ...Object.values(parsed?.briefing ?? {}).filter((v): v is string => typeof v === "string"), ...(parsed?.decision?.evidence ?? [])].filter((v): v is string => typeof v === "string"));
-          if (parsed?.metricCommentary) {
-            const covered = parsed.metricCommentary.flatMap(item => item.metricIds ?? []);
-            if (covered.some(id => !metricIds.includes(id))) throw new Error("Metric commentary cited an unavailable metric.");
-            const required = !spec.derived ? reviewMetricIds(spec.id, data).filter(id => data?.total[id] != null) : [];
-            if (required.some(id => !covered.includes(id))) throw new Error("Metric commentary omitted available chapter measures. Rewrite insights to retry.");
-          }
-          if (!valid || !cards.length || typeof parsed?.summary !== "string" || !parsed.summary.trim())
-            throw new Error("The model returned no complete chapter analysis. Retry writing insights.");
-          // The verdict leads; a model that forgot to mark one has its first card promoted.
-          if (!cards.some(c => c.focus === "kpis")) cards[0] = { ...cards[0], focus: "kpis" };
-          // Deterministic direction audit: a card that contradicts its own cited figures is removed; a contradicting verdict fails the chapter.
-          const directional = cards.map(c => directionIssues(c, model, spec.id));
-          const verdictIssue = cards.findIndex((c, i) => c.focus === "kpis" && directional[i].length);
-          if (verdictIssue >= 0) throw new Error(`The chapter verdict contradicts its own figures. ${directional[verdictIssue][0]} Rewrite insights to retry.`);
-          let checked = cards.filter((_, i) => !directional[i].length);
-          const removed = cards.flatMap((c, i) => directional[i].length ? [{ headline: c.headline, verdict: "contradicted", reason: directional[i][0] }] : []);
-          let verification: ChapterNarrative["verification"];
-          if (verifies) {
-            const verdicts = await verifyCards(checked, figures + "\n\n" + portfolio, spec.derived ? "" : coveredDigest(out, spec.id), signal, (call) => { usage = addCall(usage, call); });
-            if (!verdicts) verification = { checked: 0, removed, unavailable: true };
-            else {
-              const flagged = new Map(verdicts.filter(v => v.verdict !== "supported" && checked[v.index]).map(v => [v.index, v]));
-              const lead = checked.findIndex(c => c.focus === "kpis");
-              if (lead >= 0 && flagged.has(lead)) throw new Error(`The independent audit rejected the chapter verdict (${flagged.get(lead)!.verdict}): ${flagged.get(lead)!.reason} Rewrite insights to retry.`);
-              removed.push(...[...flagged].map(([i, v]) => ({ headline: checked[i].headline, verdict: v.verdict, reason: v.reason })));
-              checked = checked.filter((_, i) => !flagged.has(i));
-              verification = { checked: verdicts.length, removed };
+        let correction = "";
+        for (let repair = 0; repair < 2; repair++) {
+          try {
+            const requestMessage = correction
+              ? chapterPrompt(["CORRECTION REQUIRED: " + correction, "Regenerate the complete chapter JSON from the supplied evidence. Keep all observed figures exact; remove unsupported claims. Do not invent missing evidence."], [{ label: "Original chapter instructions and evidence:", text: message }])
+              : message;
+            const parsed = parseJson(await askModel(requestMessage, focusIds, signal, (call) => { usage = addCall(usage, call); },
+              { ...extra, analysisKey: fingerprint, ...(repair ? { repairAttempt: repair } : {}) }));
+            const cards = Array.isArray(parsed?.cards)
+              ? parsed!.cards.filter(
+                  (c): c is InsightCard =>
+                    !!c && typeof c.headline === "string" && !!c.headline.trim(),
+                )
+              : [];
+            const valid = cards.every(c => [c.meaning,c.evidence].every(v => typeof v === "string" && !!v.trim()) && !!c.focus && !!(c.lens || c.category) && !!c.confidence);
+            validateNarrativeCards(cards, metricIds, focusIds, model, spec.id, [figures, portfolio, model.scope.month, spec.id === "predictions" ? forwardScenarios(model) : ""].join("\n"), [parsed?.summary, ...(parsed?.metricCommentary?.map(item => item.text) ?? []), ...Object.values(parsed?.briefing ?? {}).filter((v): v is string => typeof v === "string"), ...(parsed?.decision?.evidence ?? [])].filter((v): v is string => typeof v === "string"));
+            if (parsed?.metricCommentary) {
+              const covered = parsed.metricCommentary.flatMap(item => item.metricIds ?? []);
+              if (covered.some(id => !metricIds.includes(id))) throw new Error("Metric commentary cited an unavailable metric.");
+              const required = !spec.derived ? reviewMetricIds(spec.id, data).filter(id => data?.total[id] != null) : [];
+              if (required.some(id => !covered.includes(id))) throw new Error("Metric commentary omitted available chapter measures. Rewrite insights to retry.");
             }
-          } else if (removed.length) verification = { checked: 0, removed };
-          const narrative: ChapterNarrative = { summary: parsed.summary.trim(), cards: checked, generated: true, usage, analysisKey: fingerprint,
-            ...(verification ? { verification } : {}), ...chapterExtras(parsed) };
-          if (providerModel) writeCache(key, narrative);
-          finish(spec, narrative);
-        } catch (error) {
-          if (signal?.aborted) throw error;
-          finish(spec, { ...fallbackNarrative(spec, data, own, model), error: error instanceof Error ? error.message : String(error), usage });
+            if (!valid || !cards.length || typeof parsed?.summary !== "string" || !parsed.summary.trim())
+              throw new Error("The model returned no complete chapter analysis. Retry writing insights.");
+            // The verdict leads; a model that forgot to mark one has its first card promoted.
+            if (!cards.some(c => c.focus === "kpis")) cards[0] = { ...cards[0], focus: "kpis" };
+            // Deterministic direction audit: a card that contradicts its own cited figures is removed; a contradicting verdict fails the chapter.
+            const directional = cards.map(c => directionIssues(c, model, spec.id));
+            const verdictIssue = cards.findIndex((c, i) => c.focus === "kpis" && directional[i].length);
+            if (verdictIssue >= 0) throw new Error(`The chapter verdict contradicts its own figures. ${directional[verdictIssue][0]} Rewrite insights to retry.`);
+            let checked = cards.filter((_, i) => !directional[i].length);
+            const removed = cards.flatMap((c, i) => directional[i].length ? [{ headline: c.headline, verdict: "contradicted", reason: directional[i][0] }] : []);
+            let verification: ChapterNarrative["verification"];
+            if (verifies) {
+              const verdicts = await verifyCards(checked, figures + "\n\n" + portfolio, spec.derived ? "" : coveredDigest(out, spec.id), signal, (call) => { usage = addCall(usage, call); });
+              if (!verdicts) verification = { checked: 0, removed, unavailable: true };
+              else {
+                const flagged = new Map(verdicts.filter(v => v.verdict !== "supported" && checked[v.index]).map(v => [v.index, v]));
+                const lead = checked.findIndex(c => c.focus === "kpis");
+                if (lead >= 0 && flagged.has(lead)) throw new Error(`The independent audit rejected the chapter verdict (${flagged.get(lead)!.verdict}): ${flagged.get(lead)!.reason} Rewrite insights to retry.`);
+                removed.push(...[...flagged].map(([i, v]) => ({ headline: checked[i].headline, verdict: v.verdict, reason: v.reason })));
+                checked = checked.filter((_, i) => !flagged.has(i));
+                verification = { checked: verdicts.length, removed };
+              }
+            } else if (removed.length) verification = { checked: 0, removed };
+            const narrative: ChapterNarrative = { summary: parsed.summary.trim(), cards: checked, generated: true, usage, analysisKey: fingerprint,
+              ...(verification ? { verification } : {}), ...chapterExtras(parsed) };
+            const releaseIssues = reportReleaseIssues({ ...model, chapters: {}, narratives: { [spec.id]: narrative }, customization: { ...model.customization, chapterIds: [spec.id] } } as ReportModel);
+            if (releaseIssues.length) throw new Error(releaseIssues.join("; "));
+            if (providerModel) writeCache(key, narrative);
+            finish(spec, narrative);
+            break;
+          } catch (error) {
+            if (signal?.aborted) throw error;
+            // Retry only rejected model content, not authentication, quota or transport failures.
+            if (repair === 0 && /Analysis |Metric commentary|complete chapter analysis|verdict|executive-summary:|recommendations:|Executive brief|unresolved template/.test(error instanceof Error ? error.message : String(error))) {
+              correction = (error instanceof Error ? error.message : String(error)).slice(0, 4000);
+              continue;
+            }
+            finish(spec, { ...fallbackNarrative(spec, data, own, model), error: error instanceof Error ? error.message : String(error), usage });
+            break;
+          }
         }
       }
     }),
