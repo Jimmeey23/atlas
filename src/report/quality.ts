@@ -19,13 +19,19 @@ function evidenceTokens(text: string): string[] {
 }
 
 const unitScale: Record<string, number> = { k: 1e3, l: 1e5, cr: 1e7 };
-/** A token's value in base units, plus half its last displayed digit: the rounding a correct restatement may carry. */
+/** Magnitude of a change between two supplied figures ("units fell by 110"), as text for the evidence pool. */
+const absoluteChange = (current: unknown, previous: unknown) =>
+  current == null || previous == null || !Number.isFinite(Number(current) - Number(previous)) ? '' : String(Math.abs(Number(current) - Number(previous)));
+/** A token's value in base units, and how far a correct restatement at its precision may sit from the exact figure. */
 function tokenValue(token: string) {
   const [, digits, unit] = token.match(/^([\d.]+)(.*)$/) ?? [];
   if (!digits) return null;
   const scale = unitScale[unit] ?? (unit === '%' || unit === 'pp' ? 0.01 : 1);
   const decimals = digits.split('.')[1]?.length ?? 0;
-  return { value: parseFloat(digits) * scale, tolerance: 0.5 * 10 ** -decimals * scale, unit };
+  // A shortened figure may round (1.0654 → 1.07) or truncate (→ 1.06), so it gets a full last-digit step.
+  // A plain whole number only rounds (502.7 → 503): counts are matched near-exactly in a large evidence pool.
+  const step = 10 ** -decimals * scale;
+  return { value: parseFloat(digits) * scale, tolerance: decimals || scale !== 1 ? step : step / 2, unit };
 }
 /** Supplied values in base units, sorted for lookup. Percent figures also stand as plain numbers. */
 function suppliedValues(tokens: Iterable<string>) {
@@ -72,10 +78,13 @@ export function validateNarrativeCards(cards: InsightCard[], metricIds: string[]
       const ids = metricIds;
       for (const id of ids) {
         if (!definition(id)) continue;
-        for (const row of [d.total, d.prior, d.priorYear, d.yearToDate, d.priorYearToDate, ...d.history]) if (row?.[id] != null) formatted.push(reportFmt(id, row[id]));
-        formatted.push(reportDelta(id, d.total[id], d.prior[id]), reportDelta(id, d.total[id], d.priorYear[id]));
+        // Exact values sit beside their display form, so a finer rounding of a displayed figure is verifiable.
+        for (const row of [d.total, d.prior, d.priorYear, d.yearToDate, d.priorYearToDate, ...d.history]) if (row?.[id] != null) formatted.push(reportFmt(id, row[id]), String(row[id]));
+        formatted.push(reportDelta(id, d.total[id], d.prior[id]), reportDelta(id, d.total[id], d.priorYear[id]),
+          absoluteChange(d.total[id], d.prior[id]), absoluteChange(d.total[id], d.priorYear[id]), absoluteChange(d.yearToDate?.[id], d.priorYearToDate?.[id]));
         for (const group of d.groups) for (const row of group.rows) {
-          formatted.push(reportFmt(id, row[id]), reportFmt(id, group.prior?.[String(row.g)]?.[id]), reportDelta(id, row[id], group.prior?.[String(row.g)]?.[id]), reportDelta(id, row[id], group.priorYear?.[String(row.g)]?.[id]));
+          formatted.push(reportFmt(id, row[id]), reportFmt(id, group.prior?.[String(row.g)]?.[id]), reportDelta(id, row[id], group.prior?.[String(row.g)]?.[id]), reportDelta(id, row[id], group.priorYear?.[String(row.g)]?.[id]),
+            absoluteChange(row[id], group.prior?.[String(row.g)]?.[id]), absoluteChange(row[id], group.priorYear?.[String(row.g)]?.[id]));
         }
       }
     }

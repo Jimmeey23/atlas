@@ -111,3 +111,14 @@ test('generation drops highlights that still name absent rows after one repair, 
   assert.deepEqual(kept.sessions.cards.find(c => c.focus === 'studio')!.highlight, []);
  } finally { globalThis.fetch = original; }
 });
+
+test('narrative validation accepts governed absolute changes and truncated restatements of chapter figures', () => {
+ const sales = { ...data, id: 'sales', total: { attendance: 269 }, prior: { attendance: 379 }, priorYear: { attendance: 350 }, yearToDate: { attendance: 15844356.61 }, priorYearToDate: { attendance: 10653653.79 }, history: [], groups: [] } as ChapterData;
+ const validate = (evidence: string) => validateNarrativeCards([{ ...card, evidence }], ['attendance'], [], { ...model, chapters: { sessions: data, sales } }, 'sessions', '');
+ assert.doesNotThrow(() => validate('Units fell by 110 to 269.'), 'month-on-month absolute change');
+ assert.doesNotThrow(() => validate('Down 81 on last September.'), 'year-on-year absolute change');
+ assert.doesNotThrow(() => validate('YTD ₹1.58Cr versus ₹1.06Cr last year.'), 'prior YTD truncated rather than rounded');
+ assert.doesNotThrow(() => validate('YTD ₹1.58Cr versus ₹1.07Cr last year.'));
+ assert.throws(() => validate('YTD ₹1.58Cr versus ₹1.04Cr last year.'), /1\.04cr/);
+ assert.throws(() => validate('Units fell by 140.'), /140/);
+});
