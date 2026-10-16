@@ -48,7 +48,7 @@ export function Secondary({
   const fields = useGroupFields(bp.source, groups);
   const key = groups.join();
   // Conversion's explore tables carry the full newcomer measure set; others stay compact.
-  const columns = tab === 5 ? bp.columns : bp.columns.slice(0, 7);
+  const columns = tab === 5 || tab === 4 ? bp.columns : bp.columns.slice(0, 7);
   useEffect(() => {
     if (!open) return;
     let active = true;

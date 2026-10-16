@@ -8,6 +8,8 @@ export const salesRankingCriteria = [
   "aov",
   "buyers",
   "arpu",
+  "purchase_frequency",
+  "product_breadth",
   "discount_rate",
 ];
 export function splitSalesRankings(rows: Row[], metric: string, limit: number) {

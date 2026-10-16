@@ -2394,5 +2394,50 @@
     "aggregation": "sum",
     "higherIsBetter": true,
     "minSample": 3
+  },
+  {
+    "id": "purchase_frequency",
+    "label": "Purchases / member",
+    "expression": "COUNT(DISTINCT sale_id) FILTER (WHERE member_id IS NOT NULL)::DOUBLE/NULLIF(COUNT(DISTINCT member_id),0)",
+    "sources": [
+      "Sales.Sale ID",
+      "Sales.Member ID"
+    ],
+    "format": "decimal",
+    "domain": "revenue",
+    "aggregation": "weighted",
+    "higherIsBetter": true,
+    "minSample": 5
+  },
+  {
+    "id": "product_breadth",
+    "label": "Distinct products sold",
+    "expression": "COUNT(DISTINCT product)",
+    "sources": [
+      "Sales.Product"
+    ],
+    "format": "integer",
+    "domain": "revenue",
+    "aggregation": "sum",
+    "higherIsBetter": true,
+    "minSample": 1
+  },
+  {
+    "id": "lapsed_memberships",
+    "label": "Lapsed membership count",
+    "expression": "COUNT(*) FILTER (WHERE latest_lapse)",
+    "sources": [
+      "Lapsed.Churned Date",
+      "Lapsed.Member ID",
+      "Lapsed.Start Date",
+      "Lapsed.Status",
+      "Lapsed.Amount Paid",
+      "Lapsed.Membership Name"
+    ],
+    "format": "integer",
+    "domain": "risk",
+    "aggregation": "sum",
+    "higherIsBetter": false,
+    "minSample": 5
   }
 ]

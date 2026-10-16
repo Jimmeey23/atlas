@@ -175,3 +175,27 @@
 .app:is([data-workspace="sales"],[data-workspace="overview"]) :is(.table-scroll, .intelligence-table) :is(tbody, tfoot) :is(.scorecard-cell, .cell-value, .row-name, .row-chevron, .row-action, .monthly-value) { color: var(--text-1); }
 .app:is([data-workspace="sales"],[data-workspace="overview"]) :is(.table-scroll, .intelligence-table) :is(tbody, tfoot) .scorecard-cell:hover { color: var(--text-1); }
 .app:is([data-workspace="sales"],[data-workspace="overview"]) .monthly-table tbody .latest-month { border-inline-color: var(--hairline-strong); }
+
+.tracker-active { display:grid; grid-template-columns:1fr auto; align-items:center; gap:8px 24px; padding:20px; margin-bottom:18px; border:1px solid var(--hairline); border-radius:12px; background:color-mix(in srgb,var(--accent) 6%,var(--surface-1)); }
+.tracker-active strong { font-size:32px; color:var(--accent); font-variant-numeric:tabular-nums; }
+.tracker-active small { grid-column:1/-1; color:var(--text-2); }
+.renewal-cohorts,.retention-worklists { padding:24px; border:1px solid var(--hairline); border-radius:16px; background:var(--surface-1); margin-block:24px; box-shadow:0 6px 24px #00000006; }
+.renewal-cohorts h2,.retention-worklists h2 { margin:0 0 10px; letter-spacing:-.5px; }
+.renewal-cohorts > .small { max-width:110ch; line-height:1.65; }
+.renewal-cohorts .intelligence-table,.worklist-table-wrap { overflow:auto; max-height:620px; border:1px solid var(--hairline); border-radius:10px; margin-top:16px; }
+.renewal-cohorts table,.worklist-table { width:100%; border-collapse:separate; border-spacing:0; font-variant-numeric:tabular-nums; }
+.renewal-cohorts :is(th,td),.worklist-table :is(th,td) { padding:14px 16px; border-bottom:1px solid var(--hairline); vertical-align:middle; }
+.renewal-cohorts th,.worklist-table th { position:sticky; top:0; z-index:2; background:var(--surface-2,var(--surface-1)); font-size:11px; text-align:left; white-space:nowrap; }
+.renewal-cohorts td:not(:first-child) { text-align:right; }
+.renewal-cohorts tbody tr:nth-child(even),.worklist-table tbody tr:nth-child(even) { background:color-mix(in srgb,var(--accent) 3%,var(--surface-1)); }
+.renewal-cohorts tbody tr:hover,.worklist-table tbody tr:hover { background:color-mix(in srgb,var(--accent) 8%,var(--surface-1)); }
+.renewal-cohorts td:last-child { font-weight:700; color:var(--accent); }
+.renewal-segment td { font-size:12px; color:var(--text-2); }
+.worklist-controls { display:flex; flex-wrap:wrap; align-items:end; gap:12px; padding:16px; border:1px solid var(--hairline); border-radius:10px; }
+.worklist-tabs { display:flex; flex-wrap:wrap; gap:8px; margin:20px 0; }
+.worklist-tabs button { padding:10px 14px; border-radius:8px; border:1px solid var(--hairline); }
+.worklist-tabs button.active { background:var(--accent); color:white; }
+.worklist-tabs button span { margin-left:8px; font-weight:700; }
+.worklist-table td { min-width:110px; max-width:320px; white-space:normal; overflow-wrap:anywhere; }
+.worklist-scope { color:var(--text-2); line-height:1.6; }
+@media(max-width:760px) { .renewal-cohorts,.retention-worklists { padding:14px; } .worklist-controls>* { flex:1 1 160px; } .renewal-cohorts table { min-width:850px; } }

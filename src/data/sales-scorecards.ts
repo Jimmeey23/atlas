@@ -17,11 +17,11 @@ export function salesScorecardFactsSQL(scope: string, includeImports: boolean) {
     (lower(COALESCE(scoped.category,''))='privates' OR regexp_matches(lower(COALESCE(scoped.product,'')),'private')) AS is_private
   FROM scoped LEFT JOIN history ON scoped.purchase_key=history.purchase_key AND scoped.member_id=history.member_id AND scoped.product=history.product AND scoped.plan_kind=history.plan_kind`;
 }
-export const salesScorecardAggregate = `COUNT(*) AS payment_lines, COUNT(DISTINCT purchase_key) AS purchase_count, COUNT(DISTINCT sale_id) AS transactions,COUNT(DISTINCT member_id) AS buyers,SUM(revenue) AS gross_revenue,SUM(revenue-vat) AS net_revenue,SUM(discount) AS discount_value,SUM(discount)/NULLIF(SUM(revenue)+SUM(discount),0) AS discount_rate,COUNT(*) FILTER(WHERE discount>0) AS discounted_lines,COUNT(discount) AS discount_known,COUNT(DISTINCT sale_id) FILTER(WHERE discount>0)::DOUBLE/NULLIF(COUNT(DISTINCT sale_id),0) AS discount_penetration`;
+export const salesScorecardAggregate = `SUM(revenue)/NULLIF(COUNT(DISTINCT member_id),0) AS arpu,SUM(revenue)/NULLIF(COUNT(DISTINCT sale_id),0) AS aov,COUNT(DISTINCT sale_id) FILTER(WHERE member_id IS NOT NULL)::DOUBLE/NULLIF(COUNT(DISTINCT member_id),0) AS purchase_frequency,COUNT(DISTINCT product) AS product_breadth,COUNT(*) AS payment_lines, COUNT(DISTINCT purchase_key) AS purchase_count, COUNT(DISTINCT sale_id) AS transactions,COUNT(DISTINCT member_id) AS buyers,SUM(revenue) AS gross_revenue,SUM(revenue-vat) AS net_revenue,SUM(discount) AS discount_value,SUM(discount)/NULLIF(SUM(revenue)+SUM(discount),0) AS discount_rate,COUNT(*) FILTER(WHERE discount>0) AS discounted_lines,COUNT(discount) AS discount_known,COUNT(DISTINCT sale_id) FILTER(WHERE discount>0)::DOUBLE/NULLIF(COUNT(DISTINCT sale_id),0) AS discount_penetration`;
 
 /** Row dimensions each scorecard shows by default; viewers may swap or add any groupable Sales column. */
 export const salesScorecardDefaults = {
-  discounts: ['discount_code'], upgrades: ['previous_product', 'product'],
+  people: ['associate'], people_month: ['associate', 'month'], discounts: ['discount_code'], upgrades: ['previous_product', 'product'],
   annual: ['member', 'month', 'product'], private: ['member', 'month', 'product'],
 } as const satisfies Record<string, readonly string[]>;
 // Columns the scorecards have always shown verbatim (NULL stays NULL); `previous_product` is computed by the facts query.
@@ -43,4 +43,16 @@ export function salesScorecardTerms(dims: readonly string[], row: Record<string,
     : d === 'member' ? [row.member_id == null ? 'member_id IS NULL' : `member_id=${quote(String(row.member_id))}`, `COALESCE(member,'Unidentified member')=${quote(String(row.member))}`]
     : verbatim.has(d) ? [row[d] == null ? `${d} IS NULL` : `${d}=${quote(String(row[d]))}`]
     : [`${groupValueSQL(d)}=${quote(String(row[d]))}`]);
+}
+
+/** Product rankings use distinct sales, with alphabetical tie-breaking. */
+export function salesScorecardQuery(facts: string, condition: string, dims: string[]) {
+  const dimensions = salesScorecardDims(dims);
+  const selected = dimensions.length ? salesScorecardSelect(dimensions)+',' : '';
+  const equality = dimensions.flatMap(d=>d==='member' ? ['p.member_id IS NOT DISTINCT FROM g.member_id', "COALESCE(p.member,'Unidentified member')=g.member"] : [d==='discount_code' ? "COALESCE(p.discount_code,'No code')=g.discount_code" : verbatim.has(d) ? `p."${d}" IS NOT DISTINCT FROM g."${d}"` : `${groupValueSQL(d).replaceAll('"'+d+'"','p."'+d+'"')} IS NOT DISTINCT FROM g."${d}"`]).join(' AND ');
+  const product = (direction: string) => `(SELECT p.product FROM eligible p ${equality ? 'WHERE '+equality : ''} GROUP BY p.product HAVING COUNT(DISTINCT p.sale_id)>0 ORDER BY COUNT(DISTINCT p.sale_id) ${direction},p.product LIMIT 1)`;
+  const partition=dimensions.filter(d=>d!=='month').flatMap(d=>d==='member'?['member_id','member']:[d]).map(d=>'"'+d+'"').join(',');
+  const window=`OVER (${partition?'PARTITION BY '+partition+' ':''}ORDER BY month)`;
+  const growth=dimensions.includes('month') ? `,CASE WHEN TRY_CAST(month||'-01' AS DATE)=TRY_CAST(LAG(month) ${window}||'-01' AS DATE)+INTERVAL 1 MONTH THEN gross_revenue/NULLIF(LAG(gross_revenue) ${window},0)-1 END AS mom_growth` : '';
+  return `WITH facts AS (${facts}), eligible AS (SELECT * FROM facts WHERE ${condition}), g AS (SELECT ${selected}${salesScorecardAggregate} FROM eligible ${dimensions.length ? 'GROUP BY ALL' : ''}) SELECT g.*,${product('DESC')} AS top_product,${product('ASC')} AS bottom_product${growth} FROM g ORDER BY gross_revenue DESC NULLS LAST`;
 }

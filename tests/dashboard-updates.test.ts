@@ -68,3 +68,29 @@ test('sales trackers use earlier purchase history, successful payments and nondu
   assert.equal(Number(up.purchase_count),1);assert.equal(Number(up.transactions),1);assert.equal(Number(up.buyers),1);assert.equal(up.gross_revenue,12000);assert.equal(up.discount_value,400);
   assert.equal(rows.filter((r:any)=>r.is_annual).length,3);assert.equal(rows.filter((r:any)=>r.is_private).length,1);
 }));
+
+test('sales scorecards deduplicate sales for frequency and product ranking across payment lines',async()=>database(['sales'],async c=>{
+  await c.run(`INSERT INTO sales(source_row,sale_id,member_id,member,product,associate,revenue,date,month) VALUES
+  (1,'s1','m1','One','A',NULL,100,'2026-09-01','2026-09'),
+  (2,'s1','m1','One','A',NULL,50,'2026-09-01','2026-09'),
+  (3,'s2','m1','One','B',NULL,100,'2026-09-02','2026-09'),
+  (4,'s3','m2','Two','B',NULL,150,'2026-09-03','2026-09')`);
+  const {salesScorecardQuery}=await import('../src/data/sales-scorecards.ts');
+  for(const dims of [[],['associate'],['member','month','product'],['month','associate']]) {
+    const rows=(await c.runAndReadAll(salesScorecardQuery(salesScorecardFactsSQL('',true),'TRUE',dims))).getRowObjectsJS();
+    assert.ok(rows.length);
+    if(!dims.length||dims[0]==='associate') {
+      assert.equal(rows[0].top_product,'B');assert.equal(rows[0].bottom_product,'A');
+      assert.equal(rows[0].purchase_frequency,1.5);assert.equal(rows[0].arpu,200);
+    }
+  }
+}));
+
+test('sales MoM requires an adjacent calendar month and recomputes growth per salesperson',async()=>database(['sales'],async c=>{
+  await c.run(`INSERT INTO sales(source_row,sale_id,member_id,product,associate,revenue,month) VALUES
+  (1,'a','m','Plan','Alex',100,'2026-06'),(2,'b','m','Plan','Alex',150,'2026-07'),(3,'c','m','Plan','Alex',300,'2026-09')`);
+  const {salesScorecardQuery}=await import('../src/data/sales-scorecards.ts');
+  const rows=(await c.runAndReadAll(salesScorecardQuery(salesScorecardFactsSQL('',true),'TRUE',['associate','month']))).getRowObjectsJS();
+  assert.equal(rows.find((r:any)=>r.month==='2026-07').mom_growth,.5);
+  assert.equal(rows.find((r:any)=>r.month==='2026-09').mom_growth,null);
+}));
