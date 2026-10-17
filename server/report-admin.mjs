@@ -8,7 +8,10 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypt
 const TTL_MS = 12 * 60 * 60 * 1000;
 const processSecret = randomBytes(32).toString("hex");
 const passcode = (env) => env.ATLAS_ADMIN_PASSCODE || env.KRA_PASSCODE || "";
-const secret = (env) => env.ATLAS_ADMIN_SECRET || env.KRA_SESSION_SECRET || processSecret;
+// Report storage already requires this server-only credential. Derive a separate
+// signing key so tokens survive cold starts without exposing or reusing it directly.
+const secret = (env) => env.ATLAS_ADMIN_SECRET || env.KRA_SESSION_SECRET ||
+  (env.SUPABASE_SERVICE_ROLE_KEY ? createHmac("sha256", env.SUPABASE_SERVICE_ROLE_KEY).update("atlas-report-admin-session:v1").digest("hex") : processSecret);
 const digest = (text) => createHash("sha256").update(String(text)).digest();
 const sign = (env, body) => createHmac("sha256", secret(env)).update(body).digest("base64url");
 

@@ -1,0 +1,95 @@
+/* Loaded with the shared component, including when the Leads tab opens first. */
+:root[data-theme] :is(#lead-periods, #website-lead-periods) {
+  --period-header-height: 100px;
+  border: 1px solid var(--hairline-strong); border-radius: 16px;
+  background: var(--surface-1); overflow: hidden; margin-top: 24px;
+}
+.website-lead-periods > summary { gap: 16px; flex-wrap: wrap; padding: 20px!important; list-style: none; }
+.website-lead-periods > summary::-webkit-details-marker { display:none; }
+.website-lead-periods > summary::after { content:'⌄'; font-size:18px; color:var(--text-3); transition:transform 150ms; }
+.website-lead-periods[open] > summary::after { transform:rotate(180deg); }
+.period-summary-title { display:flex; align-items:center; gap:12px; flex:1 1 420px; font-size:14px; font-weight:650; line-height:1.5; color:var(--text-1); }
+.period-summary-icon { display:grid; place-items:center; width:36px; height:36px; flex:none; border:1px solid var(--hairline); border-radius:10px; background:var(--surface-2); color:var(--accent); font-size:21px; }
+.period-summary-meta { display:flex; flex-wrap:wrap; gap:8px; font-size:10px; color:var(--text-3); }
+.period-summary-meta > span { padding:5px 9px; border:1px solid var(--hairline); border-radius:6px; background:var(--surface-2); }
+.website-lead-periods .secondary-content { padding:0 20px 18px; }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) .period-toolbar {
+  display:flex; flex-wrap:wrap; align-items:flex-end; gap:18px 20px; margin:0 0 16px; padding:16px;
+  border:1px solid var(--hairline); border-radius:12px; background:var(--surface-2);
+}
+.website-lead-periods .period-toolbar-section { display:grid; gap:8px; min-width:0; }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) .period-toolbar-caption,
+:root[data-theme] :is(#lead-periods, #website-lead-periods) .period-toolbar label:not(.period-toggle) { display:grid; gap:8px; min-width:0; color:var(--text-3); font-size:10px; font-weight:650; letter-spacing:.6px; text-transform:uppercase; }
+.website-lead-periods .period-toolbar-toggles { display:flex; flex-wrap:wrap; gap:6px; }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) label.period-toggle {
+  display:inline-flex; align-items:center; flex:none; gap:8px; min-width:0; min-height:38px; margin:0; padding:0 12px;
+  border:1px solid var(--hairline-strong); border-radius:8px; background:var(--surface-1); color:var(--text-2);
+  font-size:12px; font-weight:550; text-transform:none; letter-spacing:0; cursor:pointer; white-space:nowrap;
+}
+:root[data-theme] :is(#lead-periods, #website-lead-periods) .period-toggle:has(input:checked) { border-color:var(--accent); background:color-mix(in srgb,var(--accent) 9%,var(--surface-1)); color:var(--text-1); }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) .period-toggle input { width:14px; height:14px; margin:0; accent-color:var(--accent); flex:none; }
+.website-lead-periods .period-toggle:focus-within { outline:2px solid var(--accent); outline-offset:3px; }
+.website-lead-periods .period-toolbar-view { padding-left:20px; border-left:1px solid var(--hairline-strong); }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) label.period-group-field { flex:1 1 210px; max-width:300px; margin-left:auto; }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) .period-toolbar :is(select,input[type=date]) {
+  height:38px!important; min-height:38px!important; max-height:none!important; width:100%; max-width:none; box-sizing:border-box;
+  border:1px solid var(--hairline-strong)!important; border-radius:8px!important; padding:0 10px!important;
+  background-color:var(--surface-1)!important; color:var(--text-1); font:inherit; font-size:12px; font-weight:550; letter-spacing:0; text-transform:none;
+}
+:root[data-theme] :is(#lead-periods, #website-lead-periods) .period-toolbar select { padding-right:32px!important; }
+.website-lead-periods .period-group-field select:disabled { opacity:.55; cursor:not-allowed; }
+.website-lead-periods .period-date-range { display:flex; align-items:flex-end; gap:8px; }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) .period-date-range label { flex:1; min-width:130px; }
+.website-lead-periods .period-date-arrow { display:grid; place-items:center; height:38px; color:var(--text-3); }
+.website-lead-periods .period-message { padding:10px 12px; border-left:2px solid var(--accent); background:var(--surface-2); color:var(--text-2); font-size:12px; line-height:1.6; }
+.website-lead-periods .period-message-error { border-color:var(--bad,#c74141); }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) .table-scroll { max-width:100%; max-height:640px; overflow:auto; border:1px solid var(--hairline-strong); border-radius:10px; isolation:isolate; }
+.website-lead-periods .table-scroll:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) table { width:max-content; min-width:100%; border-collapse:separate; border-spacing:0; font-size:12px; font-variant-numeric:tabular-nums; }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) :is(th,td) { border-bottom:1px solid var(--hairline); padding:0 14px; text-align:right; min-width:108px; max-width:none; color:var(--text-1); }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) thead th { position:sticky; background:var(--surface-2); font-size:10px; font-weight:600; text-transform:none; letter-spacing:.2px; }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) thead tr:first-child th { top:0; z-index:4; height:var(--period-header-height)!important; min-height:var(--period-header-height)!important; max-height:none!important; padding:12px 16px!important; white-space:normal!important; line-height:1.5!important; vertical-align:middle!important; text-align:left; border-left:1px solid var(--hairline-strong); }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) .period-window-title { display:block; font-size:12px; font-weight:700; color:var(--text-1); }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) thead small { display:block; margin:5px 0 0; color:var(--text-2); font-size:10px; font-weight:400; line-height:1.6; letter-spacing:0; }
+.website-lead-periods thead small > span { display:block; }
+.website-lead-periods .period-prior-range { color:var(--text-3); }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) thead tr:nth-child(2) th { top:var(--period-header-height); z-index:4; height:34px!important; min-height:34px!important; max-height:34px!important; border-bottom:2px solid var(--hairline-strong); }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) tbody :is(th,td) { height:40px!important; min-height:40px!important; max-height:none!important; line-height:1.5!important; }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) :is(.period-measure-heading, tbody th) { min-width:250px; width:250px; max-width:250px; text-align:left; }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) thead .period-measure-heading { left:0; z-index:6; border-left:0; }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) tbody th { position:sticky; top:auto; left:0; z-index:2; font-size:11px; font-weight:550; letter-spacing:0; background:var(--surface-1); box-shadow:1px 0 var(--hairline-strong); }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) tbody tr:nth-child(even) { background:var(--surface-2); }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) tbody tr:nth-child(even) th { background:var(--surface-2); }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) tbody tr:hover :is(th,td) { background:color-mix(in srgb,var(--accent) 7%,var(--surface-1)); }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) .period-window-start { border-left:1px solid var(--hairline-strong); }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) .period-prior { color:var(--text-3); }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) .pm-cell { display:block; width:100%; text-align:right; border:0; border-radius:4px; padding:4px 0; background:transparent; color:inherit; font:inherit; cursor:pointer; }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) .period-current .pm-cell { font-weight:650; }
+.website-lead-periods .pm-cell:disabled { cursor:default; }
+.website-lead-periods .pm-cell:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.website-lead-periods .pm-cell:not(:disabled):hover { color:var(--accent); text-decoration:underline; text-underline-offset:3px; }
+.website-lead-periods .period-delta { display:inline-block; padding:2px 7px; border-radius:5px; background:var(--surface-2); color:var(--text-2); font-size:11px; }
+:root[data-theme] :is(#lead-periods, #website-lead-periods) .period-contributors :is(th,td) { border-top:1px solid var(--hairline-strong); font-size:10px; color:var(--text-3); }
+.website-lead-periods .period-footnote { margin:14px 0 0; max-width:110ch; color:var(--text-3); font-size:11px; line-height:1.8; }
+@media(max-width:900px) {
+  .website-lead-periods .period-toolbar-view { padding-left:0; border-left:0; }
+  :root[data-theme] :is(#lead-periods, #website-lead-periods) label.period-group-field { margin-left:0; }
+  .website-lead-periods .period-date-range { order:4; flex:1 0 100%; max-width:400px; }
+}
+@media(max-width:540px) {
+  .website-lead-periods > summary { padding:16px!important; gap:10px; }
+  .period-summary-title { flex-basis:100%; font-size:13px; }
+  .period-summary-meta { margin-left:48px; flex:1; }
+  .website-lead-periods .secondary-content { padding:0 12px 14px; }
+  :root[data-theme] :is(#lead-periods, #website-lead-periods) .period-toolbar { gap:16px; padding:12px; }
+  :root[data-theme] :is(#lead-periods, #website-lead-periods) label.period-group-field { flex-basis:100%; max-width:none; }
+  :root[data-theme] :is(#lead-periods, #website-lead-periods) .period-date-range label { min-width:0; }
+  :root[data-theme] :is(#lead-periods, #website-lead-periods) :is(.period-measure-heading, tbody th) { min-width:165px; width:165px; max-width:165px; }
+}
+:root[data-theme] :is(#lead-periods, #website-lead-periods) tbody th {
+  white-space:normal!important; overflow:visible; overflow-wrap:normal; padding-block:10px!important;
+}
+@media print {
+  :root[data-theme] :is(#lead-periods, #website-lead-periods) .table-scroll { max-height:none; overflow:visible; }
+  :root[data-theme] :is(#lead-periods, #website-lead-periods) :is(th,td) { position:static!important; }
+}

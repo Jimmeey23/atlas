@@ -1,3 +1,4 @@
+import { adminStatus, unlockAdmin, lockAdmin } from "../report/storage";
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { LockKeyhole, Pencil, X } from 'lucide-react';
@@ -56,6 +57,8 @@ function resetElement(element: EditableElement) {
 
 export function WorkspaceEditor({ scope, enabled, onEnabled }: { scope: string; enabled: boolean; onEnabled: (value: boolean) => void }) {
   const [gate, setGate] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
+  const lock = () => { lockAdmin(); onEnabled(false); };
   const [passcode, setPasscode] = useState('');
   const [error, setError] = useState('');
   const [picking, setPicking] = useState(true);
@@ -85,7 +88,7 @@ export function WorkspaceEditor({ scope, enabled, onEnabled }: { scope: string; 
     const shortcut = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'e') {
         event.preventDefault(); event.stopPropagation();
-        if (enabled) onEnabled(false); else { setGate(true); setError(''); }
+        if (enabled) lock(); else { setGate(true); setError(''); }
       }
     };
     document.addEventListener('keydown', shortcut, true);
@@ -135,7 +138,7 @@ export function WorkspaceEditor({ scope, enabled, onEnabled }: { scope: string; 
   };
   const [toolbar, setToolbar] = useState<Element | null>(null);
   useEffect(() => { setToolbar(document.querySelector('.titlebar .toolbar-group')); }, []);
-  const control = <button data-workspace-editor className="icon-button" aria-label={enabled ? 'Lock workspace editor' : 'Unlock workspace editor'} title={enabled ? 'Lock workspace editor (Ctrl/⌘ + Shift + E)' : 'Unlock workspace editor (Ctrl/⌘ + Shift + E)'} onClick={() => { if (enabled) { onEnabled(false); setSelected(null); } else { setGate(true); setError(''); } }}>{enabled ? <LockKeyhole size={15} /> : <Pencil size={15} />}</button>;
+  const control = <button data-workspace-editor className="icon-button" aria-label={enabled ? 'Lock workspace editor' : 'Unlock workspace editor'} title={enabled ? 'Lock workspace editor (Ctrl/⌘ + Shift + E)' : 'Unlock workspace editor (Ctrl/⌘ + Shift + E)'} onClick={() => { if (enabled) { lock(); setSelected(null); } else { setGate(true); setError(''); } }}>{enabled ? <LockKeyhole size={15} /> : <Pencil size={15} />}</button>;
   return <>
     {toolbar ? createPortal(control, toolbar) : <div data-workspace-editor className="workspace-editor-launch">{control}</div>}
     {gate && <div data-workspace-editor className="workspace-editor-backdrop"><form className="workspace-editor-gate" role="dialog" aria-modal="true" aria-label="Unlock workspace editing" onKeyDown={event => {
@@ -147,12 +150,23 @@ export function WorkspaceEditor({ scope, enabled, onEnabled }: { scope: string; 
         if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
         else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
       }
-    }} onSubmit={event => { event.preventDefault(); if (passcode === '9818') { onEnabled(true); setGate(false); setPasscode(''); setError(''); setPicking(true); } else setError('Incorrect passcode.'); }}>
+    }} onSubmit={async event => {
+      event.preventDefault(); if (unlocking) return;
+      if (passcode !== '9818') { setError('Incorrect passcode.'); return; }
+      setUnlocking(true); setError('');
+      try {
+        const status = await adminStatus();
+        if (status.configured && !status.unlocked) await unlockAdmin(passcode);
+        if (!status.configured && scope.startsWith('15:')) throw new Error('Report editing is not configured on the server. Set the report admin passcode before adding report content.');
+        onEnabled(true); setGate(false); setPasscode(''); setPicking(true);
+      } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not unlock report editing.'); }
+      finally { setUnlocking(false); }
+    }}>
       <h2>Unlock workspace editing</h2><label>Passcode<input autoFocus type="password" inputMode="numeric" value={passcode} onChange={event => setPasscode(event.target.value)} /></label>
-      {error && <p role="alert">{error}</p>}<div><button type="submit" className="button">Unlock</button><button type="button" className="button" onClick={() => { setGate(false); setPasscode(''); setError(''); }}>Cancel</button></div>
+      {error && <p role="alert">{error}</p>}<div><button type="submit" className="button" disabled={unlocking}>{unlocking ? "Unlocking…" : "Unlock"}</button><button type="button" className="button" onClick={() => { setGate(false); setPasscode(''); setError(''); }}>Cancel</button></div>
     </form></div>}
     {enabled && <aside data-workspace-editor className={`workspace-editor-panel ${minimized ? "workspace-editor-minimized" : ""}`} aria-label="Element editor">
-      <div className="workspace-editor-heading"><strong>Workspace editor</strong><button className="button" onClick={() => setMinimized(value => !value)}>{minimized ? "Expand" : "Minimize"}</button><button className="icon-button" aria-label="Lock editor" onClick={() => onEnabled(false)}><X size={16} /></button></div>
+      <div className="workspace-editor-heading"><strong>Workspace editor</strong><button className="button" onClick={() => setMinimized(value => !value)}>{minimized ? "Expand" : "Minimize"}</button><button className="icon-button" aria-label="Lock editor" onClick={lock}><X size={16} /></button></div>
       {!minimized && <>
       <label><input type="checkbox" checked={picking} onChange={event => setPicking(event.target.checked)} /> Select elements to edit</label>
       <p className="small">Click any element to inspect it. Turn selection off to use filters and drilldowns. Use the navbar Save icon to keep changes. Text edits change the display; calculations still use source data.</p>

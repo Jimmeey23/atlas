@@ -101,7 +101,22 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
     const complete=()=>{audio.currentTime=0;void audio.play().then(()=>setMessage('Chapter complete.')).catch(()=>setMessage('Chapter complete. Use Sound clips to play applause.'));};
     window.addEventListener('p57-chapter-complete',complete);return()=>{window.removeEventListener('p57-chapter-complete',complete);audio.pause();};
   },[]);
-  useEffect(() => { void adminStatus().then(s => { setAdminConfigured(s.configured); if (!s.unlocked && adminToken()) { lockAdmin(); setAdmin(false); } }).catch(() => undefined); }, []);
+  useEffect(() => {
+    const sync = (event?: Event) => { if (event?.type === "storage" && (event as StorageEvent).key && (event as StorageEvent).key !== "atlas-report-admin") return; const unlocked = !!adminToken(); setAdmin(unlocked); setEditing(unlocked); };
+    const tokenAtRequest = adminToken();
+    let active = true;
+    window.addEventListener("p57-report-admin-session", sync);
+    window.addEventListener("storage", sync);
+    void adminStatus().then(status => {
+      if (!active) return;
+      setAdminConfigured(status.configured);
+      // A response started before an unlock must not clear the new session.
+      if (adminToken() !== tokenAtRequest) return;
+      if (!status.unlocked && tokenAtRequest) lockAdmin();
+      else if (status.unlocked) sync();
+    }).catch(() => undefined);
+    return () => { active = false; window.removeEventListener("p57-report-admin-session", sync); window.removeEventListener("storage", sync); };
+  }, []);
   useEffect(() => { history.replaceState(null, "", `#${page.tab}/${page.section}`); if (continuous) document.getElementById(`chapter-${page.tab}`)?.scrollIntoView({ block: "start", behavior: "instant" }); else main.current?.scrollTo({ top: 0 }); setFlipped(""); }, [page.tab, page.section, continuous]);
   // Shared review sessions: the presenter toolkit follows and drives the chapter tab.
   useEffect(() => { window.dispatchEvent(new CustomEvent("p57-report-navigate", { detail: page.tab === "overview" ? "" : page.tab })); }, [page.tab]);

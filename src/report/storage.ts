@@ -14,18 +14,31 @@ export interface SavedReport {
 /** Generated reports kept by the server, in addition to pinned ones. */
 export const KEEP_RECENT = 5;
 const ADMIN_KEY = "atlas-report-admin";
+type AdminSession = { token: string; expiresAt: string };
+let memorySession: AdminSession | null = null;
+let memoryOnly = false;
+const notifyAdmin = () => window.dispatchEvent(new Event("p57-report-admin-session"));
 export function adminToken(): string {
   try {
     const saved = JSON.parse(localStorage.getItem(ADMIN_KEY) || "null");
-    return saved && Date.parse(saved.expiresAt) > Date.now() ? String(saved.token) : "";
-  } catch { return ""; }
+    if (saved && typeof saved.token === "string" && Date.parse(saved.expiresAt) > Date.now()) return saved.token;
+    if (!memoryOnly) { memorySession = null; return ""; }
+  } catch { /* Storage may be unavailable; keep the verified session for this page. */ }
+  return memorySession && Date.parse(memorySession.expiresAt) > Date.now() ? memorySession.token : "";
 }
-export function lockAdmin() { try { localStorage.removeItem(ADMIN_KEY); } catch { /* already locked */ } }
+export function lockAdmin() {
+  memorySession = null; memoryOnly = false;
+  try { localStorage.removeItem(ADMIN_KEY); } catch { /* already locked */ }
+  notifyAdmin();
+}
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const token = adminToken();
   const response = await fetch(url, { ...init, headers: { ...(init?.headers ?? {}), ...(token ? { "x-atlas-admin": token } : {}) } });
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error || "Report storage request failed.");
+  if (!response.ok) {
+    if (response.status === 403) { lockAdmin(); window.dispatchEvent(new Event("p57-unlock-report")); }
+    throw new Error(body.error || "Report storage request failed.");
+  }
   return body as T;
 }
 const json = (method: string, body: unknown, signal?: AbortSignal): RequestInit => ({ method, signal, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -44,7 +57,10 @@ export const pinReport = (id: string, pinned: boolean) => request<{ id: string; 
 export const adminStatus = () => request<{ configured: boolean; unlocked: boolean }>("/api/reports/admin");
 export async function unlockAdmin(passcode: string) {
   const session = await request<{ token: string; expiresAt: string }>("/api/reports/admin", json("POST", { passcode }));
-  try { localStorage.setItem(ADMIN_KEY, JSON.stringify(session)); } catch { /* unlocked for this page only */ }
+  if (!session.token || !(Date.parse(session.expiresAt) > Date.now())) throw new Error("The server did not return a valid editing session. Retry unlocking.");
+  memorySession = session;
+  try { localStorage.setItem(ADMIN_KEY, JSON.stringify(session)); memoryOnly = false; } catch { memoryOnly = true; }
+  notifyAdmin();
   return session;
 }
 export const generateComponent = (context: string, prompt: string, signal?: AbortSignal) =>

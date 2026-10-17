@@ -1,3 +1,4 @@
+import "./WebsiteLeadPeriods.css";
 import { DropdownField } from "./ui/DropdownField";
 import { useEffect, useMemo, useState } from "react";
 import { query, quote, health, type Row } from "../data/duckdb";
@@ -11,8 +12,8 @@ import { context, where, today } from "../data/analytics";
 import { WEBSITE, websiteScope, marketingMetricSQL, marketingDimension, marketingDimensionOptions, marketingContributor, websitePeriodWindows, websiteColumns } from "../data/performance-marketing";
 import { useGroupFields } from "../data/group-registry";
 const websiteIds = [...websiteColumns, "website_contact_rate", "website_untouched", "website_open", "website_pipeline_value"];
-const label = (range: { from: string; to: string }) =>
-  `${range.from} → ${range.to}`;
+const periodDate = (value: string) => new Date(`${value}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+const label = (range: { from: string; to: string }) => `${periodDate(range.from)} – ${periodDate(range.to)}`;
 
 import type { TreeRow } from "./NestedTable";
 import { marketingDrill } from "./MarketingAnalytics";
@@ -102,13 +103,13 @@ export function WebsiteLeadPeriods({ version, onDrill, expanded = false, website
   return (
     <details id={websiteOnly ? "website-lead-periods" : "lead-periods"} className="secondary website-lead-periods" open={expanded || undefined}>
       <summary>
-        {websiteOnly ? "Website leads" : "Leads"} received · weekly, monthly & custom periods
-        <span className="small">{websiteOnly ? `Source exactly “${WEBSITE}”` : "Selected lead sources"}</span>
+        <span className="period-summary-title"><span className="period-summary-icon" aria-hidden="true">▦</span><span>{websiteOnly ? "Website leads" : "Leads"} received · weekly, monthly & custom periods</span></span>
+        <span className="period-summary-meta"><span>{windows.length} periods</span><span>{websiteOnly ? `Source exactly “${WEBSITE}”` : "Selected lead sources"}</span></span>
       </summary>
       <div className="secondary-content">
         <div className="pm-controls period-toolbar" aria-label="Period table options">
           <div className="period-toolbar-section">
-            <span className="period-toolbar-caption">Columns</span>
+            <span className="period-toolbar-caption">Period columns</span>
             <div className="period-toolbar-toggles">
               <label className="period-toggle"><input type="checkbox" checked={lastWeek} onChange={e=>setLastWeek(e.target.checked)}/><span>Last week</span></label>
               <label className="period-toggle"><input type="checkbox" checked={custom} onChange={e=>setCustom(e.target.checked)}/><span>Custom period</span></label>
@@ -125,29 +126,29 @@ export function WebsiteLeadPeriods({ version, onDrill, expanded = false, website
           </div>
           <label className="period-group-field">Group by <DropdownField aria-label="Group period comparisons" disabled={multiLocation} value={group} onChange={event=>setGroup(event.target.value)}><option value="">All selected leads</option>{options.map(o=><option key={o.field} value={o.field}>{o.label}</option>)}</DropdownField></label>
         </div>
-        {custom && !customValid && <p role="alert">Choose a custom start and end date, with the end on or after the start.</p>}
-        {multiLocation && <p className="small">Locations appear separately in one table. Selected studio filters still apply; select multiple studios or all studios to compare them.</p>}
+        {custom && !customValid && <p className="period-message period-message-error" role="alert">Choose a custom start and end date, with the end on or after the start.</p>}
+        {multiLocation && <p className="period-message">Locations appear separately in one table. Selected studio filters still apply; select multiple studios or all studios to compare them.</p>}
         {error && <p role="alert">{error}</p>}
-        {loading && <p role="status">Loading website enquiry periods…</p>}
+        {loading && <p role="status">Loading lead periods…</p>}
         {sourceEmpty && <p role="status">The latest Leads snapshot contains no rows. Period totals are unavailable until source data is loaded.</p>}
-        {!sourceEmpty && <div className="table-scroll">
+        {!sourceEmpty && <div className="table-scroll" role="region" aria-label="Lead period comparisons — scroll for more periods" tabIndex={0}>
           <table className="worklist-table">
             <thead>
               <tr>
-                <th rowSpan={2}>Performance measure</th>
+                <th className="period-measure-heading" rowSpan={2} scope="col">Performance measure<small>Click a value to explore leads</small></th>
                 {windows.map((w) => (
-                  <th key={w.key} colSpan={compareOff ? 1 : 3}>
-                    {w.title}
+                  <th className="period-window-heading" key={w.key} scope="colgroup" colSpan={compareOff ? 1 : 3}>
+                    <span className="period-window-title">{w.title}</span>
                     <small>
-                      {label(w.current)}{compareOff ? "" : ` vs ${label(w.prior)}`}
+                      <span>{label(w.current)}</span>{!compareOff && <span className="period-prior-range">vs {label(w.prior)}</span>}
                     </small>
                   </th>
                 ))}
               </tr>
               <tr>
                 {windows.flatMap((w) => [
-                  <th key={w.key + "c"}>Current</th>,
-                  ...(compareOff ? [] : [<th key={w.key + "p"}>Prior</th>, <th key={w.key + "d"}>Δ</th>]),
+                  <th className="period-current period-window-start" scope="col" key={w.key + "c"}>Current</th>,
+                  ...(compareOff ? [] : [<th className="period-prior" scope="col" key={w.key + "p"}>Prior</th>, <th className="period-change" scope="col" key={w.key + "d"}>Change</th>]),
                 ])}
               </tr>
             </thead>
@@ -159,33 +160,33 @@ export function WebsiteLeadPeriods({ version, onDrill, expanded = false, website
                     const current = bucket(`${w.key}:current`,segment)?.[id];
                     const prior = bucket(`${w.key}:prior`,segment)?.[id];
                     return [
-                      <td key={w.key + "c"}><button className="pm-cell" disabled={!onDrill||current==null} onClick={()=>inspect(w.key,"current",segment,id)}>{fmt(id, current)}</button></td>,
+                      <td className="period-current period-window-start" key={w.key + "c"}><button className="pm-cell" disabled={!onDrill||current==null} onClick={()=>inspect(w.key,"current",segment,id)}>{fmt(id, current)}</button></td>,
                       ...(compareOff ? [] : [
-                        <td key={w.key + "p"}><button className="pm-cell" disabled={!onDrill||prior==null} onClick={()=>inspect(w.key,"prior",segment,id)}>{fmt(id, prior)}</button></td>,
-                        <td key={w.key + "d"}>{delta(id, current, prior)}</td>,
+                        <td className="period-prior" key={w.key + "p"}><button className="pm-cell" disabled={!onDrill||prior==null} onClick={()=>inspect(w.key,"prior",segment,id)}>{fmt(id, prior)}</button></td>,
+                        <td className="period-change" key={w.key + "d"}><span className="period-delta">{delta(id, current, prior)}</span></td>,
                       ]),
                     ];
                   })}
                 </tr>
               )))}
-              {segments.map(segment=><tr key={segment}>
+              {segments.map(segment=><tr className="period-contributors" key={segment}>
                 <th scope="row">{group ? `${segment} · ` : ""}Contributing rows</th>
                 {windows.flatMap((w) => [
-                  <td key={w.key + "c"}>
+                  <td className="period-current period-window-start" key={w.key + "c"}>
                     <button className="pm-cell" disabled={!onDrill} onClick={()=>inspect(w.key,"current",segment,"leads")}>{fmt("records", bucket(`${w.key}:current`,segment)?.n)}</button>
                   </td>,
                   ...(compareOff ? [] : [
-                    <td key={w.key + "p"}>
+                    <td className="period-prior" key={w.key + "p"}>
                       <button className="pm-cell" disabled={!onDrill} onClick={()=>inspect(w.key,"prior",segment,"leads")}>{fmt("records", bucket(`${w.key}:prior`,segment)?.n)}</button>
                     </td>,
-                    <td key={w.key + "d"}>—</td>,
+                    <td className="period-change" key={w.key + "d"}>—</td>,
                   ]),
                 ])}
               </tr>)}
             </tbody>
           </table>
         </div>}
-        <p className="small">
+        <p className="period-footnote">
           Last Week covers the completed Monday–Sunday week. Custom dates use the chosen range and compare the preceding equal-length period. Week, month, quarter and year windows run to today and ignore the page
           date filter; the 30-day window is rolling. Other filters still apply.
           Outcomes are the latest recorded statuses for leads created in each window.
