@@ -1,0 +1,24 @@
+.workspace-sort-stack { display:flex; flex-direction:column; }
+.workspace-drag-handle { position:absolute; top:3px; right:3px; z-index:5; width:24px; height:24px; border:1px solid var(--border); border-radius:5px; background:var(--surface, #fff); color:var(--text-2); cursor:grab; opacity:.35; font-size:19px; line-height:1; }
+.workspace-drag-handle:hover,.workspace-drag-handle:focus-visible { opacity:1; }
+.workspace-drag-handle:active { cursor:grabbing; }
+@media print { .workspace-drag-handle { display:none; } }
+.workspace-sort-stack > * { flex-shrink:0; }
+.workspace-drag-handle[hidden] { display:none!important; }
+.workspace-selected { outline:2px dashed #d4a719!important; outline-offset:3px; }
+.workspace-editor-launch { position:fixed; top:16px; right:16px; z-index:100; }
+.workspace-editor-panel,.workspace-editor-gate { background:var(--surface, #fff); color:var(--text-1, #171717); border:1px solid var(--border, #ccc); border-radius:12px; padding:18px; box-shadow:0 12px 50px #0003; }
+.workspace-editor-panel { position:fixed; right:12px; top:80px; bottom:12px; width:min(360px,calc(100vw - 24px)); z-index:2000; overflow:auto; }
+.workspace-editor-heading { display:flex; justify-content:space-between; align-items:center; }
+.workspace-editor-panel label,.workspace-editor-gate label { display:block; font-size:12px; margin:10px 0; }
+.workspace-editor-panel input:not([type=checkbox]),.workspace-editor-panel textarea,.workspace-editor-gate input { display:block; width:100%; padding:7px; border:1px solid var(--border,#ccc); border-radius:5px; color:inherit; background:transparent; margin-top:4px; }
+.workspace-editor-panel textarea { min-height:70px; resize:vertical; }
+.workspace-editor-panel code { display:block; overflow-wrap:anywhere; font-size:11px; }
+.workspace-editor-presets { display:grid; grid-template-columns:1fr 1fr; gap:0 12px; }
+.workspace-editor-backdrop { position:fixed; inset:0; background:#0007; display:grid; place-items:center; z-index:2100; }
+.workspace-editor-gate { width:min(360px,calc(100vw - 32px)); }
+@media print { [data-workspace-editor] { display:none!important; } }
+.titlebar button[hidden] { display:none!important; }
+.workspace-editor-minimized { bottom:auto; width:320px; }
+@media (min-width:1100px) { .workspace-editing .app { width:calc(100% - 390px)!important; margin-right:390px!important; } }
+@media (max-width:1099px) { .workspace-editor-panel { top:auto; max-height:48vh; } .workspace-editor-minimized { top:80px; bottom:auto; } }

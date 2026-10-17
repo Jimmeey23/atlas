@@ -1,3 +1,6 @@
+import { WorkspaceEditor } from "./components/WorkspaceEditor";
+import { useWorkspaceDrag } from "./components/useWorkspaceDrag";
+import { saveWorkspace, workspaceKey, workspaceScopes, workspaceDrills } from "./state/workspaceLayout";
 import { missingPrivateScope } from "./state/store";
 import { AnalysisNavigation } from "./components/AnalysisNavigation";
 import { DropdownField } from "./components/ui/DropdownField";
@@ -21,6 +24,7 @@ import {
 } from "./state/preferences";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import {
+  Save,
   Sun,
   Moon,
   Command,
@@ -227,7 +231,12 @@ export default function App() {
   const [columns, setColumns] = useState(linked?.columns || pagePrefs.columns || bp.columns);
   const [configuredTab, setConfiguredTab] = useState(s.tab);
   const [signals, setSignals] = useState<Insight[]>([]);
-  const [drill, setDrill] = useState<TreeRow | null>(null);
+  const scopeKey = workspaceKey(s.tab, s.view);
+  const [drill, updateDrill] = useState<TreeRow | null>(workspaceDrills[scopeKey] || null);
+  const setDrill = useCallback((entry: TreeRow | null) => {
+    workspaceDrills[workspaceKey(useStore.getState().tab, useStore.getState().view)] = entry;
+    updateDrill(entry);
+  }, []);
   const [modal, setModal] = useState("");
   const [command, setCommand] = useState("");
   const [toast, setToast] = useState("");
@@ -236,6 +245,9 @@ export default function App() {
   const [thresholdValues, setThresholdValues] =
     useState<Thresholds>(thresholds());
   const main = useRef<HTMLElement>(null);
+  const [editing, setEditing] = useState(false);
+  useEffect(() => { if (!editing && modal === "settings") setModal(""); }, [editing, modal]);
+  useWorkspaceDrag(main, scopeKey, !busy, editing);
   const lastTab = useRef(s.tab);
   const sequence = useRef(0);
   const shownView = useRef("");
@@ -332,7 +344,7 @@ export default function App() {
       setConfiguredTab(s.tab);
       setAnalysis(blank);
       setError("");
-      setDrill(null);
+      updateDrill(workspaceDrills[scopeKey] || null);
       main.current?.scrollTo({ top: 0 });
     }
   }, [s.tab, bp]);
@@ -447,9 +459,9 @@ export default function App() {
       if (key === "0") s.set({ tab: navigationOrder[9] });
       if (key === "f") s.set({ filterOpen: !s.filterOpen });
       if (key === "s") s.set({ signalOpen: !s.signalOpen });
-      if (key === "t")
+      if (editing && key === "t")
         s.set({ theme: s.theme === "matte" ? "gloss" : "matte" });
-      if (key === "d")
+      if (editing && key === "d")
         s.set({
           density:
             s.density === "compact"
@@ -467,7 +479,7 @@ export default function App() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [s]);
+  }, [s, editing]);
   const loaderLines: Record<number, string[]> = {
     0: ["Putting the big picture into focus…", "A little number crunch. A lot of studio insight…", "Connecting the dots across your studios…", "Your studio story is taking shape…"],
     1: ["Warming up the barre and the numbers…", "Finding the sessions that steal the show…", "A little pulse, a little shake, a lot of insight…", "Giving every signature experience its spotlight…"],
@@ -519,7 +531,7 @@ export default function App() {
     },
     [bp.source, s.tab, s.filters],
   );
-  useEffect(() => { setDrill(null); main.current?.scrollTo({top: 0}); }, [s.view]);
+  useEffect(() => { updateDrill(workspaceDrills[scopeKey] || null); main.current?.scrollTo({top: 0}); }, [scopeKey]);
   const closeDrill = useCallback(() => setDrill(null), []);
   const dismiss = (i: Insight) => {
     const d = JSON.parse(localStorage.getItem("floor-dismissals") || "{}");
@@ -610,6 +622,7 @@ export default function App() {
           : {}),
       }}
     >
+      <WorkspaceEditor scope={scopeKey} enabled={editing} onEnabled={setEditing} />
       <a className="skip" href="#main">
         Skip to performance data
       </a>
@@ -637,6 +650,14 @@ export default function App() {
         </div>
         <div className="toolbar">
           <div className="toolbar-group" aria-label="Workspace tools">
+            <button data-workspace-editor className="icon-button" aria-label="Save workspace across all tabs" title="Save layout, styling and drilldowns across all tabs in this browser" onClick={() => {
+              try {
+                workspaceScopes[scopeKey] = { tab: s.tab, view: s.view, filters: s.filters, compare: s.compare, transient: s.transient };
+                workspaceDrills[scopeKey] = drill;
+                saveWorkspace({ active: scopeKey, preferences: usePreferences.getState().preferences, theme: s.theme, density: s.density, rate: s.rate });
+                notify("Workspace saved across all tabs in this browser");
+              } catch { notify("Workspace could not be saved. Browser storage may be full or unavailable."); }
+            }}><Save size={15} /></button>
             <FloatingReviewTools><PresentationTools /><StickyNotes /></FloatingReviewTools>
             <button
               className="button hide-mobile"
@@ -698,7 +719,7 @@ export default function App() {
             })()}
           </label>
           <span className="toolbar-divider hide-mobile" />
-          <div className="toolbar-group" aria-label="Display">
+          {editing && <div className="toolbar-group" aria-label="Display">
             <DropdownField
               aria-label="Theme"
               className="theme-select"
@@ -730,7 +751,7 @@ export default function App() {
               <option value="comfortable">Comfortable</option>
               <option value="dense">Dense</option>
             </DropdownField>
-          </div>
+          </div>}
           <span className="toolbar-divider" />
           <div className="toolbar-group">
             <button
@@ -746,6 +767,7 @@ export default function App() {
             <button
               className="icon-button"
               aria-label="Settings"
+              hidden={!editing}
               onClick={() => setModal("settings")}
             >
               <Settings2 size={15} />
@@ -1340,7 +1362,7 @@ export default function App() {
                 </div>
               </>
             )}
-            {modal === "settings" && (
+            {editing && modal === "settings" && (
               <>
                 <AtlasSettings />
                 <SqlElementBuilder key={s.tab} page={s.tab} version={version} />

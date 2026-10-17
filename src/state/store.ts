@@ -1,3 +1,4 @@
+import { savedWorkspace, workspaceScopes, workspaceKey } from "./workspaceLayout";
 import { create } from "zustand";
 import { filterFields, type FilterGroup } from "../data/advanced-controls";
 import { relativePeriod } from "../data/periods";
@@ -51,6 +52,7 @@ export interface Filters {
   capacityBand: string;
 }
 const params = new URLSearchParams(location.search);
+const restoringWorkspace = !!savedWorkspace && (!location.search || performance.getEntriesByType("navigation").some(entry => (entry as PerformanceNavigationTiming).type === "reload"));
 let privateScope:
   | { filters: Filters; transient: { field: string; value: string }[] }
   | undefined;
@@ -86,6 +88,7 @@ export const linkedLayout: {
   groups?: string[];
   columns?: string[];
 } | null = (() => {
+  if (restoringWorkspace) return null;
   const read = (key: string) => {
     try {
       const v = JSON.parse(params.get(key) || "null");
@@ -195,6 +198,11 @@ export const useStore = create<Store>((set, get) => ({
     const next = {
       ...(patch.tab != null && patch.view == null ? { view: "" } : {}),
       ...patch,
+      ...(patch.tab != null || patch.view != null ? (() => {
+        workspaceScopes[workspaceKey(s.tab, s.view)] = scopeOf(s);
+        const target = workspaceScopes[workspaceKey(parentTab(patch.tab ?? s.tab), patch.view ?? (patch.tab != null ? "" : s.view))];
+        return target ? { filters: target.filters as Filters, compare: target.compare, transient: target.transient as Store["transient"] } : {};
+      })() : {}),
       ...(patch.tab != null ? { tab: parentTab(patch.tab) } : {}),
     };
     const changed =
@@ -215,6 +223,10 @@ export const useStore = create<Store>((set, get) => ({
       ],
     }),
 }));
+if (savedWorkspace && restoringWorkspace) {
+  const active = savedWorkspace.scopes[savedWorkspace.active];
+  if (active) useStore.setState({ ...active, filters: active.filters as Filters, transient: active.transient as Store["transient"], theme: savedWorkspace.theme, density: savedWorkspace.density, rate: savedWorkspace.rate });
+}
 function writeState(s: Store) {
   document.documentElement.dataset.theme = s.theme;
   document.documentElement.dataset.density = s.density;

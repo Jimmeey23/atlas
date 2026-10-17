@@ -1,3 +1,5 @@
+import { useWorkspaceValue } from "./useWorkspaceValue";
+import { workspaceKey } from "../state/workspaceLayout";
 import { TABLE_ROW_HEIGHT } from "./ui/layout";
 import { GroupByPicker } from "./ui/GroupByPicker";
 import { useGroupFields } from "../data/group-registry";
@@ -74,15 +76,16 @@ export function NestedTable({
   onColumns: (v: string[]) => void;
   onDrill: (r: TreeRow, metric?: string) => void;
 }) {
-  const [expanded, setExpanded] = useState<ExpandedState>({});
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [search, setSearch] = useState("");
+  const store = useStore();
+  const tableKey = `${workspaceKey(store.tab, store.view)}/${sourceOverride || "register"}/${groups.join("/")}`;
+  const [expanded, setExpanded] = useWorkspaceValue<ExpandedState>(tableKey + "/expanded", {});
+  const [sorting, setSorting] = useWorkspaceValue<SortingState>(tableKey + "/sorting", []);
+  const [search, setSearch] = useWorkspaceValue(tableKey + "/search", "");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [picker, setPicker] = useState(false);
   const [selectionTotal, setSelectionTotal] = useState<Row | null>(null);
-  const [compressed, setCompressed] = useState(false);
+  const [compressed, setCompressed] = useWorkspaceValue(tableKey + "/compressed", false);
   const parent = useRef<HTMLDivElement>(null);
-  const store = useStore();
   const { preferences, page: updatePage } = usePreferences();
   const sizing = preferences.page[store.tab]?.columnSizing || {};
   // Any populated column of this table's sheet can be a grouping level.
