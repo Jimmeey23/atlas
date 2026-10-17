@@ -13,7 +13,7 @@ export function useWorkspaceDrag(root: React.RefObject<HTMLElement>, scope: stri
       const parents = [canvas, ...canvas.querySelectorAll<HTMLElement>('div, section')];
       for (const parent of parents) {
         if (parent.closest('table, [role="dialog"], .chart, .echarts')) continue;
-        const children = [...parent.children].filter((el): el is HTMLElement => el instanceof HTMLElement && !el.matches('button, script, style, .print-context, .page-intro') && (el.matches('section, article, .register, .metric-card') || !!el.querySelector('h2, h3') || el.matches('.metric, .metric-card, .metric-flip, .chart-card, .panel, [data-workspace-element]')));
+        const children = [...parent.children].filter((el): el is HTMLElement => el instanceof HTMLElement && !el.matches('button, script, style, .print-context, .page-intro') && ((parent === canvas && el.matches('div, section, article, aside')) || el.matches('section, article, .register, .metric-card') || !!el.querySelector('h2, h3') || el.matches('.metric, .metric-card, .metric-flip, .chart-card, .panel, [data-workspace-element]')));
         if (children.length < 2) continue;
         const display = getComputedStyle(parent).display;
         if (!/grid|flex/.test(display) && parent !== canvas) continue;

@@ -3,9 +3,11 @@ import { createPortal } from 'react-dom';
 import { LockKeyhole, Pencil, X } from 'lucide-react';
 import { workspaceElements, type ElementOverride } from '../state/workspaceLayout';
 
-export function elementPath(element: HTMLElement, root: HTMLElement): string {
+type EditableElement = HTMLElement | SVGElement;
+
+export function elementPath(element: EditableElement, root: HTMLElement): string {
   const parts: string[] = [];
-  let node: HTMLElement | null = element;
+  let node: Element | null = element;
   while (node && node !== root) {
     if (node.id) { parts.unshift('#' + CSS.escape(node.id)); break; }
     const anchor = node.getAttribute('data-note-anchor');
@@ -17,15 +19,19 @@ export function elementPath(element: HTMLElement, root: HTMLElement): string {
   }
   return parts.join(' > ') || ':scope';
 }
-const originals = new WeakMap<HTMLElement, { styles: Map<string, [string, string]>; attributes: Map<string, string | null>; text: Map<Node, string | null> }>();
-function apply(element: HTMLElement, override: ElementOverride) {
+const normalizedStyles = new Map<string, string>();
+const originals = new WeakMap<EditableElement, { styles: Map<string, [string, string]>; attributes: Map<string, string | null>; text: Map<Node, string | null> }>();
+function apply(element: EditableElement, override: ElementOverride) {
   let original = originals.get(element);
   if (!original) { original = { styles: new Map(), attributes: new Map(), text: new Map() }; originals.set(element, original); }
   for (const name of Object.keys(override.styles || {})) if (!original.styles.has(name)) original.styles.set(name, [element.style.getPropertyValue(name), element.style.getPropertyPriority(name)]);
   for (const name of Object.keys(override.attributes || {})) if (!original.attributes.has(name)) original.attributes.set(name, element.getAttribute(name));
   if (override.text != null) for (const node of element.childNodes) if (node.nodeType === Node.TEXT_NODE && !original.text.has(node)) original.text.set(node, node.nodeValue);
   for (const [property, value] of Object.entries(override.styles || {})) {
-    if (element.style.getPropertyValue(property) !== value || (value && element.style.getPropertyPriority(property) !== 'important')) element.style.setProperty(property, value, 'important');
+    const key = `${property}=${value}`;
+    if (!normalizedStyles.has(key)) { const probe = document.createElement('span').style; probe.setProperty(property, value); normalizedStyles.set(key, probe.getPropertyValue(property)); }
+    const normalized = normalizedStyles.get(key)!;
+    if (element.style.getPropertyValue(property) !== normalized || (normalized && element.style.getPropertyPriority(property) !== 'important')) element.style.setProperty(property, value, 'important');
   }
   for (const [name, value] of Object.entries(override.attributes || {})) {
     if (/^on/i.test(name) || ['style', 'id', 'class', 'data-workspace-editor'].includes(name)) continue;
@@ -39,7 +45,7 @@ function apply(element: HTMLElement, override: ElementOverride) {
   }
 }
 
-function resetElement(element: HTMLElement) {
+function resetElement(element: EditableElement) {
   const original = originals.get(element);
   if (!original) return;
   for (const [name, [value, priority]] of original.styles) element.style.setProperty(name, value, priority);
@@ -54,14 +60,14 @@ export function WorkspaceEditor({ scope, enabled, onEnabled }: { scope: string; 
   const [error, setError] = useState('');
   const [picking, setPicking] = useState(true);
   const [minimized, setMinimized] = useState(false);
-  const [selected, setSelected] = useState<HTMLElement | null>(null);
+  const [selected, setSelected] = useState<EditableElement | null>(null);
   const [text, setText] = useState('');
   const [styles, setStyles] = useState('{}');
   const [attributes, setAttributes] = useState('{}');
   const [revision, setRevision] = useState(0);
   const root = () => document.querySelector<HTMLElement>('.app');
-  const keyFor = (element: HTMLElement) => `${element.closest('#main') ? scope : 'global'}|${elementPath(element, root()!)}`;
-  const select = (element: HTMLElement) => {
+  const keyFor = (element: EditableElement) => `${element.closest('#main') ? scope : 'global'}|${elementPath(element, root()!)}`;
+  const select = (element: EditableElement) => {
     setMinimized(false);
     setSelected(element);
     const saved = workspaceElements[keyFor(element)] || {};
@@ -92,7 +98,7 @@ export function WorkspaceEditor({ scope, enabled, onEnabled }: { scope: string; 
       for (const [key, override] of Object.entries(workspaceElements)) {
         const split = key.indexOf('|');
         if (![scope, 'global'].includes(key.slice(0, split))) continue;
-        try { const selector = key.slice(split + 1); const target = selector === ':scope' ? app : app.querySelector<HTMLElement>(selector); if (target && !target.closest('[data-workspace-editor]')) apply(target, override); } catch { /* A removed element no longer has a target. */ }
+        try { const selector = key.slice(split + 1); const target = selector === ':scope' ? app : app.querySelector<EditableElement>(selector); if (target && !target.closest('[data-workspace-editor]')) apply(target, override); } catch { /* A removed element no longer has a target. */ }
       }
     };
     restore();
@@ -104,7 +110,7 @@ export function WorkspaceEditor({ scope, enabled, onEnabled }: { scope: string; 
     if (!enabled || !picking) return;
     const listener = (event: MouseEvent) => {
       const target = event.target;
-      if (!(target instanceof HTMLElement) || target.closest('[data-workspace-editor], .workspace-drag-handle')) return;
+      if (!(target instanceof HTMLElement || target instanceof SVGElement) || target.closest('[data-workspace-editor], .workspace-drag-handle')) return;
       if (!target.closest('.app')) return;
       event.preventDefault(); event.stopPropagation(); select(target);
     };
@@ -149,9 +155,9 @@ export function WorkspaceEditor({ scope, enabled, onEnabled }: { scope: string; 
       <div className="workspace-editor-heading"><strong>Workspace editor</strong><button className="button" onClick={() => setMinimized(value => !value)}>{minimized ? "Expand" : "Minimize"}</button><button className="icon-button" aria-label="Lock editor" onClick={() => onEnabled(false)}><X size={16} /></button></div>
       {!minimized && <>
       <label><input type="checkbox" checked={picking} onChange={event => setPicking(event.target.checked)} /> Select elements to edit</label>
-      <p className="small">Click any element to inspect it. Turn selection off to use filters and drilldowns. Use the navbar Save icon to keep changes.</p>
+      <p className="small">Click any element to inspect it. Turn selection off to use filters and drilldowns. Use the navbar Save icon to keep changes. Text edits change the display; calculations still use source data.</p>
       {selected?.isConnected ? <>
-        <code>{selected.tagName.toLowerCase()} · {selected.getAttribute('aria-label') || selected.className || 'element'}</code>
+        <code>{selected.tagName.toLowerCase()} · {selected.getAttribute('aria-label') || selected.getAttribute('class') || 'element'}</code>
         <button className="button" onClick={() => { if (selected.parentElement && selected.parentElement !== root()) select(selected.parentElement); }}>Select parent container</button>
         <label>Text content<textarea aria-label="Text content" value={text} onChange={event => setText(event.target.value)} disabled={![...selected.childNodes].some(node => node.nodeType === Node.TEXT_NODE)} /></label>
         <div className="workspace-editor-presets">{['color','background-color','font-size','font-weight','width','height','padding','margin','border-radius','gap','translate','rotate','opacity','display','grid-template-columns','grid-column','position','top','left','z-index','order'].map(property => <label key={property}>{property}<input placeholder={getComputedStyle(selected).getPropertyValue(property)} value={(() => { try { return JSON.parse(styles)[property] || ''; } catch { return ''; } })()} onChange={event => { try { setStyles(JSON.stringify({ ...jsonRecord(styles), [property]: event.target.value }, null, 2)); } catch { setError('Fix the CSS JSON first.'); } }} /></label>)}</div>

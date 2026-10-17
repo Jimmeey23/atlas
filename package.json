@@ -16,7 +16,8 @@
     "verify:report-page": "node scripts/verify-report-page.mjs",
     "verify:report-deck": "node scripts/verify-report-deck.mjs",
     "check:report": "tsx --test tests/report-release-gate.test.ts",
-    "verify:report-editorial": "node scripts/verify-report-editorial.mjs"
+    "verify:report-editorial": "node scripts/verify-report-editorial.mjs",
+    "verify:workspace": "node scripts/verify-workspace-editor.mjs"
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.30.0",

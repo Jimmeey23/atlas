@@ -1,4 +1,4 @@
-import { savedWorkspace } from "./workspaceLayout";
+import { readWorkspace } from "./workspaceLayout";
 import { create } from "zustand";
 import { migrateSalesAccent } from "./workspaceAppearance";
 export const themeOptions = [
@@ -84,7 +84,7 @@ function load() {
   try {
     return {
       ...defaultPreferences,
-      ...migrateSalesAccent((savedWorkspace?.preferences || JSON.parse(localStorage.getItem("atlas-preferences") || "{}")) as Preferences),
+      ...migrateSalesAccent((readWorkspace()?.preferences || JSON.parse(localStorage.getItem("atlas-preferences") || "{}")) as Preferences),
     };
   } catch {
     return { ...defaultPreferences };
