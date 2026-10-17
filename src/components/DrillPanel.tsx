@@ -21,11 +21,16 @@ import { fmt, formatField } from "../semantics/formats";
 import { exportCSV } from "./exports";
 import { sourceRows } from "../data/raw";
 import { Sparkline } from "./MetricCard";
-// Sheet columns kept out of the record table. The Lapsed sheet's "Derived Status" is
-// its own renewal guess (it treats free classes as renewals) and contradicts the
-// Lapsed members rule, so only the recorded Status is shown.
-const hiddenColumns: Record<string, string[]> = { lapsed: ["Derived Status"] };
-const shownColumn = (source: string, key: string) => !/token/i.test(key) && !hiddenColumns[source]?.includes(key);
+const shownColumn = (key: string) => !/token/i.test(key);
+// Lapsed: Derived Status sits beside the recorded Status, which drives renewal and churn.
+const sheetColumns = (source: string, row: Record<string, unknown>) => {
+  const keys = Object.keys(row).filter(shownColumn);
+  if (source !== "lapsed" || !keys.includes("Derived Status") || !keys.includes("Status")) return keys;
+  const rest = keys.filter((k) => k !== "Derived Status");
+  rest.splice(rest.indexOf("Status") + 1, 0, "Derived Status");
+  return rest;
+};
+const renewalOutcomeLabel: Record<string, string> = { renewed: "Renewed", lapsed: "Lapsed", frozen: "Frozen", pending: "Grace period" };
 
 export function DrillPanel({
   entry,
@@ -321,10 +326,11 @@ export function DrillPanel({
             {!loading && sourceData.length > 0 && (
               <div className="source-detail-table" tabIndex={0} aria-label="Original item-level sheet rows">
                 <table>
-                  <thead><tr><th scope="col">Sheet row</th>{Object.keys(sourceData[0]).filter((k) => shownColumn(source, k)).map((k) => <th scope="col" key={k}>{k}</th>)}</tr></thead>
+                  <thead><tr><th scope="col">Sheet row</th>{source === "lapsed" && <th scope="col" title="Renewal cohort outcome used by the Renewals table, Lapsed and Churn metrics">Counted as</th>}{sheetColumns(source, sourceData[0]).map((k) => <th scope="col" key={k}>{k}</th>)}</tr></thead>
                   <tbody>{sourceData.map((row, i) => <tr key={String(records[i]?.source_row)}>
                     <td><a target="_blank" rel="noreferrer" href={`https://docs.google.com/spreadsheets/d/${definition.id}/edit#range=${encodeURIComponent("'" + definition.title + "'!A" + records[i]?.source_row)}`}>{String(records[i]?.source_row)} ↗</a></td>
-                    {Object.entries(row).filter(([k]) => shownColumn(source, k)).map(([k,v]) => <td key={k}>{formatField(k, v)}</td>)}
+                    {source === "lapsed" && <td>{renewalOutcomeLabel[String(records[i]?.renewal_outcome)] ?? "Not due"}</td>}
+                    {sheetColumns(source, row).map((k) => <td key={k}>{formatField(k, row[k])}</td>)}
                   </tr>)}</tbody>
                 </table>
               </div>

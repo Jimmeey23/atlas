@@ -23,7 +23,7 @@ const PRESETS: Record<string, string[]> = {
   recurring: ["day", "time", "format", "trainer", "sessions", "capacity", "booked", "checked_in", "empty", "revenue"],
   new: ["first_visit", "member", "entry_type", "source", "trainer", "format", "conversion", "retention", "first_purchase", "ltv", "visits_post", "conversion_days"],
   leads: ["date", "member", "source", "status", "stage", "associate", "trial_status", "conversion", "response_hours", "touches"],
-  lapsed: ["member", "product", "start_date", "end_date", "status", "completed", "remaining", "session_limit", "days_absent", "last_visit", "churned_date"],
+  lapsed: ["member", "product", "start_date", "end_date", "status", "derived_status", "renewal_outcome", "completed", "remaining", "session_limit", "days_absent", "last_visit", "churned_date"],
   bookings: ["date", "member", "format", "trainer", "product", "attended", "late_cancelled", "cancelled", "no_show"],
   checkins: ["date", "member", "format", "trainer", "product", "revenue"],
   payroll: ["trainer", "month", "sessions", "new_count", "converted", "retained", "revenue"],

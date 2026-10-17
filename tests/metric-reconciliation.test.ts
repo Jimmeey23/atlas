@@ -63,16 +63,19 @@ test("lapsed members count only a member's most recent paid, unrestricted member
  const db=await DuckDBInstance.create(":memory:");const c=await db.connect();
  try {
   await c.run(`CREATE TABLE lapsed AS SELECT * FROM (VALUES
-   (1,'renewed-later','Monthly Membership',5000,'Lapsed','2026-08-01','2026-09-01','2026-09-01'),
-   (2,'renewed-later','Monthly Membership',5000,'Active','2026-09-02','2026-10-02',NULL),
-   (3,'lost','Monthly Membership',5000,'Lapsed','2026-08-01','2026-09-10','2026-09-10'),
-   (4,'lost','Studio Intro Offer',1500,'Active','2026-09-20','2026-10-20',NULL),
-   (5,'lost-free','Monthly Membership',5000,'Lapsed','2026-08-01','2026-09-12','2026-09-12'),
-   (6,'lost-free','Complimentary Class',0,'Active','2026-09-25','2026-09-25',NULL),
-   (7,'frozen','Monthly Membership',5000,'Lapsed','2026-07-01','2026-08-01','2026-08-01'),
-   (8,'frozen','Monthly Membership',5000,'Frozen','2026-08-15','2026-09-15','2026-09-15'),
-   (9,'test-only','TEST',5000,'Lapsed','2026-08-01','2026-09-05','2026-09-05')
-  ) t(row_id,member_id,product,amount_paid,status,start_date,end_date,churned_date)`);
+   (1,'renewed-later','Monthly Membership',5000,'Lapsed','2026-08-01','2026-09-01','2026-09-01','Lapsed'),
+   (2,'renewed-later','Monthly Membership',5000,'Active','2026-09-02','2026-10-02',NULL,'Active'),
+   (3,'lost','Monthly Membership',5000,'Lapsed','2026-08-01','2026-09-10','2026-09-10','Lapsed'),
+   (4,'lost','Studio Intro Offer',1500,'Active','2026-09-20','2026-10-20',NULL,'Active'),
+   (5,'lost-free','Monthly Membership',5000,'Lapsed','2026-08-01','2026-09-12',NULL,'Lapsed'),
+   (6,'lost-free','Complimentary Class',0,'Active','2026-09-25','2026-09-25',NULL,'Active'),
+   (7,'frozen','Monthly Membership',5000,'Lapsed','2026-07-01','2026-08-01','2026-08-01','Lapsed'),
+   (8,'frozen','Monthly Membership',5000,'Frozen','2026-08-15','2026-09-15','2026-09-15','Frozen'),
+   (9,'test-only','TEST',5000,'Lapsed','2026-08-01','2026-09-05','2026-09-05','Lapsed'),
+   (10,'not-activated','Monthly Membership',5000,'Lapsed','2026-07-01','2026-08-01','2026-08-01','Lapsed'),
+   (11,'not-activated','Monthly Membership',5000,'Not Activated','2026-09-01','2026-10-01',NULL,'Not Activated'),
+   (12,'grace','Monthly Membership',5000,'Renewed','2026-08-01','2026-09-30',NULL,'Renewal Grace Period')
+  ) t(row_id,member_id,product,amount_paid,status,start_date,end_date,churned_date,derived_status)`);
   await c.run(`ALTER TABLE lapsed ADD COLUMN latest_lapse BOOLEAN`);
   await c.run(latestLapseSQL());
   const result=await c.runAndReadAll(`SELECT ${metrics.lapsed_members.sql({rate:1200,today:'2026-10-05'})}::INTEGER AS lapsed, string_agg(member_id,',' ORDER BY member_id) FILTER (WHERE latest_lapse) AS who FROM lapsed`);

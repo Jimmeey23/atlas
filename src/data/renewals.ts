@@ -1,20 +1,38 @@
-import { paidMembershipSQL } from "../semantics/membership-eligibility";
+import { confirmedLapseSQL, paidMembershipSQL } from "../semantics/membership-eligibility";
 import { groupValueSQL } from "./group-fields";
 /**
- * The table and drills share exactly the same deduplicated expiry cohort.
+ * The table, drills and the Lapsed membership card share exactly the same deduplicated expiry cohort.
  * Eligibility matches Lapsed members: paid memberships whose names are not restricted
- * (server/kra-churn.mjs), ongoing-access products only, already expired by the as-of date.
- * Every due membership lands in one state: due = renewed + lapsed + frozen + pending:
- *  - frozen: the membership's status is Frozen;
- *  - lapsed: no later eligible membership after 14 days, or a recorded Churned Date;
- *  - renewed: a later eligible membership exists by the as-of date.
- *  - pending: expired within the 14-day grace period with no observed renewal.
+ * (server/kra-churn.mjs), ongoing-access products only, already expired by the as-of date,
+ * and a recorded Status of Renewed, Lapsed or Frozen — Not Activated, Active and New
+ * memberships are not due.
+ * One membership per unique member per expiry month, chosen before scope filters apply, so a
+ * filtered view is always a subset of the unfiltered cohort; a member with any Lapsed
+ * membership that month takes the Lapsed outcome.
+ * Every due member lands in one state from the recorded Status: due = renewed + lapsed + frozen + pending:
+ *  - renewed / frozen: Status is Renewed / Frozen;
+ *  - lapsed: Status is Lapsed and the Churned Date is at least 30 days old;
+ *  - pending: Status is Lapsed within 30 days of the Churned Date (grace period).
  */
-export function renewalFactsSQL(scope: string, asOf: string) {
+export function renewalFactsSQL(scope: string, asOf: string, table = "lapsed") {
   const ongoing = `member_id IS NOT NULL AND end_date IS NOT NULL AND start_date IS NOT NULL AND ${paidMembershipSQL} AND (session_limit>1 OR regexp_matches(lower(product),'membership|unlimited|u/l|pack')) AND NOT regexp_matches(lower(product),'complimentary|free|intro|newcomer')`;
-  return `WITH paid AS (SELECT * FROM lapsed WHERE ${ongoing}),
-    cohort AS (SELECT *,CASE WHEN EXISTS(SELECT 1 FROM paid next WHERE next.member_id=lapsed.member_id AND next.start_date>lapsed.start_date AND next.end_date>lapsed.end_date AND next.start_date<='${asOf}') THEN 1 ELSE 0 END AS renewed FROM lapsed${scope}${scope ? " AND " : " WHERE "}${ongoing} AND end_date<'${asOf}' QUALIFY ROW_NUMBER() OVER(PARTITION BY member_id,SUBSTR(end_date,1,7) ORDER BY end_date DESC,source_row DESC)=1)
-    SELECT *, SUBSTR(end_date,1,7) AS expiry_month, CASE WHEN lower(COALESCE(status,''))='frozen' THEN 'frozen' WHEN renewed=1 THEN 'renewed' WHEN churned_date IS NOT NULL OR TRY_CAST(end_date AS DATE)<=TRY_CAST('${asOf}' AS DATE)-INTERVAL 14 DAY THEN 'lapsed' ELSE 'pending' END AS renewal_state FROM cohort`;
+  const status = "lower(trim(COALESCE(status,'')))";
+  return `WITH cohort AS (SELECT * FROM "${table}" WHERE ${ongoing} AND end_date<'${asOf}' AND ${status} IN ('renewed','lapsed','frozen') QUALIFY ROW_NUMBER() OVER(PARTITION BY member_id,SUBSTR(end_date,1,7) ORDER BY ${status}='lapsed' DESC,end_date DESC,source_row DESC)=1),
+    facts AS (SELECT *, SUBSTR(end_date,1,7) AS expiry_month, CASE WHEN ${status}='frozen' THEN 'frozen' WHEN ${status}='renewed' THEN 'renewed' WHEN ${confirmedLapseSQL(asOf)} THEN 'lapsed' ELSE 'pending' END AS renewal_state FROM cohort)
+    SELECT * FROM facts${scope}`;
+}
+/**
+ * Stamps each source row's renewal state as renewal_outcome (a distinct name, so the facts
+ * above never see two renewal_state columns) so registry metrics (the Lapsed membership
+ * card, its trend and drill) count the same rows as the Renewals table. Rows outside the
+ * cohort stay NULL. Re-run whenever the table loads or is restored, since states move with the as-of date.
+ */
+export function renewalStateSQL(asOf: string, table = "lapsed") {
+  return [
+    `ALTER TABLE "${table}" ADD COLUMN IF NOT EXISTS renewal_outcome VARCHAR`,
+    `UPDATE "${table}" SET renewal_outcome=NULL`,
+    `UPDATE "${table}" SET renewal_outcome=f.renewal_state FROM (SELECT source_row, renewal_state FROM (${renewalFactsSQL("", asOf, table)})) f WHERE "${table}".source_row=f.source_row`,
+  ];
 }
 export function renewalCohortSQL(scope: string, asOf: string) {
   return `WITH facts AS (${renewalFactsSQL(scope, asOf)}) SELECT expiry_month AS month,${renewalMeasuresSQL()} FROM facts GROUP BY expiry_month ORDER BY month DESC LIMIT 14`;
@@ -35,10 +53,10 @@ export function renewalDrillPredicate(scope: string, asOf: string, month: string
 /** Shared measures over renewalFactsSQL; the report and dashboard use the same cohort. */
 export const renewalMeasures: Record<string, { label: string; format: 'integer' | 'percent'; expression: string }> = {
   due: { label: 'Paid memberships due', format: 'integer', expression: 'COUNT(*)' },
-  renewed: { label: 'Renewals completed', format: 'integer', expression: "COUNT(*) FILTER (WHERE renewal_state='renewed')" },
-  lapsed: { label: 'Expired without renewal after 14 days / recorded lapse', format: 'integer', expression: "COUNT(*) FILTER (WHERE renewal_state='lapsed')" },
-  frozen: { label: 'Frozen memberships', format: 'integer', expression: "COUNT(*) FILTER (WHERE renewal_state='frozen')" },
-  pending: { label: 'Pending renewal decision (14-day grace)', format: 'integer', expression: "COUNT(*) FILTER (WHERE renewal_state='pending')" },
+  renewed: { label: 'Status Renewed', format: 'integer', expression: "COUNT(*) FILTER (WHERE renewal_state='renewed')" },
+  lapsed: { label: 'Status Lapsed, 30+ days past Churned Date', format: 'integer', expression: "COUNT(*) FILTER (WHERE renewal_state='lapsed')" },
+  frozen: { label: 'Status Frozen', format: 'integer', expression: "COUNT(*) FILTER (WHERE renewal_state='frozen')" },
+  pending: { label: 'Grace period: Status Lapsed under 30 days past Churned Date', format: 'integer', expression: "COUNT(*) FILTER (WHERE renewal_state='pending')" },
   renewal_rate: { label: 'Confirmed renewals / all due', format: 'percent', expression: "COUNT(*) FILTER (WHERE renewal_state='renewed')::DOUBLE/NULLIF(COUNT(*),0)" },
 };
 export const renewalMeasuresSQL = (ids = Object.keys(renewalMeasures)) => ids.map(id => `${renewalMeasures[id].expression} AS "${id}"`).join(',');

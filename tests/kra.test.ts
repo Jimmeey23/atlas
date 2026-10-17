@@ -46,17 +46,17 @@ test('KRA first-class outcomes reject prior attendances, cancellations, future a
   assert.equal(june.trials.rows.find(row=>row.member_id==='repeat').completed,null);
   assert.equal(june.trialsTarget,null);
 });
-test('KRA churn uses recorded Lapsed dates across eligible membership records without expiry inference',()=>{
+test('KRA churn uses Status with a 30-day Churned Date grace across eligible membership records',()=>{
   const rows=[
     {member_id:'a',start_date:'2026-05-01',end_date:'2026-06-20',product:'Monthly Membership',revenue:500,status:'Renewed',source_row:2},
     {member_id:'a',start_date:'2026-05-02',end_date:'2026-06-25',product:'Monthly Membership',revenue:500,status:'Renewed',source_row:3},
-    {member_id:'a',start_date:'2026-06-26',end_date:'2026-07-26',product:'Monthly Membership',revenue:500,source_row:4},
+    {member_id:'a',start_date:'2026-06-26',end_date:'2026-07-26',product:'Monthly Membership',revenue:500,status:'Lapsed',churned_date:'2026-09-20',source_row:4},
     {member_id:'b',start_date:'2026-05-01',end_date:'2026-06-30',product:'Monthly Membership',revenue:500,churned_date:'2026-06-30',status:'Lapsed',source_row:5},
-    {member_id:'x',start_date:'2025-05-01',end_date:'2025-06-30',product:'Monthly Membership',revenue:500,churned_date:'2025-06-30',source_row:6},
-    {member_id:'y',start_date:'2025-05-01',end_date:'2025-06-30',product:'Monthly Membership',revenue:500,churned_date:'2025-06-30',source_row:7},
-    {member_id:'z',start_date:'2026-08-01',end_date:'2026-09-30',product:'Monthly Membership',revenue:500,source_row:8},
-    {member_id:'free',start_date:'2026-05-01',end_date:'2026-06-30',product:'Free Membership',revenue:0,source_row:9},
-    {member_id:'intro',start_date:'2026-05-01',end_date:'2026-06-30',product:'Studio Intro Offer',revenue:500,churned_date:'2026-06-30',source_row:10},
+    {member_id:'x',start_date:'2025-05-01',end_date:'2025-06-30',product:'Monthly Membership',revenue:500,churned_date:'2025-06-30',status:'Lapsed',source_row:6},
+    {member_id:'y',start_date:'2025-05-01',end_date:'2025-06-30',product:'Monthly Membership',revenue:500,churned_date:'2025-06-30',status:'Lapsed',source_row:7},
+    {member_id:'z',start_date:'2026-08-01',end_date:'2026-09-30',product:'Monthly Membership',revenue:500,status:'Lapsed',churned_date:'2026-09-30',source_row:8},
+    {member_id:'free',start_date:'2026-05-01',end_date:'2026-06-30',product:'Free Membership',revenue:0,status:'Lapsed',source_row:9},
+    {member_id:'intro',start_date:'2026-05-01',end_date:'2026-06-30',product:'Studio Intro Offer',revenue:500,churned_date:'2026-06-30',status:'Lapsed',source_row:10},
     {member_id:'froze',start_date:'2026-05-01',end_date:'2026-06-30',product:'Monthly Membership',revenue:500,status:'Frozen',churned_date:'2026-06-30',source_row:11},
   ];
   const result=kraPerformance({lapsed:{rows,status:'ok'}},'2026-10-06');
@@ -95,10 +95,10 @@ test('exact 10 percent target boundaries avoid floating point false passes and f
   ];
   const memberships=[];
   for(let i=0;i<10;i++){
-    memberships.push({member_id:'old-'+i,product:'Monthly membership',revenue:500,start_date:'2025-05-01',end_date:'2025-06-30',churned_date:'2025-06-30'});
-    memberships.push({member_id:'new-'+i,product:'Monthly membership',revenue:500,start_date:'2026-05-01',end_date:'2026-06-30',churned_date:i===0?null:'2026-06-30'});
+    memberships.push({member_id:'old-'+i,product:'Monthly membership',revenue:500,start_date:'2025-05-01',end_date:'2025-06-30',churned_date:'2025-06-30',status:'Lapsed'});
+    memberships.push({member_id:'new-'+i,product:'Monthly membership',revenue:500,start_date:'2026-05-01',end_date:'2026-06-30',churned_date:i===0?null:'2026-06-30',status:i===0?'Renewed':'Lapsed'});
   }
-  memberships.push({member_id:'new-0',product:'Monthly membership',revenue:500,start_date:'2026-07-01',end_date:'2026-08-01'});
+  memberships.push({member_id:'new-0',product:'Monthly membership',revenue:500,start_date:'2026-07-01',end_date:'2026-08-01',status:'Active'});
   const june=kraPerformance({sales:source(payments),lapsed:source(memberships)},'2026-10-06').monthly[0];
   assert.equal(june.revenueTarget,true); // exactly 10% YoY growth meets the target
   assert.equal(june.stabilityTarget,false); // exactly 10% dip fails "less than 10%"
@@ -113,8 +113,8 @@ test('exact 10 percent target boundaries avoid floating point false passes and f
     {date:'2025-12-02',revenue:90,status:'succeeded'},
     {date:'2026-04-08',revenue:500,status:'succeeded'}
   ]),lapsed:source([
-    {member_id:'old',start_date:'2025-08-01',end_date:'2025-09-01',churned_date:'2025-09-01',product:'Monthly membership',revenue:500},
-    {member_id:'old',start_date:'2025-10-10',end_date:'2025-11-10',product:'Monthly membership',revenue:500}
+    {member_id:'old',start_date:'2025-08-01',end_date:'2025-09-01',churned_date:'2025-09-01',product:'Monthly membership',revenue:500,status:'Lapsed'},
+    {member_id:'old',start_date:'2025-10-10',end_date:'2025-11-10',product:'Monthly membership',revenue:500,status:'Lapsed'}
   ])},'2026-10-06');
   const p=result.comparisonPeriods;
   assert.equal(p.current.to,'2026-10-06');assert.equal(p.lastYear.to,'2025-10-06');

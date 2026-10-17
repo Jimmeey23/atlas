@@ -52,9 +52,10 @@ test("renewal cohorts use expiry month instead of purchase month and have exhaus
     await c.run(
       "INSERT INTO lapsed VALUES ('renewed',1000,'2026-08-31','2026-08-01',10,'10 pack','2026-07',2),('renewed',1000,'2026-09-30','2026-09-01',10,'10 pack','2026-08',3),('lapsed',1000,'2026-08-31','2026-08-01',10,'10 pack','2026-07',4),('grace',1000,'2026-09-30','2026-09-01',10,'10 pack','2026-08',5),('upcoming',1000,'2026-10-31','2026-10-01',10,'10 pack','2026-09',6),('free',0,'2026-08-31','2026-08-01',10,'Complimentary','2026-07',7)",
     );
-    // Lapsed needs a recorded Churned Date; amount_paid drives paid eligibility.
-    await c.run("ALTER TABLE lapsed ADD COLUMN amount_paid DOUBLE; ALTER TABLE lapsed ADD COLUMN status VARCHAR; ALTER TABLE lapsed ADD COLUMN churned_date VARCHAR");
-    await c.run("UPDATE lapsed SET amount_paid=revenue, churned_date=CASE WHEN member_id IN ('lapsed','grace') THEN end_date END, status=CASE WHEN member_id='grace' THEN 'Frozen' END");
+    // States follow the recorded Status; Lapsed needs a Churned Date 30+ days old. amount_paid drives paid eligibility.
+    await c.run("ALTER TABLE lapsed ADD COLUMN amount_paid DOUBLE; ALTER TABLE lapsed ADD COLUMN status VARCHAR; ALTER TABLE lapsed ADD COLUMN churned_date VARCHAR; ALTER TABLE lapsed ADD COLUMN derived_status VARCHAR");
+    await c.run("INSERT INTO lapsed(member_id,revenue,end_date,start_date,session_limit,product,month,source_row) VALUES ('dormant',1000,'2026-08-31','2026-08-01',10,'10 pack','2026-07',8)");
+    await c.run("UPDATE lapsed SET amount_paid=revenue, status=CASE WHEN member_id='grace' THEN 'Frozen' WHEN member_id='dormant' THEN 'Not Activated' WHEN member_id='upcoming' THEN 'Active' WHEN source_row=2 THEN 'Renewed' ELSE 'Lapsed' END, churned_date=end_date");
     const result = await c.runAndReadAll(renewalCohortSQL("", "2026-10-05"));
     const rows = result.getRowObjectsJson();
     const august = rows.find((r) => r.month === "2026-08")!;

@@ -1,4 +1,4 @@
-const today = () =>
+export const today = () =>
   new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Kolkata",
     year: "numeric",

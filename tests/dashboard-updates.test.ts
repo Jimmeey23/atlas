@@ -5,7 +5,7 @@ import { sqlTypes } from '../src/data/normalise.ts';
 import { metricSQL } from '../src/semantics/metrics.ts';
 import { acquisitionAggregate, acquisitionFactsSQL } from '../src/data/acquisition.ts';
 import { contributesToMetric } from '../src/data/acquisition-reference.ts';
-import { renewalCohortSQL, renewalDrillPredicate } from '../src/data/renewals.ts';
+import { renewalCohortSQL, renewalDrillPredicate, renewalStateSQL } from '../src/data/renewals.ts';
 import { salesScorecardFactsSQL, salesScorecardAggregate } from '../src/data/sales-scorecards.ts';
 async function database(tables:string[], work:(c:any)=>Promise<void>) {
   const db=await DuckDBInstance.create(':memory:');const c=await db.connect();
@@ -41,9 +41,10 @@ test('renewal cell drills reconcile to deduplicated cohort counts and retain lat
     (5,'lost','Monthly Membership',1000,10,'2026-07-01','2026-08-01'),
     (6,'free','Free Trial',0,1,'2026-07-01','2026-08-01'),
     (7,'restricted','Copper + Cloves Single Class Package',1000,10,'2026-07-01','2026-08-01'),
-    (8,'no-churn','Monthly Membership',1000,10,'2026-07-01','2026-08-01')`);
-  // Expired access without observed renewal after grace is a lapse even with no churn date.
-  await c.run(`UPDATE lapsed SET amount_paid=revenue, churned_date=CASE WHEN member_id IN ('lost','restricted') THEN end_date END`);
+    (8,'no-churn','Monthly Membership',1000,10,'2026-07-01','2026-08-01'),
+    (9,'dormant','Monthly Membership',1000,10,'2026-07-01','2026-08-01')`);
+  // Status Lapsed with no Churned Date falls back to End Date for the 30-day grace; Not Activated is never due.
+  await c.run(`UPDATE lapsed SET amount_paid=revenue, churned_date=CASE WHEN member_id IN ('lost','restricted') THEN end_date END, status=CASE WHEN member_id='dormant' THEN 'Not Activated' WHEN source_row=2 THEN 'Renewed' ELSE 'Lapsed' END`);
   const scope=" WHERE end_date<='2026-08-31'";
   const [r]=(await c.runAndReadAll(renewalCohortSQL(scope,'2026-10-06'))).getRowObjectsJS();
   assert.equal(Number(r.due),3);assert.equal(Number(r.renewed),1);assert.equal(Number(r.lapsed),2);
@@ -52,6 +53,10 @@ test('renewal cell drills reconcile to deduplicated cohort counts and retain lat
     const [drill]=(await c.runAndReadAll(`SELECT COUNT(*) AS n FROM lapsed WHERE ${renewalDrillPredicate(scope,'2026-10-06','2026-08',state)}`)).getRowObjectsJS();
     assert.equal(Number(drill.n),Number(r[state]));
   }
+  // The Renewals tab's Lapsed membership card counts the same rows as the table's lapsed column.
+  for(const sql of renewalStateSQL('2026-10-06')) await c.run(sql);
+  const [card]=(await c.runAndReadAll(`SELECT ${metricSQL(['lapsed_memberships'],{rate:1200,today:'2026-10-06'})} FROM lapsed WHERE end_date>='2026-08-01' AND end_date<='2026-08-31'`)).getRowObjectsJS();
+  assert.equal(Number(card.lapsed_memberships),Number(r.lapsed));
 }));
 test('sales trackers use earlier purchase history, successful payments and nonduplicated upgrades',async()=>database(['sales'],async c=>{
   await c.run(`INSERT INTO sales(source_row,member_id,sale_id,membership_id,date,month,product,category,revenue,vat,discount,units,status,imported) VALUES

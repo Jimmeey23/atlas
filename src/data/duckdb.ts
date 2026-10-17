@@ -1,4 +1,6 @@
 import { latestLapseSQL } from "../semantics/membership-eligibility";
+import { renewalStateSQL } from "./renewals";
+import { today } from "./periods";
 import * as duckdb from "@duckdb/duckdb-wasm";
 import wasmMVP from "@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url";
 import wasmEH from "@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url";
@@ -124,13 +126,14 @@ async function restoreSnapshot(key: string) {
           savedAt: number;
         }
       | undefined;
-    if (!entry || entry.schema !== 20) return false;
+    if (!entry || entry.schema !== 21) return false;
     resultCache.clear();
     await database.registerFileBuffer(key + ".parquet", entry.buffer);
     await connection.query(
       `DROP TABLE IF EXISTS "${key}";CREATE TABLE "${key}" AS SELECT * FROM read_parquet('${key}.parquet')`,
     );
     await database.dropFile(key + ".parquet");
+    if (key === "lapsed") for (const sql of [latestLapseSQL("lapsed", today()), ...renewalStateSQL(today())]) await connection.query(sql);
     health[key] = entry.meta;
     await measureFields(key);
     return true;
@@ -145,7 +148,7 @@ async function persist(key: string) {
     );
     const buffer = await database.copyFileToBuffer(key + ".parquet");
     await writeSnapshot({
-      schema: 20,
+      schema: 21,
       key,
       buffer,
       meta: health[key],
@@ -247,7 +250,10 @@ async function ingestSource(data: SourceData) {
     );
     await database.dropFile(data.key + ".json");
   }
-  if (data.key === "lapsed") await connection.query(latestLapseSQL());
+  if (data.key === "lapsed") {
+    await connection.query(latestLapseSQL("lapsed", today()));
+    for (const sql of renewalStateSQL(today())) await connection.query(sql);
+  }
   await persist(data.key);
   await measureFields(data.key);
 }

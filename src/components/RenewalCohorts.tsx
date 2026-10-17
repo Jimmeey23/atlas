@@ -66,12 +66,13 @@ export function RenewalCohorts({ version, onDrill }: { version: number; onDrill:
       <h2>Renewals by expiry month</h2>
       <p className="small">
         14 completed months, independent of date filters. Other filters apply.
-        One paid ongoing membership per member per expiry month; zero-value and
-        restricted memberships (intro, 2 for 1, single class, private, credit)
-        are excluded. Total due = Renewed + Expired/lapsed + Frozen + Pending.
-        Renewed requires a later observed paid membership. Expired/lapsed means
-        no renewal after a 14-day grace period or a recorded Churned Date.
-        Pending means expiry within grace. Frozen is the membership’s own status.
+        Unique members per expiry month, counting paid ongoing memberships only;
+        zero-value and restricted memberships (intro, 2 for 1, single class,
+        private, credit) are excluded, as are Not Activated, Active and New.
+        Total due = Renewed + Expired/lapsed + Frozen + Grace period, from the
+        Lapsed sheet’s Status. Lapsed counts only once the Churned Date is at
+        least 30 days old; under 30 days it shows as Grace period. A member with
+        any Lapsed membership in the month takes the Lapsed outcome.
       </p>
       <GroupByPicker name="Renewals" label="Split months by" value={split} onChange={setSplit} fields={fields} defaults={[]} min={0} max={1} emptyLabel="No split" />
       {error ? (
@@ -87,7 +88,7 @@ export function RenewalCohorts({ version, onDrill }: { version: number; onDrill:
                   "Renewed",
                   "Expired / lapsed",
                   "Frozen",
-                  "Pending (14-day grace)",
+                  "Grace period (<30 days)",
                   "Renewal rate",
                 ].map((x) => (
                   <th key={x}>{x}</th>

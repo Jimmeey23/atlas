@@ -21,6 +21,8 @@ import { pipeline } from "node:stream/promises";
 import path from "node:path";
 import { normalise, sqlTypes } from "../src/data/normalise.ts";
 import { latestLapseSQL } from "../src/semantics/membership-eligibility.ts";
+import { renewalStateSQL } from "../src/data/renewals.ts";
+import { today as kolkataToday } from "../src/data/periods.ts";
 import { sanitizeLabSpec, patchLabSpec, labSQL, validateLabRelationships, labTypes, labAggregates, labFormats, labDensities, labValueModes } from "../src/data/data-lab.ts";
 import { elementSpecError, elementResultError, requestedElementTypes, wantsFullHistory } from "../src/semantics/element-spec.ts";
 const labToolDefs = (sourceKeys) => {
@@ -337,7 +339,10 @@ export function intelligenceRoutes(
                   .map(([k, t]) => lit(k) + ":" + lit(t))
                   .join(",")}})`,
               );
-              if (source.key === "lapsed") await c.run(latestLapseSQL("facts_lapsed"));
+              if (source.key === "lapsed") {
+                await c.run(latestLapseSQL("facts_lapsed", kolkataToday()));
+                for (const sql of renewalStateSQL(kolkataToday(), "facts_lapsed")) await c.run(sql);
+              }
               versions.set(source.key, data.fetchedAt);
               // An original-column table from an older version would mismatch the new facts.
               if (!buildRaw && rawVersions.has(source.key)) {

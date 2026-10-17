@@ -149,7 +149,7 @@ test('renewal report uses the dashboard deduplicated paid expiry cohort and rene
       ('grace','10 pack',1000,10,'2026-08-01','2026-09-25',4),
       ('lapsed','10 pack',1000,10,'2026-08-01','2026-09-01',5),
       ('free','complimentary',1000,10,'2026-08-01','2026-09-01',6)`);
-    await c.run(`UPDATE lapsed SET amount_paid=revenue, churned_date=CASE WHEN member_id='lapsed' THEN end_date END, status=CASE WHEN member_id='grace' THEN 'Frozen' END`);
+    await c.run(`UPDATE lapsed SET amount_paid=revenue, churned_date=CASE WHEN member_id='lapsed' THEN end_date END, status=CASE WHEN member_id='grace' THEN 'Frozen' WHEN member_id='renewed' THEN 'Renewed' ELSE 'Lapsed' END`);
     const scope=" WHERE SUBSTR(end_date,1,7)='2026-09'";
     const report=(await(await c.run(`SELECT ${renewalMeasuresSQL()} FROM (${renewalFactsSQL(scope,'2026-10-06')})`)).getRowObjects())[0];
     const dashboard=(await(await c.run(renewalCohortSQL(scope,'2026-10-06'))).getRowObjects())[0];

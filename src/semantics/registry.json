@@ -892,9 +892,11 @@
   {
     "id": "churn_rate",
     "label": "Churn rate",
-    "expression": "(COUNT(*) FILTER (WHERE churned_date IS NOT NULL)) / NULLIF((COUNT(*)),0)",
+    "expression": "(COUNT(*) FILTER (WHERE renewal_outcome='lapsed')) / NULLIF((COUNT(*) FILTER (WHERE renewal_outcome IS NOT NULL)),0)",
     "sources": [
-      "Lapsed.Churned Date"
+      "Lapsed.Status",
+      "Lapsed.Churned Date",
+      "Lapsed.End Date"
     ],
     "format": "percent",
     "domain": "risk",
@@ -2425,9 +2427,10 @@
   {
     "id": "lapsed_memberships",
     "label": "Lapsed membership count",
-    "expression": "COUNT(*) FILTER (WHERE latest_lapse)",
+    "expression": "COUNT(*) FILTER (WHERE renewal_outcome='lapsed')",
     "sources": [
       "Lapsed.Churned Date",
+      "Lapsed.End Date",
       "Lapsed.Member ID",
       "Lapsed.Start Date",
       "Lapsed.Status",
