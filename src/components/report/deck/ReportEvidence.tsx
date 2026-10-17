@@ -1,3 +1,4 @@
+import { ImportedContentElement } from './ImportedContentElement';
 import { useMemo, useState } from 'react';
 import { ChartColumn, ChartLine, Database, Download, Maximize2, RotateCcw, Search, Table2, ZoomIn, ZoomOut, Trash2 } from 'lucide-react';
 import type { ReportEvidenceBlock, ReportModel } from '../../../report/model';
@@ -8,7 +9,7 @@ import { useRecordDrilldown } from './RecordDrilldown';
 import { axisStyle, chartPalette, tooltipStyle, useChart } from './useChart';
 import { EditableText, useEdit, Slot } from './editing';
 const readable=(field:string)=>definition(field)?.label || field.replaceAll('_',' ').replace(/^./,s=>s.toUpperCase());
-export function ReportEvidence({ block, path, chapterId, model }: {block:ReportEvidenceBlock;path:(string|number)[];chapterId:string;model:ReportModel}) {
+function GovernedReportEvidence({ block, path, chapterId, model }: {block:ReportEvidenceBlock;path:(string|number)[];chapterId:string;model:ReportModel}) {
  const edit=useEdit(),drill=useRecordDrilldown();
  const [query,setQuery]=useState(''),[sort,setSort]=useState<{field:string;descending:boolean}|null>(null),[preview,setPreview]=useState(false),[metric,setMetric]=useState(block.metricId || ''),[type,setType]=useState(block.chartType || 'bar'),[zoom,setZoom]=useState(100);
  const columns=block.columns ?? Object.keys(block.rows?.[0] ?? {});
@@ -44,3 +45,5 @@ export function ReportEvidence({ block, path, chapterId, model }: {block:ReportE
   <EditableText path={[...path,'description']} value={block.description} as="p" className="source-evidence-caption"/>
  </section>;
 }
+
+export function ReportEvidence(props: Parameters<typeof GovernedReportEvidence>[0]) { return props.block.attachment ? <ImportedContentElement block={props.block}/> : <GovernedReportEvidence {...props}/>; }

@@ -53,3 +53,5 @@ export const generateSpeakerNotes = (context: string, signal?: AbortSignal) =>
   request<{ notes: SpeakerNotes }>("/api/reports/speaker-notes", json("POST", { context }, signal));
 
 export const generateReportEdits = (context:string,prompt:string,signal?:AbortSignal) => request<{summary:string;operations:import('./source-edit').ReportEditOperation[]}>('/api/reports/edit-plan',json('POST',{context,prompt},signal));
+
+export const importReportContent = (body: {context:string;prompt:string;text:string;chapterId:string;sectionId:string;file?:{name:string;base64:string}}, signal?:AbortSignal) => request<{summary:string;operations:import('./source-edit').ReportEditOperation[]}>('/api/reports/import-content',json('POST',body,signal));

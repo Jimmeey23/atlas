@@ -1,3 +1,4 @@
+import { validateContentBlock } from '../src/report/content-import.ts';
 import { assertReportRelease } from "../src/report/release-gate.mjs";
 import { randomUUID } from "node:crypto";
 import { adminConfigured, requireAdmin, unlockAdmin, verifyAdmin } from "./report-admin.mjs";
@@ -38,9 +39,15 @@ function validateExtras(report) {
     for (const chapter of report.importedChapters) {
       if (!chapter || ["id", "title", "filename", "sha256"].some(k => typeof chapter[k] !== "string") || !/^[a-z0-9-]+$/.test(chapter.id)) throw fail("Source chapter metadata is malformed.");
       if (chapter.sections != null && (!Array.isArray(chapter.sections) || chapter.sections.some(s => !s || typeof s.id !== "string" || typeof s.title !== "string" || typeof s.html !== "string" || /<(script|style|iframe|object|embed|form)\b|\son\w+\s*=|javascript:/i.test(s.html)))) throw fail("Source chapter evidence is malformed.");
-      if(chapter.sections?.some(s=>s.blocks && (!Array.isArray(s.blocks) || s.blocks.some(b=>!b || !['text','chart','table'].includes(b.kind) || typeof b.id!=='string' || typeof b.title!=='string' || b.text!=null && typeof b.text!=='string' || b.rows!=null && !Array.isArray(b.rows)))))throw fail('Report elements are malformed.');
+      if(chapter.sections?.some(s=>s.blocks && (!Array.isArray(s.blocks) || s.blocks.some(b=>!b || !['text','chart','table','metric','heatmap'].includes(b.kind) || typeof b.id!=='string' || typeof b.title!=='string' || b.text!=null && typeof b.text!=='string' || b.rows!=null && !Array.isArray(b.rows)))))throw fail('Report elements are malformed.');
       if (chapter.metrics != null && (!Array.isArray(chapter.metrics) || chapter.metrics.some(m => !m || ["label", "value", "note"].some(k => typeof m[k] !== "string")))) throw fail("Source chapter metrics are malformed.");
     }
+  }
+  if (!plainRecord(report.documentEdits?.blocks) || Object.values(report.documentEdits?.blocks ?? {}).some(blocks=>!Array.isArray(blocks))) throw fail("Report elements are malformed.");
+  for (const block of [...Object.values(report.documentEdits?.blocks ?? {}).flat(), ...(report.importedChapters ?? []).flatMap(c => (c.sections ?? []).flatMap(s => s.blocks ?? []))]) {
+    if (!block || typeof block !== "object") throw fail("Report elements are malformed.");
+    if (block.attachment) { try { validateContentBlock(block); } catch(error) { throw fail(error.message); } }
+    else if (["metric","heatmap"].includes(block.kind)) throw fail("Imported visuals require source evidence.");
   }
   if (!plainRecord(report.replacements) || !plainRecord(report.presenterNotes) || !plainRecord(report.speakerNotes))
     throw fail("Report edits are malformed.");

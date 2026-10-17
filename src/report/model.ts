@@ -257,7 +257,8 @@ export interface ImportedChapterSource {
   sections?: { id: string; title: string; html: string; tables: number; charts: number; chartRepairs?: number; blocks?: ReportEvidenceBlock[] }[];
 }
 export interface ReportEvidenceBlock {
-  id: string; kind: 'text' | 'chart' | 'table'; title: string; text?: string;
+  id: string; kind: 'text' | 'chart' | 'table' | 'metric' | 'heatmap'; title: string; text?: string;
+  attachment?: { name: string; sha256: string; excerpt: string; importedAt: string };
   source?: string; dataChapterId?: string; metricId?: string; groupField?: string;
   columns?: string[]; rows?: Row[]; chartType?: 'bar' | 'line' | 'area';
   description?: string;

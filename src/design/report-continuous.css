@@ -125,3 +125,23 @@
 @media print{.leadership-front{break-after:page}.leadership-front h1{font-size:28px}.leadership-verdicts{gap:8px}.intelligence-scroll{overflow:visible}.intelligence-scroll table{min-width:0;font-size:9px}.intelligence-scroll th,.intelligence-scroll td{padding:5px}}
 
 .leadership-front .intelligence-scroll table{min-width:0;table-layout:fixed}.leadership-front .intelligence-scroll th:first-child{width:38%}.leadership-front .intelligence-scroll th,.leadership-front .intelligence-scroll td{overflow-wrap:anywhere}
+
+.p57-import-fields {display:grid;gap:12px;padding:16px;min-width:0;}
+.p57-import-fields label {display:grid;gap:5px;font-size:12px;}
+.p57-import-fields textarea,.p57-import-fields select,.p57-import-fields input {width:100%;max-width:100%;box-sizing:border-box;}
+.p57-import-fields textarea {resize:vertical;}
+.p57-imported-metric {display:grid;gap:8px;padding:24px;border:1px solid var(--hairline);border-radius:12px;}
+.p57-imported-metric strong {font-size:36px;line-height:1.2;}
+.p57-imported-source {margin:12px 0;font-size:12px;}
+.p57-imported-source pre {white-space:pre-wrap;overflow-wrap:anywhere;max-height:280px;overflow:auto;}
+.p57-imported-content {min-width:0;}
+.p57-imported-content .source-block-prose {white-space:pre-wrap;}
+.p57-agent-modes {flex-wrap:wrap;}
+.p57-agent-panel > .p57-import-fields {overflow:auto;max-height:45vh;flex-shrink:0;}
+.p57-agent-plan .p57-imported-content {margin:12px 0;padding:10px;border-top:1px solid #e0e6ee;}
+.p57-agent-plan .source-interactive-chart {height:240px;min-height:240px;}
+.p57-report-agent[data-mode="import"] .p57-agent-panel {display:block;overflow-y:auto;}
+.p57-report-agent[data-mode="import"] .p57-import-fields {max-height:none;overflow:visible;}
+.p57-report-agent[data-mode="import"] .p57-agent-messages {min-height:0;max-height:150px;overflow:auto;}
+.p57-report-agent[data-mode="import"] .p57-agent-plan {max-height:none;overflow:visible;}
+.p57-report-agent[data-mode="import"] .p57-agent-panel > form textarea {height:auto;min-height:80px;}

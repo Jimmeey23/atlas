@@ -1,3 +1,4 @@
+import { registerReportContent } from './report-content.mjs';
 import {isQuotaError, reportProviderError} from "./report-errors.mjs";
 import { requireAdmin } from "./report-admin.mjs";
 import { createHash } from "node:crypto";
@@ -793,6 +794,7 @@ export function intelligenceRoutes(
     },
     required: ["kind", "title", "subtitle", "body", "tone", "items", "chart", "columns", "rows", "bullets", "left", "right"],
   };
+  registerReportContent(app, route, reportJSON);
   app.post("/api/reports/edit-plan", route(async req => {
     requireAdmin(req);
     const nullableString={type:['string','null']};

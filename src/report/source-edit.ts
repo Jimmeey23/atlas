@@ -1,3 +1,4 @@
+import { validateContentBlock } from './content-import';
 import { applyGeneratedOperation } from './generated-edits';
 import { monthLabel } from './period';
 import { definition } from './definitions';
@@ -15,7 +16,8 @@ export function applyReportOperations(model: ReportModel, operations: ReportEdit
     if(op.block) {
       const block=op.block;
       for(const key of Object.keys(block))if((block as unknown as Record<string,unknown>)[key]==null)delete (block as unknown as Record<string,unknown>)[key];
-      if(block.kind!=='text') {
+      if (block.attachment) validateContentBlock(block);
+      else if(block.kind!=='text') {
         const data=next.chapters[block.dataChapterId ?? ''];if(!data)throw new Error('Chart/table requires a governed dataset.');
         const group=block.groupField && block.groupField!=='month'?data.groups.find(g=>(g.id ?? g.field)===block.groupField) ?? data.groups.find(g=>g.field===block.groupField):null;
         if(block.groupField && block.groupField!=='month' && !group)throw new Error('Choose an existing evidence grouping.');
@@ -76,7 +78,7 @@ export function applyReportOperations(model: ReportModel, operations: ReportEdit
     if(op.action==='set' && ['title','text','description'].includes(op.element)){(blocks[bi] as unknown as Record<string,unknown>)[op.element]=op.text;continue;}
     throw new Error('Unsupported report change.');
   }
-  for(const chapter of next.importedChapters ?? []){chapter.tables=chapter.sections?.reduce((n,s)=>n+(s.html?.match(/<table\b/g)?.length ?? 0)+(s.blocks?.filter(b=>b.kind==='table').length ?? 0),0) ?? 0;chapter.charts=chapter.sections?.reduce((n,s)=>n+(s.html?.match(/<figure\b/g)?.length ?? 0)+(s.blocks?.filter(b=>b.kind==='chart').length ?? 0),0) ?? 0;}
+  for(const chapter of next.importedChapters ?? []){chapter.tables=chapter.sections?.reduce((n,s)=>n+(s.html?.match(/<table\b/g)?.length ?? 0)+(s.blocks?.filter(b=>b.kind==='table').length ?? 0),0) ?? 0;chapter.charts=chapter.sections?.reduce((n,s)=>n+(s.html?.match(/<figure\b/g)?.length ?? 0)+(s.blocks?.filter(b=>b.kind==='chart'||b.kind==='heatmap').length ?? 0),0) ?? 0;}
   return next;
 }
 /** Every visible block and every governed dataset is included, without silent truncation. */

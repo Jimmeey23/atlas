@@ -14,7 +14,7 @@ import '../../../design/report-source.css';
 export function SourceReportChapter({model,chapterId,section='summary'}:{model:ReportModel;chapterId:string;section?:DeckSection}) {
  const index=model.importedChapters?.findIndex(c=>c.id===chapterId) ?? -1,chapter=model.importedChapters?.[index],edit=useEdit();
  const [query,setQuery]=useState(''),[flipped,setFlipped]=useState<Record<string,boolean>>({});
- const sections=useMemo(()=>(chapter?.sections ?? []).map((s,i)=>({...s,index:i})).filter(s=>section==='tables'?s.blocks?.some(b=>b.kind==='table') || s.tables>0:section==='trends'?s.blocks?.some(b=>b.kind==='chart') || s.charts>0:true).filter(s=>!query||JSON.stringify(s).toLowerCase().includes(query.toLowerCase())),[chapter,section,query]);
+ const sections=useMemo(()=>(chapter?.sections ?? []).map((s,i)=>({...s,index:i})).filter(s=>section==='tables'?s.blocks?.some(b=>b.kind==='table') || s.tables>0:section==='trends'?s.blocks?.some(b=>b.kind==='chart'||b.kind==='heatmap') || s.charts>0:true).filter(s=>!query||JSON.stringify(s).toLowerCase().includes(query.toLowerCase())),[chapter,section,query]);
  if(!chapter)return <p className="notice">Select a chapter to continue.</p>;
  const path=['importedChapters',index];
  const metrics=(chapter.metrics ?? []).filter(m=>m.metricId && m.dataChapterId && model.chapters[m.dataChapterId]?.total[m.metricId]!=null && Number.isFinite(Number(model.chapters[m.dataChapterId].total[m.metricId])));

@@ -1,3 +1,4 @@
+import { ImportedContentElement } from './ImportedContentElement';
 import { ReportAssistant } from "./ReportAssistant";
 import { reportAppearance } from "../../../report/appearance";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
@@ -241,7 +242,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
           {message && <p className="deck-message" role="status">{message}<button className="icon-button" aria-label="Dismiss" onClick={() => setMessage("")}><X size={13}/></button></p>}
           {edit.editing && <p className="deck-edit-banner"><PencilLine size={14}/>Editing — click any text to rewrite it. Use <b>✦</b> on a component to replace just that component with AI. Save writes to the database.</p>}
           <article className="report-doc r2 deck-doc p57-report-surface" style={reportAppearance(model)} data-report-theme={model.customization?.theme || "light"} data-accent={options.accent} data-surface={options.surface} data-report-layout={options.layout} data-typography={options.typography} data-card-style={options.cardStyle} data-density={options.density} data-section={page.section} key={continuous ? "continuous" : `${page.tab}:${page.section}`}>
-            {model.importedChapters?.length ? <SourceReportChapter key={tab.id} model={model} chapterId={tab.id} section={continuous ? "summary" : page.section} /> : continuous ? <ContinuousReport model={model} tabs={tabs} ranked={ranked} onNavigate={open}/> : <div className="cr-report cr-presentation">{body()}</div>}
+            {model.importedChapters?.length ? <SourceReportChapter key={tab.id} model={model} chapterId={tab.id} section={continuous ? "summary" : page.section} /> : continuous ? <ContinuousReport model={model} tabs={tabs} ranked={ranked} onNavigate={open}/> : <div className="cr-report cr-presentation">{body()}{page.section === 'summary' && model.documentEdits?.blocks[cid]?.filter(block=>block.attachment).map(block=><ImportedContentElement key={block.id} block={block}/>)}</div>}
           </article>
           <div className="deck-chapter-markers" hidden>{tabs.filter(t => t.spec || model.importedChapters?.length).map(t => <section key={t.id} className="r-section" id={t.id}><span className="r-section-topic">{t.label}</span></section>)}</div>
           {!continuous && <footer className="deck-pager-bar" data-export="omit">
