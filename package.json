@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx scripts/dev.mjs",
+    "dev": "tsx watch --clear-screen=false --include 'server/**' scripts/dev.mjs",
     "build": "npm run check:report && tsc -b && vite build && node scripts/build-api.mjs",
     "start": "NODE_ENV=production tsx server/index.mjs",
     "test": "tsx --test tests/*.test.ts",

@@ -92,3 +92,43 @@ test('imported evidence survives saving and reloading a report',async()=>{
     assert.deepEqual(restored.importedChapters[0].sections[0].blocks[0],block());
   }finally{server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));}
 });
+
+test('source matching preserves signed values, formatted amounts, decimals and JSON cells', async () => {
+  const { sourceNumbers } = await import('../src/report/content-import');
+  assert.deepEqual(sourceNumbers('Effect −3.49; rate .5%; revenue ₹1,901,973; Indian amount 2,51,600; range 18–20.'), [-3.49, .5, 1901973, 251600, 18, 20]);
+  assert.deepEqual(sourceNumbers('{"values":[25,30,1,234]}'), [25,30,1,234]);
+  assert.deepEqual(sourceNumbers('Counts 25,30; rate 9.0%.'), [25,30,9]);
+  validateContentBlock({...block(), attachment:{...attachment,excerpt:'Adjusted effect −3.49; percentage 9.0%.'},rows:[{Month:'Effect',Leads:-3.49}]});
+  assert.throws(()=>validateContentBlock({...block(),attachment:{...attachment,excerpt:'Percentage 9.0%.'},rows:[{Month:'Rate',Leads:.09}]}), /cannot be traced/);
+});
+
+test('unsupported calculated values become exact source text with an explicit warning', async () => {
+  const old=process.env.ATLAS_ADMIN_PASSCODE;process.env.ATLAS_ADMIN_PASSCODE='test-import-passcode';
+  try {
+    const source='Instructor cohort: 36 newcomers. Return rate: 9.0%. Counts of returners were not supplied.';
+    let handler:any;
+    const result={summary:'Instructor performance additions',elements:[
+      {chapterId:'sales',sectionId:'',kind:'table',title:'New Client 21-Day Conversion by Instructor – September 2026',text:'',description:'Conversion',excerpt:source,columns:['Cohort','Returners'],values:[[36,3]],metricId:'',chartType:'bar'},
+      {chapterId:'sales',sectionId:'',kind:'metric',title:'Newcomers',text:'',description:'Reported cohort',excerpt:source,columns:['Newcomers'],values:[[36]],metricId:'Newcomers',chartType:'bar'},
+    ]};
+    registerReportContent({post:(_path:string,fn:any)=>handler=fn},(fn:any)=>fn,async()=>({result,usage:{}}));
+    const token=unlockAdmin('test-import-passcode').token;
+    const plan=await handler({headers:{'x-atlas-admin':token},body:{text:source,context:JSON.stringify({chapters:[{id:'sales',title:'Sales',sections:[]}]}),chapterId:'sales'}});
+    assert.equal(plan.operations.length,2);
+    const preserved=plan.operations[0].block;
+    assert.equal(preserved.kind,'text');assert.equal(preserved.text,source);
+    assert.equal(preserved.rows,undefined);assert.equal(preserved.columns,undefined);
+    assert.equal(preserved.attachment.excerpt,source);
+    assert.equal(plan.operations[1].block.rows[0].Newcomers,36);
+    assert.equal(plan.warnings.length,1);assert.match(plan.summary,/row 1, column “Returners”/);
+    validateContentBlock(preserved);
+  } finally {if(old===undefined)delete process.env.ATLAS_ADMIN_PASSCODE;else process.env.ATLAS_ADMIN_PASSCODE=old;}
+});
+
+test('HTML extraction preserves inline numeric values and decodes visible source entities', async () => {
+  const source=await extractReportContent({text:'<table><tr><td>Richard D&#x27;Costa</td><td>&minus;<span>3</span><span>.49</span></td><td>9&#46;0&percnt;</td></tr></table>'});
+  assert.match(source.text,/Richard D'Costa/);
+  assert.match(source.text,/−3\.49/);assert.match(source.text,/9\.0%/);
+  const {sourceNumbers}=await import('../src/report/content-import');
+  assert.deepEqual(sourceNumbers(source.text),[-3.49,9]);
+});
