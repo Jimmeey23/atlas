@@ -32,7 +32,7 @@ const carries = (source: string, field: string) => !tracked.has(field) || !field
 export const factsFor = (spec: ChapterSpec, filters: Filters) => spec.renewal
   ? `(${renewalFactsSQL(where(filters, 'lapsed', []), today())})`
   : metricFacts(filters, spec.source, [], spec.website ? websiteScope(where(filters, spec.source, [])) : undefined);
-const measuresFor = (spec: ChapterSpec, ids: string[], filters: Filters) => spec.renewal ? renewalMeasuresSQL(ids) : metricSQL(ids, context(filters, []));
+const measuresFor = (spec: ChapterSpec, ids: string[], filters: Filters) => spec.renewal ? renewalMeasuresSQL(ids) : metricSQL(ids, { ...context(filters, []), source: spec.source });
 /** Memberships are dated by expiry, so their month comes from end_date. */
 const monthColumn = (source: string) =>
   source === "lapsed" ? "SUBSTR(end_date,1,7)" : "month";
@@ -48,7 +48,7 @@ async function groupTable(spec: ChapterSpec, group: GroupSpec, filters: Filters)
   if ((group.fields ?? [group.field]).some(field => !carries(spec.source, field))) return null;
   const columns = usableMetrics(group.columns).filter(id => !currentSnapshotMetrics.has(id));
   if (!columns.length) return null;
-  const read = (f: Filters) => query(groupQuery(factsFor(spec, f), group, columns, context(f, []), spec.renewal));
+  const read = (f: Filters) => query(groupQuery(factsFor(spec, f), group, columns, { ...context(f, []), source: spec.source }, spec.renewal));
   const [current, priorRows, priorYearRows] = await Promise.all([
     read(filters), read({ ...filters, ...monthBounds(shiftMonth(filters.from.slice(0,7),-1)) }),
     read({ ...filters, ...monthBounds(shiftMonth(filters.from.slice(0,7),-12)) }),
@@ -76,7 +76,7 @@ async function groupTable(spec: ChapterSpec, group: GroupSpec, filters: Filters)
     columns, rows, total, prior, priorYear, compare: group.compare, omitted, diagnostics, analysis,
     // Kept lean: the grouping label, sample size and the table's own measures, capped for the saved report.
     eligible: eligible.slice(0, 60).map(r => Object.fromEntries(['g', 'n', ...columns].map(k => [k, r[k] ?? null]))),
-    minimum: group.minMetric ? `Minimum ${group.minValue ?? 3} ${definition(group.minMetric)?.label.toLowerCase()}` : 'Minimum 3 source records' };
+    minimum: group.minValue != null && group.minValue > 0 ? `User-requested minimum ${group.minValue} ${group.minMetric ? definition(group.minMetric)?.label.toLowerCase() : 'source records'}` : 'Full filtered dataset; no minimum sample cutoff' };
 }
 
 async function historyFor(spec: ChapterSpec, scope: ReportScope, ids: string[]) {
@@ -117,7 +117,7 @@ async function segmentHistoryFor(spec: ChapterSpec, scope: ReportScope): Promise
   const facts = factsFor(spec, filters), month = monthColumn(spec.source), scoped = where(filters, spec.source, []);
   const conjunction = spec.renewal || ["sessions", "sales", "checkins"].includes(spec.source) || !scoped ? "WHERE" : "AND";
   const rows = await query(`SELECT ${month} AS month,COALESCE("${cfg.field}",'Unspecified') AS g,${measuresFor(spec, ids, filters)},COUNT(*) AS n FROM ${facts} ${conjunction} ${month} IS NOT NULL AND ${month}>=${quote(start)} GROUP BY 1,2 ORDER BY 1,2`);
-  const ranked = rows.filter(r => String(r.month) === scope.month && Number(r.n) >= 3 && r.g !== "Unspecified" && (!ids.includes("sessions") || Number(r.sessions) >= 5))
+  const ranked = rows.filter(r => String(r.month) === scope.month && r.g !== "Unspecified")
     .sort((a, b) => Number(b.sessions ?? b.n) - Number(a.sessions ?? a.n) || String(a.g).localeCompare(String(b.g))).slice(0, cfg.limit).map(r => String(r.g));
   if (!ranked.length) return undefined;
   return { field: cfg.field, title: cfg.title, metrics: ids, segments: ranked, rows: rows.filter(r => ranked.includes(String(r.g))) };

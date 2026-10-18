@@ -25,8 +25,8 @@ test('a cell drill-down is scoped to the metric that was clicked', async () => d
   assert.equal(await count('leads'), 4, 'an unfiltered metric still drills to every row');
 }));
 
-test('a cell only shows a comparison and a small-sample mark when they mean something', () => {
-  // Counts are exact at any size; rates and averages are not.
+test('cell comparisons preserve evidence without automatic small-sample marks', () => {
+  // Rates and averages remain structurally distinct from additive counts.
   assert.equal(derived('fill_rate'), true);
   assert.equal(derived('avg_class_size_incl'), true);
   assert.equal(derived('sessions'), false);
@@ -41,11 +41,11 @@ test('a cell only shows a comparison and a small-sample mark when they mean some
   assert.equal(cellDelta('sessions', 120, 0), null, 'a zero baseline cannot carry a percentage');
   assert.equal(cellDelta('sessions', 100, 100)?.tone, 'muted');
 
-  const text = provenance('fill_rate', 0.6, 3, true, 0.5);
+  const text = provenance('fill_rate', 0.6, 3, 0.5);
   assert.match(text, /Formula: /);
   assert.match(text, /Source columns: /);
   assert.match(text, /Comparison period/);
-  assert.match(text, /Fewer than 5 records/);
-  assert.doesNotMatch(provenance('fill_rate', 0.6, 40, false, null), /Fewer than/);
-  assert.doesNotMatch(provenance('fill_rate', 0.6, 40, false, null), /Comparison period/);
+  assert.doesNotMatch(text, /Fewer than|small sample|minimum/);
+  assert.doesNotMatch(provenance('fill_rate', 0.6, 40, null), /Fewer than/);
+  assert.doesNotMatch(provenance('fill_rate', 0.6, 40, null), /Comparison period/);
 });

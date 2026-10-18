@@ -12,8 +12,8 @@ export function groupQuery(facts: string, group: GroupSpec, columns: string[], c
 }
 export function rankedRows(rows: Row[], group: GroupSpec) {
   const metric = group.rankBy ?? group.columns[0];
-  const eligible = rows.filter(row => Number(row.is_total) !== 1 && Number(row.n) >= 3
-    && (!group.minMetric || Number(row[group.minMetric]) >= (group.minValue ?? 3))
+  const eligible = rows.filter(row => Number(row.is_total) !== 1
+    && (!(group.minValue != null && group.minValue > 0) || Number(row[group.minMetric ?? 'n']) >= group.minValue)
     && row[metric] != null && Number.isFinite(Number(row[metric])));
   eligible.sort((a,b) => Number(b[metric])-Number(a[metric]) || String(a.g).localeCompare(String(b.g)));
   const limit = group.limit ?? 10;

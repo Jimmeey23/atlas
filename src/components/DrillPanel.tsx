@@ -132,7 +132,7 @@ export function DrillPanel({
     const path = [groupingPath, entry.predicate].filter(Boolean).join(" AND ");
     const summaryPath = [groupingPath, entry.summaryPredicate ?? entry.predicate].filter(Boolean).join(" AND ");
     const transient = entry.transient ?? s.transient;
-    const metricContext = entry.queryContext ?? context(filters, transient);
+    const metricContext = entry.queryContext ?? context(filters, transient, source);
     const w = where(filters, source, transient);
     setScope({ where: w, path });
     Promise.all([
@@ -251,12 +251,7 @@ export function DrillPanel({
                   <strong>{metrics[id].label}</strong>
                   <code>{metrics[id].description}</code>
                   <p className="small">
-                    Source columns: {metrics[id].sources.join(", ")}. Ranking
-                    minimum {metrics[id].minSample} records
-                    {Number(summary.n || 0) < metrics[id].minSample
-                      ? ` · this scope has ${Number(summary.n || 0)}, so read it as a hint rather than a result`
-                      : ""}
-                    .
+                    Source columns: {metrics[id].sources.join(", ")}. Uses the full eligible filtered dataset.
                   </p>
                 </div>
               ))}

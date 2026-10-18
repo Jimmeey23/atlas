@@ -38,7 +38,6 @@ export function provenance(
   id: string,
   value: unknown,
   n: number,
-  thin: boolean,
   before: unknown,
 ) {
   const m = metrics[id];
@@ -50,10 +49,6 @@ export function provenance(
   ];
   if (before != null)
     lines.push(`Comparison period: ${fmt(id, before, true)}`);
-  if (thin)
-    lines.push(
-      `* Fewer than ${m.minSample} records. This is a derived value on a small sample — read it as a hint, not a result.`,
-    );
   lines.push("Click to inspect the records behind this cell.");
   return lines.join("\n");
 }

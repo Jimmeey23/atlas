@@ -136,7 +136,7 @@ export async function explainChange(args, ctx) {
 /** Least-squares line through equally spaced points: slope per step and the next value. */
 export function trend(values) {
   const pts = values.map((v, i) => [i, v]).filter(([, v]) => v != null);
-  if (pts.length < 3) return null;
+  if (pts.length < 2) return null;
   const n = pts.length, mx = pts.reduce((s, [x]) => s + x, 0) / n, my = pts.reduce((s, [, y]) => s + y, 0) / n;
   const sxx = pts.reduce((s, [x]) => s + (x - mx) ** 2, 0);
   const slope = sxx ? pts.reduce((s, [x, y]) => s + (x - mx) * (y - my), 0) / sxx : 0;
@@ -206,7 +206,7 @@ export function scoreSeries(series, { minBaseline = 0 } = {}) {
   for (const [key, values] of Object.entries(series)) {
     const latest = values.at(-1);
     const history = values.slice(0, -1).filter((v) => v != null);
-    if (latest == null || history.length < 3) continue;
+    if (latest == null || history.length < 2) continue;
     const mean = history.reduce((s, v) => s + v, 0) / history.length;
     if (Math.abs(mean) < minBaseline) continue;
     const sd = Math.sqrt(history.reduce((s, v) => s + (v - mean) ** 2, 0) / history.length);
@@ -228,19 +228,15 @@ export async function findAnomalies(args, ctx) {
   for (const w of windows) results.push(await metricRows(ctx, args.source, [id], groups, JSON.stringify({ ...base, from: w.from, to: w.to }), { exclude_hosted: !!args.exclude_hosted }));
   if (results[0].snapshot) throw new Error(`${id} is a current snapshot; it has no weekly history.`);
   const series = {};
-  const samples = {};
   const flat = [];
   results.forEach((r, i) => {
     for (const row of r.rows) {
       const k = keyOf(row, groups);
       (series[k] ??= Array(windows.length).fill(null))[i] = num(row[id]);
-      (samples[k] ??= Array(windows.length).fill(0))[i] = num(row.source_records) ?? 0;
       flat.push({ period: windows[i].label, ...(groups.length ? { [groups[0]]: k } : {}), [id]: num(row[id]) });
     }
   });
-  // Small groups swing wildly; require a typical sample of at least 5 records.
-  const eligible = Object.fromEntries(Object.entries(series).filter(([k]) => samples[k].slice(0, -1).reduce((s, v) => s + v, 0) / (windows.length - 1) >= 5));
-  const scored = scoreSeries(eligible).map((s) => ({ [groups[0] || 'scope']: s.key, ...s, latest_period: windows.at(-1).label }));
+  const scored = scoreSeries(series).map((s) => ({ [groups[0] || 'scope']: s.key, ...s, latest_period: windows.at(-1).label }));
   return {
     output: { metric: id, label: metrics[id].label, grain, latest_period: windows.at(-1).label, baseline_periods: windows.length - 1, method: `latest complete ${grain} vs the mean of the previous ${windows.length - 1}; unusual = |z| ≥ 2 and ≥ 10% from baseline.`, unusual: scored.filter((s) => s.unusual), all: scored.slice(0, 25) },
     evidence: [{ sql: results.at(-1).sql, provenance: results.at(-1).provenance, rows: scored.length, result: scored.slice(0, 40), filters: results.at(-1).filters }, { sql: '-- series behind the anomaly scores', provenance: results.at(-1).provenance, rows: flat.length, result: flat.slice(-40), filters: results.at(-1).filters }],
@@ -253,7 +249,7 @@ export async function rankPerformance(args, ctx) {
   checkMetrics(args.source, ids, ctx.available);
   const [key] = ids;
   const r = await metricRows(ctx, args.source, ids, [args.group_by], args.scope_json, { exclude_hosted: !!args.exclude_hosted });
-  const min = Math.max(1, num(args.min_sample) ?? 3);
+  const min = Math.max(0, num(args.min_sample) ?? 0);
   const rows = r.rows.map((row) => ({ ...row, sample: num(row.source_records) }));
   const eligible = rows.filter((row) => row.sample >= min && num(row[key]) != null);
   const desc = args.order !== 'asc';
@@ -270,7 +266,7 @@ export async function rankPerformance(args, ctx) {
   }));
   const limit = Math.min(50, num(args.limit) || 10);
   return {
-    output: { ranking_metric: key, label: metrics[key].label, scope: scopeLabel(r.filters), peer_average: round(peer), ranked: ranked.slice(0, limit), eligible: ranked.length, excluded_low_sample: rows.filter((row) => row.sample < min).map((row) => ({ [args.group_by]: row[args.group_by], sample: row.sample })).slice(0, 15), sample_rule: `at least ${min} source records (classes for sessions)` },
+    output: { ranking_metric: key, label: metrics[key].label, scope: scopeLabel(r.filters), peer_average: round(peer), ranked: ranked.slice(0, limit), eligible: ranked.length, excluded_low_sample: rows.filter((row) => row.sample < min).map((row) => ({ [args.group_by]: row[args.group_by], sample: row.sample })).slice(0, 15), sample_rule: min > 0 ? `User-requested minimum: ${min} source records (classes for sessions)` : 'No minimum sample cutoff; all filtered groups with a valid metric are eligible' },
     evidence: [{ sql: r.sql, provenance: r.provenance, rows: ranked.length, result: ranked.slice(0, 40), filters: r.filters }],
   };
 }
@@ -350,7 +346,7 @@ export function analysisToolDefs(sources, metricIds) {
     fn('explain_change', 'Explain WHY a total changed between two periods: splits it into multiplicative drivers (classes × class size × yield; transactions × AOV; newcomers × conversion; bookings × late rate) whose contributions add up exactly, and shows which studios / formats / instructors / slots drove it. Use for "why", "what drove", "what caused".', { source, metric_id: metric, dimensions: { type: 'array', items: { type: 'string', enum: groupEnum } }, period_a: periodField, period_b: periodField, exclude_hosted: { type: 'boolean' } }),
     fn('forecast', 'Monthly history (12 months), linear trend on the last 6 completed months, month-end run-rate projection for totals, and gap / required daily pace to an optional target. Use for "will we hit", "on track", "projection", "month-end".', { source, metric_id: metric, target: { type: ['number', 'null'] }, scope_json: scopeField, exclude_hosted: { type: 'boolean' } }),
     fn('find_anomalies', 'Find unusual values: the latest complete week or month vs its own recent history (z-score), per studio / instructor / format etc. Use for "anything unusual", "what stands out", "spikes", "drops", "red flags".', { source, metric_id: metric, dimension: { type: ['string', 'null'], enum: [...groupEnum, null] }, grain: { type: 'string', enum: ['week', 'month'] }, scope_json: scopeField, exclude_hosted: { type: 'boolean' } }),
-    fn('rank_performance', 'Rank studios / instructors / formats / class slots etc. by a governed metric with a minimum sample, percentile and gap to the peer average. The first metric is the ranking metric; others are shown beside it. Use for best / worst / top / bottom / leaderboard.', { source, metric_ids: { type: 'array', items: metric }, group_by: { type: 'string', enum: groupEnum }, min_sample: { type: ['integer', 'null'] }, order: { type: 'string', enum: ['desc', 'asc'] }, limit: { type: ['integer', 'null'] }, scope_json: scopeField, exclude_hosted: { type: 'boolean' } }),
+    fn('rank_performance', 'Rank studios / instructors / formats / class slots etc. by a governed metric, percentile and gap to the peer average. Use the full filtered dataset by default; min_sample is an optional user-requested filter only. The first metric is the ranking metric; others are shown beside it. Use for best / worst / top / bottom / leaderboard.', { source, metric_ids: { type: 'array', items: metric }, group_by: { type: 'string', enum: groupEnum }, min_sample: { type: ['integer', 'null'], minimum: 0, description: 'Optional minimum source-record count, only when requested by the user. Null or 0 includes all filtered groups with valid metric values.' }, order: { type: 'string', enum: ['desc', 'asc'] }, limit: { type: ['integer', 'null'] }, scope_json: scopeField, exclude_hosted: { type: 'boolean' } }),
     fn('member_journey', "One member's history across all dates and studios: first visit and outcome, visits, favourite format and instructor, bookings and late cancels, purchases, memberships and lapse. Takes a name (partial is fine) or member ID. Never returns contact details.", { member: { type: 'string' } }),
     fn('what_if', 'Scenario model on regular classes: change fill rate (target %), class size %, number of classes % or revenue per visit %, and see attendance, fill and earned revenue vs the baseline. Use for "what if", "if we", "how much more".', { scope_json: scopeField, fill_rate_target_pct: { type: ['number', 'null'] }, class_size_change_pct: { type: ['number', 'null'] }, sessions_change_pct: { type: ['number', 'null'] }, yield_change_pct: { type: ['number', 'null'] } }),
   ];

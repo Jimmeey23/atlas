@@ -131,7 +131,7 @@ test('all report grouping SQL compiles against the common engine schema', async 
   try {
     await c.run(`CREATE TABLE facts (${Object.entries(sqlTypes).map(([k,t])=>`"${k}" ${t}`).join(',')}, renewal_state VARCHAR,slot_fill DOUBLE)`);
     for (const spec of chapters) for (const group of spec.groups) {
-      const rows = await (await c.run(groupQuery('facts', group, group.columns, {rate:1200,today:'2026-10-06'}, spec.renewal))).getRowObjects();
+      const rows = await (await c.run(groupQuery('facts', group, group.columns, {rate:1200,today:'2026-10-06',source:spec.source}, spec.renewal))).getRowObjects();
       assert.equal(rows.length, 1, `${spec.id}/${group.id ?? group.field} returns empty rollup`);
     }
   } finally { c.closeSync(); }
@@ -156,4 +156,15 @@ test('renewal report uses the dashboard deduplicated paid expiry cohort and rene
     for(const id of ['due','renewed','lapsed','frozen','renewal_rate']) assert.equal(report[id],dashboard[id]);
     assert.equal(Number(report.due),3); assert.equal(Number(report.renewed),1); assert.equal(Number(report.lapsed),1); assert.equal(Number(report.frozen),1); assert.equal(Number(report.renewal_rate),1/3);
   } finally { c.closeSync(); }
+});
+
+test('recurring report rates use reported session totals, not summary-row counts',async()=>{
+ const db=await DuckDBInstance.create(':memory:');const c=await db.connect();
+ try {
+ await c.run("CREATE TABLE recurring AS SELECT * FROM (VALUES ('Barre',10,40),('Barre',5,20)) t(format,sessions,checked_in)");
+ const group={field:'format',title:'Formats',columns:['recurring_sessions','avg_class_size_incl']};
+ const rows=(await c.runAndReadAll(groupQuery('recurring',group,group.columns,{rate:1200,today:'2026-10-18',source:'recurring'}))).getRowObjectsJS();
+ assert.equal(rows[0].recurring_sessions,15n);
+ assert.equal(rows[0].avg_class_size_incl,4);
+ } finally {c.closeSync();db.closeSync();}
 });

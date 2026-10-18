@@ -29,8 +29,9 @@ test('each table measures its whole metric set in one query', async () => {
     const columns = Object.entries({ ...sqlTypes, ...derivedColumns })
       .map(([k, t]) => `"${k}" ${t}`)
       .join(',');
+    // Cross-source measures need their secondary tables available before any catalogue query.
+    for (const table of catalogue().keys()) await c.run(`CREATE TABLE "${table}" (${columns})`);
     for (const [table, entries] of catalogue()) {
-      await c.run(`CREATE TABLE "${table}" (${columns})`);
       const sql = `SELECT ${metricSQL(entries.map((e) => e.id), { rate: 1200, today: '2026-10-07' })}, COUNT(*) AS n FROM "${table}"`;
       // An empty table still has to produce one row per metric without error:
       // this is what the catalogue runs for every source when it opens.

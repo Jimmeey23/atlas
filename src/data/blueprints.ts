@@ -445,7 +445,7 @@ export const blueprints: Blueprint[] = [
     source: "payroll",
     domain: "people",
     kpis: [
-      "sessions",
+      "payroll_sessions",
       "attendance",
       "payroll_revenue",
       "payroll_revenue_per_session",
@@ -459,7 +459,7 @@ export const blueprints: Blueprint[] = [
       "payroll_retention",
     ],
     columns: [
-      "sessions",
+      "payroll_sessions",
       "empty_sessions",
       "attendance",
       "payroll_revenue",

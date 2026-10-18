@@ -11,6 +11,7 @@ export const splitMembershipList = (value: unknown): string[] => String(value ??
 // Every Is New label containing the word new is a trial. "Not new" is excluded
 // so a future negated label cannot be counted as a trial.
 export const referenceNew = (row: Row) => {
+  if (typeof row.is_new === 'boolean') return row.is_new;
   const label = String(row.entry_type ?? '').trim();
   return /\bnew\b/i.test(label) && !/^not\b/i.test(label);
 };
@@ -36,11 +37,13 @@ export function referenceSummary(rows: Row[], uniqueOutcomes = false) {
   const newcomers = count(referenceNew);
   const converted = rows.some(r => r.conversion != null) ? count(referenceConverted) : null;
   const retained = rows.some(r => r.retention != null) ? count(referenceRetained) : null;
-  const ltvRows = rows.filter(r => r.ltv != null);
+  const newcomerRows = rows.filter(referenceNew);
+  const ltvRows = newcomerRows.filter(r => r.ltv != null);
+  const conversionRows = newcomerRows.filter(r => referenceConverted(r) && r.conversion_days != null && Number(r.conversion_days) >= 0);
   return { cohort_rows: rows.length, newcomers, converted_members: converted, retained_members: retained,
-    conversion_rate: newcomers && converted != null ? converted / newcomers : null, retention_rate: newcomers && retained != null ? retained / newcomers : null,
+    conversion_rate: newcomers ? count(row => referenceNew(row) && referenceConverted(row)) / newcomers : null, retention_rate: newcomers ? count(row => referenceNew(row) && referenceRetained(row)) / newcomers : null,
     total_ltv: ltvRows.length ? ltvRows.reduce((s,r) => s + Number(r.ltv),0) : null,
-    avg_ltv: avg(rows,'ltv'), conversion_span: avg(rows,'conversion_days',true), visits_post: avg(rows,'visits_post',true),
+    avg_ltv: avg(newcomerRows,'ltv'), conversion_span: avg(conversionRows,'conversion_days'), visits_post: avg(rows,'visits_post',true),
     avg_spend: avg(rows,'avg_purchase_value'), unique_members: new Set(rows.map(r => r.member_id).filter(Boolean)).size };
 }
 export function metricFilter(metric?: string) {
@@ -67,19 +70,22 @@ export function contributesToMetric(row: Row, metric?: string, uniqueOutcomes = 
   const present = (key: string) => row[key] != null && Number.isFinite(Number(row[key]));
   const identified = row.member_id != null && String(row.member_id) !== '';
   if (metric === 'newcomers') return referenceNew(row) && (!uniqueOutcomes || identified);
-  if (metric === 'converted_members' || metric === 'conversion_rate') return referenceConverted(row) && (!uniqueOutcomes || identified);
-  if (metric === 'retained_members' || metric === 'retention_rate') return referenceRetained(row) && (!uniqueOutcomes || identified);
+  if (metric === 'conversion_rate') return referenceNew(row) && referenceConverted(row) && (!uniqueOutcomes || identified);
+  if (metric === 'retention_rate') return referenceNew(row) && referenceRetained(row) && (!uniqueOutcomes || identified);
+  if (metric === 'converted_members') return referenceConverted(row) && (!uniqueOutcomes || identified);
+  if (metric === 'retained_members') return referenceRetained(row) && (!uniqueOutcomes || identified);
   if (metric === 'unique_members') return identified;
   if (metric === 'mature_30') return identified;
   if (metric === 'converted_30' || metric === 'conversion_30_rate') return Boolean(row.converted_in_30) && identified;
   if (metric === 'retained_30' || metric === 'retention_30_rate') return Boolean(row.returned_in_30) && identified;
   if (metric === 'converted_same_month' || metric === 'conversion_same_month_rate') return Boolean(row.converted_same_month);
   if (metric === 'retained_same_month' || metric === 'retention_same_month_rate') return Boolean(row.returned_same_month);
-  if (metric === 'conversion_span' || metric === 'median_span') return present('conversion_days') && Number(row.conversion_days) > 0;
+  if (metric === 'conversion_span' || metric === 'median_span') return referenceNew(row) && referenceConverted(row) && present('conversion_days') && Number(row.conversion_days) >= 0;
   if (metric === 'visits_post') return present('visits_post') && Number(row.visits_post) > 0;
   if (metric === 'second_visit_rate') return referenceNew(row) && Number(row.visits_post) > 0;
-  if (metric === 'first_purchase') return referenceConverted(row) && Number(row.first_purchase) > 0;
+  if (metric === 'first_purchase') return referenceNew(row) && referenceConverted(row) && Number(row.first_purchase) > 0;
   const sources: Record<string,string> = {avg_ltv:'ltv',total_ltv:'ltv',avg_spend:'avg_purchase_value',post_trial_ltv:'post_trial_ltv',purchases_post:'post_trial_purchases',purchase_freq:'post_trial_purchases',source_visits:'class_no',atv:'ltv',auv:'ltv'};
+  if (metric === 'avg_ltv' || metric === 'total_ltv') return referenceNew(row) && present('ltv');
   if (metric && sources[metric]) return present(sources[metric]);
   if (metric === 'units') return Boolean(String(row.purchase_journey ?? '').trim());
   return true;

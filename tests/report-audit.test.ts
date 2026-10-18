@@ -85,3 +85,12 @@ test('an unavailable audit never blocks the report', async () => {
   assert.equal(out.generated, true); assert.equal(out.cards.length, 2); assert.equal(out.verification?.unavailable, true);
 });
 void allChapters;
+
+test('report summary session counts retain their distinct source identities',()=>{
+ const recurring=chapters.find(c=>c.id==='recurring')!;
+ assert.ok(ownedMetricIds(recurring).includes('recurring_sessions'));
+ assert.ok(!ownedMetricIds(recurring).includes('sessions'));
+ assert.ok(recurring.groups.every(g=>!g.columns.includes('sessions')));
+ const payroll=chapters.find(c=>c.id==='instructor-outcomes')!;
+ assert.ok(payroll.groups.find(g=>g.title==='Instructor economics')!.columns.includes('payroll_sessions'));
+});

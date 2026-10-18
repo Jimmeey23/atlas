@@ -119,3 +119,10 @@ test("progress lines describe each tool call in plain words", () => {
   assert.equal(describeCall("find_entity", { kind: "studio", text: "kh" }), "Resolving “kh” (studio)");
   assert.match(describeCall("query_metrics", { metric_ids: ["attendance"], group_by: ["location"] }), /by location/);
 });
+
+test("rank_performance includes all valid filtered groups unless the user sets a cutoff", async () => {
+  const { output } = await rankPerformance({ source: "sessions", metric_ids: ["fill_rate", "attendance"], group_by: "location", min_sample: null, order: "desc", limit: 5, scope_json: sep, exclude_hosted: true }, ctx());
+  assert.equal(output.ranked.length, 2);
+  assert.deepEqual(output.excluded_low_sample, []);
+  assert.match(output.sample_rule, /No minimum sample cutoff/);
+});

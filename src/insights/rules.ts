@@ -136,7 +136,6 @@ export const rules: Rule[] = [
     sql: (f) =>
       `SELECT source AS entity,${metricSQL(["new_clients", "second_visit_rate", "avg_first_purchase"], context())},COUNT(*) AS n FROM new${where(f, "new", [])} GROUP BY source`,
     test: (x) =>
-      Number(x.new_clients) >= 3 &&
       x.second_visit_rate != null &&
       Number(x.second_visit_rate) < thresholds().secondVisit,
     build: (x) =>
@@ -158,7 +157,7 @@ export const rules: Rule[] = [
     sql: (f) =>
       `SELECT associate AS entity,MEDIAN(response_hours) AS hours,${metricSQL(["leads", "pipeline_value"], context())},COUNT(*) AS n FROM leads${where(f, "leads", [])} GROUP BY associate`,
     test: (x) =>
-      Number(x.n) >= 3 && Number(x.hours) > thresholds().responseHours,
+       Number(x.hours) > thresholds().responseHours,
     build: (x) =>
       r(
         "critical",
@@ -247,7 +246,6 @@ export const rules: Rule[] = [
     sql: (f) =>
       `SELECT product AS entity,${metricSQL(["utilisation", "revenue"], context())},COUNT(*) AS n FROM lapsed${where(f, "lapsed", [])} GROUP BY product`,
     test: (x) =>
-      Number(x.n) >= 3 &&
       x.utilisation != null &&
       Number(x.utilisation) < thresholds().lowUtilisation,
     build: (x) =>
@@ -267,7 +265,7 @@ export const rules: Rule[] = [
     sql: (f) =>
       `SELECT format AS entity,${metricSQL(["booking_no_show_rate", "bookings", "revenue_per_booking"], context())},COUNT(*) AS n FROM bookings${where(f, "bookings", [])} GROUP BY format`,
     test: (x) =>
-      Number(x.n) >= 5 && Number(x.booking_no_show_rate) > thresholds().noShow,
+       Number(x.booking_no_show_rate) > thresholds().noShow,
     build: (x) =>
       r(
         "attention",
@@ -323,7 +321,7 @@ export const rules: Rule[] = [
     tab: 10,
     sql: (f) =>
       `SELECT trainer AS entity,${metricSQL(["contribution", "sessions"], context())},COUNT(*) AS n FROM payroll${where(f, "payroll", [])} GROUP BY trainer`,
-    test: (x) => Number(x.sessions) >= 5 && Number(x.contribution) < 0,
+    test: (x) =>  Number(x.contribution) < 0,
     build: (x) =>
       r(
         "critical",
@@ -357,7 +355,7 @@ export const rules: Rule[] = [
     tab: 1,
     sql: (f) =>
       `SELECT format AS entity,${metricSQL(["fill_rate", "revenue", "sessions"], context())},COUNT(*) AS n FROM sessions${where(f, "sessions", [])} GROUP BY format`,
-    test: (x) => Number(x.sessions) >= 8 && Number(x.fill_rate) > 0.7,
+    test: (x) => Number(x.fill_rate) > 0.7,
     build: (x) =>
       r(
         "opportunity",

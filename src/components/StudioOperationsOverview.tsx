@@ -68,7 +68,7 @@ export function StudioOperationsOverview({
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState("weekly");
   const [metric, setMetric] = useState("fill_rate");
-  const [minimum, setMinimum] = useState(1);
+  const [minimum, setMinimum] = useState(0);
   const [table, setTable] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const chart = useRef<echarts.ECharts | null>(null);
@@ -346,9 +346,9 @@ export function StudioOperationsOverview({
             Minimum sessions
             <input
               type="number"
-              min={1}
+              min={0}
               value={minimum}
-              onChange={(e) => setMinimum(Math.max(1, Number(e.target.value)))}
+              onChange={(e) => setMinimum(Math.max(0, Number(e.target.value) || 0))}
             />
           </label>
           <button

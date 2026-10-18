@@ -156,7 +156,7 @@ export function StudioOperations({
   const [preset, setPreset] = useState("All Metrics (Default)");
   const [columns, setColumns] = useState(defaultColumns);
   const [criterion, setCriterion] = useState("fill_rate");
-  const [minimum, setMinimum] = useState(3);
+  const [minimum, setMinimum] = useState(0);
   const [limit, setLimit] = useState(5);
   const [excludeHosted, setExcludeHosted] = useState(false);
   const [search, setSearch] = useState("");
@@ -282,7 +282,7 @@ export function StudioOperations({
   }, [sql, version]);
   const data = useMemo(() => {
     let eligible = rows.filter(
-      (r) => Number(r.sessions) >= (isFlat ? 1 : minimum),
+      (r) => Number(r.sessions) >= (minimum),
     );
     if (view === "faceoff")
       eligible = comparableInstructors(eligible, [
@@ -316,7 +316,7 @@ export function StudioOperations({
     [prior, view, fields],
   );
   const rankings = useMemo(
-    () => rankOperations(data, criterion, isFlat ? 1 : minimum, limit),
+    () => rankOperations(data, criterion, minimum, limit),
     [data, criterion, minimum, limit, view, isFlat],
   );
   const tableData = useMemo(() => {
@@ -331,7 +331,7 @@ export function StudioOperations({
         rankOperations(
           data,
           criterion,
-          isFlat ? 1 : minimum,
+          minimum,
           data.length,
         ).eligible.map((r, i) => [String(r.entity), i + 1]),
       ),
@@ -846,10 +846,10 @@ export function StudioOperations({
                 Minimum sessions
                 <input
                   type="number"
-                  min="1"
+                  min="0"
                   value={minimum}
                   onChange={(e) =>
-                    setMinimum(Math.max(1, Number(e.target.value) || 1))
+                    setMinimum(Math.max(0, Number(e.target.value) || 0))
                   }
                 />
               </label>
@@ -978,7 +978,7 @@ export function StudioOperations({
                 {tableData.length.toLocaleString("en-IN")} groups / sessions
               </span>
               <span className="ops-sample-badge">
-                ≥ {isFlat ? 1 : minimum} sessions
+                ≥ {minimum} sessions
               </span>
               {minFill > 0 && (
                 <span className="ops-sample-badge">Fill ≥ {minFill}%</span>

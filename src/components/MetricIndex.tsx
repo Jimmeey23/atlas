@@ -6,7 +6,7 @@ import { ensureSource, usable } from "../data/loader";
 import { useStore } from "../state/store";
 import { metrics, metricSQL, contributorPredicate } from "../semantics/metrics";
 import { catalogue, domainLabels, domains } from "../semantics/catalogue";
-import { cellDelta, derived, provenance } from "../semantics/cells";
+import { cellDelta, provenance } from "../semantics/cells";
 import { fmt } from "../semantics/formats";
 import { sheets } from "../data/sheets.config";
 import { Register } from "./Register";
@@ -58,7 +58,9 @@ export function MetricIndex({
       for (const [table, entries] of tables) {
         if (!active) return;
         try {
-          if (!usable(table)) await ensureSource(table);
+          const required = new Set([table, ...entries.flatMap(entry => metrics[entry.id].sources.map(source => sheets.find(sheet => sheet.title === source.split('.')[0])?.key).filter((key): key is string => !!key))]);
+          await Promise.all([...required].filter(key => !usable(key)).map(key => ensureSource(key)));
+          if ([...required].some(key => !usable(key))) throw new Error("A required source is unavailable");
           if (!usable(table)) throw new Error("source unavailable");
           const ids = entries.map((e) => e.id);
           const [now, before] = await Promise.all([
@@ -195,13 +197,12 @@ export function MetricIndex({
               </h3>
               <div className="metric-index-grid">
                 {list.map((row) => {
-                  const thin = derived(row.id) && row.n > 0 && row.n < metrics[row.id].minSample;
                   const change = cellDelta(row.id, row.value, row.previous);
                   return (
                     <button
                       key={row.id}
-                      className={`metric-index-cell${thin ? " cell-thin" : ""}`}
-                      title={provenance(row.id, row.value, row.n, thin, row.previous)}
+                      className="metric-index-cell"
+                      title={provenance(row.id, row.value, row.n, row.previous)}
                       onClick={() => drill(row)}
                     >
                       <span className="metric-index-label">
@@ -209,7 +210,6 @@ export function MetricIndex({
                       </span>
                       <span className="metric-index-value">
                         {fmt(row.id, row.value, metrics[row.id].format === "currency")}
-                        {thin && <span aria-hidden="true">*</span>}
                       </span>
                       <span className="metric-index-foot">
                         <em>{sheets.find((s) => s.key === row.table)?.title}</em>

@@ -28,7 +28,7 @@ import {
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { metrics } from "../semantics/metrics";
 import { fmt } from "../semantics/formats";
-import { derived, cellDelta, provenance } from "../semantics/cells";
+import { cellDelta, provenance } from "../semantics/cells";
 import { query, quote, type Row } from "../data/duckdb";
 import { blueprints } from "../data/blueprints";
 import { where, context, metricFacts } from "../data/analytics";
@@ -149,7 +149,7 @@ export function NestedTable({
       metricFacts(store.filters, source);
     let active = true;
     query(
-      `SELECT ${columns.length ? metricSQL(columns, context())+"," : ""}COUNT(*) AS n FROM ${facts}${["sessions", "sales", "checkins"].includes(source) || !w ? " WHERE " : " AND "}(${terms})${predicate ? " AND (" + predicate + ")" : ""}`,
+      `SELECT ${columns.length ? metricSQL(columns, context(store.filters, store.transient, source))+"," : ""}COUNT(*) AS n FROM ${facts}${["sessions", "sales", "checkins"].includes(source) || !w ? " WHERE " : " AND "}(${terms})${predicate ? " AND (" + predicate + ")" : ""}`,
     ).then((r) => {
       if (active) setSelectionTotal(r[0]);
     });
@@ -221,12 +221,11 @@ export function NestedTable({
           const v = row.original.values[id];
           const heat = metrics[id].format === "percent";
           const n = Number(row.original.values.n ?? 0);
-          const thin = derived(id) && n > 0 && n < metrics[id].minSample;
           const before = prior.get(row.original.id)?.[id];
           const change = cellDelta(id, v, before);
           return (
             <button
-              className={`cell-value${thin ? " cell-thin" : ""}`}
+              className="cell-value"
               style={{
                 width: "100%",
                 textAlign: "right",
@@ -235,12 +234,11 @@ export function NestedTable({
                     ? `color-mix(in srgb,var(--accent) ${Math.min(25, Math.max(0, Number(v) * 25))}%,transparent)`
                     : undefined,
               }}
-              title={provenance(id, v, n, thin, before)}
+              title={provenance(id, v, n, before)}
               onClick={() => onDrill(row.original, id)}
             >
               <span className="cell-figure">
                 {fmt(id, v, metrics[id].format === "currency")}
-                {thin && <span aria-hidden="true" className="cell-thin-mark">*</span>}
               </span>
               {change && (
                 <span className={`cell-delta ${change.tone}`}>{change.text}</span>

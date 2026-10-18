@@ -1,3 +1,4 @@
+import { metrics } from '../semantics/metrics';
 import { assertGroupable, groupable, groupColumn, groupLabel, groupValueSQL } from './group-fields';
 
 // Cohort outcomes are grouped by first visit. Legacy _30 IDs remain stable for saved table preferences; their displayed definitions now use calendar-month purchases.
@@ -5,8 +6,8 @@ export const acquisitionMeasures = [
   ['cohort_rows', 'Clients / trials', 'integer'],
   ['unique_members', 'Unique members', 'integer'],
   ['newcomers', 'New clients', 'integer'],
-  ['converted_members', 'Converted members', 'integer'],
-  ['retained_members', 'Retained members', 'integer'],
+  ['converted_members', 'Converted records (all visit types)', 'integer'],
+  ['retained_members', 'Retained records (all visit types)', 'integer'],
   ['converted_30', 'Same-month converted', 'integer'],
   ['retained_30', 'Same-month converted & retained', 'integer'],
   ['mature_30', 'Calendar-month cohort members', 'integer'],
@@ -45,8 +46,8 @@ export function acquisitionFactsSQL(scope: string, today: string, bookings = fal
   const late = bookings
     ? `(SELECT COUNT(*) FROM bookings b WHERE b.member_id=new.member_id AND b.late_cancelled>0)`
     : `CAST(NULL AS BIGINT)`;
-  return `WITH flags AS (SELECT *, ${late} AS late_cancels, COALESCE(entry_type,'Unspecified') AS entry,
-    (regexp_matches(lower(trim(COALESCE(entry_type,''))), '(^|[^a-z])new([^a-z]|$)') AND NOT regexp_matches(lower(trim(COALESCE(entry_type,''))), '^not([^a-z]|$)')) AS ref_new,
+  return `WITH flags AS (SELECT *, ${late} AS late_cancels, ${bookings ? 'TRUE' : 'FALSE'} AS late_cancels_available, COALESCE(entry_type,'Unspecified') AS entry,
+    COALESCE(is_new, (regexp_matches(lower(trim(COALESCE(entry_type,''))), '(^|[^a-z])new([^a-z]|$)') AND NOT regexp_matches(lower(trim(COALESCE(entry_type,''))), '^not([^a-z]|$)'))) AS ref_new,
     (len(list_filter(regexp_split_to_array(COALESCE(purchase_journey,''), '[,;|/]+|\\s-\\s'), token -> trim(token)<>''))=0
       OR len(list_filter(regexp_split_to_array(COALESCE(purchase_journey,''), '[,;|/]+|\\s-\\s'), token -> trim(token)<>'' AND NOT regexp_matches(lower(regexp_replace(trim(token),'\\s+',' ','g')), '^money credits($| )')))>0) AS ref_membership_eligible,
     trim(COALESCE(retention,''))='Retained' AS ref_retained,
@@ -68,28 +69,28 @@ export const acquisitionAggregate = `COUNT(*) AS cohort_rows,
   CASE WHEN COUNT(first_purchase_date)>0 THEN COUNT(DISTINCT member_id) FILTER (WHERE converted_in_30) END AS converted_30,
   CASE WHEN COUNT(first_purchase_date)>0 AND COUNT(retention)>0 THEN COUNT(DISTINCT member_id) FILTER (WHERE returned_in_30) END AS retained_30,
   COUNT(DISTINCT member_id) AS mature_30,
-  CASE WHEN COUNT(conversion)>0 THEN COUNT(*) FILTER (WHERE ref_converted)::DOUBLE/NULLIF(COUNT(*) FILTER (WHERE ref_new),0) END AS conversion_rate,
-  CASE WHEN COUNT(retention)>0 THEN COUNT(*) FILTER (WHERE ref_retained)::DOUBLE/NULLIF(COUNT(*) FILTER (WHERE ref_new),0) END AS retention_rate,
+  ${metrics['conversion_rate'].sql({rate:1200,today:'1970-01-01'}).replaceAll('is_new','ref_new').replaceAll("conversion='Converted'",'ref_converted')} AS conversion_rate,
+  ${metrics['retention_rate'].sql({rate:1200,today:'1970-01-01'}).replaceAll('is_new','ref_new').replaceAll("retention='Retained'",'ref_retained')} AS retention_rate,
   CASE WHEN COUNT(first_purchase_date)>0 THEN COUNT(DISTINCT member_id) FILTER (WHERE converted_in_30)::DOUBLE/NULLIF(COUNT(DISTINCT member_id),0) END AS conversion_30_rate,
   CASE WHEN COUNT(first_purchase_date)>0 AND COUNT(retention)>0 THEN COUNT(DISTINCT member_id) FILTER (WHERE returned_in_30)::DOUBLE/NULLIF(COUNT(DISTINCT member_id),0) END AS retention_30_rate,
-  AVG(ltv) AS avg_ltv, SUM(ltv) AS total_ltv, AVG(avg_purchase_value) AS avg_spend,
-  AVG(first_purchase) FILTER (WHERE ref_converted AND first_purchase>0) AS first_purchase,
+  AVG(ltv) FILTER (WHERE ref_new) AS avg_ltv, SUM(ltv) FILTER (WHERE ref_new) AS total_ltv, AVG(avg_purchase_value) AS avg_spend,
+  AVG(first_purchase) FILTER (WHERE ref_new AND ref_converted AND first_purchase>0) AS first_purchase,
   AVG(post_trial_ltv) AS post_trial_ltv,
-  AVG(conversion_days) FILTER (WHERE conversion_days>0) AS conversion_span,
-  MEDIAN(conversion_days) FILTER (WHERE conversion_days>0) AS median_span,
+  AVG(conversion_days) FILTER (WHERE ref_new AND ref_converted AND conversion_days>=0) AS conversion_span,
+  MEDIAN(conversion_days) FILTER (WHERE ref_new AND ref_converted AND conversion_days>=0) AS median_span,
   -- Same trial cohort and same counting unit as the conversion and retention
   -- rates, so the three read against one another.
-  CASE WHEN COUNT(visits_post)>0 THEN COUNT(*) FILTER (WHERE ref_new AND visits_post>0)::DOUBLE/NULLIF(COUNT(*) FILTER (WHERE ref_new),0) END AS second_visit_rate,
+  ${metrics['second_visit_rate'].sql({rate:1200,today:'1970-01-01'}).replaceAll('is_new','ref_new')} AS second_visit_rate,
   AVG(visits_post) FILTER (WHERE visits_post>0) AS visits_post, AVG(post_trial_purchases) AS purchases_post,
   SUM(class_no) AS source_visits,
   CASE WHEN COUNT(first_purchase_date)>0 THEN COUNT(*) FILTER (WHERE converted_same_month) END AS converted_same_month,
   CASE WHEN COUNT(first_purchase_date)>0 AND COUNT(retention)>0 THEN COUNT(*) FILTER (WHERE returned_same_month) END AS retained_same_month,
   CASE WHEN COUNT(first_purchase_date)>0 THEN COUNT(*) FILTER (WHERE converted_same_month)::DOUBLE/NULLIF(COUNT(*) FILTER (WHERE ref_new),0) END AS conversion_same_month_rate,
   CASE WHEN COUNT(first_purchase_date)>0 AND COUNT(retention)>0 THEN COUNT(*) FILTER (WHERE returned_same_month)::DOUBLE/NULLIF(COUNT(*) FILTER (WHERE ref_new),0) END AS retention_same_month_rate,
-  SUM(post_trial_ltv) AS post_trial_spend, SUM(post_trial_purchases) AS post_trial_purchases_total,
-  SUM(purchases) AS total_purchases, SUM(visits) AS total_visits,
-  SUM(ltv)/NULLIF(SUM(visits) FILTER (WHERE ltv IS NOT NULL),0) AS revenue_per_visit,
-  SUM(late_cancels) AS late_cancels`;
+  SUM(post_trial_ltv) FILTER (WHERE ref_new) AS post_trial_spend, SUM(post_trial_purchases) FILTER (WHERE ref_new) AS post_trial_purchases_total,
+  SUM(purchases) FILTER (WHERE ref_new) AS total_purchases, SUM(visits) FILTER (WHERE ref_new) AS total_visits,
+  SUM(ltv) FILTER (WHERE ref_new)/NULLIF(SUM(visits) FILTER (WHERE ref_new AND ltv IS NOT NULL),0) AS revenue_per_visit,
+  CASE WHEN BOOL_OR(late_cancels_available) THEN COALESCE(LIST_SUM(LIST_TRANSFORM(LIST(DISTINCT STRUCT_PACK(member_id := member_id, cancels := late_cancels)) FILTER (WHERE ref_new AND member_id IS NOT NULL), item -> item.cancels)),0) END AS late_cancels`;
 
 export function acquisitionMonths(today: string, count = 14) {
   const now = new Date(today + 'T00:00:00Z');
@@ -154,9 +155,11 @@ export function acquisitionPivotSQL(scope: string, now: string, parent: Acquisit
 }
 
 export const instructorAcquisitionAggregate = acquisitionAggregate
-  .replace('COUNT(*) FILTER (WHERE ref_new) AS newcomers', 'COUNT(DISTINCT member_id) FILTER (WHERE ref_new) AS newcomers')
+  .replaceAll('COUNT(*) FILTER (WHERE ref_new)', 'COUNT(DISTINCT member_id) FILTER (WHERE ref_new)')
   .replaceAll('COUNT(*) FILTER (WHERE ref_converted)', 'COUNT(DISTINCT member_id) FILTER (WHERE ref_converted)')
   .replaceAll('COUNT(*) FILTER (WHERE ref_retained)', 'COUNT(DISTINCT member_id) FILTER (WHERE ref_retained)')
+  .replaceAll('COUNT(*) FILTER (WHERE ref_new AND ref_converted)', 'COUNT(DISTINCT member_id) FILTER (WHERE ref_new AND ref_converted)')
+  .replaceAll('COUNT(*) FILTER (WHERE ref_new AND ref_retained)', 'COUNT(DISTINCT member_id) FILTER (WHERE ref_new AND ref_retained)')
   .replaceAll('COUNT(*) FILTER (WHERE ref_new AND visits_post>0)', 'COUNT(DISTINCT member_id) FILTER (WHERE ref_new AND visits_post>0)')
   .replaceAll('NULLIF(COUNT(*) FILTER (WHERE ref_new),0)', 'NULLIF(COUNT(DISTINCT member_id) FILTER (WHERE ref_new),0)');
 /** Body over a `facts` CTE (acquisitionFactsSQL). Default grouping keeps the reference SQL; any other New-sheet columns group as text with NULL kept distinct. */

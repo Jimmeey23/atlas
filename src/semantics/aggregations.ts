@@ -1,6 +1,5 @@
 import type { Row } from "../data/duckdb";
 export function slotVerdict(row: Row, rate: number) {
-  if (Number(row.n) < 8) return "Low sample";
   if (row.fill_rate == null || row.revenue_per_session == null)
     return "Unavailable";
   if (Number(row.fill_rate) < 0.2) return "Cut";

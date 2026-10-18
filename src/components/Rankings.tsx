@@ -20,6 +20,7 @@ export function Rankings({
   onDrill: (row: Row) => void;
 }) {
   const [chosen, setChosen] = useState("");
+  const [minimum, setMinimum] = useState(0);
   const validColumns = columns.filter(x => metrics[x]);
   const id = validColumns.includes(chosen)
     ? chosen
@@ -36,14 +37,14 @@ export function Rankings({
         .filter(
           (r) =>
             Number(r.level) === firstLevel &&
-            Number(r.n) >= (m?.minSample ?? 1) &&
+            (!minimum || Number(r.n) >= minimum) &&
             r[id] != null,
         )
         .sort(
           (a, b) =>
             (Number(b[id]) - Number(a[id])) * (m?.higherIsBetter ? 1 : -1),
         ),
-    [rows, id, firstLevel, m],
+    [rows, id, firstLevel, m, minimum],
   );
   const s = useStore();
   const maximum = Math.max(...eligible.map((r) => Math.abs(Number(r[id]))), 1);
@@ -56,6 +57,7 @@ export function Rankings({
       title="Worth your attention"
       actions={
         <>
+          <label className="small">Minimum group size <input aria-label="Ranking minimum group size" type="number" min={0} value={minimum} onChange={e => setMinimum(Math.max(0, Number(e.target.value) || 0))} style={{ width: 70 }} /></label>
           <ChartControls rows={eligible} title="Rankings" />
           <DropdownField
             aria-label="Ranking measure"
@@ -102,18 +104,18 @@ export function Rankings({
               </button>
             ))}
             {!list.length && (
-              <p className="small">No entities meet the minimum sample.</p>
+              <p className="small">No entities match the current filters.</p>
             )}
           </div>
         ))}
       </div>
       <div className="ranking-foot">
-        n ≥ {m.minSample} source records.{" "}
+        {minimum ? `User filter: n ≥ ${minimum} contributing observations.` : "Full filtered dataset; no minimum group size."}{" "}
         {
           rows.filter(
             (r) =>
               Number(r.level) === firstLevel &&
-              Number(r.n) < m.minSample,
+              minimum > 0 && Number(r.n) < minimum,
           ).length
         }{" "}
         groups excluded. Both lists share one scale.

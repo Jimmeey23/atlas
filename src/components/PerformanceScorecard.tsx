@@ -33,7 +33,7 @@ const measures: Column[] = [
   { id: "conversion_rate", label: "Conversion %", drill: "new", extra: "is_new" },
   { id: "retention_rate", label: "Retention %", drill: "new", extra: "is_new" },
   { id: "late_cancelled", label: "Late cancelled", format: "booking_late_cancelled", drill: "bookings", extra: "late_cancelled>0" },
-  { id: "late_cancel_rate", label: "Late-cancel %", format: "booking_late_rate", drill: "bookings" },
+  { id: "booking_late_rate", label: "Booking late-cancel rate", format: "booking_late_rate", drill: "bookings" },
 ];
 
 export function PerformanceScorecard({
@@ -210,8 +210,9 @@ export function PerformanceScorecard({
       <p className="small">
         Composite score (0–100) averages each {noun.toLowerCase()}'s rank against the others on fill rate, class average
         excluding empty classes, revenue per class, conversion %, retention % and, inversely, late-cancel % and empty-class
-        share. New members are first visits whose “Is New” label contains “new”; converted and retained follow the
-        Conversion and Retention Status columns. Late cancellations count late-cancelled bookings.
+        share. Newcomers use the same eligibility as Acquisition; converted and retained follow the
+        Conversion and Retention Status columns. Booking late-cancel rate uses Bookings, separate from the Sessions rate.
+        Newcomer and booking totals include only the {noun.toLowerCase()} groups represented by the selected sessions.
         Top values are the busiest by checked-in attendance.
       </p>
     </Register>

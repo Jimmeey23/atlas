@@ -37,7 +37,7 @@ export function withOverviewGroup(m: OverviewModule, group?: string): OverviewMo
 }
 
 export function overviewSQL(m: OverviewModule, filters: Filters, transient: {field:string;value:string}[]) {
-  const ctx = context(filters, transient);
+  const ctx = context(filters, transient, m.source);
   let facts: string;
   if (m.key === 'meta') facts = `meta${metaScope(filters.from, filters.to, {})}`;
   else if (m.key === 'website') facts = `leads${websiteScope(where({...filters,source:[]},'leads',transient.filter(t=>t.field!=='source')))}`;

@@ -1,0 +1,70 @@
+{
+  "period": "2026-09-01 through 2026-09-30",
+  "sources": {
+    "sessions": {
+      "fetchedAt": "2026-10-18T04:24:39.843Z",
+      "hash": "581990009f22c5b8c0b6efe03d35811813576920"
+    },
+    "new": {
+      "fetchedAt": "2026-10-18T04:24:33.365Z",
+      "hash": "1927a15a35974bf7046f2c981e22f1134472a1b9"
+    }
+  },
+  "note": "Before is reconstructed using the former fixed eligibility rule against the SAME cached snapshot, not a historical screenshot. Formulas are unchanged. Other views could already display the small-group value. Eligible does not guarantee a position in a limited top/bottom list. Current user minimum filters are zero. These are snapshot-specific examples, not live upstream reconciliation.",
+  "examples": [
+    {
+      "metric": "Fill rate",
+      "scope": "All studios, September 2026",
+      "observations": 860,
+      "calculation": "4,653 attendance / 10,925 seats",
+      "before": "42.6%",
+      "after": "42.6%",
+      "change": "Unchanged total"
+    },
+    {
+      "metric": "Average attendance per session",
+      "scope": "All studios, September 2026",
+      "observations": 860,
+      "calculation": "4,653 attendance / 860 sessions",
+      "before": "5.41",
+      "after": "5.41",
+      "change": "Unchanged total"
+    },
+    {
+      "metric": "Fill rate",
+      "scope": "Supreme HQ, Bandra \u00b7 Studio Barre 57 \u00b7 Atulan Purohit \u00b7 Saturday 11:30",
+      "observations": 4,
+      "calculation": "45 attendance / 56 seats",
+      "before": "80.4% \u00b7 excluded from sample-gated rankings",
+      "after": "80.4% \u00b7 eligible",
+      "change": "Eligibility changed; value unchanged"
+    },
+    {
+      "metric": "Average attendance per session",
+      "scope": "Supreme HQ, Bandra \u00b7 Studio Barre 57 \u00b7 Atulan Purohit \u00b7 Saturday 11:30",
+      "observations": 4,
+      "calculation": "45 attendance / 4 sessions",
+      "before": "11.25 \u00b7 excluded from sample-gated rankings",
+      "after": "11.25 \u00b7 eligible",
+      "change": "Eligibility changed; value unchanged"
+    },
+    {
+      "metric": "Average first purchase",
+      "scope": "Kwality House, Kemps Corner \u00b7 Abandoned checkout \u00b7 newcomer rows, imports excluded",
+      "observations": 2,
+      "calculation": "(\u20b91,943 + \u20b91,943) / 2 converted newcomers with positive purchases",
+      "before": "\u20b91,943 \u00b7 excluded from sample-gated rankings",
+      "after": "\u20b91,943 \u00b7 eligible",
+      "change": "Eligibility changed; value unchanged"
+    },
+    {
+      "metric": "Trial conversion rate",
+      "scope": "Supreme HQ, Bandra \u00b7 Walkin \u00b7 newcomer rows, imports excluded",
+      "observations": 2,
+      "calculation": "1 converted newcomer / 2 newcomers",
+      "before": "50.0% \u00b7 excluded from sample-gated rankings",
+      "after": "50.0% \u00b7 eligible",
+      "change": "Eligibility changed; value unchanged"
+    }
+  ]
+}

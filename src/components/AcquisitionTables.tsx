@@ -34,10 +34,12 @@ const tableOptions = [
   { key: "trainers", label: "Instructor performance", description: "First-visit outcomes", icon: GraduationCap },
   { key: "journeys", label: "Purchase journeys", description: "Converted members", icon: Route },
 ] as const;
-function MetricTabs({ value, onChange, includeAll = false }: { value: string; onChange: (key: string) => void; includeAll?: boolean }) {
+const uniqueMeasureLabels: Record<string, string> = { newcomers: 'Unique newcomers', converted_members: 'Converted members (all visit types)', retained_members: 'Retained members (all visit types)', conversion_rate: 'Unique-newcomer conversion rate', retention_rate: 'Unique-newcomer retention rate', second_visit_rate: 'Unique-newcomer second-visit rate' };
+const measureLabel = (measure: Measure, unique = false) => unique ? uniqueMeasureLabels[measure[0]] || measure[1] : measure[1];
+function MetricTabs({ value, onChange, includeAll = false, unique = false }: { value: string; onChange: (key: string) => void; includeAll?: boolean; unique?: boolean }) {
   return <div className="acq-metric-tabs" aria-label="Choose table metric">
     {includeAll && <button aria-pressed={value === "all"} onClick={() => onChange("all")}>All metrics</button>}
-    {acquisitionMeasures.map(m => <button key={m[0]} aria-pressed={value === m[0]} onClick={() => onChange(m[0])}>{m[1]}</button>)}
+    {acquisitionMeasures.map(m => <button key={m[0]} aria-pressed={value === m[0]} onClick={() => onChange(m[0])}>{measureLabel(m, unique)}</button>)}
   </div>;
 }
 function valueText(measure: Measure, value: unknown) {
@@ -214,10 +216,10 @@ function MetricsTable({ rows, dimensions, kind, scope, onDrill, grouping }: { ro
     description={kind === "hosted" ? "Hosted first visits by experience and month, matching the reference. Selected global filters apply." : "First-visit instructor outcomes with unique member counts and recorded visits. Selected global filters apply."}
     onSearch={v => { setSearch(v); setPage(0); }}
     actions={<>{grouping}<ValueSelection options={[...new Set(rows.filter(r => !r.is_total).map(r => String(r[dimensions[0][0]] ?? "Unspecified")))].sort()} selected={selectedValues} onChange={values => { setSelectedValues(values); setPage(0); }} label={`${kind === "hosted" ? "Hosted" : "Instructor"} first-column values`} /></>}
-    metricBar={<MetricTabs value={metric} onChange={setMetric} includeAll />}
+    metricBar={<MetricTabs value={metric} onChange={setMetric} includeAll unique={kind === "trainers"} />}
     footer={<><Pagination count={matching.length} page={currentPage} setPage={setPage} /><span>{kind === "hosted" ? "First-visit acquisition cohorts; total event attendance and event revenue are not included." : "Instructor attribution follows the member’s first visit."} Footer totals cover the full filtered scope, independent of search.</span><DefinitionNote /></>}>
     <div className="acq-table-scroll" tabIndex={0} aria-label="Metrics table. Scroll horizontally for additional metrics."><table className="acq-table">
-      <thead><tr>{dimensions.map(([key, label], i) => <SortHeading key={key} label={label} name={key} sort={sort} onSort={onSort} className={i === 0 ? "acq-sticky acq-dimension" : "acq-dimension"} />)}{measures.map(m => <SortHeading key={m[0]} label={m[1]} name={m[0]} sort={sort} onSort={onSort} />)}</tr></thead>
+      <thead><tr>{dimensions.map(([key, label], i) => <SortHeading key={key} label={label} name={key} sort={sort} onSort={onSort} className={i === 0 ? "acq-sticky acq-dimension" : "acq-dimension"} />)}{measures.map(m => <SortHeading key={m[0]} label={measureLabel(m, kind === "trainers")} name={m[0]} sort={sort} onSort={onSort} />)}</tr></thead>
       <tbody>{matching.slice(currentPage * 25, currentPage * 25 + 25).map((r, i) => <tr key={JSON.stringify(dimensions.map(([key]) => r[key]))}>{dimensions.map(([key], j) => <td key={key} className={`${j === 0 ? "acq-sticky " : ""}acq-dimension`}>
         {j === 0 && kind === "trainers" && <span className="acq-rank">{currentPage * 25 + i + 1}</span>}{key === "month" ? acquisitionPeriodLabel(r[key]) : key === "entry" ? <span className="acq-badge neutral">{r[key] ?? "Unspecified"}</span> : key === "trainer" ? <InstructorName name={String(r[key] ?? "Unspecified")}/> : r[key] ?? "Unspecified"}
       </td>)}{measures.map(m => <td key={m[0]}><button className="acq-cell-button" onClick={() => drill(r, m[0])}><span className={r[m[0]] == null ? "acq-missing" : m[2] === "percent" ? "acq-rate" : "acq-value"}>{valueText(m, r[m[0]])}</span></button></td>)}</tr>)}</tbody>

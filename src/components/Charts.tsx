@@ -328,7 +328,7 @@ export function Chart({
           );
         else if (tab === 10)
           r = await query(
-            `SELECT trainer,${metricSQL(["contribution", "payroll_cost", "payroll_revenue", "contribution_margin"], context())},COUNT(*) AS n FROM payroll${w} GROUP BY trainer ORDER BY contribution DESC LIMIT 15`,
+            `SELECT trainer,${metricSQL(["contribution", "payroll_cost", "payroll_revenue", "contribution_margin"], context(state.filters, state.transient, "payroll"))},COUNT(*) AS n FROM payroll${w} GROUP BY trainer ORDER BY contribution DESC LIMIT 15`,
           );
         else if (tab === 3 || secondary)
           r = data.trend.map(row => ({ ...row, g0: row.month }));
@@ -343,7 +343,7 @@ export function Chart({
           const month =
             bp.source === "lapsed" ? "SUBSTR(end_date,1,7)" : "month";
           r = await query(
-            `SELECT ${month} AS month,${metricSQL(ids, context())},COUNT(*) AS n FROM ${facts} GROUP BY ${month} ORDER BY month`,
+            `SELECT ${month} AS month,${metricSQL(ids, context(state.filters, state.transient, bp.source))},COUNT(*) AS n FROM ${facts} GROUP BY ${month} ORDER BY month`,
           );
         }
         if (active) {

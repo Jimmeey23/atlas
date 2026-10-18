@@ -22,7 +22,7 @@ import {
   themeOptions,
   sections,
 } from "./state/preferences";
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Save,
   Sun,
@@ -106,6 +106,7 @@ import {
 import { RenewalCohorts } from "./components/RenewalCohorts";
 import { SignalRail } from "./components/SignalRail";
 import { DrillPanel } from "./components/DrillPanel";
+import { MetricDefinitionReader } from "./components/MetricDefinitionReader";
 import { DataHealth } from "./components/DataHealth";
 import { Secondary } from "./components/Secondary";
 import { MetricIndex } from "./components/MetricIndex";
@@ -148,8 +149,7 @@ const blank: Analysis = {
 // source table and which record predicate explain that single number.
 const DataLabLazy = lazy(() => import("./components/DataLab").then(module => ({ default: module.DataLab })));
 function DataLab(props: React.ComponentProps<typeof DataLabLazy>) { return <Suspense fallback={<p role="status">Loading workspace…</p>}><DataLabLazy {...props} /></Suspense>; }
-const AnalysisWorkbenchLazy = lazy(() => import("./components/AnalysisWorkbench").then(module => ({ default: module.AnalysisWorkbench })));
-function AnalysisWorkbench(props: React.ComponentProps<typeof AnalysisWorkbenchLazy>) { return <Suspense fallback={<p role="status">Loading workspace…</p>}><AnalysisWorkbenchLazy {...props} /></Suspense>; }
+
 const StudioOperationsOverviewLazy = lazy(() => import("./components/StudioOperationsOverview").then(module => ({ default: module.StudioOperationsOverview })));
 function StudioOperationsOverview(props: React.ComponentProps<typeof StudioOperationsOverviewLazy>) { return <Suspense fallback={<p role="status">Loading workspace…</p>}><StudioOperationsOverviewLazy {...props} /></Suspense>; }
 const StudioOperationsDeepDiveLazy = lazy(() => import("./components/StudioOperationsDeepDive").then(module => ({ default: module.StudioOperationsDeepDive })));
@@ -189,6 +189,11 @@ function metricScope(
     predicate,
     filters: currentSnapshotMetrics.has(id) ? { ...filters, from: "", to: "" } : filters,
   };
+}
+
+function MetricSummary({ children, periods }: { children: ReactNode; periods?: ReactNode }) {
+  // Keep the Leads cards and period table together so saved section orders cannot put the table first.
+  return periods ? <section id="lead-metric-summary" style={{ display: 'block' }}>{children}{periods}</section> : <>{children}</>;
 }
 
 export default function App() {
@@ -562,7 +567,6 @@ export default function App() {
     return () => { delete document.documentElement.dataset.workspace; };
   }, [overviewWorkspace]);
   const commands = [
-    {name:"Advanced analysis builder",kind:"Analysis",run:()=>window.dispatchEvent(new Event("atlas-open-analysis"))},
     {name:"Back / undo scope",kind:"Navigation",run:s.undo},
     {name:"Forward / redo scope",kind:"Navigation",run:s.redo},
     ...tabs.map((name, i) => ({
@@ -831,7 +835,7 @@ export default function App() {
       </nav>
       <div className="workspace">
         {busy && <div className="loader-bar" />}
-        {busy && (
+        {busy && s.tab !== 11 && (
           <div className="loader-shell" role="status" aria-live="polite" aria-atomic="true" style={{ "--loader-accent": "var(--accent)" } as React.CSSProperties}>
             <div className="loader-graphic" aria-hidden="true">
               <svg className="loader-orbit" viewBox="0 0 88 88"><circle className="loader-orbit-track" cx="44" cy="44" r="38" /><circle className="loader-orbit-arc" cx="44" cy="44" r="38" /><circle className="loader-orbit-dot" cx="44" cy="6" r="3" /></svg>
@@ -849,8 +853,8 @@ export default function App() {
           id="main"
           ref={main}
           tabIndex={-1}
-          className={`canvas ${busy ? "loading" : ""}`}
-          aria-busy={busy}
+          className={`canvas ${busy && s.tab !== 11 ? "loading" : ""}`}
+          aria-busy={busy && s.tab !== 11}
         >
           <div className="print-context">
             <h2>Atlas / {s.view === "kra" ? "Jimmeey Gondaa · KRA performance" : websiteMarketingView ? "Website lead performance" : marketingView ? "Performance Marketing" : tabs[s.tab]}</h2>
@@ -903,7 +907,6 @@ export default function App() {
           />}
           {missingPrivateScope && <p className="notice">This link contains a member-specific scope saved in another browser. Open the saved analysis in its original browser to restore that scope.</p>}
           {s.tab !== 15 && <AnalysisNavigation />}
-          {s.tab !== 16 && s.tab !== 15 && <AnalysisWorkbench key={s.tab + s.view} version={version} onDrill={setDrill} />}
           {error && (
             <div className="notice">
               <TriangleAlert size={14} />
@@ -971,9 +974,12 @@ export default function App() {
           ) : s.tab === 13 ? (
             <IntelligenceWorkspace />
           ) : s.tab === 11 ? (
-            ready ? (
-              <DataHealth version={version} onRefresh={() => void load(true)} />
-            ) : null
+            <>
+              <Register index="MD" id="data-quality-metric-definitions" title="Metric definitions" subtitle="What each number means, how it is calculated, and where it comes from." dateIndependent>
+                <MetricDefinitionReader />
+              </Register>
+              {ready ? <DataHealth version={version} onRefresh={() => void load(true)} /> : <p role="status" className="small">Loading source quality checks. Metric definitions are available above.</p>}
+            </>
           ) : !ready || configuredTab !== s.tab ? null : marketingView ? (
             <PerformanceMarketing version={version} onDrill={setDrill} websiteOnly={websiteMarketingView} />
           ) : s.tab === 1 ? (
@@ -998,6 +1004,7 @@ export default function App() {
                   </button>
                 </div>
               )}
+              <MetricSummary periods={s.tab === 8 ? <WebsiteLeadPeriods version={version} onDrill={setDrill} websiteOnly={false} expanded /> : undefined}>
               <div
                 className="metric-strip"
               >
@@ -1047,6 +1054,7 @@ export default function App() {
                   <MetricCard key={id} id={id} value={instructorPayroll?.total[id]} previous={instructorPayroll?.previous[id]} trend={instructorPayroll?.trend ?? []} n={instructorPayroll?.count ?? 0} evidence={instructorPayroll?.total ?? {}} compare={s.compare !== "none"} />
                 ))}
               </div>
+              </MetricSummary>
               <PinnedInsights page={s.tab} />
               <SavedElements page={s.tab} version={version} />
               {s.tab === 3 && (
@@ -1207,7 +1215,6 @@ export default function App() {
               {s.tab === 0 && <OverviewModules version={version} onDrill={setDrill} />}
               {s.tab === 14 && <PerformanceScorecard dimension="format_group" index="08" version={version} onDrill={setDrill} />}
               {s.tab === 14 && <FormatComparison version={version} />}
-              {s.tab === 8 && <WebsiteLeadPeriods version={version} onDrill={setDrill} websiteOnly={false} expanded />}
               <MoMTable version={workspaceVersion} ids={[...new Set([...bp.columns, ...bp.kpis, ...Object.keys(metrics)])].filter(id => metricTable(id) === bp.source)} />
               {s.tab === 4 && <SalesScorecards version={contentVersion} onDrill={setDrill} />}
               {s.tab === 5 && <><ConversionJourneys version={contentVersion} /><AcquisitionMainTables version={contentVersion} /></>}
@@ -1342,10 +1349,7 @@ export default function App() {
                 <X size={16} />
               </button>
             </div>
-            {modal === "metrics" && <>
-              <p className="small"><a href="/reference/metric-definitions.html" target="_blank" rel="noopener noreferrer">Open full reference</a> · <a href="/reference/metric-definitions.md" download>Download document</a></p>
-              <iframe title="Atlas metric definition document" src="/reference/metric-definitions.html" style={{ width: "100%", height: "70vh", border: "1px solid var(--border, #ddd)", borderRadius: 8, background: "white" }} />
-            </>}
+            {modal === "metrics" && <MetricDefinitionReader />}
             {modal === "command" && (
               <>
                 <input

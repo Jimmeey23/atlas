@@ -9,8 +9,7 @@
     "format": "integer",
     "domain": "attendance",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "capacity",
@@ -22,8 +21,7 @@
     "format": "integer",
     "domain": "attendance",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "attendance",
@@ -35,8 +33,7 @@
     "format": "integer",
     "domain": "attendance",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "fill_rate",
@@ -49,8 +46,7 @@
     "format": "percent",
     "domain": "attendance",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "booking_fill_rate",
@@ -63,8 +59,7 @@
     "format": "percent",
     "domain": "attendance",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "show_up_rate",
@@ -77,8 +72,7 @@
     "format": "percent",
     "domain": "attendance",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "booked",
@@ -90,8 +84,7 @@
     "format": "integer",
     "domain": "attendance",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "no_shows",
@@ -105,8 +98,7 @@
     "format": "integer",
     "domain": "attendance",
     "aggregation": "sum",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "no_show_rate",
@@ -120,12 +112,11 @@
     "format": "percent",
     "domain": "attendance",
     "aggregation": "weighted",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "late_cancel_rate",
-    "label": "Late-cancel rate",
+    "label": "Session late-cancel rate",
     "expression": "(SUM(late_cancelled)) / NULLIF((SUM(booked)),0)",
     "sources": [
       "Sessions.LateCancelled",
@@ -134,8 +125,7 @@
     "format": "percent",
     "domain": "attendance",
     "aggregation": "weighted",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "avg_class_size_incl",
@@ -148,21 +138,20 @@
     "format": "decimal",
     "domain": "attendance",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "avg_class_size_excl",
     "label": "Average size, non-empty",
     "expression": "SUM(checked_in)/NULLIF(SUM(CASE WHEN checked_in>0 THEN COALESCE(non_empty,sessions) ELSE 0 END),0)",
     "sources": [
-      "Sessions.CheckedIn"
+      "Sessions.CheckedIn",
+      "Sessions.SessionID"
     ],
     "format": "decimal",
     "domain": "attendance",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "empty_sessions",
@@ -174,8 +163,7 @@
     "format": "integer",
     "domain": "attendance",
     "aggregation": "sum",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "empty_session_rate",
@@ -188,8 +176,7 @@
     "format": "percent",
     "domain": "attendance",
     "aggregation": "weighted",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "unsold_seats",
@@ -202,8 +189,7 @@
     "format": "integer",
     "domain": "attendance",
     "aggregation": "sum",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "overbooked_sessions",
@@ -216,8 +202,7 @@
     "format": "integer",
     "domain": "attendance",
     "aggregation": "sum",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "attendance_cv",
@@ -229,8 +214,7 @@
     "format": "ratio",
     "domain": "attendance",
     "aggregation": "weighted",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "revenue",
@@ -242,8 +226,7 @@
     "format": "currency",
     "domain": "revenue",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "gross_revenue",
@@ -255,8 +238,7 @@
     "format": "currency",
     "domain": "revenue",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "net_revenue",
@@ -269,8 +251,7 @@
     "format": "currency",
     "domain": "revenue",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "vat",
@@ -282,8 +263,7 @@
     "format": "currency",
     "domain": "revenue",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "transactions",
@@ -295,8 +275,7 @@
     "format": "integer",
     "domain": "revenue",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "units",
@@ -308,8 +287,7 @@
     "format": "integer",
     "domain": "revenue",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "revenue_per_session",
@@ -317,14 +295,12 @@
     "expression": "SUM(revenue)/NULLIF(SUM(sessions),0)",
     "sources": [
       "Sessions.Revenue",
-      "Sessions.CheckedIn",
-      "Sessions.Capacity"
+      "Sessions.SessionID"
     ],
     "format": "currency",
     "domain": "revenue",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "rev_pac",
@@ -338,8 +314,7 @@
     "format": "currency",
     "domain": "revenue",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "rev_pas",
@@ -353,8 +328,7 @@
     "format": "currency",
     "domain": "revenue",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "lost_revenue",
@@ -368,8 +342,7 @@
     "format": "currency",
     "domain": "revenue",
     "aggregation": "weighted",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "aov",
@@ -383,8 +356,7 @@
     "format": "currency",
     "domain": "revenue",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "arpu",
@@ -398,8 +370,7 @@
     "format": "currency",
     "domain": "revenue",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "buyers",
@@ -411,8 +382,7 @@
     "format": "integer",
     "domain": "revenue",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "discount_value",
@@ -425,8 +395,7 @@
     "format": "currency",
     "domain": "revenue",
     "aggregation": "sum",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "discount_rate",
@@ -440,8 +409,7 @@
     "format": "percent",
     "domain": "revenue",
     "aggregation": "weighted",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "deferred_revenue",
@@ -454,22 +422,22 @@
     "format": "currency",
     "domain": "revenue",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "unused_session_liability",
     "label": "Unused session liability",
     "expression": "SUM(COALESCE(classes_left,remaining)*rev_credit)",
     "sources": [
+      "Lapsed.Remaining Sessions",
+      "Lapsed.Revenue Per Session",
       "Sales.Sec. Membership Classes Left",
       "Sales.Sec. Membership Revenue Per Event Credit Incl VAT"
     ],
     "format": "currency",
     "domain": "risk",
     "aggregation": "sum",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "membership_rev_share",
@@ -482,8 +450,7 @@
     "format": "percent",
     "domain": "revenue",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "paid_attendance",
@@ -496,8 +463,7 @@
     "format": "integer",
     "domain": "attendance",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "non_paid_rate",
@@ -510,8 +476,7 @@
     "format": "percent",
     "domain": "attendance",
     "aggregation": "weighted",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "membership_att_share",
@@ -526,8 +491,7 @@
     "format": "percent",
     "domain": "attendance",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "intro_penetration",
@@ -540,8 +504,7 @@
     "format": "decimal",
     "domain": "attendance",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "new_clients",
@@ -553,8 +516,7 @@
     "format": "integer",
     "domain": "growth",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "conversion_rate",
@@ -568,8 +530,7 @@
     "format": "percent",
     "domain": "growth",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "second_visit_rate",
@@ -583,8 +544,7 @@
     "format": "percent",
     "domain": "growth",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "zero_return_rate",
@@ -598,8 +558,7 @@
     "format": "percent",
     "domain": "growth",
     "aggregation": "weighted",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "avg_conversion_span",
@@ -613,8 +572,7 @@
     "format": "days",
     "domain": "growth",
     "aggregation": "avg",
-    "higherIsBetter": false,
-    "minSample": 3
+    "higherIsBetter": false
   },
   {
     "id": "median_conversion_span",
@@ -628,8 +586,7 @@
     "format": "days",
     "domain": "growth",
     "aggregation": "median",
-    "higherIsBetter": false,
-    "minSample": 3
+    "higherIsBetter": false
   },
   {
     "id": "avg_ltv",
@@ -642,8 +599,7 @@
     "format": "currency",
     "domain": "growth",
     "aggregation": "avg",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "first_visitors",
@@ -656,8 +612,7 @@
     "format": "integer",
     "domain": "growth",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "new_converted",
@@ -670,8 +625,7 @@
     "format": "integer",
     "domain": "growth",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "new_retained",
@@ -684,8 +638,7 @@
     "format": "integer",
     "domain": "growth",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "new_total_spend",
@@ -698,8 +651,7 @@
     "format": "currency",
     "domain": "revenue",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "new_post_trial_spend",
@@ -712,8 +664,7 @@
     "format": "currency",
     "domain": "revenue",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "new_post_trial_purchases",
@@ -726,8 +677,7 @@
     "format": "integer",
     "domain": "growth",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "new_total_purchases",
@@ -740,8 +690,7 @@
     "format": "integer",
     "domain": "growth",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "new_visits",
@@ -754,8 +703,7 @@
     "format": "integer",
     "domain": "attendance",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "new_revenue_per_visit",
@@ -769,24 +717,23 @@
     "format": "currency",
     "domain": "revenue",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "new_late_cancels",
     "label": "Late cancellations",
-    "expression": "CAST(NULL AS DOUBLE)",
+    "expression": "(SELECT COUNT(*) FROM (SELECT member_id AS booking_member_id, late_cancelled AS booking_late FROM bookings) b WHERE b.booking_late>0 AND list_contains(LIST(DISTINCT member_id) FILTER (WHERE is_new AND member_id IS NOT NULL),b.booking_member_id))",
     "sources": [
-      "Bookings.Late Cancelled",
-      "Bookings.Member Id",
       "New.Member Id",
-      "New.Is New"
+      "New.Is New",
+      "New.First Visit Date",
+      "Bookings.Member Id",
+      "Bookings.Late Cancelled"
     ],
     "format": "integer",
     "domain": "risk",
     "aggregation": "sum",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "avg_first_purchase",
@@ -800,8 +747,7 @@
     "format": "currency",
     "domain": "growth",
     "aggregation": "avg",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "ltv_to_first_purchase",
@@ -816,8 +762,7 @@
     "format": "ratio",
     "domain": "growth",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "retention_rate",
@@ -830,8 +775,7 @@
     "format": "percent",
     "domain": "growth",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "active_base",
@@ -844,8 +788,7 @@
     "format": "integer",
     "domain": "growth",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "at_risk_actives",
@@ -858,8 +801,7 @@
     "format": "integer",
     "domain": "risk",
     "aggregation": "sum",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "visits_post_trial",
@@ -871,8 +813,7 @@
     "format": "integer",
     "domain": "growth",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "active_memberships",
@@ -886,8 +827,7 @@
     "format": "integer",
     "domain": "risk",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "churn_rate",
@@ -901,8 +841,7 @@
     "format": "percent",
     "domain": "risk",
     "aggregation": "weighted",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "lapsed_members",
@@ -919,22 +858,20 @@
     "format": "integer",
     "domain": "risk",
     "aggregation": "sum",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "utilisation",
     "label": "Membership utilisation",
     "expression": "SUM(session_limit-remaining) FILTER (WHERE session_limit>0 AND remaining BETWEEN 0 AND session_limit)/NULLIF(SUM(session_limit) FILTER (WHERE session_limit>0 AND remaining BETWEEN 0 AND session_limit),0)",
     "sources": [
-      "Lapsed \u2192 Sessions Limit",
-      "Lapsed \u2192 Remaining Sessions"
+      "Lapsed.Sessions Limit",
+      "Lapsed.Remaining Sessions"
     ],
     "format": "percent",
     "domain": "risk",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "zero_usage_memberships",
@@ -951,8 +888,7 @@
     "format": "integer",
     "domain": "risk",
     "aggregation": "sum",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "dormant_actives",
@@ -967,8 +903,7 @@
     "format": "integer",
     "domain": "risk",
     "aggregation": "sum",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "revenue_at_risk_30d",
@@ -982,8 +917,7 @@
     "format": "currency",
     "domain": "risk",
     "aggregation": "sum",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "risk_score",
@@ -1000,8 +934,7 @@
     "format": "decimal",
     "domain": "risk",
     "aggregation": "avg",
-    "higherIsBetter": false,
-    "minSample": 3
+    "higherIsBetter": false
   },
   {
     "id": "memberships_count",
@@ -1013,8 +946,7 @@
     "format": "integer",
     "domain": "risk",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "remaining_sessions",
@@ -1026,8 +958,7 @@
     "format": "integer",
     "domain": "risk",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "days_absent",
@@ -1039,8 +970,7 @@
     "format": "days",
     "domain": "risk",
     "aggregation": "avg",
-    "higherIsBetter": false,
-    "minSample": 3
+    "higherIsBetter": false
   },
   {
     "id": "bookings",
@@ -1052,8 +982,7 @@
     "format": "integer",
     "domain": "attendance",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "unique_bookers",
@@ -1065,8 +994,7 @@
     "format": "integer",
     "domain": "attendance",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "booking_avg_class_size",
@@ -1074,13 +1002,18 @@
     "expression": "COUNT(*) FILTER (WHERE attended)/NULLIF(COUNT(DISTINCT COALESCE(session_id,unique_id1,unique_id2,date||'|'||time||'|'||format||'|'||location)),0)",
     "sources": [
       "Bookings.Attended",
-      "Bookings.Session Date"
+      "Bookings.Session ID",
+      "Bookings.UniqueID1",
+      "Bookings.UniqueID2",
+      "Bookings.Session Date",
+      "Bookings.Time",
+      "Bookings.Class",
+      "Bookings.Location"
     ],
     "format": "decimal",
     "domain": "attendance",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "booking_empty_sessions",
@@ -1088,78 +1021,78 @@
     "expression": "COUNT(DISTINCT COALESCE(session_id,unique_id1,unique_id2,date||'|'||time||'|'||format||'|'||location)) - COUNT(DISTINCT CASE WHEN attended THEN COALESCE(session_id,unique_id1,unique_id2,date||'|'||time||'|'||format||'|'||location) END)",
     "sources": [
       "Bookings.Attended",
-      "Bookings.Session Date"
+      "Bookings.Session ID",
+      "Bookings.UniqueID1",
+      "Bookings.UniqueID2",
+      "Bookings.Session Date",
+      "Bookings.Time",
+      "Bookings.Class",
+      "Bookings.Location"
     ],
     "format": "integer",
     "domain": "attendance",
     "aggregation": "sum",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "cancellation_rate",
     "label": "Cancellation rate",
     "expression": "(COUNT(*) FILTER (WHERE cancelled)) / NULLIF((COUNT(*)),0)",
     "sources": [
-      "Bookings.Cancellation rate"
+      "Bookings.Cancelled"
     ],
     "format": "percent",
     "domain": "attendance",
     "aggregation": "weighted",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "booking_late_rate",
-    "label": "Late-cancel rate",
+    "label": "Booking late-cancel rate",
     "expression": "(COUNT(*) FILTER (WHERE late_cancelled>0)) / NULLIF((COUNT(*)),0)",
     "sources": [
-      "Bookings.Late-cancel rate"
+      "Bookings.Late Cancelled"
     ],
     "format": "percent",
     "domain": "attendance",
     "aggregation": "weighted",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "booking_no_show_rate",
     "label": "No-show rate",
     "expression": "(COUNT(*) FILTER (WHERE no_show)) / NULLIF((COUNT(*)),0)",
     "sources": [
-      "Bookings.No-show rate"
+      "Bookings.No Show"
     ],
     "format": "percent",
     "domain": "attendance",
     "aggregation": "weighted",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "booking_attendance_rate",
     "label": "Attended share",
     "expression": "(COUNT(*) FILTER (WHERE attended)) / NULLIF((COUNT(*)),0)",
     "sources": [
-      "Bookings.Attended share"
+      "Bookings.Attended"
     ],
     "format": "percent",
     "domain": "attendance",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "refund_rate",
     "label": "Refund rate",
     "expression": "(COUNT(*) FILTER (WHERE refunded)) / NULLIF((COUNT(*)),0)",
     "sources": [
-      "Bookings.Refund rate"
+      "Bookings.Refunded"
     ],
     "format": "percent",
     "domain": "attendance",
     "aggregation": "weighted",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "effective_attendance",
@@ -1174,8 +1107,7 @@
     "format": "percent",
     "domain": "attendance",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "booking_lead_time_days",
@@ -1188,12 +1120,11 @@
     "format": "days",
     "domain": "attendance",
     "aggregation": "avg",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "same_day_share",
-    "label": "Same-day bookings",
+    "label": "Bookings within 24 hours",
     "expression": "(COUNT(*) FILTER (WHERE lead_time>=0 AND lead_time<1)) / NULLIF((COUNT(*) FILTER (WHERE NOT imported)),0)",
     "sources": [
       "Bookings.Session Date",
@@ -1202,8 +1133,7 @@
     "format": "percent",
     "domain": "attendance",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "revenue_per_booking",
@@ -1215,8 +1145,7 @@
     "format": "currency",
     "domain": "revenue",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "leads",
@@ -1228,8 +1157,7 @@
     "format": "integer",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "lead_conversion_rate",
@@ -1241,8 +1169,7 @@
     "format": "percent",
     "domain": "people",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "response_time_hours",
@@ -1255,8 +1182,7 @@
     "format": "decimal",
     "domain": "people",
     "aggregation": "avg",
-    "higherIsBetter": false,
-    "minSample": 3
+    "higherIsBetter": false
   },
   {
     "id": "untouched_leads",
@@ -1271,8 +1197,7 @@
     "format": "integer",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": false,
-    "minSample": 3
+    "higherIsBetter": false
   },
   {
     "id": "touches",
@@ -1287,8 +1212,7 @@
     "format": "decimal",
     "domain": "people",
     "aggregation": "avg",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "open_leads",
@@ -1301,8 +1225,7 @@
     "format": "integer",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "pipeline_value",
@@ -1310,13 +1233,15 @@
     "expression": "(COUNT(*) FILTER (WHERE lower(trim(COALESCE(stage,'')))<>'membership sold' AND (status NOT IN ('Lost','Disqualified') OR status IS NULL)))*(COUNT(*) FILTER (WHERE lower(trim(stage))='membership sold'))::DOUBLE/NULLIF(COUNT(*),0)*(SELECT AVG(first_purchase) FROM new WHERE is_new)",
     "sources": [
       "Leads.Stage Name",
-      "New.First Purchase Value"
+      "Leads.Status",
+      "New.First Purchase Value",
+      "New.Is New",
+      "New.Conversion Status"
     ],
     "format": "currency",
     "domain": "people",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "checkins",
@@ -1328,8 +1253,7 @@
     "format": "integer",
     "domain": "attendance",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "unique_attendees",
@@ -1342,8 +1266,7 @@
     "format": "integer",
     "domain": "attendance",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "attendance_avg_class_size",
@@ -1356,8 +1279,7 @@
     "format": "decimal",
     "domain": "attendance",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "attendance_empty_sessions",
@@ -1370,8 +1292,7 @@
     "format": "integer",
     "domain": "attendance",
     "aggregation": "sum",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "visits_per_member",
@@ -1384,8 +1305,7 @@
     "format": "decimal",
     "domain": "attendance",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "complimentary_rate",
@@ -1398,8 +1318,7 @@
     "format": "percent",
     "domain": "attendance",
     "aggregation": "weighted",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "revenue_per_checkin",
@@ -1412,8 +1331,7 @@
     "format": "currency",
     "domain": "revenue",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "teaching_hours",
@@ -1425,8 +1343,7 @@
     "format": "decimal",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "revenue_per_hour",
@@ -1439,8 +1356,7 @@
     "format": "currency",
     "domain": "people",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "trainers",
@@ -1452,12 +1368,11 @@
     "format": "integer",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "teacher_dependency",
-    "label": "Single-trainer dependence",
+    "label": "Maximum listed-instructor share",
     "expression": "MAX(teacher_dependency)",
     "sources": [
       "Recurring.Top5Trainers"
@@ -1465,12 +1380,11 @@
     "format": "percent",
     "domain": "people",
     "aggregation": "last",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "trainer_depth",
-    "label": "Trainer depth",
+    "label": "Maximum listed-instructor count",
     "expression": "MAX(trainer_depth)",
     "sources": [
       "Recurring.Top5Trainers"
@@ -1478,8 +1392,7 @@
     "format": "integer",
     "domain": "people",
     "aggregation": "last",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "payroll_revenue",
@@ -1491,8 +1404,7 @@
     "format": "currency",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "payroll_cost",
@@ -1505,8 +1417,7 @@
     "format": "currency",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "contribution",
@@ -1520,8 +1431,7 @@
     "format": "currency",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "contribution_margin",
@@ -1535,8 +1445,7 @@
     "format": "percent",
     "domain": "people",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "payroll_pct_of_revenue",
@@ -1550,8 +1459,7 @@
     "format": "percent",
     "domain": "people",
     "aggregation": "weighted",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "empty_session_cost",
@@ -1564,8 +1472,7 @@
     "format": "currency",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "break_even_class_size",
@@ -1579,8 +1486,7 @@
     "format": "decimal",
     "domain": "people",
     "aggregation": "weighted",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "payroll_conversion",
@@ -1593,8 +1499,7 @@
     "format": "percent",
     "domain": "people",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "payroll_retention",
@@ -1607,8 +1512,7 @@
     "format": "percent",
     "domain": "people",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "new_handled",
@@ -1620,8 +1524,7 @@
     "format": "integer",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "records",
@@ -1633,8 +1536,7 @@
     "format": "integer",
     "domain": "attendance",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 1
+    "higherIsBetter": true
   },
   {
     "id": "draw_premium_pp",
@@ -1646,13 +1548,13 @@
       "Sessions.Location",
       "Sessions.Class",
       "Sessions.Day",
-      "Sessions.Time"
+      "Sessions.Time",
+      "Sessions.Trainer"
     ],
     "format": "percent",
     "domain": "people",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "booking_attended",
@@ -1664,8 +1566,7 @@
     "format": "integer",
     "domain": "attendance",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "booking_cancelled",
@@ -1677,8 +1578,7 @@
     "format": "integer",
     "domain": "attendance",
     "aggregation": "sum",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "booking_no_shows",
@@ -1690,8 +1590,7 @@
     "format": "integer",
     "domain": "attendance",
     "aggregation": "sum",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "booking_late_cancelled",
@@ -1703,8 +1602,7 @@
     "format": "integer",
     "domain": "attendance",
     "aggregation": "sum",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "membership_revenue",
@@ -1716,8 +1614,7 @@
     "format": "currency",
     "domain": "risk",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "checkin_revenue",
@@ -1729,8 +1626,7 @@
     "format": "currency",
     "domain": "revenue",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "payroll_revenue_per_session",
@@ -1743,8 +1639,7 @@
     "format": "currency",
     "domain": "people",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "nonempty_reliability",
@@ -1757,8 +1652,7 @@
     "format": "percent",
     "domain": "attendance",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "active_slots",
@@ -1773,8 +1667,7 @@
     "format": "integer",
     "domain": "attendance",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "gap_to_break_even",
@@ -1789,8 +1682,7 @@
     "format": "decimal",
     "domain": "people",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "booking_pending",
@@ -1805,8 +1697,7 @@
     "format": "integer",
     "domain": "attendance",
     "aggregation": "sum",
-    "higherIsBetter": false,
-    "minSample": 1
+    "higherIsBetter": false
   },
   {
     "id": "converted_leads",
@@ -1818,8 +1709,7 @@
     "format": "integer",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "trials_completed",
@@ -1831,8 +1721,7 @@
     "format": "integer",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "complimentary_visits",
@@ -1844,8 +1733,7 @@
     "format": "integer",
     "domain": "attendance",
     "aggregation": "sum",
-    "higherIsBetter": false,
-    "minSample": 1
+    "higherIsBetter": false
   },
   {
     "id": "session_complimentary_rate",
@@ -1858,22 +1746,26 @@
     "format": "percent",
     "domain": "attendance",
     "aggregation": "weighted",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   },
   {
     "id": "late_affected_sessions",
     "label": "Affected sessions",
     "expression": "COUNT(DISTINCT COALESCE(session_id,unique_id1,unique_id2,date||'|'||time||'|'||format||'|'||location)) FILTER (WHERE late_cancelled>0)",
     "sources": [
+      "Bookings.Session ID",
+      "Bookings.UniqueID1",
+      "Bookings.UniqueID2",
       "Bookings.Session Date",
+      "Bookings.Time",
+      "Bookings.Class",
+      "Bookings.Location",
       "Bookings.Late Cancelled"
     ],
     "format": "integer",
     "domain": "attendance",
     "aggregation": "sum",
     "higherIsBetter": false,
-    "minSample": 5,
     "description": "Distinct source sessions with at least one late cancellation in this scope."
   },
   {
@@ -1888,7 +1780,6 @@
     "domain": "attendance",
     "aggregation": "sum",
     "higherIsBetter": false,
-    "minSample": 5,
     "description": "Source sale values attributed to late-cancelled booking rows, excluding imported rows. This is not lost cash or a cancellation fee."
   },
   {
@@ -1896,13 +1787,15 @@
     "label": "Followed-up leads",
     "expression": "COUNT(*) FILTER (WHERE touches>0)",
     "sources": [
-      "Leads.Follow Up 1 Date"
+      "Leads.Follow Up 1 Date",
+      "Leads.Follow Up 2 Date",
+      "Leads.Follow Up 3 Date",
+      "Leads.Follow Up 4 Date"
     ],
     "format": "integer",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "website_trials",
@@ -1914,8 +1807,7 @@
     "format": "integer",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "website_members",
@@ -1927,8 +1819,7 @@
     "format": "integer",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "website_retained",
@@ -1940,60 +1831,66 @@
     "format": "integer",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "website_trial_members",
     "label": "Converted trial leads",
     "expression": "COUNT(*) FILTER (WHERE lower(trim(COALESCE(trial_status,'')))='trial completed' AND lower(trim(COALESCE(conversion,'')))='converted')",
     "sources": [
+      "Leads.Trial Status",
       "Leads.Conversion Status"
     ],
     "format": "integer",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "website_open",
     "label": "Open Website pipeline",
     "expression": "COUNT(*) FILTER (WHERE NOT (lower(trim(COALESCE(conversion,'')))='converted') AND (status NOT IN ('Lost','Disqualified') OR status IS NULL))",
     "sources": [
-      "Leads.Conversion Status"
+      "Leads.Conversion Status",
+      "Leads.Status"
     ],
     "format": "integer",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "website_untouched",
     "label": "Untouched Website leads",
     "expression": "COUNT(*) FILTER (WHERE touches=0 AND date_diff('hour',TRY_CAST(date AS TIMESTAMP),TIMESTAMP '{today}')>48 AND NOT (lower(trim(COALESCE(conversion,'')))='converted') AND (status NOT IN ('Lost','Disqualified') OR status IS NULL))",
     "sources": [
-      "Leads.Follow Up 1 Date"
+      "Leads.Follow Up 1 Date",
+      "Leads.Follow Up 2 Date",
+      "Leads.Follow Up 3 Date",
+      "Leads.Follow Up 4 Date",
+      "Leads.Created At",
+      "Leads.Conversion Status",
+      "Leads.Status"
     ],
     "format": "integer",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "website_contact_rate",
     "label": "Followed-up rate",
     "expression": "(COUNT(*) FILTER (WHERE touches>0)) / NULLIF((COUNT(*)),0)",
     "sources": [
-      "Leads.Follow Up 1 Date"
+      "Leads.Follow Up 1 Date",
+      "Leads.Follow Up 2 Date",
+      "Leads.Follow Up 3 Date",
+      "Leads.Follow Up 4 Date"
     ],
     "format": "percent",
     "domain": "people",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "website_trial_rate",
@@ -2005,8 +1902,7 @@
     "format": "percent",
     "domain": "people",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "website_win_rate",
@@ -2018,8 +1914,7 @@
     "format": "percent",
     "domain": "people",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "website_trial_win_rate",
@@ -2032,8 +1927,7 @@
     "format": "percent",
     "domain": "people",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "website_ltv",
@@ -2046,8 +1940,7 @@
     "format": "currency",
     "domain": "revenue",
     "aggregation": "avg",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "website_pipeline_value",
@@ -2055,13 +1948,15 @@
     "expression": "(COUNT(*) FILTER (WHERE NOT (lower(trim(COALESCE(conversion,'')))='converted') AND (status NOT IN ('Lost','Disqualified') OR status IS NULL)))*(COUNT(*) FILTER (WHERE lower(trim(COALESCE(conversion,'')))='converted'))::DOUBLE/NULLIF(COUNT(*),0)*(SELECT AVG(first_purchase) FROM new WHERE is_new)",
     "sources": [
       "Leads.Conversion Status",
-      "New.First Purchase Value"
+      "Leads.Status",
+      "New.First Purchase Value",
+      "New.Is New",
+      "New.Conversion Status"
     ],
     "format": "currency",
     "domain": "revenue",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "meta_records",
@@ -2073,8 +1968,7 @@
     "format": "integer",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "meta_spend",
@@ -2086,8 +1980,7 @@
     "format": "currency",
     "domain": "revenue",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "meta_impressions",
@@ -2099,8 +1992,7 @@
     "format": "integer",
     "domain": "growth",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "meta_reach",
@@ -2112,8 +2004,7 @@
     "format": "integer",
     "domain": "growth",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "meta_clicks",
@@ -2125,8 +2016,7 @@
     "format": "integer",
     "domain": "growth",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "meta_link_clicks",
@@ -2138,8 +2028,7 @@
     "format": "integer",
     "domain": "growth",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "meta_leads",
@@ -2151,8 +2040,7 @@
     "format": "integer",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "meta_instant_leads",
@@ -2164,8 +2052,7 @@
     "format": "integer",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "meta_purchases",
@@ -2177,8 +2064,7 @@
     "format": "integer",
     "domain": "revenue",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "meta_purchase_value",
@@ -2190,8 +2076,7 @@
     "format": "currency",
     "domain": "revenue",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "meta_add_to_cart",
@@ -2203,8 +2088,7 @@
     "format": "integer",
     "domain": "growth",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "meta_checkout",
@@ -2216,8 +2100,7 @@
     "format": "integer",
     "domain": "growth",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "meta_ctr",
@@ -2230,8 +2113,7 @@
     "format": "percent",
     "domain": "growth",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "meta_cpc",
@@ -2244,8 +2126,7 @@
     "format": "currency",
     "domain": "revenue",
     "aggregation": "weighted",
-    "higherIsBetter": false,
-    "minSample": 3
+    "higherIsBetter": false
   },
   {
     "id": "meta_cpm",
@@ -2258,8 +2139,7 @@
     "format": "currency",
     "domain": "revenue",
     "aggregation": "weighted",
-    "higherIsBetter": false,
-    "minSample": 3
+    "higherIsBetter": false
   },
   {
     "id": "meta_cpl",
@@ -2272,8 +2152,7 @@
     "format": "currency",
     "domain": "revenue",
     "aggregation": "weighted",
-    "higherIsBetter": false,
-    "minSample": 3
+    "higherIsBetter": false
   },
   {
     "id": "meta_cpa",
@@ -2286,8 +2165,7 @@
     "format": "currency",
     "domain": "revenue",
     "aggregation": "weighted",
-    "higherIsBetter": false,
-    "minSample": 3
+    "higherIsBetter": false
   },
   {
     "id": "meta_roas",
@@ -2300,8 +2178,7 @@
     "format": "ratio",
     "domain": "revenue",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "meta_frequency",
@@ -2314,8 +2191,7 @@
     "format": "ratio",
     "domain": "revenue",
     "aggregation": "weighted",
-    "higherIsBetter": false,
-    "minSample": 3
+    "higherIsBetter": false
   },
   {
     "id": "crm_trials",
@@ -2327,8 +2203,7 @@
     "format": "integer",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "crm_members",
@@ -2340,8 +2215,7 @@
     "format": "integer",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "crm_retained",
@@ -2353,8 +2227,7 @@
     "format": "integer",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "crm_win_rate",
@@ -2366,8 +2239,7 @@
     "format": "percent",
     "domain": "people",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "crm_google_leads",
@@ -2380,8 +2252,7 @@
     "format": "integer",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "crm_meta_leads",
@@ -2394,8 +2265,7 @@
     "format": "integer",
     "domain": "people",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 3
+    "higherIsBetter": true
   },
   {
     "id": "purchase_frequency",
@@ -2408,21 +2278,20 @@
     "format": "decimal",
     "domain": "revenue",
     "aggregation": "weighted",
-    "higherIsBetter": true,
-    "minSample": 5
+    "higherIsBetter": true
   },
   {
     "id": "product_breadth",
     "label": "Distinct products sold",
     "expression": "COUNT(DISTINCT product)",
     "sources": [
-      "Sales.Product"
+      "Sales.Cleaned Product",
+      "Sales.Sale Item"
     ],
     "format": "integer",
     "domain": "revenue",
     "aggregation": "sum",
-    "higherIsBetter": true,
-    "minSample": 1
+    "higherIsBetter": true
   },
   {
     "id": "lapsed_memberships",
@@ -2440,7 +2309,6 @@
     "format": "integer",
     "domain": "risk",
     "aggregation": "sum",
-    "higherIsBetter": false,
-    "minSample": 5
+    "higherIsBetter": false
   }
 ]

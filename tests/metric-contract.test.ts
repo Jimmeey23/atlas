@@ -17,9 +17,10 @@ test('contracts state adverse direction, basis and lookalikes', () => {
   assert.ok(metricContract('retention_rate').includes('second_visit_rate'));
   assert.ok(metricContract('active_base').includes('current snapshot'));
 });
-test('reading guide flags adverse and thin-sample measures', () => {
+test('reading guide flags adverse measures without imposing a fixed sample cutoff', () => {
   const guide = readingGuide(['no_show_rate', 'fill_rate', 'conversion_rate'], 2);
   assert.ok(guide.includes('no_show_rate'));
   assert.doesNotMatch(guide, /Lower is better[^\n]*fill_rate/);
-  assert.ok(guide.includes('below the minimum sample'));
+  assert.doesNotMatch(guide, /below the minimum sample|low confidence/);
+  assert.match(metricContract('fill_rate'), /full eligible filtered dataset/);
 });

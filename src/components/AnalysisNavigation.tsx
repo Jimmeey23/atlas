@@ -17,11 +17,6 @@ export function AnalysisNavigation() {
       >
         Forward / redo →
       </button>
-      <button
-        onClick={() => window.dispatchEvent(new Event("atlas-open-analysis"))}
-      >
-        Advanced analysis
-      </button>
       <span className="analysis-global-scope">
         Global scope · {store.filters.from || "All dates"} —{" "}
         {store.filters.to || "latest"}

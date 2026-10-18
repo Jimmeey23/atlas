@@ -1,3 +1,4 @@
+import { retentionSnapshotSQL } from './metric-consistency';
 import { compileFilters } from "./advanced-controls";
 import { sqlTypes } from "./normalise";
 import { newSheetFields } from "./new-fields";
@@ -15,7 +16,8 @@ export const today = () =>
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
-export const context = (filters = useStore.getState().filters, transient = useStore.getState().transient): QueryContext => ({
+export const context = (filters = useStore.getState().filters, transient = useStore.getState().transient, source = "sessions"): QueryContext => ({
+  source,
   rate: useStore.getState().rate,
   today: today(),
   newWhere: where(filters, "new", transient),
@@ -134,7 +136,7 @@ export function monthlyHistorySQL(tab: number, ids: string[], filters: Filters, 
   const cross = historicalTransient(transient);
   const historicalIds = ids.filter(id => !currentSnapshotMetrics.has(id));
   const aggregates = [
-    ...(historicalIds.length ? [metricSQL(historicalIds, context(history, cross))] : []),
+    ...(historicalIds.length ? [metricSQL(historicalIds, context(history, cross, source))] : []),
     ...ids.filter(id => currentSnapshotMetrics.has(id)).map(id => `NULL AS "${id}"`),
   ].join(",");
   const month = source === "lapsed" ? "SUBSTR(end_date,1,7)" : "month";
@@ -180,7 +182,7 @@ async function performAnalysis(
   );
   const w = where(filters, b.source);
   const prev = comparison(filters, compare === "none" ? "prior" : compare);
-  const aggregate = metricSQL(ids, context(filters));
+  const aggregate = metricSQL(ids, context(filters, useStore.getState().transient, b.source));
   // Any real, non-sensitive column of the table may be grouped; identifiers are validated, never trusted.
   const parts = [...new Set(groups)].filter((g) => groupable(g) || allowed.includes(g));
   const groupExpressions = parts.map((g) => `COALESCE(${groupable(g) ? groupColumn(g) : `"${g}"`},'Unspecified')`);
@@ -189,18 +191,18 @@ async function performAnalysis(
   const end = new Date(today() + "T00:00:00Z");
   end.setUTCDate(0);
   const wide = { ...filters, from: "", to: end.toISOString().slice(0, 10) };
-  const rollup = (f: Filters, ctx = context(f)) =>
+  const rollup = (f: Filters, ctx = context(f, useStore.getState().transient, b.source)) =>
     `SELECT ${groupExpressions.map((g, i) => `${g} AS g${i}`).join(",")}, ${metricSQL(ids, ctx)}, ${sample} AS n, GROUPING_ID(${groupExpressions.join(",")}) AS level FROM ${facts(f)} GROUP BY ROLLUP(${groupExpressions.join(",")}) HAVING GROUPING_ID(${groupExpressions.join(",")}) < ${2 ** parts.length - 1} ORDER BY level DESC,g0 LIMIT 50000`;
   const [total, previous, groupRows, previousGroups, trend, heat, raw] = await Promise.all([
     query(
       `SELECT ${aggregate},${sample} AS n,COUNT(*) AS records_n FROM ${facts(filters)}`,
     ),
-    query(`SELECT ${metricSQL(ids, context(prev))}, ${sample} AS n FROM ${facts(prev)}`),
-    query(rollup(filters, context(filters))),
+    query(`SELECT ${metricSQL(ids, context(prev, useStore.getState().transient, b.source))}, ${sample} AS n FROM ${facts(prev)}`),
+    query(rollup(filters, context(filters, useStore.getState().transient, b.source))),
     // Skipped entirely when nothing is being compared against.
     compare === "none" ? Promise.resolve([] as Row[]) : query(rollup(prev)),
     query(
-      `SELECT ${b.source === "lapsed" ? "SUBSTR(end_date,1,7)" : "month"} AS month, ${metricSQL(ids, context(wide))},${sample} AS n FROM ${facts(wide)} ${["sessions", "sales", "checkins"].includes(b.source) || !where(wide, b.source) ? "WHERE" : "AND"} month IS NOT NULL GROUP BY ${b.source === "lapsed" ? "SUBSTR(end_date,1,7)" : "month"} ORDER BY month DESC LIMIT 14`,
+      `SELECT ${b.source === "lapsed" ? "SUBSTR(end_date,1,7)" : "month"} AS month, ${metricSQL(ids, context(wide, useStore.getState().transient, b.source))},${sample} AS n FROM ${facts(wide)} ${["sessions", "sales", "checkins"].includes(b.source) || !where(wide, b.source) ? "WHERE" : "AND"} month IS NOT NULL GROUP BY ${b.source === "lapsed" ? "SUBSTR(end_date,1,7)" : "month"} ORDER BY month DESC LIMIT 14`,
     ).then((r) => [...r].reverse()),
     query(
       `SELECT day,time,${aggregate},${sample} AS n FROM ${facts(filters)} GROUP BY day,time`,
@@ -264,19 +266,6 @@ async function performAnalysis(
     Object.assign(total[0],now[0]);Object.assign(previous[0],prior[0]);
     trend.forEach(row=>Object.assign(row,monthly.find(m=>m.month===row.month)||{}));
   }
-  if (tab === 5 && ids.includes("new_late_cancels")) {
-    // Late cancellations come from the Bookings sheet: every late-cancelled booking
-    // made by the newcomers in scope (matched on member ID), whenever it happened.
-    const lateCancels = (f: Filters) => `SELECT COUNT(*) FILTER (WHERE late_cancelled>0) AS new_late_cancels FROM bookings WHERE member_id IN (SELECT member_id FROM new${where(f, "new")}${where(f, "new") ? " AND" : " WHERE"} is_new AND member_id IS NOT NULL)`;
-    const [now, prior, monthly] = await Promise.all([
-      query(lateCancels(filters)),
-      query(lateCancels(prev)),
-      query(`SELECT n.month, COUNT(*) FILTER (WHERE b.late_cancelled>0) AS new_late_cancels FROM (SELECT DISTINCT member_id, month FROM new${where(wide, "new")}${where(wide, "new") ? " AND" : " WHERE"} is_new AND member_id IS NOT NULL) n JOIN bookings b USING (member_id) GROUP BY n.month`),
-    ]);
-    Object.assign(total[0], now[0]);
-    Object.assign(previous[0], prior[0]);
-    trend.forEach((row) => { row.new_late_cancels = monthly.find((m) => m.month === row.month)?.new_late_cancels ?? null; });
-  }
   if (tab === 6) {
     const currentIds = b.kpis.filter((id) => currentSnapshotMetrics.has(id));
     const currentFilters = { ...filters, from: "", to: "" };
@@ -284,14 +273,14 @@ async function performAnalysis(
     Object.assign(total[0], current[0]);
     currentIds.forEach((id) => { previous[0][id] = null; trend.forEach((row) => delete row[id]); });
     // Access dates let us rebuild running memberships and upcoming expiry value as of
-    // each month end. Status history is not recorded, so history uses dates alone; the
+    // each month end. Status history is not recorded; apply current known status rules
+    // consistently to every point. Historical status changes cannot be reconstructed; the
     // latest point is the status-aware current value so the line ends on the card.
     const months = trend.map((row) => String(row.month)).filter((m) => /^\d{4}-\d{2}$/.test(m));
     if (months.length) {
       const asOf = `LEAST(LAST_DAY(CAST(m.month || '-01' AS DATE)), DATE '${context().today}')`;
       const history = await query(`SELECT m.month,
-        COUNT(*) FILTER (WHERE status NOT IN ('Not Activated','Frozen') AND TRY_CAST(start_date AS DATE)<=${asOf} AND (end_date IS NULL OR TRY_CAST(end_date AS DATE)>=${asOf})) AS active_memberships,
-        SUM(amount_paid) FILTER (WHERE status<>'Not Activated' AND TRY_CAST(end_date AS DATE) BETWEEN ${asOf} AND ${asOf}+INTERVAL 30 DAY) AS revenue_at_risk_30d
+        ${retentionSnapshotSQL(asOf, context())}
         FROM (VALUES ${months.map((m) => `(${quote(m)})`).join(",")}) AS m(month) CROSS JOIN (SELECT * FROM lapsed${where(currentFilters, "lapsed")}) l
         GROUP BY m.month`);
       for (const row of trend) {

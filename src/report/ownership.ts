@@ -28,7 +28,7 @@ export function tabMetricIds(spec: ChapterSpec): string[] {
   if (spec.renewal) return Object.keys(renewalMeasures);
   const source = tabSource(spec);
   return Object.keys(metrics).filter(id => id !== "records" && !(spec.source === "recurring" && id === "draw_premium_pp") && metricTable(id) === source
-    && (spec.website ? id.startsWith("website_") : !id.startsWith("website_")));
+    && (spec.website ? id.startsWith("website_") : !id.startsWith("website_"))).map(id => spec.source === "recurring" && id === "sessions" ? "recurring_sessions" : id);
 }
 
 const explicit = (spec: ChapterSpec) => [...new Set([...spec.metrics, ...spec.history, ...spec.groups.flatMap(g => g.columns)])];

@@ -72,7 +72,7 @@ export function Secondary({
           )
         : w;
     query(
-      `SELECT ${groups.map((g, i) => `CAST("${g}" AS VARCHAR) AS ${i ? `g${i}` : "entity"}`).join(",")},${metricSQL(columns, context())},COUNT(*) AS n FROM ${metricFacts(state.filters, bp.source, [], effective)}${predicate ? (!["sessions", "sales", "checkins"].includes(bp.source) && effective ? " AND " : " WHERE ") + predicate : ""} GROUP BY ${groups.map((g) => `"${g}"`).join(",")} ORDER BY n DESC LIMIT 100`,
+      `SELECT ${groups.map((g, i) => `CAST("${g}" AS VARCHAR) AS ${i ? `g${i}` : "entity"}`).join(",")},${metricSQL(columns, context(state.filters, state.transient, bp.source))},COUNT(*) AS n FROM ${metricFacts(state.filters, bp.source, [], effective)}${predicate ? (!["sessions", "sales", "checkins"].includes(bp.source) && effective ? " AND " : " WHERE ") + predicate : ""} GROUP BY ${groups.map((g) => `"${g}"`).join(",")} ORDER BY n DESC LIMIT 100`,
     )
       .then((r) => {
         if (active) {

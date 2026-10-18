@@ -58,7 +58,7 @@ export function SalesScorecards({version,onDrill}:{version:number;onDrill:(entry
     onDrill({id:`sales-${kind}-${id}`,label:`${specs.find(s=>s.kind===kind)!.title} · ${labels[id]}`,source:'sales',filters,metrics:['transactions','buyers','gross_revenue','net_revenue','discount_value','discount_rate'],path:[],predicate:`source_row IN (SELECT source_row FROM (${facts}) WHERE ${terms.join(' AND ')})`,values:row||totals[kind]||{},children:[]});
   }
   return <>{specs.map(spec=>{
-    const control=controls[spec.kind]??{sort:spec.kind==='people_month'?'month':'gross_revenue',minimum:1,pageSize:25};
+    const control=controls[spec.kind]??{sort:spec.kind==='people_month'?'month':'gross_revenue',minimum:0,pageSize:25};
     const {sort,minimum,pageSize}=control;
     const updateControl=(change:Partial<typeof control>)=>{setControls(current=>({...current,[spec.kind]:{...control,...change}}));setPages(current=>({...current,[spec.kind]:0}));};
     const dims=dimsOf(spec.kind),[,setDims]=grouping[spec.kind],initial=[...salesScorecardDefaults[spec.kind]];
@@ -78,7 +78,7 @@ export function SalesScorecards({version,onDrill}:{version:number;onDrill:(entry
           </div>
           <details className="scorecard-options"><summary>Table options <span>Grouping, minimum sales & page size</span></summary><div className="scorecard-options-body">
             <GroupByPicker name={spec.title} value={dims} fields={fieldsFor(spec.kind)} defaults={initial} onChange={next=>{setDims(next.length?next:initial);setPages({...pages,[spec.kind]:0});}}/>
-            <div className="scorecard-display-options"><label>Minimum sales<input type="number" min="1" value={minimum} onChange={e=>updateControl({minimum:Math.max(1,Number(e.target.value))})}/></label><label>Rows per page<select value={pageSize} onChange={e=>updateControl({pageSize:Number(e.target.value)})}>{[10,25,50,100].map(n=><option key={n}>{n}</option>)}</select></label></div>
+            <div className="scorecard-display-options"><label>Minimum sales<input type="number" min="0" value={minimum} onChange={e=>updateControl({minimum:Math.max(0,Number(e.target.value)||0)})}/></label><label>Rows per page<select value={pageSize} onChange={e=>updateControl({pageSize:Number(e.target.value)})}>{[10,25,50,100].map(n=><option key={n}>{n}</option>)}</select></label></div>
           </div></details>
         </div>
         <div className="table-scroll sales-scorecard-table" aria-busy={loading} tabIndex={0} role="region" aria-label={`${spec.title}. Scroll for all columns.`}><table><thead><tr>{dims.map(d=><th scope="col" className="sales-dimension" key={d}>{headings[d]??groupLabel(d)}</th>)}{ids.map(id=><th scope="col" data-metric={id} key={id}>{labels[id]}</th>)}</tr></thead><tbody>{matching.slice(page*pageSize,(page+1)*pageSize).map((row,i)=><tr key={i}>{dims.map(d=><td className="sales-dimension" key={d}><button className={`scorecard-cell${d==='discount_code'?' sales-code':''}`} title={String(row[d]??'—')} onClick={()=>drill(spec.kind,row,'transactions')}>{row[d]??'—'}</button></td>)}{ids.map(id=><td data-metric={id} key={id}><button className="scorecard-cell" onClick={()=>drill(spec.kind,row,id)}>{text(id,row[id])}</button></td>)}</tr>)}</tbody><tfoot><tr><th scope="row" colSpan={dims.length}>Full scope total</th>{ids.map(id=><td data-metric={id} key={id}><button className="scorecard-cell" onClick={()=>drill(spec.kind,null,id)}>{text(id,totals[spec.kind]?.[id])}</button></td>)}</tr></tfoot></table></div>

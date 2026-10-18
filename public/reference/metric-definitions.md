@@ -2,9 +2,55 @@
 
 175 registered metrics; 11 configured source tabs. Generated from application source by scripts/build-metric-reference.ts.
 
+## Cross-tab consistency
+
+See [snapshot comparison evidence](metric-consistency.json). Same-source metrics were compared under matching scopes; different source bases remain distinct.
+
+## Before and after examples
+
+See [snapshot comparison](sample-size-comparison.md) for numerical examples and provenance.
+
+## Definition review: findings and remaining caveats
+
+### Corrected: Source lineage
+
+Booking-rate pseudo-columns, malformed utilisation references, product-count lineage, and the primary Retention source for unused-credit valuation were corrected. Missing secondary inputs were added.
+
+### Corrected: Population wording
+
+Active base counts identities with an Active row without latest-row ranking. Active memberships use status exclusions rather than a three-status whitelist. Expiring purchase value includes Frozen and future-start rows.
+
+### Corrected: Timing and eligibility
+
+Bookings within 24 hours replaces same-day wording. Payment eligibility includes missing status. Lapse definitions disclose End Date fallback. Retention and return-visit equality is not guaranteed.
+
+### Corrected: Aggregation and confidence
+
+Instructor-list metrics use MAX, not latest state. Renewal counts are additive counts, not weighted rates. Payroll contributing-observation units are teaching sessions. Fixed minimum-sample rules were removed.
+
+### Corrected: Full filtered dataset
+
+Fixed metric-level minimums, automatic low-sample badges and confidence restrictions were removed. Names no longer gain Derived merely for a sample threshold. User-selected group/session/transaction filters remain available and default to no sample cutoff.
+
+### Corrected: Cross-tab calculations
+
+Acquisition rates, LTV and conversion timing now follow the same newcomer eligibility as the shared registry. Acquisition and catalogue late cancellations share one distinct-member matched booking formula. Retention reconstructions use the same status predicates as current cards. AI queries skip filters on absent source fields; the all-time cross-source booking metric is explicitly unavailable in scoped AI queries.
+
+### Unverified source availability: Optional/missing configured columns
+
+Required Leads status/LTV/UTM fields and optional Sales membership-balance fields are absent from the configured column list. Normalization can read dynamic headers; live headers were not refreshed in this audit.
+
+### Remaining calculation caveat: Unequal coverage
+
+Some ratios use differing non-null populations. Revenue per hour can include revenue on rows without session IDs while hours require IDs; membership credit valuation can repeat balances. Retention history uses current status eligibility at earlier access dates; past status changes cannot be recovered. These need a separately governed numerical correction.
+
+### Coverage boundary: Specialist measures
+
+All 175 registry entries were inspected against formulas and normalization. The code appendix locates specialist implementations but is not an individually approved business definition for every local or user-generated measure. No live source totals were reconciled. Existing saved reports retain their frozen content until rebuilt.
+
 ## Reading the reference
 
-Registry entries below include the exact registered SQL, executable substitutions, source columns, aggregation, output unit, polarity, minimum sample and any declared target. Specialist calculations outside the registry are indexed by implementation file and output alias in the appendix. Those aliases include intermediate fields and dimensions as well as measures; they are not additional governed registry definitions.
+Registry entries below include the exact registered SQL, executable substitutions, source columns, aggregation, output unit, polarity, any declared target and user-filter policy. Specialist calculations outside the registry are indexed by implementation file and output alias in the appendix. Those aliases include intermediate fields and dimensions as well as measures; they are not additional governed registry definitions.
 
 ## Filters and dates
 
@@ -16,7 +62,7 @@ Weighted measures are computed from aggregate numerators and denominators, rathe
 
 ## Comparison and current stock
 
-Whole calendar months compare with whole months; arbitrary ranges use the configured comparison window. Active stock and current balance values cannot reconstruct historical stock. Targets and directionality are registry metadata, not proof of causation or business-policy approval. Minimum sample is a display/evidence guardrail, not a confidence interval.
+Whole calendar months compare with whole months; arbitrary ranges use the configured comparison window. Active stock and current balance values cannot reconstruct historical stock. Targets and directionality are registry metadata, not proof of causation or business-policy approval. Metrics use the full eligible filtered dataset. Definitions contain no fixed minimum sample size. Users may apply minimum group/session/transaction controls in the relevant app view. Mathematical validity and business eligibility rules still apply.
 
 ## Revenue and estimates
 
@@ -36,7 +82,7 @@ This is implementation documentation, not a live data extract. Source links iden
 
 [Open sheet](https://docs.google.com/spreadsheets/d/16wFlke0bHFcmfn-3UyuYlGnImBq0DY7ouVYAlAFTZys/edit#gid=2108019763)
 
-Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 
 Columns: TrainerID, FirstName, LastName, Trainer, SessionID, SessionName, Capacity, CheckedIn, LateCancelled, Booked, Complimentary, Location, Date, Day, Time, Revenue, NonPaid, UniqueID1, UniqueID2, Memberships, Packages, IntroOffers, SingleClasses, Type, Class, Classes
 
@@ -44,7 +90,7 @@ Columns: TrainerID, FirstName, LastName, Trainer, SessionID, SessionName, Capaci
 
 [Open sheet](https://docs.google.com/spreadsheets/d/16wFlke0bHFcmfn-3UyuYlGnImBq0DY7ouVYAlAFTZys/edit#gid=0)
 
-Recurring session date; do not use instructor-only slot baseline measures here.
+Recurring source date/month and aggregated schedule rows. MAX-based instructor list measures are not latest-state measures.
 
 Columns: TrainerID, FirstName, LastName, Trainer, SessionID, SessionName, Capacity, CheckedIn, LateCancelled, Booked, Complimentary, Location, Date, Day, Time, Revenue, NonPaid, UniqueID1, UniqueID2, Memberships, Packages, IntroOffers, SingleClasses, Type, Class, Classes, EmptySessions, NonEmptySessions, TotalCheckedInSum, TotalCapacitySum, TotalRevenueSum, ClassAvgInclEmpty, ClassAvgExclEmpty, FillRate, WeightedAverage, Top5Trainers
 
@@ -52,7 +98,7 @@ Columns: TrainerID, FirstName, LastName, Trainer, SessionID, SessionName, Capaci
 
 [Open sheet](https://docs.google.com/spreadsheets/d/16wFlke0bHFcmfn-3UyuYlGnImBq0DY7ouVYAlAFTZys/edit#gid=1778490418)
 
-See normalization.
+Teacher Recurring source date/month; aggregated instructor/schedule rows. sessions is the reported TotalSessions/Classes value, not source row count.
 
 Columns: TrainerID, FirstName, LastName, Trainer, SessionID, SessionName, Capacity, CheckedIn, LateCancelled, Booked, Complimentary, Location, Date, Day, Time, Revenue, NonPaid, UniqueID1, UniqueID2, Memberships, Packages, IntroOffers, SingleClasses, Type, Class, Classes, TotalSessions, EmptySessions, NonEmptySessions, TotalCheckedInSum, TotalCapacitySum, TotalRevenueSum, ClassAvgInclEmpty, ClassAvgExclEmpty, FillRate, WeightedAverage
 
@@ -60,7 +106,7 @@ Columns: TrainerID, FirstName, LastName, Trainer, SessionID, SessionName, Capaci
 
 [Open sheet](https://docs.google.com/spreadsheets/d/1HbGnJk-peffUp7XoXSlsL55924E9yUt8cP_h93cdTT0/edit#gid=0)
 
-Payment date; successful, non-voided payment lines. Membership balance is ranked once per membership within the selected sale cohort.
+Payment date; known voids are excluded, and Payment Status must be succeeded or missing. Missing void flags are accepted. Import exclusions follow the app toggle. Current membership balances are not historical balances.
 
 Columns: Member ID, Customer Name, Customer Email, Paying Member ID, Sale Item ID, Payment Date, Payment Value, Paid In Money, Credits, Payment VAT, Payment Status, Payment Method, Payment Transaction ID, Stripe Token, Sold By, Sale Reference, Calculated Location, Cleaned Product, Cleaned Category, Host Id, Purchase Type, Payment Source, Paid In Event Credits, Price Excluding VAT In Currency, Discount Value In Currency, Discount Code, Created At, Modified At, Sale ID, Sale Total Discount Value, Sale Item Quantity, Sale Item Unit Price Including VAT, Sale Item Unit Price Excluding VAT, Sale Item Unit VAT Amount, Sale Item Unit Discount Value, Sec. Is Voided, Sec. Membership ID, Sec. Membership Start Date, Sec. Membership End Date, Sec. Membership Total Classes, Sec. Membership Classes Left, Sec. Membership Total Money, Sec. Membership Money Left, Sec. Membership Type, Sec. Membership Is Freezed, Sec. Membership Used Session Credits, Sec. Membership Revenue Per Event Credit Incl VAT, Sec. Membership Activated On First Use, Sec. Membership Name
 
@@ -68,7 +114,7 @@ Columns: Member ID, Customer Name, Customer Email, Paying Member ID, Sale Item I
 
 [Open sheet](https://docs.google.com/spreadsheets/d/149ILDqovzZA6FRUJKOwzutWdVqmqWBtWPfzG3A0zxTI/edit#gid=1398234978)
 
-First-visit date cohort; latest source outcomes are distinct from dated conversion events.
+First Visit Date cohort. is_new=true uses normalized Is New labels/booleans. Latest reported statuses are not dated conversion events; row counts are not guaranteed distinct members.
 
 Columns: Member Id, First Name, Last Name, Email, Phone Number, First Visit Date, First Visit Entity Name, First Visit Type, First Visit Location, Payment Method, Membership Used, Home Location, Class No, Trainer Name, Is New, Visits Post Trial, Visits Post Trial Same Month, Late Cancellations Post Trial, Memberships Bought Post Trial, Purchase Count Post Trial, First Purchase Post Trial, First Purchase Value, Ltv, Retention Status, Conversion Status, First Purchase Date, No of Visits, Last Visit Date, Days Since Last Visit, Conversion Span (Days), Days To Second Visit, Unique Locations Visited Post Trial, Month Year, Source, Ltv Post Trial, Avg Purchase Value Post Trial, Last Purchase Date, Last Purchase Value, Total Purchases All Time, Days Active, Visits Per Month, Late Cancel Rate Post Trial, First Visit Day, First Visit Time Slot, Conversion Speed Bucket, Lifecycle Status
 
@@ -76,7 +122,7 @@ Columns: Member Id, First Name, Last Name, Email, Phone Number, First Visit Date
 
 [Open sheet](https://docs.google.com/spreadsheets/d/149ILDqovzZA6FRUJKOwzutWdVqmqWBtWPfzG3A0zxTI/edit#gid=1898477983)
 
-Calendar month; partial-month selections include corresponding payroll months; source amounts may be rounded.
+Calendar month from Month Year. Partial-month selections include corresponding full source months. Source revenue is monthly instructor attribution. Evidence n is SUM(sessions), not row count.
 
 Columns: Teacher ID, Teacher Name, Teacher Email, Location, Cycle Sessions, Empty Cycle Sessions, Non-Empty Cycle Sessions, Cycle Customers, Cycle Paid, Strength Sessions, Empty Strength Sessions, Non-Empty Strength Sessions, Strength Customers, Strength Paid, Barre Sessions, Empty Barre Sessions, Non-Empty Barre Sessions, Barre Customers, Barre Paid, Total Sessions, Total Empty Sessions, Total Non-Empty Sessions, Total Customers, Total Paid, Month Year, Unique Key, Converted, Conversion Rate, Retained, Retention Rate, New
 
@@ -84,7 +130,7 @@ Columns: Teacher ID, Teacher Name, Teacher Email, Location, Cycle Sessions, Empt
 
 [Open sheet](https://docs.google.com/spreadsheets/d/1x-0iFgnYmEqt-b2MfAgHVx5CErcX5NtZYB9p5Rh6f1I/edit#gid=0)
 
-Membership expiry date cohort; current-stock measures override date scope as stated.
+End Date expiry cohort for standard dated queries, although normalized date stores Purchase Date. Member-expiry-month renewal cohorts and latest-eligible-member lapse counts are separate populations.
 
 Columns: Member Name, Member ID, Member Email, Member Phone, Host ID, Status, Membership Name, Sessions Limit, Purchase Date, Start Date, End Date, Churned Date, Amount Paid, Discount Code, Discount Value, Original Amount (Before Discount), Sold By, Created By, Most Recent Visit Date, First Visit Date, Total Sessions Completed, Sessions Used %, Remaining Sessions, Total Cancellations, Late Cancellations, No Shows, Cancellation Rate %, Preferred Booking Method, Primary Location, Locations Attended, Membership Freeze Count, Days Frozen, Membership Duration (Days), Days Active, Days Since Last Visit, Average Sessions Per Month, Revenue Per Session, Attendance Rate %
 
@@ -92,7 +138,7 @@ Columns: Member Name, Member ID, Member Email, Member Phone, Host ID, Status, Me
 
 [Open sheet](https://docs.google.com/spreadsheets/d/1OO-Pk7P__1uqsRdmFZ82JBl4-LGPPr7MCTbwKgeLqL0/edit#gid=0)
 
-Booking/session date; outcome flags can overlap; exclusive outcome charts apply precedence.
+Session Date; one booking source row. Some views further restrict to late cancellations. Imported booking lead time is null. Flag-based counts can overlap; exclusive charts apply precedence.
 
 Columns: Member Id, Sale Date, Customer Name, Customer Email, Sale Value, Sale Item, Sale Id, Session Date, Payment Method, Membership Used, Stripe Token, Refunded, Vat, Location Name, Sold By, Cancelled, Late Cancelled, No Show, Trainer Id, Teacher Name, Cleaned Class, Attended, Class No, Is New, Day Of Week, Time Slot, Host Id, UniqueID1, UniqueID2
 
@@ -100,7 +146,7 @@ Columns: Member Id, Sale Date, Customer Name, Customer Email, Sale Value, Sale I
 
 [Open sheet](https://docs.google.com/spreadsheets/d/1dQMNF69WnXVQdhlLvUZTig3kL97NA21k6eZ9HRu6xiQ/edit#gid=256104486)
 
-Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 
 Columns: ID, Full Name, Phone Number, Email, Created At, Source ID, Source Name, Member ID, Converted To Customer At, Stage Name, Associate, Remarks, Follow Up 1 Date, Follow Up Comments (1), Follow Up 2 Date, Follow Up Comments (2), Follow Up 3 Date, Follow Up Comments (3), Follow Up 4 Date, Follow Up Comments (4), Center, Class Type, Host ID, Status, Channel, Period
 
@@ -108,7 +154,7 @@ Columns: ID, Full Name, Phone Number, Email, Created At, Source ID, Source Name,
 
 [Open sheet](https://docs.google.com/spreadsheets/d/1a7XKv2WCog7o8nYuV8YcFdqtfPYJNRO6DelJ6Hn_z6Q/edit#gid=0)
 
-Session date; one check-in row. Attendance-based revenue uses attended rows. Teaching duration is counted once per attended session with valid duration.
+Source Date or Date (IST); one check-in source row. attended is read from Attended, falling back to Checked In. Distinct session IDs, source rows and attended visits are different populations.
 
 Columns: Member ID, First Name, Last Name, Email, Order At, Paid, Payment Method Name, Checked In, Complementary, Is Late Cancelled, Session ID, Session Name, Capacity, Location, Date (IST), Day of Week, Time, Duration (Minutes), Teacher Name, Cleaned Product, Cleaned Category, Cleaned Class, Host ID, Month Year, Class No, Is New, UniqueID1, UniqueID2
 
@@ -116,26 +162,31 @@ Columns: Member ID, First Name, Last Name, Email, Order At, Paid, Payment Method
 
 [Open sheet](https://docs.google.com/spreadsheets/d/1mfZQlccKdAVHzkP2eo_HpHK6lZe6Y0oQbtaVS9o6aeI/edit#gid=1995330774)
 
-Meta reporting date; platform attribution and row-level reach are separate from CRM identities.
+Meta reporting date; account/network scope without studio identity. Row reach is summed rather than audience-deduplicated; CRM and platform attribution are separate.
 
 Columns: date, account_id, account_name, campaign_id, campaign_name, objective, adset_id, adset_name, ad_id, ad_name, publisher_platform, impressions, reach, frequency, spend, clicks, inline_link_clicks, ctr, cpc, cpm, leads, on_facebook_lead, purchases, purchase_value, add_to_cart, initiate_checkout, cpl, cpa, roas
 
 ## Studio sessions — sessions
 
-Studio sessions measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Source fields: Sessions.SessionID.
+The number of studio sessions in your filtered selection.
+
+How we calculate it: Count one per Sessions-sheet row. For summary sheets, add the session totals recorded on each row.
+
+Detailed definition: Number of studio sessions represented by the selected source rows. Sessions rows contribute one each; recurring and Payroll rows contribute their recorded session totals. This is not a distinct SessionID count.
 
 - Domain: attendance
 - Source: Sessions.SessionID
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.SessionID: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows.
 
@@ -153,20 +204,25 @@ SUM(sessions)
 
 ## Seats offered — capacity
 
-Seats offered measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Source fields: Sessions.Capacity.
+How many seats were offered across the selected sessions.
+
+How we calculate it: Add recorded seat capacities.
+
+Detailed definition: Total recorded seats offered across selected sessions; missing capacity values do not contribute.
 
 - Domain: attendance
 - Source: Sessions.Capacity
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.Capacity: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows.
 
@@ -184,20 +240,25 @@ SUM(capacity)
 
 ## Attendance — attendance
 
-Attendance measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Source fields: Sessions.CheckedIn.
+How many attendance visits were recorded across the selected sessions.
+
+How we calculate it: Add recorded check-ins; repeat visits count again.
+
+Detailed definition: Total recorded session check-ins, counting visits rather than distinct community members.
 
 - Domain: attendance
 - Source: Sessions.CheckedIn
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.CheckedIn: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows.
 
@@ -215,20 +276,25 @@ SUM(checked_in)
 
 ## Fill rate — fill_rate
 
-Attendees divided by available seats across the same sessions.
+The percentage of offered seats filled by attendance.
+
+How we calculate it: Total attendance divided by total offered seats, multiplied by 100.
+
+Detailed definition: Attendees divided by available seats across the same sessions.
 
 - Domain: attendance
 - Source: Sessions.CheckedIn; Sessions.Capacity
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: weighted
 - Unit: percent
 - Numerator / condition: Attendees
 - Denominator: Available seats
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.CheckedIn: Declared in configured source schema; live availability not verified · Sessions.Capacity: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -246,20 +312,25 @@ Runtime template (rate preview = 1):
 
 ## Booking fill — booking_fill_rate
 
-Booking fill measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Sessions.Booked; Sessions.Capacity.
+The percentage of offered seats reserved.
+
+How we calculate it: Total booked seats divided by total offered seats, multiplied by 100.
+
+Detailed definition: Recorded booked seats as a percentage of recorded offered seats across selected sessions; this measures reservations rather than attendance.
 
 - Domain: attendance
 - Source: Sessions.Booked; Sessions.Capacity
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: (SUM(capacity))
+- Numerator / condition: (SUM(booked))
+- Denominator: NULLIF((SUM(capacity)),0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.Booked: Declared in configured source schema; live availability not verified · Sessions.Capacity: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -277,20 +348,25 @@ Runtime template (rate preview = 1):
 
 ## Show-up rate — show_up_rate
 
-Show-up rate measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Sessions.CheckedIn; Sessions.Booked.
+Attendance compared with the number of booked seats.
+
+How we calculate it: Total attendance divided by total booked seats, multiplied by 100.
+
+Detailed definition: Recorded attendance divided by recorded booked seats, expressed as a percentage. Separate column totals can have different missing-value coverage.
 
 - Domain: attendance
 - Source: Sessions.CheckedIn; Sessions.Booked
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: (SUM(booked))
+- Numerator / condition: (SUM(checked_in))
+- Denominator: NULLIF((SUM(booked)),0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.CheckedIn: Declared in configured source schema; live availability not verified · Sessions.Booked: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -308,20 +384,25 @@ Runtime template (rate preview = 1):
 
 ## Booked seats — booked
 
-Booked seats measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Source fields: Sessions.Booked.
+How many seats were booked across the selected sessions.
+
+How we calculate it: Add recorded booked-seat counts.
+
+Detailed definition: Total booked seats recorded on the selected studio sessions, rather than distinct people or booking transaction rows.
 
 - Domain: attendance
 - Source: Sessions.Booked
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.Booked: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows.
 
@@ -339,20 +420,25 @@ SUM(booked)
 
 ## No-shows — no_shows
 
-No-shows measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Apply the conditional population/value rules shown in the formula. Source fields: Sessions.Booked; Sessions.CheckedIn; Sessions.LateCancelled.
+An estimate of booked seats left unused without a late cancellation.
+
+How we calculate it: For sessions with all inputs recorded, subtract attendance and late cancellations from bookings, use zero for negative results, then add.
+
+Detailed definition: Estimated unfulfilled bookings: for each session with all three counts present, booked seats less attendance less late cancellations, floored at zero. Sessions with a missing input are excluded.
 
 - Domain: attendance
 - Source: Sessions.Booked; Sessions.CheckedIn; Sessions.LateCancelled
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.Booked: Declared in configured source schema; live availability not verified · Sessions.CheckedIn: Declared in configured source schema; live availability not verified · Sessions.LateCancelled: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Apply the conditional population/value rules shown in the formula.
 
@@ -370,20 +456,25 @@ SUM(CASE WHEN booked IS NOT NULL AND checked_in IS NOT NULL AND late_cancelled I
 
 ## No-show rate — no_show_rate
 
-No-show rate measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Apply the conditional population/value rules shown in the formula. Source fields: Sessions.Booked; Sessions.CheckedIn; Sessions.LateCancelled.
+Estimated no-shows as a percentage of recorded bookings.
+
+How we calculate it: Estimated no-show seats divided by all recorded booked seats, multiplied by 100.
+
+Detailed definition: Estimated no-show seats as a percentage of all recorded booked seats. Missing attendance or late-cancel counts exclude a session from the numerator but not necessarily the booked-seat denominator.
 
 - Domain: attendance
 - Source: Sessions.Booked; Sessions.CheckedIn; Sessions.LateCancelled
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: SUM(booked)
+- Numerator / condition: SUM(CASE WHEN booked IS NOT NULL AND checked_in IS NOT NULL AND late_cancelled IS NOT NULL THEN GREATEST(booked-checked_in-late_cancelled,0) END)
+- Denominator: NULLIF(SUM(booked),0)
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.Booked: Declared in configured source schema; live availability not verified · Sessions.CheckedIn: Declared in configured source schema; live availability not verified · Sessions.LateCancelled: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Apply the conditional population/value rules shown in the formula.
 
@@ -399,22 +490,27 @@ Runtime template (rate preview = 1):
 SUM(CASE WHEN booked IS NOT NULL AND checked_in IS NOT NULL AND late_cancelled IS NOT NULL THEN GREATEST(booked-checked_in-late_cancelled,0) END)/NULLIF(SUM(booked),0)
 ```
 
-## Late-cancel rate — late_cancel_rate
+## Session late-cancel rate — late_cancel_rate
 
-Late-cancel rate measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Sessions.LateCancelled; Sessions.Booked.
+The percentage of booked seats recorded as late cancellations.
+
+How we calculate it: Total late-cancelled seats divided by total booked seats, multiplied by 100.
+
+Detailed definition: Recorded late-cancelled seats as a percentage of recorded booked seats; a missing count is not explicitly treated as zero.
 
 - Domain: attendance
 - Source: Sessions.LateCancelled; Sessions.Booked
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: (SUM(booked))
+- Numerator / condition: (SUM(late_cancelled))
+- Denominator: NULLIF((SUM(booked)),0)
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.LateCancelled: Declared in configured source schema; live availability not verified · Sessions.Booked: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -432,20 +528,25 @@ Runtime template (rate preview = 1):
 
 ## Average class size — avg_class_size_incl
 
-Total attendees divided by sessions, including empty sessions.
+Average attendance per session, including empty sessions.
+
+How we calculate it: Total attendance divided by total represented sessions.
+
+Detailed definition: Total attendees divided by sessions, including empty sessions.
 
 - Domain: attendance
 - Source: Sessions.CheckedIn; Sessions.SessionID
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: weighted
 - Unit: decimal
 - Numerator / condition: Attendees
 - Denominator: Sessions
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.CheckedIn: Declared in configured source schema; live availability not verified · Sessions.SessionID: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -463,20 +564,25 @@ Runtime template (rate preview = 1):
 
 ## Average size, non-empty — avg_class_size_excl
 
-Average size, non-empty measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Apply the conditional population/value rules shown in the formula. Source fields: Sessions.CheckedIn.
+Average attendance per non-empty session.
+
+How we calculate it: Total attendance divided by recorded non-empty sessions on rows with positive attendance.
+
+Detailed definition: Attendance visits per represented non-empty session. Only rows with positive attendance supply the non-empty session denominator.
 
 - Domain: attendance
-- Source: Sessions.CheckedIn
+- Source: Sessions.CheckedIn; Sessions.SessionID
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: weighted
 - Unit: decimal
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: SUM(CASE WHEN checked_in>0 THEN COALESCE(non_empty,sessions) ELSE 0 END)
+- Numerator / condition: SUM(checked_in)
+- Denominator: NULLIF(SUM(CASE WHEN checked_in>0 THEN COALESCE(non_empty,sessions) ELSE 0 END),0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.CheckedIn: Declared in configured source schema; live availability not verified · Sessions.SessionID: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Apply the conditional population/value rules shown in the formula.
 
@@ -494,20 +600,25 @@ SUM(checked_in)/NULLIF(SUM(CASE WHEN checked_in>0 THEN COALESCE(non_empty,sessio
 
 ## Empty sessions — empty_sessions
 
-Empty sessions measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Source fields: Sessions.CheckedIn.
+How many represented sessions had explicitly recorded zero attendance.
+
+How we calculate it: Add recorded empty-session counts.
+
+Detailed definition: Number of represented studio sessions with explicitly recorded zero attendance. Missing attendance does not establish an empty session.
 
 - Domain: attendance
 - Source: Sessions.CheckedIn
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.CheckedIn: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows.
 
@@ -525,20 +636,25 @@ SUM(empty)
 
 ## Empty-session rate — empty_session_rate
 
-Empty-session rate measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Sessions.CheckedIn; Sessions.SessionID.
+The percentage of represented sessions recorded as empty.
+
+How we calculate it: Empty sessions divided by all represented sessions, multiplied by 100.
+
+Detailed definition: Explicitly empty studio sessions as a percentage of all represented sessions, including sessions whose attendance is missing in the denominator.
 
 - Domain: attendance
 - Source: Sessions.CheckedIn; Sessions.SessionID
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: (SUM(sessions))
+- Numerator / condition: (SUM(empty))
+- Denominator: NULLIF((SUM(sessions)),0)
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.CheckedIn: Declared in configured source schema; live availability not verified · Sessions.SessionID: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -556,20 +672,25 @@ Runtime template (rate preview = 1):
 
 ## Unsold seats — unsold_seats
 
-Unsold seats measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Apply the conditional population/value rules shown in the formula. Source fields: Sessions.Capacity; Sessions.CheckedIn.
+How many offered seats were left unoccupied.
+
+How we calculate it: For rows with capacity and attendance, subtract attendance from capacity, use zero for negative results, then add.
+
+Detailed definition: Unoccupied attendance capacity: available seats less recorded attendance, floored at zero per session. Both values must be present. This is not a measure of unsold paid inventory.
 
 - Domain: attendance
 - Source: Sessions.Capacity; Sessions.CheckedIn
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.Capacity: Declared in configured source schema; live availability not verified · Sessions.CheckedIn: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Apply the conditional population/value rules shown in the formula.
 
@@ -587,20 +708,25 @@ SUM(CASE WHEN capacity IS NOT NULL AND checked_in IS NOT NULL THEN GREATEST(capa
 
 ## Overbooked sessions — overbooked_sessions
 
-Overbooked sessions measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Source fields: Sessions.Booked; Sessions.Capacity.
+How many source rows show bookings above seat capacity.
+
+How we calculate it: Count rows where recorded bookings exceed recorded capacity.
+
+Detailed definition: Count of source rows whose booked seats exceed recorded capacity; rows missing either count cannot qualify.
 
 - Domain: attendance
 - Source: Sessions.Booked; Sessions.Capacity
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: booked>capacity
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.Booked: Declared in configured source schema; live availability not verified · Sessions.Capacity: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
 
@@ -618,20 +744,25 @@ COUNT(*) FILTER (WHERE booked>capacity)
 
 ## Attendance variability — attendance_cv
 
-Attendance variability measures the result of the registered calculation over the applicable normalized source population. Take the arithmetic mean of non-null qualifying values. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Sessions.CheckedIn.
+How much recorded session attendance varies relative to its average.
+
+How we calculate it: Population standard deviation of attendance divided by average attendance.
+
+Detailed definition: Population standard deviation of recorded session attendance divided by its mean, a unitless measure of variability. Missing attendance is excluded and a zero mean makes the value unavailable.
 
 - Domain: attendance
 - Source: Sessions.CheckedIn
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: weighted
 - Unit: ratio
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: AVG(checked_in)
+- Numerator / condition: STDDEV_POP(checked_in)
+- Denominator: NULLIF(AVG(checked_in),0)
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.CheckedIn: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Take the arithmetic mean of non-null qualifying values. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -649,19 +780,24 @@ STDDEV_POP(checked_in)/NULLIF(AVG(checked_in),0)
 
 ## Earned revenue — revenue
 
-Revenue attributed to studio sessions in the selected date range.
+Revenue attributed to the selected studio sessions.
+
+How we calculate it: Add session-attributed revenue; this differs from cash collected by payment date.
+
+Detailed definition: Revenue attributed to studio sessions in the selected date range.
 
 - Domain: revenue
 - Source: Sessions.Revenue
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: sum
 - Unit: currency
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
+- Source schema status: Sessions.Revenue: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: Recognised earned revenue differs from cash collected on the Revenue & sales tab.
 
 Calculation method: Add the specified numeric values across qualifying rows.
@@ -680,19 +816,24 @@ SUM(revenue)
 
 ## Gross revenue — gross_revenue
 
-Payments collected on successful, non-voided sale lines, by payment date.
+Cash collected on eligible Sales payment lines in the selected payment dates.
+
+How we calculate it: Add Payment Value on non-voided lines with succeeded or missing payment status.
+
+Detailed definition: Payment Value on non-voided sale rows whose Payment Status is succeeded or missing, by payment date. Voided=true rows and other payment statuses are excluded; a missing void flag is accepted.
 
 - Domain: revenue
 - Source: Sales.Payment Value
 - Table: sales
-- Date / population: Payment date; successful, non-voided payment lines. Membership balance is ranked once per membership within the selected sale cohort.
+- Date / population: Payment date; known voids are excluded, and Payment Status must be succeeded or missing. Missing void flags are accepted. Import exclusions follow the app toggle. Current membership balances are not historical balances.
 - Aggregation: sum
 - Unit: currency
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
+- Source schema status: Sales.Payment Value: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: Cash collections and session-attributed revenue have different timing and populations.
 
 Calculation method: Add the specified numeric values across qualifying rows.
@@ -711,19 +852,24 @@ SUM(revenue)
 
 ## Net of recorded GST — net_revenue
 
-Successful payment value less the GST recorded on those same payment lines.
+Eligible cash collections after subtracting recorded payment tax.
+
+How we calculate it: Subtract GST from Payment Value on eligible Sales lines where both are recorded, then add.
+
+Detailed definition: Payment Value less payment GST/VAT on eligible sale rows, including only rows where both values are known. Eligible rows are non-voided with status succeeded or missing.
 
 - Domain: revenue
 - Source: Sales.Payment Value; Sales.Payment VAT
 - Table: sales
-- Date / population: Payment date; successful, non-voided payment lines. Membership balance is ranked once per membership within the selected sale cohort.
+- Date / population: Payment date; known voids are excluded, and Payment Status must be succeeded or missing. Missing void flags are accepted. Import exclusions follow the app toggle. Current membership balances are not historical balances.
 - Aggregation: sum
 - Unit: currency
-- Numerator / condition: revenue IS NOT NULL AND vat IS NOT NULL
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
+- Source schema status: Sales.Payment Value: Declared in configured source schema; live availability not verified · Sales.Payment VAT: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: Uses collected payment and payment tax (legacy VAT field); the source catalogue price is not collected net revenue.
 
 Calculation method: Add the specified numeric values across qualifying rows. Apply each FILTER condition only to its associated aggregate.
@@ -742,20 +888,25 @@ SUM(revenue-vat) FILTER (WHERE revenue IS NOT NULL AND vat IS NOT NULL)
 
 ## Recorded GST — vat
 
-Recorded GST measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Source fields: Sales.Payment VAT.
+Recorded payment GST on eligible Sales lines.
+
+How we calculate it: Add recorded payment GST, including source columns named VAT.
+
+Detailed definition: Total recorded payment GST, in INR, from eligible Sales lines. The source may use the legacy VAT column name; missing tax does not contribute.
 
 - Domain: revenue
 - Source: Sales.Payment VAT
 - Table: sales
-- Date / population: Payment date; successful, non-voided payment lines. Membership balance is ranked once per membership within the selected sale cohort.
+- Date / population: Payment date; known voids are excluded, and Payment Status must be succeeded or missing. Missing void flags are accepted. Import exclusions follow the app toggle. Current membership balances are not historical balances.
 - Aggregation: sum
 - Unit: currency
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sales.Payment VAT: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows.
 
@@ -773,20 +924,25 @@ SUM(vat)
 
 ## Transactions — transactions
 
-Transactions measures the result of the registered calculation over the applicable normalized source population. Count unique identities rather than source rows. Source fields: Sales.Sale ID.
+How many known sales transactions appear in eligible payment lines.
+
+How we calculate it: Count different recorded Sale IDs.
+
+Detailed definition: Number of distinct non-null Sale IDs in eligible Sales lines. Missing sale IDs are excluded, so this is the known transaction count rather than proof of a complete count.
 
 - Domain: revenue
 - Source: Sales.Sale ID
 - Table: sales
-- Date / population: Payment date; successful, non-voided payment lines. Membership balance is ranked once per membership within the selected sale cohort.
+- Date / population: Payment date; known voids are excluded, and Payment Status must be succeeded or missing. Missing void flags are accepted. Import exclusions follow the app toggle. Current membership balances are not historical balances.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sales.Sale ID: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count unique identities rather than source rows.
 
@@ -804,20 +960,25 @@ COUNT(DISTINCT sale_id)
 
 ## Units sold — units
 
-Units sold measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Source fields: Sales.Sale Item Quantity.
+How many sale-item units appear in eligible payment lines.
+
+How we calculate it: Add recorded item quantities.
+
+Detailed definition: Total recorded sale-item quantities on eligible payment lines; not the number of payment lines or distinct products.
 
 - Domain: revenue
 - Source: Sales.Sale Item Quantity
 - Table: sales
-- Date / population: Payment date; successful, non-voided payment lines. Membership balance is ranked once per membership within the selected sale cohort.
+- Date / population: Payment date; known voids are excluded, and Payment Status must be succeeded or missing. Missing void flags are accepted. Import exclusions follow the app toggle. Current membership balances are not historical balances.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sales.Sale Item Quantity: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows.
 
@@ -835,20 +996,25 @@ SUM(units)
 
 ## Revenue / session — revenue_per_session
 
-Revenue / session measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Sessions.Revenue; Sessions.CheckedIn; Sessions.Capacity.
+Session-attributed revenue earned per represented session.
+
+How we calculate it: Total session-attributed revenue divided by represented sessions.
+
+Detailed definition: Session-attributed revenue in INR per represented studio session. Revenue and session counts are summed separately.
 
 - Domain: revenue
-- Source: Sessions.Revenue; Sessions.CheckedIn; Sessions.Capacity
+- Source: Sessions.Revenue; Sessions.SessionID
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: weighted
 - Unit: currency
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: SUM(sessions)
+- Numerator / condition: SUM(revenue)
+- Denominator: NULLIF(SUM(sessions),0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.Revenue: Declared in configured source schema; live availability not verified · Sessions.SessionID: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -866,20 +1032,25 @@ SUM(revenue)/NULLIF(SUM(sessions),0)
 
 ## Revenue / attendee — rev_pac
 
-Revenue / attendee measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Sessions.Revenue; Sessions.CheckedIn; Sessions.Capacity.
+Session-attributed revenue earned per attendance visit.
+
+How we calculate it: Total session-attributed revenue divided by total attendance.
+
+Detailed definition: Session-attributed revenue in INR per recorded attendance visit. This is a visit yield, not revenue per unique member.
 
 - Domain: revenue
 - Source: Sessions.Revenue; Sessions.CheckedIn; Sessions.Capacity
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: weighted
 - Unit: currency
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: SUM(checked_in)
+- Numerator / condition: SUM(revenue)
+- Denominator: NULLIF(SUM(checked_in),0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.Revenue: Declared in configured source schema; live availability not verified · Sessions.CheckedIn: Declared in configured source schema; live availability not verified · Sessions.Capacity: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -897,20 +1068,25 @@ SUM(revenue)/NULLIF(SUM(checked_in),0)
 
 ## Revenue / seat — rev_pas
 
-Revenue / seat measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Sessions.Revenue; Sessions.CheckedIn; Sessions.Capacity.
+Session-attributed revenue earned per offered seat.
+
+How we calculate it: Total session-attributed revenue divided by total seat capacity.
+
+Detailed definition: Session-attributed revenue in INR per recorded offered seat, including unoccupied capacity.
 
 - Domain: revenue
 - Source: Sessions.Revenue; Sessions.CheckedIn; Sessions.Capacity
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: weighted
 - Unit: currency
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: SUM(capacity)
+- Numerator / condition: SUM(revenue)
+- Denominator: NULLIF(SUM(capacity),0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.Revenue: Declared in configured source schema; live availability not verified · Sessions.CheckedIn: Declared in configured source schema; live availability not verified · Sessions.Capacity: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -928,19 +1104,24 @@ SUM(revenue)/NULLIF(SUM(capacity),0)
 
 ## Opportunity at current yield — lost_revenue
 
-Unoccupied seats valued at the current average revenue per attendee.
+Estimated value of unoccupied seats at the current revenue per visit.
+
+How we calculate it: Unoccupied seats multiplied by session revenue per attendance visit; this is a scenario, not measured lost cash.
+
+Detailed definition: Unoccupied seats valued at the current average revenue per attendee.
 
 - Domain: revenue
 - Source: Sessions.Capacity; Sessions.CheckedIn; Sessions.Revenue
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: weighted
 - Unit: currency
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: SUM(checked_in)
+- Numerator / condition: SUM(CASE WHEN capacity IS NOT NULL AND checked_in IS NOT NULL THEN GREATEST(capacity-checked_in,0) END)*SUM(revenue)
+- Denominator: NULLIF(SUM(checked_in),0)
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
+- Source schema status: Sessions.Capacity: Declared in configured source schema; live availability not verified · Sessions.CheckedIn: Declared in configured source schema; live availability not verified · Sessions.Revenue: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: A scenario estimate; it assumes every available seat earns the observed yield. It is not measured lost sales or a forecast.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Apply the conditional population/value rules shown in the formula.
@@ -959,20 +1140,25 @@ SUM(CASE WHEN capacity IS NOT NULL AND checked_in IS NOT NULL THEN GREATEST(capa
 
 ## Average order value — aov
 
-Average order value measures the result of the registered calculation over the applicable normalized source population. Count unique identities rather than source rows. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Sales.Payment Value; Sales.Sale ID; Sales.Member ID.
+Average collected revenue per known sales transaction.
+
+How we calculate it: Eligible Sales collections divided by different known Sale IDs.
+
+Detailed definition: Eligible payment collections in INR per distinct known Sale ID. Collections with missing Sale ID can contribute revenue without contributing to the transaction denominator.
 
 - Domain: revenue
 - Source: Sales.Payment Value; Sales.Sale ID; Sales.Member ID
 - Table: sales
-- Date / population: Payment date; successful, non-voided payment lines. Membership balance is ranked once per membership within the selected sale cohort.
+- Date / population: Payment date; known voids are excluded, and Payment Status must be succeeded or missing. Missing void flags are accepted. Import exclusions follow the app toggle. Current membership balances are not historical balances.
 - Aggregation: weighted
 - Unit: currency
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: COUNT(DISTINCT sale_id)
+- Numerator / condition: SUM(revenue)
+- Denominator: NULLIF(COUNT(DISTINCT sale_id),0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sales.Payment Value: Declared in configured source schema; live availability not verified · Sales.Sale ID: Declared in configured source schema; live availability not verified · Sales.Member ID: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count unique identities rather than source rows. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -990,20 +1176,25 @@ SUM(revenue)/NULLIF(COUNT(DISTINCT sale_id),0)
 
 ## Revenue / buyer — arpu
 
-Revenue / buyer measures the result of the registered calculation over the applicable normalized source population. Count unique identities rather than source rows. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Sales.Payment Value; Sales.Sale ID; Sales.Member ID.
+Average collected revenue per known buyer.
+
+How we calculate it: Eligible Sales collections divided by different known buyer Member IDs.
+
+Detailed definition: Eligible payment collections in INR per distinct known buyer Member ID. Collections with missing Member ID can contribute revenue without contributing a buyer.
 
 - Domain: revenue
 - Source: Sales.Payment Value; Sales.Sale ID; Sales.Member ID
 - Table: sales
-- Date / population: Payment date; successful, non-voided payment lines. Membership balance is ranked once per membership within the selected sale cohort.
+- Date / population: Payment date; known voids are excluded, and Payment Status must be succeeded or missing. Missing void flags are accepted. Import exclusions follow the app toggle. Current membership balances are not historical balances.
 - Aggregation: weighted
 - Unit: currency
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: COUNT(DISTINCT member_id)
+- Numerator / condition: SUM(revenue)
+- Denominator: NULLIF(COUNT(DISTINCT member_id),0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sales.Payment Value: Declared in configured source schema; live availability not verified · Sales.Sale ID: Declared in configured source schema; live availability not verified · Sales.Member ID: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count unique identities rather than source rows. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -1021,20 +1212,25 @@ SUM(revenue)/NULLIF(COUNT(DISTINCT member_id),0)
 
 ## Unique buyers — buyers
 
-Unique buyers measures the result of the registered calculation over the applicable normalized source population. Count unique identities rather than source rows. Source fields: Sales.Member ID.
+How many identified buyers appear in eligible Sales lines.
+
+How we calculate it: Count different recorded buyer Member IDs.
+
+Detailed definition: Number of distinct non-null Member IDs represented on eligible Sales lines; not all active community members.
 
 - Domain: revenue
 - Source: Sales.Member ID
 - Table: sales
-- Date / population: Payment date; successful, non-voided payment lines. Membership balance is ranked once per membership within the selected sale cohort.
+- Date / population: Payment date; known voids are excluded, and Payment Status must be succeeded or missing. Missing void flags are accepted. Import exclusions follow the app toggle. Current membership balances are not historical balances.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sales.Member ID: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count unique identities rather than source rows.
 
@@ -1052,19 +1248,24 @@ COUNT(DISTINCT member_id)
 
 ## Discount given — discount_value
 
-Sale-item unit discount multiplied by quantity, summed across payment lines.
+Total recorded item-level discounts on eligible payment lines.
+
+How we calculate it: Multiply each item's unit discount by its quantity, then add.
+
+Detailed definition: Sale-item unit discount multiplied by quantity, summed across payment lines.
 
 - Domain: revenue
 - Source: Sales.Sale Item Unit Discount Value; Sales.Sale Item Quantity
 - Table: sales
-- Date / population: Payment date; successful, non-voided payment lines. Membership balance is ranked once per membership within the selected sale cohort.
+- Date / population: Payment date; known voids are excluded, and Payment Status must be succeeded or missing. Missing void flags are accepted. Import exclusions follow the app toggle. Current membership balances are not historical balances.
 - Aggregation: sum
 - Unit: currency
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
+- Source schema status: Sales.Sale Item Unit Discount Value: Declared in configured source schema; live availability not verified · Sales.Sale Item Quantity: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: Sale-level discount totals repeat on multi-item sales and are not summed as item discounts.
 
 Calculation method: Add the specified numeric values across qualifying rows.
@@ -1083,19 +1284,24 @@ SUM(discount)
 
 ## Discount rate — discount_rate
 
-Item-level discounts divided by collected revenue plus those discounts.
+Discounts as a share of collections plus discounts.
+
+How we calculate it: Total item discounts divided by collections plus item discounts, multiplied by 100.
+
+Detailed definition: Item-level discounts divided by collected revenue plus those discounts.
 
 - Domain: revenue
 - Source: Sales.Sale Item Unit Discount Value; Sales.Sale Item Quantity; Sales.Payment Value
 - Table: sales
-- Date / population: Payment date; successful, non-voided payment lines. Membership balance is ranked once per membership within the selected sale cohort.
+- Date / population: Payment date; known voids are excluded, and Payment Status must be succeeded or missing. Missing void flags are accepted. Import exclusions follow the app toggle. Current membership balances are not historical balances.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: (SUM(revenue)+SUM(discount))
+- Numerator / condition: (SUM(discount))
+- Denominator: NULLIF((SUM(revenue)+SUM(discount)),0)
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
+- Source schema status: Sales.Sale Item Unit Discount Value: Declared in configured source schema; live availability not verified · Sales.Sale Item Quantity: Declared in configured source schema; live availability not verified · Sales.Payment Value: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: Uses unit discount × quantity, not the sale-level discount repeated on each row.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
@@ -1114,19 +1320,24 @@ Runtime template (rate preview = 1):
 
 ## Deferred balance — deferred_revenue
 
-Remaining membership money, counted once per membership in the selected sale cohort.
+Current unused membership money attached to the selected Sales cohort.
+
+How we calculate it: Add the latest recorded money-left balance once per membership within the selected cohort.
+
+Detailed definition: Remaining membership money, counted once per membership in the selected sale cohort.
 
 - Domain: revenue
 - Source: Sales.Sec. Membership Money Left; Sales.Sec. Membership ID
 - Table: sales
-- Date / population: Payment date; successful, non-voided payment lines. Membership balance is ranked once per membership within the selected sale cohort.
+- Date / population: Payment date; known voids are excluded, and Payment Status must be succeeded or missing. Missing void flags are accepted. Import exclusions follow the app toggle. Current membership balances are not historical balances.
 - Aggregation: sum
 - Unit: currency
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
+- Source schema status: Sales.Sec. Membership Money Left: Declared in configured source schema; live availability not verified · Sales.Sec. Membership ID: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: A current balance from the source snapshot; not a historical balance at the selected period end.
 
 Calculation method: Add the specified numeric values across qualifying rows. Apply the conditional population/value rules shown in the formula.
@@ -1145,20 +1356,25 @@ SUM(CASE WHEN membership_balance_rank=1 THEN money_left END)
 
 ## Unused session liability — unused_session_liability
 
-Unused session liability measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Source fields: Sales.Sec. Membership Classes Left; Sales.Sec. Membership Revenue Per Event Credit Incl VAT.
+Estimated value of remaining session credits.
+
+How we calculate it: Multiply remaining credits by recorded revenue per credit, then add; the membership fields used depend on the workspace.
+
+Detailed definition: Remaining session credits multiplied by recorded revenue per credit, summed over selected membership rows. Retention uses Lapsed.Remaining Sessions and Lapsed.Revenue Per Session; the Sales variant uses membership classes-left and revenue-credit fields.
 
 - Domain: risk
-- Source: Sales.Sec. Membership Classes Left; Sales.Sec. Membership Revenue Per Event Credit Incl VAT
-- Table: sales
-- Date / population: Payment date; successful, non-voided payment lines. Membership balance is ranked once per membership within the selected sale cohort.
+- Source: Lapsed.Remaining Sessions; Lapsed.Revenue Per Session; Sales.Sec. Membership Classes Left; Sales.Sec. Membership Revenue Per Event Credit Incl VAT
+- Table: lapsed
+- Date / population: End Date expiry cohort for standard dated queries, although normalized date stores Purchase Date. Member-expiry-month renewal cohorts and latest-eligible-member lapse counts are separate populations.
 - Aggregation: sum
 - Unit: currency
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Lapsed.Remaining Sessions: Declared in configured source schema; live availability not verified · Lapsed.Revenue Per Session: Declared in configured source schema; live availability not verified · Sales.Sec. Membership Classes Left: Declared in configured source schema; live availability not verified · Sales.Sec. Membership Revenue Per Event Credit Incl VAT: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: A snapshot valuation proxy, not an accounting liability. The expression does not deduplicate repeated membership balances, and missing factors do not contribute.
 
 Calculation method: Add the specified numeric values across qualifying rows.
 
@@ -1176,20 +1392,25 @@ SUM(COALESCE(classes_left,remaining)*rev_credit)
 
 ## Membership revenue share — membership_rev_share
 
-Membership revenue share measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Sales.Cleaned Category; Sales.Payment Value.
+The percentage of eligible Sales collections from the Memberships category.
+
+How we calculate it: Memberships-category payment value divided by all eligible payment value, multiplied by 100.
+
+Detailed definition: Share of eligible Sales payment value whose normalized category is exactly Memberships, expressed as a percentage of all recorded payment value.
 
 - Domain: revenue
 - Source: Sales.Cleaned Category; Sales.Payment Value
 - Table: sales
-- Date / population: Payment date; successful, non-voided payment lines. Membership balance is ranked once per membership within the selected sale cohort.
+- Date / population: Payment date; known voids are excluded, and Payment Status must be succeeded or missing. Missing void flags are accepted. Import exclusions follow the app toggle. Current membership balances are not historical balances.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: category='Memberships'
-- Denominator: (SUM(revenue))
+- Numerator / condition: (SUM(revenue) FILTER (WHERE category='Memberships'))
+- Denominator: NULLIF((SUM(revenue)),0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sales.Cleaned Category: Declared in configured source schema; live availability not verified · Sales.Payment Value: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -1207,20 +1428,25 @@ Runtime template (rate preview = 1):
 
 ## Paid attendance — paid_attendance
 
-Paid attendance measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Source fields: Sessions.CheckedIn; Sessions.NonPaid.
+Attendance remaining after subtracting recorded NonPaid visits.
+
+How we calculate it: Total attendance minus total NonPaid visits.
+
+Detailed definition: Total recorded attendance less total recorded NonPaid visits. The two columns are summed separately; this is a residual count, not individually verified paid check-ins.
 
 - Domain: attendance
 - Source: Sessions.CheckedIn; Sessions.NonPaid
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.CheckedIn: Declared in configured source schema; live availability not verified · Sessions.NonPaid: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows.
 
@@ -1238,20 +1464,25 @@ SUM(checked_in)-SUM(non_paid)
 
 ## Non-paid share — non_paid_rate
 
-Non-paid share measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Sessions.NonPaid; Sessions.CheckedIn.
+The percentage of attendance recorded as NonPaid visits.
+
+How we calculate it: Total NonPaid visits divided by total attendance, multiplied by 100.
+
+Detailed definition: Recorded NonPaid visits as a percentage of total recorded session attendance; NonPaid is independent of the Complimentary column.
 
 - Domain: attendance
 - Source: Sessions.NonPaid; Sessions.CheckedIn
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: (SUM(checked_in))
+- Numerator / condition: (SUM(non_paid))
+- Denominator: NULLIF((SUM(checked_in)),0)
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.NonPaid: Declared in configured source schema; live availability not verified · Sessions.CheckedIn: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -1269,20 +1500,25 @@ Runtime template (rate preview = 1):
 
 ## Membership attendance share — membership_att_share
 
-Membership attendance share measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Sessions.Memberships; Sessions.Packages; Sessions.IntroOffers; Sessions.SingleClasses.
+Membership visits as a share of the recorded access-type visit mix.
+
+How we calculate it: Membership visits divided by combined membership, package, intro and single-class visits, multiplied by 100.
+
+Detailed definition: Membership visits as a percentage of the combined membership, package, intro and single-class visit counts. A missing component excludes that row's combined count from the denominator.
 
 - Domain: attendance
 - Source: Sessions.Memberships; Sessions.Packages; Sessions.IntroOffers; Sessions.SingleClasses
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: (SUM(memberships+packages+intro+single))
+- Numerator / condition: (SUM(memberships))
+- Denominator: NULLIF((SUM(memberships+packages+intro+single)),0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.Memberships: Declared in configured source schema; live availability not verified · Sessions.Packages: Declared in configured source schema; live availability not verified · Sessions.IntroOffers: Declared in configured source schema; live availability not verified · Sessions.SingleClasses: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -1300,20 +1536,25 @@ Runtime template (rate preview = 1):
 
 ## Intro attendances / session — intro_penetration
 
-Intro attendances / session measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Sessions.IntroOffers; Sessions.SessionID.
+Average intro-offer visits per represented session.
+
+How we calculate it: Total IntroOffers attendance divided by represented sessions.
+
+Detailed definition: Recorded IntroOffers attendance visits per represented studio session; this is a visit count per session, not a percentage or unique-newcomer count.
 
 - Domain: attendance
 - Source: Sessions.IntroOffers; Sessions.SessionID
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: weighted
 - Unit: decimal
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: (SUM(sessions))
+- Numerator / condition: (SUM(intro))
+- Denominator: NULLIF((SUM(sessions)),0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.IntroOffers: Declared in configured source schema; live availability not verified · Sessions.SessionID: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -1331,20 +1572,25 @@ Runtime template (rate preview = 1):
 
 ## Newcomers — new_clients
 
-Newcomers measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Source fields: New.Is New.
+How many selected New-sheet records are classified as newcomers.
+
+How we calculate it: Count records classified as new; repeated member records are not deduplicated.
+
+Detailed definition: Number of New-sheet cohort rows classified is_new by normalization. These are newcomer records, not deduplicated Member IDs.
 
 - Domain: growth
 - Source: New.Is New
 - Table: new
-- Date / population: First-visit date cohort; latest source outcomes are distinct from dated conversion events.
+- Date / population: First Visit Date cohort. is_new=true uses normalized Is New labels/booleans. Latest reported statuses are not dated conversion events; row counts are not guaranteed distinct members.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: is_new
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: New.Is New: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
 
@@ -1362,19 +1608,24 @@ COUNT(*) FILTER (WHERE is_new)
 
 ## Trial conversion — conversion_rate
 
-Trials whose Conversion Status is Converted, divided by every trial. A trial is any row whose Is New label contains the word new.
+The percentage of newcomer records currently marked Converted.
+
+How we calculate it: Converted newcomer records divided by all newcomer records, multiplied by 100; dates select first visits.
+
+Detailed definition: Trials whose Conversion Status is Converted, divided by every trial. A trial is a row normalized to is_new=true: labels containing the word new qualify except labels beginning with not; recognized boolean true also qualifies.
 
 - Domain: growth
 - Source: New.Is New; New.Conversion Status; New.Visits Post Trial
 - Table: new
-- Date / population: First-visit date cohort; latest source outcomes are distinct from dated conversion events.
+- Date / population: First Visit Date cohort. is_new=true uses normalized Is New labels/booleans. Latest reported statuses are not dated conversion events; row counts are not guaranteed distinct members.
 - Aggregation: weighted
 - Unit: percent
 - Numerator / condition: Converted trials
 - Denominator: Trials
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
+- Source schema status: New.Is New: Declared in configured source schema; live availability not verified · New.Conversion Status: Declared in configured source schema; live availability not verified · New.Visits Post Trial: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: Outcome is the source's latest status, not conversions occurring during this period.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
@@ -1393,20 +1644,25 @@ Runtime template (rate preview = 1):
 
 ## Second-visit rate — second_visit_rate
 
-Trials with at least one post-trial visit divided by every trial. Counted from Visits Post Trial, not from a status column.
+The percentage of newcomer records with a recorded visit after trial.
+
+How we calculate it: Newcomer records with positive Visits Post Trial divided by all newcomer records, multiplied by 100.
+
+Detailed definition: Trials with at least one post-trial visit divided by every trial. Counted from Visits Post Trial, not from a status column.
 
 - Domain: growth
 - Source: New.Is New; New.Conversion Status; New.Visits Post Trial
 - Table: new
-- Date / population: First-visit date cohort; latest source outcomes are distinct from dated conversion events.
+- Date / population: First Visit Date cohort. is_new=true uses normalized Is New labels/booleans. Latest reported statuses are not dated conversion events; row counts are not guaranteed distinct members.
 - Aggregation: weighted
 - Unit: percent
 - Numerator / condition: Returned trials
 - Denominator: Trials
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: The source derives Retention Status from the same column, so this currently equals the retention rate.
+- Source schema status: New.Is New: Declared in configured source schema; live availability not verified · New.Conversion Status: Declared in configured source schema; live availability not verified · New.Visits Post Trial: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Measures reported visit counts. It may differ from the status-based retention rate; missing visits do not qualify as zero returns.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -1424,20 +1680,25 @@ Runtime template (rate preview = 1):
 
 ## Zero-return rate — zero_return_rate
 
-Zero-return rate measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero. Source fields: New.Is New; New.Conversion Status; New.Visits Post Trial.
+The percentage of newcomer records explicitly reporting no post-trial visits.
+
+How we calculate it: Newcomer records with Visits Post Trial equal to zero divided by all newcomer records, multiplied by 100.
+
+Detailed definition: Percentage of is_new cohort rows with Visits Post Trial explicitly equal to zero. Missing visit counts are not classified as zero return.
 
 - Domain: growth
 - Source: New.Is New; New.Conversion Status; New.Visits Post Trial
 - Table: new
-- Date / population: First-visit date cohort; latest source outcomes are distinct from dated conversion events.
+- Date / population: First Visit Date cohort. is_new=true uses normalized Is New labels/booleans. Latest reported statuses are not dated conversion events; row counts are not guaranteed distinct members.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: is_new AND visits_post=0
-- Denominator: (COUNT(*) FILTER (WHERE is_new))
+- Numerator / condition: (COUNT(*) FILTER (WHERE is_new AND visits_post=0))
+- Denominator: NULLIF((COUNT(*) FILTER (WHERE is_new)),0)
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: New.Is New: Declared in configured source schema; live availability not verified · New.Conversion Status: Declared in configured source schema; live availability not verified · New.Visits Post Trial: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -1455,20 +1716,25 @@ Runtime template (rate preview = 1):
 
 ## Days to convert — avg_conversion_span
 
-Days to convert measures the result of the registered calculation over the applicable normalized source population. Take the arithmetic mean of non-null qualifying values. Apply each FILTER condition only to its associated aggregate. Source fields: New.Conversion Span (Days); New.Is New; New.Conversion Status.
+Average recorded days to conversion for converted newcomers.
+
+How we calculate it: Average nonnegative recorded conversion days among converted newcomer records.
+
+Detailed definition: Mean nonnegative recorded Conversion Span in days among is_new rows whose Conversion Status is exactly Converted. Missing and negative spans are excluded.
 
 - Domain: growth
 - Source: New.Conversion Span (Days); New.Is New; New.Conversion Status
 - Table: new
-- Date / population: First-visit date cohort; latest source outcomes are distinct from dated conversion events.
+- Date / population: First Visit Date cohort. is_new=true uses normalized Is New labels/booleans. Latest reported statuses are not dated conversion events; row counts are not guaranteed distinct members.
 - Aggregation: avg
 - Unit: days
-- Numerator / condition: is_new AND conversion='Converted' AND conversion_days>=0
-- Denominator: COUNT(conversion_days) FILTER (WHERE is_new AND conversion='Converted' AND conversion_days>=0)
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: Observation population: non-null qualifying values; median is an order statistic, not a ratio.
 - Direction: lower preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: New.Conversion Span (Days): Declared in configured source schema; live availability not verified · New.Is New: Declared in configured source schema; live availability not verified · New.Conversion Status: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Take the arithmetic mean of non-null qualifying values. Apply each FILTER condition only to its associated aggregate.
 
@@ -1486,20 +1752,25 @@ AVG(conversion_days) FILTER (WHERE is_new AND conversion='Converted' AND convers
 
 ## Median days to convert — median_conversion_span
 
-Median days to convert measures the result of the registered calculation over the applicable normalized source population. Take the median of non-null qualifying values. Apply each FILTER condition only to its associated aggregate. Source fields: New.Conversion Span (Days); New.Is New; New.Conversion Status.
+The middle recorded conversion time for converted newcomers.
+
+How we calculate it: Take the median of nonnegative recorded conversion days among converted newcomer records.
+
+Detailed definition: Median nonnegative recorded Conversion Span in days among is_new rows whose Conversion Status is exactly Converted. Missing and negative spans are excluded.
 
 - Domain: growth
 - Source: New.Conversion Span (Days); New.Is New; New.Conversion Status
 - Table: new
-- Date / population: First-visit date cohort; latest source outcomes are distinct from dated conversion events.
+- Date / population: First Visit Date cohort. is_new=true uses normalized Is New labels/booleans. Latest reported statuses are not dated conversion events; row counts are not guaranteed distinct members.
 - Aggregation: median
 - Unit: days
-- Numerator / condition: is_new AND conversion='Converted' AND conversion_days>=0
-- Denominator: COUNT(conversion_days) FILTER (WHERE is_new AND conversion='Converted' AND conversion_days>=0)
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: Observation population: non-null qualifying values; median is an order statistic, not a ratio.
 - Direction: lower preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: New.Conversion Span (Days): Declared in configured source schema; live availability not verified · New.Is New: Declared in configured source schema; live availability not verified · New.Conversion Status: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Take the median of non-null qualifying values. Apply each FILTER condition only to its associated aggregate.
 
@@ -1517,20 +1788,25 @@ MEDIAN(conversion_days) FILTER (WHERE is_new AND conversion='Converted' AND conv
 
 ## Average lifetime value — avg_ltv
 
-Average lifetime value measures the result of the registered calculation over the applicable normalized source population. Take the arithmetic mean of non-null qualifying values. Apply each FILTER condition only to its associated aggregate. Source fields: New.Ltv; New.Is New.
+Average recorded lifetime spend of the selected newcomer cohort.
+
+How we calculate it: Average recorded Ltv values among newcomer records; this is observed spend, not a forecast.
+
+Detailed definition: Mean recorded lifetime spend in INR among is_new cohort rows with an Ltv value. This is observed source spend, not a forecast of future lifetime value.
 
 - Domain: growth
 - Source: New.Ltv; New.Is New
 - Table: new
-- Date / population: First-visit date cohort; latest source outcomes are distinct from dated conversion events.
+- Date / population: First Visit Date cohort. is_new=true uses normalized Is New labels/booleans. Latest reported statuses are not dated conversion events; row counts are not guaranteed distinct members.
 - Aggregation: avg
 - Unit: currency
-- Numerator / condition: is_new
-- Denominator: COUNT(ltv) FILTER (WHERE is_new)
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: Observation population: non-null qualifying values; median is an order statistic, not a ratio.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: New.Ltv: Declared in configured source schema; live availability not verified · New.Is New: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Take the arithmetic mean of non-null qualifying values. Apply each FILTER condition only to its associated aggregate.
 
@@ -1548,20 +1824,25 @@ AVG(ltv) FILTER (WHERE is_new)
 
 ## First visitors — first_visitors
 
-First visitors measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Source fields: New.Member Id; New.First Visit Date.
+How many New-sheet records fall in the selected first-visit scope.
+
+How we calculate it: Count all selected New-sheet rows, including rows not classified as newcomers.
+
+Detailed definition: Number of selected New-sheet rows, including rows not classified is_new. No distinct-member deduplication is applied.
 
 - Domain: growth
 - Source: New.Member Id; New.First Visit Date
 - Table: new
-- Date / population: First-visit date cohort; latest source outcomes are distinct from dated conversion events.
+- Date / population: First Visit Date cohort. is_new=true uses normalized Is New labels/booleans. Latest reported statuses are not dated conversion events; row counts are not guaranteed distinct members.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: New.Member Id: Declared in configured source schema; live availability not verified · New.First Visit Date: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records.
 
@@ -1579,20 +1860,25 @@ COUNT(*)
 
 ## Converted — new_converted
 
-Converted measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Source fields: New.Is New; New.Conversion Status.
+How many newcomer records currently have Converted status.
+
+How we calculate it: Count newcomer records whose latest recorded Conversion Status is Converted.
+
+Detailed definition: Number of is_new cohort rows whose latest recorded Conversion Status is exactly Converted; not conversions dated within the reporting period.
 
 - Domain: growth
 - Source: New.Is New; New.Conversion Status
 - Table: new
-- Date / population: First-visit date cohort; latest source outcomes are distinct from dated conversion events.
+- Date / population: First Visit Date cohort. is_new=true uses normalized Is New labels/booleans. Latest reported statuses are not dated conversion events; row counts are not guaranteed distinct members.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: is_new AND conversion='Converted'
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: New.Is New: Declared in configured source schema; live availability not verified · New.Conversion Status: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
 
@@ -1610,20 +1896,25 @@ COUNT(*) FILTER (WHERE is_new AND conversion='Converted')
 
 ## Retained — new_retained
 
-Retained measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Source fields: New.Is New; New.Retention Status.
+How many newcomer records currently have Retained status.
+
+How we calculate it: Count newcomer records whose latest recorded Retention Status is Retained.
+
+Detailed definition: Number of is_new cohort rows whose latest recorded Retention Status is exactly Retained; this is a source-status count rather than a dated retention event.
 
 - Domain: growth
 - Source: New.Is New; New.Retention Status
 - Table: new
-- Date / population: First-visit date cohort; latest source outcomes are distinct from dated conversion events.
+- Date / population: First Visit Date cohort. is_new=true uses normalized Is New labels/booleans. Latest reported statuses are not dated conversion events; row counts are not guaranteed distinct members.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: is_new AND retention='Retained'
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: New.Is New: Declared in configured source schema; live availability not verified · New.Retention Status: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
 
@@ -1641,20 +1932,25 @@ COUNT(*) FILTER (WHERE is_new AND retention='Retained')
 
 ## Total spend — new_total_spend
 
-Total spend measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Apply each FILTER condition only to its associated aggregate. Source fields: New.Ltv; New.Is New.
+Recorded lifetime spend attached to the selected newcomer cohort.
+
+How we calculate it: Add newcomer Ltv values; dates select first visits, not payment dates.
+
+Detailed definition: Total recorded Ltv in INR for is_new cohort rows. The amount is lifetime spend associated with the first-visit cohort, not revenue collected during the selected dates.
 
 - Domain: revenue
 - Source: New.Ltv; New.Is New
 - Table: new
-- Date / population: First-visit date cohort; latest source outcomes are distinct from dated conversion events.
+- Date / population: First Visit Date cohort. is_new=true uses normalized Is New labels/booleans. Latest reported statuses are not dated conversion events; row counts are not guaranteed distinct members.
 - Aggregation: sum
 - Unit: currency
-- Numerator / condition: is_new
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: New.Ltv: Declared in configured source schema; live availability not verified · New.Is New: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Apply each FILTER condition only to its associated aggregate.
 
@@ -1672,20 +1968,25 @@ SUM(ltv) FILTER (WHERE is_new)
 
 ## Spend post trial — new_post_trial_spend
 
-Spend post trial measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Apply each FILTER condition only to its associated aggregate. Source fields: New.Ltv Post Trial; New.Is New.
+Recorded spending after trial attached to the newcomer cohort.
+
+How we calculate it: Add recorded Ltv Post Trial for newcomer records.
+
+Detailed definition: Total recorded Ltv Post Trial in INR for is_new cohort rows, using the source's accumulated post-trial spend.
 
 - Domain: revenue
 - Source: New.Ltv Post Trial; New.Is New
 - Table: new
-- Date / population: First-visit date cohort; latest source outcomes are distinct from dated conversion events.
+- Date / population: First Visit Date cohort. is_new=true uses normalized Is New labels/booleans. Latest reported statuses are not dated conversion events; row counts are not guaranteed distinct members.
 - Aggregation: sum
 - Unit: currency
-- Numerator / condition: is_new
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: New.Ltv Post Trial: Declared in configured source schema; live availability not verified · New.Is New: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Apply each FILTER condition only to its associated aggregate.
 
@@ -1703,20 +2004,25 @@ SUM(post_trial_ltv) FILTER (WHERE is_new)
 
 ## Purchases post trial — new_post_trial_purchases
 
-Purchases post trial measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Apply each FILTER condition only to its associated aggregate. Source fields: New.Purchase Count Post Trial; New.Is New.
+Recorded purchases after trial attached to the newcomer cohort.
+
+How we calculate it: Add recorded Purchase Count Post Trial for newcomer records.
+
+Detailed definition: Total recorded Purchase Count Post Trial for is_new cohort rows; the selected period identifies first visits rather than purchase-event dates.
 
 - Domain: growth
 - Source: New.Purchase Count Post Trial; New.Is New
 - Table: new
-- Date / population: First-visit date cohort; latest source outcomes are distinct from dated conversion events.
+- Date / population: First Visit Date cohort. is_new=true uses normalized Is New labels/booleans. Latest reported statuses are not dated conversion events; row counts are not guaranteed distinct members.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: is_new
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: New.Purchase Count Post Trial: Declared in configured source schema; live availability not verified · New.Is New: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Apply each FILTER condition only to its associated aggregate.
 
@@ -1734,20 +2040,25 @@ SUM(post_trial_purchases) FILTER (WHERE is_new)
 
 ## Total purchases — new_total_purchases
 
-Total purchases measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Apply each FILTER condition only to its associated aggregate. Source fields: New.Total Purchases All Time; New.Is New.
+Recorded all-time purchases attached to the newcomer cohort.
+
+How we calculate it: Add recorded all-time purchase counts for newcomer records.
+
+Detailed definition: Total recorded all-time purchase counts for is_new cohort rows, rather than transactions occurring during the selected reporting dates.
 
 - Domain: growth
 - Source: New.Total Purchases All Time; New.Is New
 - Table: new
-- Date / population: First-visit date cohort; latest source outcomes are distinct from dated conversion events.
+- Date / population: First Visit Date cohort. is_new=true uses normalized Is New labels/booleans. Latest reported statuses are not dated conversion events; row counts are not guaranteed distinct members.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: is_new
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: New.Total Purchases All Time: Declared in configured source schema; live availability not verified · New.Is New: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Apply each FILTER condition only to its associated aggregate.
 
@@ -1765,20 +2076,25 @@ SUM(purchases) FILTER (WHERE is_new)
 
 ## Visits — new_visits
 
-Visits measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Apply each FILTER condition only to its associated aggregate. Source fields: New.No of Visits; New.Is New.
+Recorded accumulated visits attached to the newcomer cohort.
+
+How we calculate it: Add recorded No of Visits for newcomer records.
+
+Detailed definition: Total recorded No of Visits for is_new cohort rows; this is accumulated source visit history associated with the first-visit cohort.
 
 - Domain: attendance
 - Source: New.No of Visits; New.Is New
 - Table: new
-- Date / population: First-visit date cohort; latest source outcomes are distinct from dated conversion events.
+- Date / population: First Visit Date cohort. is_new=true uses normalized Is New labels/booleans. Latest reported statuses are not dated conversion events; row counts are not guaranteed distinct members.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: is_new
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: New.No of Visits: Declared in configured source schema; live availability not verified · New.Is New: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Apply each FILTER condition only to its associated aggregate.
 
@@ -1796,20 +2112,25 @@ SUM(visits) FILTER (WHERE is_new)
 
 ## Revenue / visit — new_revenue_per_visit
 
-Revenue / visit measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero. Source fields: New.Ltv; New.No of Visits; New.Is New.
+Recorded lifetime spend per visit for the newcomer cohort.
+
+How we calculate it: Newcomer lifetime spend divided by visits on newcomer records with a recorded Ltv.
+
+Detailed definition: Recorded newcomer lifetime spend in INR per recorded visit among cohort rows with a non-null Ltv. A row with spend but missing visit count can contribute only to the numerator.
 
 - Domain: revenue
 - Source: New.Ltv; New.No of Visits; New.Is New
 - Table: new
-- Date / population: First-visit date cohort; latest source outcomes are distinct from dated conversion events.
+- Date / population: First Visit Date cohort. is_new=true uses normalized Is New labels/booleans. Latest reported statuses are not dated conversion events; row counts are not guaranteed distinct members.
 - Aggregation: weighted
 - Unit: currency
-- Numerator / condition: is_new
-- Denominator: SUM(visits) FILTER (WHERE is_new AND ltv IS NOT NULL)
+- Numerator / condition: SUM(ltv) FILTER (WHERE is_new)
+- Denominator: NULLIF(SUM(visits) FILTER (WHERE is_new AND ltv IS NOT NULL),0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: New.Ltv: Declared in configured source schema; live availability not verified · New.No of Visits: Declared in configured source schema; live availability not verified · New.Is New: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -1827,51 +2148,61 @@ SUM(ltv) FILTER (WHERE is_new)/NULLIF(SUM(visits) FILTER (WHERE is_new AND ltv I
 
 ## Late cancellations — new_late_cancels
 
-Late cancellations measures the result of the registered calculation over the applicable normalized source population. Evaluate the expression over the qualifying source population. Source fields: Bookings.Late Cancelled; Bookings.Member Id; New.Member Id; New.Is New.
+Late-cancelled bookings belonging to the selected newcomer cohort.
+
+How we calculate it: Count late-cancelled bookings linked to the group’s distinct newcomer member IDs, regardless of booking date.
+
+Detailed definition: In Acquisition, count all late-cancelled Bookings rows for member IDs belonging to the selected newcomer first-visit cohort, regardless of booking date.
 
 - Domain: risk
-- Source: Bookings.Late Cancelled; Bookings.Member Id; New.Member Id; New.Is New
+- Source: New.Member Id; New.Is New; New.First Visit Date; Bookings.Member Id; Bookings.Late Cancelled
 - Table: new
-- Date / population: First-visit date cohort; latest source outcomes are distinct from dated conversion events.
+- Date / population: Acquisition first-visit cohort from New; all-time Bookings matched by member ID. Uses the same shared formula in Acquisition and the metric catalogue.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: New.Member Id: Declared in configured source schema; live availability not verified · New.Is New: Declared in configured source schema; live availability not verified · New.First Visit Date: Declared in configured source schema; live availability not verified · Bookings.Member Id: Declared in configured source schema; live availability not verified · Bookings.Late Cancelled: Declared in configured source schema; live availability not verified
+- Runtime behavior: Matches each group’s distinct newcomer member IDs to all-time Bookings. Load both sources. AI scoped queries do not offer this cross-source calculation.
+- Caveat: The shared calculation matches distinct newcomer member IDs within each filtered group to all-time Bookings. Duplicate newcomer rows do not multiply bookings. Booking dates/import flags do not restrict this measure. AI scoped queries do not offer this cross-source measure.
 
-Calculation method: Evaluate the expression over the qualifying source population.
+Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
 
 Registered SQL:
 
 ```sql
-CAST(NULL AS DOUBLE)
+(SELECT COUNT(*) FROM (SELECT member_id AS booking_member_id, late_cancelled AS booking_late FROM bookings) b WHERE b.booking_late>0 AND list_contains(LIST(DISTINCT member_id) FILTER (WHERE is_new AND member_id IS NOT NULL),b.booking_member_id))
 ```
 
 Runtime template (rate preview = 1):
 
 ```sql
-CAST(NULL AS DOUBLE)
+(SELECT COUNT(*) FROM (SELECT member_id AS booking_member_id, late_cancelled AS booking_late FROM bookings) b WHERE b.booking_late>0 AND list_contains(LIST(DISTINCT member_id) FILTER (WHERE is_new AND member_id IS NOT NULL),b.booking_member_id))
 ```
 
 ## Average first purchase — avg_first_purchase
 
-Average first purchase measures the result of the registered calculation over the applicable normalized source population. Take the arithmetic mean of non-null qualifying values. Apply each FILTER condition only to its associated aggregate. Source fields: New.First Purchase Value; New.Is New; New.Conversion Status.
+Average positive first-purchase value for converted newcomers.
+
+How we calculate it: Average positive recorded First Purchase Value among converted newcomer records.
+
+Detailed definition: Mean positive recorded First Purchase Value in INR among is_new cohort rows whose Conversion Status is exactly Converted. Zero, negative and missing values are excluded.
 
 - Domain: growth
 - Source: New.First Purchase Value; New.Is New; New.Conversion Status
 - Table: new
-- Date / population: First-visit date cohort; latest source outcomes are distinct from dated conversion events.
+- Date / population: First Visit Date cohort. is_new=true uses normalized Is New labels/booleans. Latest reported statuses are not dated conversion events; row counts are not guaranteed distinct members.
 - Aggregation: avg
 - Unit: currency
-- Numerator / condition: is_new AND conversion='Converted' AND first_purchase>0
-- Denominator: COUNT(first_purchase) FILTER (WHERE is_new AND conversion='Converted' AND first_purchase>0)
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: Observation population: non-null qualifying values; median is an order statistic, not a ratio.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: New.First Purchase Value: Declared in configured source schema; live availability not verified · New.Is New: Declared in configured source schema; live availability not verified · New.Conversion Status: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Take the arithmetic mean of non-null qualifying values. Apply each FILTER condition only to its associated aggregate.
 
@@ -1889,20 +2220,25 @@ AVG(first_purchase) FILTER (WHERE is_new AND conversion='Converted' AND first_pu
 
 ## LTV / first purchase — ltv_to_first_purchase
 
-LTV / first purchase measures the result of the registered calculation over the applicable normalized source population. Take the arithmetic mean of non-null qualifying values. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero. Source fields: New.Ltv; New.First Purchase Value; New.Is New; New.Conversion Status.
+Recorded lifetime spend compared with first-purchase value for converted newcomers.
+
+How we calculate it: Average Ltv divided by average first-purchase value among converted newcomer records with a positive first purchase.
+
+Detailed definition: Mean recorded lifetime spend divided by mean positive first-purchase value among converted is_new rows with a positive first purchase, expressed as a multiple. Missing lifetime spend can make the two means use different record counts.
 
 - Domain: growth
 - Source: New.Ltv; New.First Purchase Value; New.Is New; New.Conversion Status
 - Table: new
-- Date / population: First-visit date cohort; latest source outcomes are distinct from dated conversion events.
+- Date / population: First Visit Date cohort. is_new=true uses normalized Is New labels/booleans. Latest reported statuses are not dated conversion events; row counts are not guaranteed distinct members.
 - Aggregation: weighted
 - Unit: ratio
-- Numerator / condition: is_new AND conversion='Converted' AND first_purchase>0
-- Denominator: AVG(first_purchase) FILTER (WHERE is_new AND conversion='Converted' AND first_purchase>0)
+- Numerator / condition: AVG(ltv) FILTER (WHERE is_new AND conversion='Converted' AND first_purchase>0)
+- Denominator: NULLIF(AVG(first_purchase) FILTER (WHERE is_new AND conversion='Converted' AND first_purchase>0),0)
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: New.Ltv: Declared in configured source schema; live availability not verified · New.First Purchase Value: Declared in configured source schema; live availability not verified · New.Is New: Declared in configured source schema; live availability not verified · New.Conversion Status: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Take the arithmetic mean of non-null qualifying values. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -1920,20 +2256,25 @@ AVG(ltv) FILTER (WHERE is_new AND conversion='Converted' AND first_purchase>0)/N
 
 ## Retention rate — retention_rate
 
-Trials whose Retention Status is Retained, divided by every trial.
+The percentage of newcomer records currently marked Retained.
+
+How we calculate it: Retained newcomer records divided by all newcomer records, multiplied by 100; no fixed retention window is implied.
+
+Detailed definition: Trials whose Retention Status is Retained, divided by every trial.
 
 - Domain: growth
 - Source: New.Retention Status; New.Is New
 - Table: new
-- Date / population: First-visit date cohort; latest source outcomes are distinct from dated conversion events.
+- Date / population: First Visit Date cohort. is_new=true uses normalized Is New labels/booleans. Latest reported statuses are not dated conversion events; row counts are not guaranteed distinct members.
 - Aggregation: weighted
 - Unit: percent
 - Numerator / condition: Retained trials
 - Denominator: Trials
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: In the current source Retained holds for exactly the trials with a post-trial visit, so this matches the second-visit rate.
+- Source schema status: New.Retention Status: Declared in configured source schema; live availability not verified · New.Is New: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Uses the reported Retained status. Equality with the post-trial visit measure depends on source consistency and is not guaranteed.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -1951,19 +2292,24 @@ COUNT(*) FILTER (WHERE is_new AND retention='Retained')::DOUBLE/NULLIF(COUNT(*) 
 
 ## Active member base — active_base
 
-Distinct members whose latest lifecycle status is Active, across all first-visit dates.
+How many identified members have an Active lifecycle row in the current snapshot.
+
+How we calculate it: Count different Member IDs with an Active lifecycle row across all first-visit dates.
+
+Detailed definition: Distinct member IDs with a source row whose Lifecycle Status is Active, across all first-visit dates. No latest-row ranking is applied.
 
 - Domain: growth
 - Source: New.Lifecycle Status; New.Member Id
 - Table: new
-- Date / population: Current source snapshot relative to today in Asia/Kolkata. Selected period dates and historical comparisons are excluded.
+- Date / population: Current source snapshot relative to today in Asia/Kolkata. Standard cards exclude selected period dates and comparisons; not a reconstructed historical balance.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: lifecycle='Active'
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
+- Source schema status: New.Lifecycle Status: Declared in configured source schema; live availability not verified · New.Member Id: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: Current snapshot measure; period comparisons and historical trend are unavailable.
 
 Calculation method: Count unique identities rather than source rows. Apply each FILTER condition only to its associated aggregate. Apply the conditional population/value rules shown in the formula.
@@ -1982,20 +2328,25 @@ CASE WHEN COUNT(lifecycle)>0 THEN COUNT(DISTINCT member_id) FILTER (WHERE lifecy
 
 ## At-risk active members — at_risk_actives
 
-At-risk active members measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Source fields: New.Lifecycle Status; New.Days Since Last Visit.
+Active New-sheet records reporting more than 21 days since a visit.
+
+How we calculate it: Count selected New-sheet rows marked Active with recorded absence above 21 days.
+
+Detailed definition: New-sheet rows marked Lifecycle Status Active with recorded Days Since Last Visit above 21.
 
 - Domain: risk
 - Source: New.Lifecycle Status; New.Days Since Last Visit
 - Table: new
-- Date / population: First-visit date cohort; latest source outcomes are distinct from dated conversion events.
+- Date / population: First Visit Date cohort. is_new=true uses normalized Is New labels/booleans. Latest reported statuses are not dated conversion events; row counts are not guaranteed distinct members.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: lifecycle='Active' AND days_absent>21
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: New.Lifecycle Status: Declared in configured source schema; live availability not verified · New.Days Since Last Visit: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Counts rows, not distinct members, within the selected first-visit date cohort. Separate from current-snapshot dormant active memberships on Lapsed.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
 
@@ -2013,20 +2364,25 @@ COUNT(*) FILTER (WHERE lifecycle='Active' AND days_absent>21)
 
 ## Post-trial visits — visits_post_trial
 
-Post-trial visits measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Source fields: New.Visits Post Trial.
+Recorded post-trial visits across all selected New-sheet rows.
+
+How we calculate it: Add Visits Post Trial without separately restricting rows to newcomers.
+
+Detailed definition: Total recorded Visits Post Trial across all selected New-sheet rows; unlike most newcomer metrics, this expression does not itself restrict rows to is_new.
 
 - Domain: growth
 - Source: New.Visits Post Trial
 - Table: new
-- Date / population: First-visit date cohort; latest source outcomes are distinct from dated conversion events.
+- Date / population: First Visit Date cohort. is_new=true uses normalized Is New labels/booleans. Latest reported statuses are not dated conversion events; row counts are not guaranteed distinct members.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: New.Visits Post Trial: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows.
 
@@ -2044,20 +2400,25 @@ SUM(visits_post)
 
 ## Active memberships — active_memberships
 
-Running memberships: access started and not yet expired, with status Active, New or Renewed. Frozen, Lapsed and Not Activated memberships are excluded.
+How many membership rows are currently running under the app's status rules.
+
+How we calculate it: Count rows started by today and not ended, with a recorded status other than Lapsed, Not Activated or Frozen.
+
+Detailed definition: Membership rows with start date on/before today and end date blank or on/after today, whose non-null status is not Lapsed, Not Activated or Frozen. Other status values also qualify; no paid-product restriction or deduplication is applied.
 
 - Domain: risk
 - Source: Lapsed.Status; Lapsed.End Date; Lapsed.Start Date
 - Table: lapsed
-- Date / population: Current source snapshot relative to today in Asia/Kolkata. Selected period dates and historical comparisons are excluded.
+- Date / population: Current source snapshot relative to today in Asia/Kolkata. Standard cards exclude selected period dates and comparisons; not a reconstructed historical balance.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: status NOT IN ('Lapsed','Not Activated','Frozen') AND start_date<='{today}' AND (end_date IS NULL OR end_date >= '{today}')
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Current snapshot. The trend counts memberships running at each month end by access dates only, because historical status is not recorded.
+- Source schema status: Lapsed.Status: Declared in configured source schema; live availability not verified · Lapsed.End Date: Declared in configured source schema; live availability not verified · Lapsed.Start Date: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Current snapshot. Historical status is not recorded. Retention reconstructs past access dates using the same current-status eligibility rule as the card. Past status changes are not recorded, so this is a reconstruction rather than historical stock.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate. Evaluate relative-date rules against the application date.
 
@@ -2075,20 +2436,25 @@ COUNT(*) FILTER (WHERE status NOT IN ('Lapsed','Not Activated','Frozen') AND sta
 
 ## Churn rate — churn_rate
 
-Churn rate measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Lapsed.Status; Lapsed.Churned Date; Lapsed.End Date.
+The percentage of the eligible paid renewal cohort confirmed as lapsed.
+
+How we calculate it: Confirmed lapsed outcomes divided by all eligible renewal outcomes, multiplied by 100, after one-member-per-expiry-month deduplication and the 30-day grace rule.
+
+Detailed definition: Confirmed lapsed member-expiry-month cohort rows divided by all rows in the shared eligible renewal cohort (renewed, lapsed, frozen and pending).
 
 - Domain: risk
 - Source: Lapsed.Status; Lapsed.Churned Date; Lapsed.End Date
 - Table: lapsed
-- Date / population: Membership expiry date cohort; current-stock measures override date scope as stated.
+- Date / population: End Date expiry cohort for standard dated queries, although normalized date stores Purchase Date. Member-expiry-month renewal cohorts and latest-eligible-member lapse counts are separate populations.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: renewal_outcome='lapsed'
-- Denominator: (COUNT(*) FILTER (WHERE renewal_outcome IS NOT NULL))
+- Numerator / condition: (COUNT(*) FILTER (WHERE renewal_outcome='lapsed'))
+- Denominator: NULLIF((COUNT(*) FILTER (WHERE renewal_outcome IS NOT NULL)),0)
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Lapsed.Status: Declared in configured source schema; live availability not verified · Lapsed.Churned Date: Declared in configured source schema; live availability not verified · Lapsed.End Date: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: A paid expiry-cohort outcome ratio, not churn divided by the active member base. Cohort deduplication and the 30-day grace policy are applied before counting.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -2106,19 +2472,24 @@ Runtime template (rate preview = 1):
 
 ## Lapsed members — lapsed_members
 
-Distinct members whose most recent paid membership has a recorded Status of Lapsed with a Churned Date at least 30 days old, counted when that membership expires in the period. Zero-value memberships and restricted names (intro, 2 for 1, studio single class, private, credit, Copper + Cloves single class, test) are ignored when finding the most recent membership; a member whose latest membership is Frozen, Not Activated, Active, New, Renewed or within 30 days of its Churned Date is not lapsed.
+How many identified members have a latest eligible paid membership confirmed lapsed.
+
+How we calculate it: Count different members whose latest eligible membership is Lapsed at least 30 days after its churn date, or end date when missing, with expiry in scope.
+
+Detailed definition: Distinct members whose most recent paid membership has a recorded Status of Lapsed with a Churned Date (or End Date when Churned Date is missing) at least 30 days old, counted when that membership expires in the period. Zero-value memberships and restricted names (intro, 2 for 1, studio single class, private, credit, Copper + Cloves single class, test) are ignored when finding the most recent membership; a member whose most recent eligible membership is Frozen, Not Activated, Active, New, Renewed or within 30 days of its Churned Date is not lapsed.
 
 - Domain: risk
 - Source: Lapsed.Churned Date; Lapsed.Member ID; Lapsed.Start Date; Lapsed.Status; Lapsed.Amount Paid; Lapsed.Membership Name
 - Table: lapsed
-- Date / population: Membership expiry date cohort; current-stock measures override date scope as stated.
+- Date / population: End Date expiry cohort for standard dated queries, although normalized date stores Purchase Date. Member-expiry-month renewal cohorts and latest-eligible-member lapse counts are separate populations.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: latest_lapse
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
+- Source schema status: Lapsed.Churned Date: Declared in configured source schema; live availability not verified · Lapsed.Member ID: Declared in configured source schema; live availability not verified · Lapsed.Start Date: Declared in configured source schema; live availability not verified · Lapsed.Status: Declared in configured source schema; live availability not verified · Lapsed.Amount Paid: Declared in configured source schema; live availability not verified · Lapsed.Membership Name: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: A member who bought another paid membership after the lapse is not counted. Restricted names follow the KRA churn rules in server/kra-churn.mjs.
 
 Calculation method: Count unique identities rather than source rows. Apply each FILTER condition only to its associated aggregate.
@@ -2137,20 +2508,25 @@ COUNT(DISTINCT member_id) FILTER (WHERE latest_lapse)
 
 ## Membership utilisation — utilisation
 
-Membership utilisation measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Lapsed → Sessions Limit; Lapsed → Remaining Sessions.
+The percentage of valid limited membership credits already used.
+
+How we calculate it: Total allowance minus remaining credits divided by total allowance, multiplied by 100, using only positive allowances with valid remaining balances.
+
+Detailed definition: Used session credits as a percentage of session allowance across memberships with a positive limit and remaining credits between zero and that limit. Both numerator and denominator use the same valid bounded-credit population.
 
 - Domain: risk
-- Source: Lapsed → Sessions Limit; Lapsed → Remaining Sessions
+- Source: Lapsed.Sessions Limit; Lapsed.Remaining Sessions
 - Table: lapsed
-- Date / population: Membership expiry date cohort; current-stock measures override date scope as stated.
+- Date / population: End Date expiry cohort for standard dated queries, although normalized date stores Purchase Date. Member-expiry-month renewal cohorts and latest-eligible-member lapse counts are separate populations.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: session_limit>0 AND remaining BETWEEN 0 AND session_limit
-- Denominator: SUM(session_limit) FILTER (WHERE session_limit>0 AND remaining BETWEEN 0 AND session_limit)
+- Numerator / condition: SUM(session_limit-remaining) FILTER (WHERE session_limit>0 AND remaining BETWEEN 0 AND session_limit)
+- Denominator: NULLIF(SUM(session_limit) FILTER (WHERE session_limit>0 AND remaining BETWEEN 0 AND session_limit),0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Lapsed.Sessions Limit: Declared in configured source schema; live availability not verified · Lapsed.Remaining Sessions: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -2168,20 +2544,25 @@ SUM(session_limit-remaining) FILTER (WHERE session_limit>0 AND remaining BETWEEN
 
 ## Unused memberships — zero_usage_memberships
 
-Unused memberships measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Apply the conditional population/value rules shown in the formula. Evaluate relative-date rules against the application date. Source fields: Lapsed.Total Sessions Completed; Lapsed.Sessions Limit; Lapsed.Remaining Sessions; Lapsed.Most Recent Visit Date; Lapsed.Status; Lapsed.Start Date.
+Memberships started over seven days ago with zero or unknown recorded usage.
+
+How we calculate it: Count non-Renewed rows over seven days old with zero completed usage, or no usage evidence and no last visit; valid allowance minus balance supplies missing usage.
+
+Detailed definition: Membership rows started more than seven days ago, with non-null status other than Renewed, whose recorded completed count is zero; when absent, valid allowance less remaining credits is used. Rows with neither usage evidence nor a last-visit date also qualify, so this includes unknown usage.
 
 - Domain: risk
 - Source: Lapsed.Total Sessions Completed; Lapsed.Sessions Limit; Lapsed.Remaining Sessions; Lapsed.Most Recent Visit Date; Lapsed.Status; Lapsed.Start Date
 - Table: lapsed
-- Date / population: Membership expiry date cohort; current-stock measures override date scope as stated.
+- Date / population: End Date expiry cohort for standard dated queries, although normalized date stores Purchase Date. Member-expiry-month renewal cohorts and latest-eligible-member lapse counts are separate populations.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: status<>'Renewed' AND date_diff('day',TRY_CAST(start_date AS DATE),DATE '{today}')>7 AND (COALESCE(completed, CASE WHEN session_limit>0 AND remaining BETWEEN 0 AND session_limit THEN session_limit-remaining END)=0 OR (COALESCE(completed, CASE WHEN session_limit>0 AND remaining BETWEEN 0 AND session_limit THEN session_limit-remaining END) IS NULL AND last_visit IS NULL))
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Lapsed.Total Sessions Completed: Declared in configured source schema; live availability not verified · Lapsed.Sessions Limit: Declared in configured source schema; live availability not verified · Lapsed.Remaining Sessions: Declared in configured source schema; live availability not verified · Lapsed.Most Recent Visit Date: Declared in configured source schema; live availability not verified · Lapsed.Status: Declared in configured source schema; live availability not verified · Lapsed.Start Date: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate. Apply the conditional population/value rules shown in the formula. Evaluate relative-date rules against the application date.
 
@@ -2199,19 +2580,24 @@ COUNT(*) FILTER (WHERE status<>'Renewed' AND date_diff('day',TRY_CAST(start_date
 
 ## Dormant active memberships — dormant_actives
 
-Running memberships (started, not yet expired, not Lapsed, Not Activated or Frozen) with more than 21 days since the last visit.
+Currently running membership rows reporting more than 21 days since a visit.
+
+How we calculate it: Count current active-membership rows whose recorded Days Since Last Visit exceeds 21.
+
+Detailed definition: Membership rows whose start date is on or before today, whose end date is blank or on/after today, whose non-null status is not Lapsed, Not Activated or Frozen, and whose recorded Days Since Last Visit exceeds 21.
 
 - Domain: risk
 - Source: Lapsed.Status; Lapsed.Days Since Last Visit; Lapsed.Start Date; Lapsed.End Date
 - Table: lapsed
-- Date / population: Current source snapshot relative to today in Asia/Kolkata. Selected period dates and historical comparisons are excluded.
+- Date / population: Current source snapshot relative to today in Asia/Kolkata. Standard cards exclude selected period dates and comparisons; not a reconstructed historical balance.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: status NOT IN ('Lapsed','Not Activated','Frozen') AND start_date<='{today}' AND (end_date IS NULL OR end_date >= '{today}') AND days_absent>21
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
+- Source schema status: Lapsed.Status: Declared in configured source schema; live availability not verified · Lapsed.Days Since Last Visit: Declared in configured source schema; live availability not verified · Lapsed.Start Date: Declared in configured source schema; live availability not verified · Lapsed.End Date: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: Current snapshot measure. Date filters and historical comparisons are excluded.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate. Evaluate relative-date rules against the application date.
@@ -2230,20 +2616,25 @@ COUNT(*) FILTER (WHERE status NOT IN ('Lapsed','Not Activated','Frozen') AND sta
 
 ## Expiring in 30 days — revenue_at_risk_30d
 
-Purchase value of running memberships expiring from today through the next 30 days. Memberships already Renewed are excluded because their renewal is secured.
+Recorded purchase value attached to memberships expiring in the next 30 days.
+
+How we calculate it: Add Amount Paid for expiries from today through 30 days ahead, excluding Renewed, Lapsed and Not Activated statuses.
+
+Detailed definition: Sum of Amount Paid on membership rows expiring from today through 30 days ahead, inclusive, with non-null status other than Renewed, Lapsed or Not Activated. Frozen rows and future-starting memberships can qualify; no start-date condition is applied.
 
 - Domain: risk
 - Source: Lapsed.Amount Paid; Lapsed.End Date; Lapsed.Status
 - Table: lapsed
-- Date / population: Current source snapshot relative to today in Asia/Kolkata. Selected period dates and historical comparisons are excluded.
+- Date / population: Current source snapshot relative to today in Asia/Kolkata. Standard cards exclude selected period dates and comparisons; not a reconstructed historical balance.
 - Aggregation: sum
 - Unit: currency
-- Numerator / condition: status NOT IN ('Renewed','Lapsed','Not Activated') AND TRY_CAST(end_date AS DATE) BETWEEN DATE '{today}' AND DATE '{today}'+INTERVAL 30 DAY
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Uses upcoming expiry dates relative to today; date filters and historical comparisons are excluded.
+- Source schema status: Lapsed.Amount Paid: Declared in configured source schema; live availability not verified · Lapsed.End Date: Declared in configured source schema; live availability not verified · Lapsed.Status: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Uses upcoming expiry dates relative to today; card date filters and comparisons are excluded. The Retention trend applies the same current-status rule to expiry windows at earlier dates; past status changes remain unknown.
 
 Calculation method: Add the specified numeric values across qualifying rows. Apply each FILTER condition only to its associated aggregate. Evaluate relative-date rules against the application date.
 
@@ -2261,20 +2652,25 @@ SUM(amount_paid) FILTER (WHERE status NOT IN ('Renewed','Lapsed','Not Activated'
 
 ## Member risk score — risk_score
 
-Member risk score measures the result of the registered calculation over the applicable normalized source population. Take the arithmetic mean of non-null qualifying values. Protect division by a zero denominator; return unavailable when it is zero. Apply the conditional population/value rules shown in the formula. Source fields: Lapsed.Total Sessions Completed; Lapsed.Sessions Limit; Lapsed.Remaining Sessions; Lapsed.Days Since Last Visit; Lapsed.Cancellation Rate %; Lapsed.Attendance Rate %.
+An uncalibrated score combining credit usage, absence and booking behaviour.
+
+How we calculate it: Average a score weighted 30% to unused allowance, 35% to absence scaled to 60 days, 15% to cancellation rate and 20% to inverse attendance rate, then multiply by 100.
+
+Detailed definition: Average heuristic score combining unused allowance (30%), absence scaled to 60 days (35%), recorded cancellation rate (15%) and inverse attendance rate (20%), multiplied by 100. Usage falls back to attendance or 0.5; other missing components can exclude a row. This is not a calibrated probability and is not guaranteed to stay between zero and 100.
 
 - Domain: risk
 - Source: Lapsed.Total Sessions Completed; Lapsed.Sessions Limit; Lapsed.Remaining Sessions; Lapsed.Days Since Last Visit; Lapsed.Cancellation Rate %; Lapsed.Attendance Rate %
 - Table: lapsed
-- Date / population: Membership expiry date cohort; current-stock measures override date scope as stated.
+- Date / population: End Date expiry cohort for standard dated queries, although normalized date stores Purchase Date. Member-expiry-month renewal cohorts and latest-eligible-member lapse counts are separate populations.
 - Aggregation: avg
 - Unit: decimal
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: Observation population: non-null qualifying values; median is an order statistic, not a ratio.
 - Direction: lower preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Lapsed.Total Sessions Completed: Declared in configured source schema; live availability not verified · Lapsed.Sessions Limit: Declared in configured source schema; live availability not verified · Lapsed.Remaining Sessions: Declared in configured source schema; live availability not verified · Lapsed.Days Since Last Visit: Declared in configured source schema; live availability not verified · Lapsed.Cancellation Rate %: Declared in configured source schema; live availability not verified · Lapsed.Attendance Rate %: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Take the arithmetic mean of non-null qualifying values. Protect division by a zero denominator; return unavailable when it is zero. Apply the conditional population/value rules shown in the formula.
 
@@ -2292,20 +2688,25 @@ AVG(100*(0.3*(1-COALESCE(LEAST(COALESCE(completed, CASE WHEN session_limit>0 AND
 
 ## Memberships held — memberships_count
 
-Memberships held measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Source fields: Lapsed.Member ID.
+How many selected membership records appear in Lapsed.
+
+How we calculate it: Count selected membership rows, including multiple memberships for one member.
+
+Detailed definition: Number of selected Lapsed-sheet membership records, including multiple memberships held by one community member.
 
 - Domain: risk
 - Source: Lapsed.Member ID
 - Table: lapsed
-- Date / population: Membership expiry date cohort; current-stock measures override date scope as stated.
+- Date / population: End Date expiry cohort for standard dated queries, although normalized date stores Purchase Date. Member-expiry-month renewal cohorts and latest-eligible-member lapse counts are separate populations.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Lapsed.Member ID: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records.
 
@@ -2323,20 +2724,25 @@ COUNT(*)
 
 ## Remaining sessions — remaining_sessions
 
-Remaining sessions measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Source fields: Lapsed.Remaining Sessions.
+Total recorded session credits remaining on selected memberships.
+
+How we calculate it: Add recorded remaining credits.
+
+Detailed definition: Total recorded remaining session credits across selected membership records. Missing balances do not contribute; unlimited or invalid allowances are not separately filtered here.
 
 - Domain: risk
 - Source: Lapsed.Remaining Sessions
 - Table: lapsed
-- Date / population: Membership expiry date cohort; current-stock measures override date scope as stated.
+- Date / population: End Date expiry cohort for standard dated queries, although normalized date stores Purchase Date. Member-expiry-month renewal cohorts and latest-eligible-member lapse counts are separate populations.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Lapsed.Remaining Sessions: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows.
 
@@ -2354,20 +2760,25 @@ SUM(remaining)
 
 ## Days since last visit — days_absent
 
-Days since last visit measures the result of the registered calculation over the applicable normalized source population. Take the arithmetic mean of non-null qualifying values. Source fields: Lapsed.Days Since Last Visit.
+Average recorded days since the last visit across membership rows.
+
+How we calculate it: Average recorded Days Since Last Visit; members with several memberships can contribute more than once.
+
+Detailed definition: Mean recorded Days Since Last Visit across membership rows with that value. Multiple memberships can give the same member multiple contributions.
 
 - Domain: risk
 - Source: Lapsed.Days Since Last Visit
 - Table: lapsed
-- Date / population: Membership expiry date cohort; current-stock measures override date scope as stated.
+- Date / population: End Date expiry cohort for standard dated queries, although normalized date stores Purchase Date. Member-expiry-month renewal cohorts and latest-eligible-member lapse counts are separate populations.
 - Aggregation: avg
 - Unit: days
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: COUNT(days_absent)
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: Observation population: non-null qualifying values; median is an order statistic, not a ratio.
 - Direction: lower preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Lapsed.Days Since Last Visit: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Take the arithmetic mean of non-null qualifying values.
 
@@ -2385,20 +2796,25 @@ AVG(days_absent)
 
 ## Bookings — bookings
 
-Bookings measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Source fields: Bookings.Member Id.
+How many booking records are in the selected scope.
+
+How we calculate it: Count all selected Bookings rows, regardless of outcome.
+
+Detailed definition: Number of selected booking source rows, including attended, cancelled, no-show, late-cancelled and unconfirmed records.
 
 - Domain: attendance
 - Source: Bookings.Member Id
 - Table: bookings
-- Date / population: Booking/session date; outcome flags can overlap; exclusive outcome charts apply precedence.
+- Date / population: Session Date; one booking source row. Some views further restrict to late cancellations. Imported booking lead time is null. Flag-based counts can overlap; exclusive charts apply precedence.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Bookings.Member Id: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records.
 
@@ -2416,20 +2832,25 @@ COUNT(*)
 
 ## Unique bookers — unique_bookers
 
-Unique bookers measures the result of the registered calculation over the applicable normalized source population. Count unique identities rather than source rows. Source fields: Bookings.Member Id.
+How many identified members appear in selected bookings.
+
+How we calculate it: Count different recorded Member IDs across all booking outcomes.
+
+Detailed definition: Distinct known Member IDs represented in the selected booking rows, regardless of booking outcome.
 
 - Domain: attendance
 - Source: Bookings.Member Id
 - Table: bookings
-- Date / population: Booking/session date; outcome flags can overlap; exclusive outcome charts apply precedence.
+- Date / population: Session Date; one booking source row. Some views further restrict to late cancellations. Imported booking lead time is null. Flag-based counts can overlap; exclusive charts apply precedence.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Bookings.Member Id: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count unique identities rather than source rows.
 
@@ -2447,20 +2868,25 @@ COUNT(DISTINCT member_id)
 
 ## Average class size — booking_avg_class_size
 
-Average class size measures the result of the registered calculation over the applicable normalized source population. Count unique identities rather than source rows. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Bookings.Attended; Bookings.Session Date.
+Average attended bookings per session represented in Bookings.
+
+How we calculate it: Attended booking rows divided by different session identities represented in Bookings, including those with no attendance.
+
+Detailed definition: Attended booking-row count divided by distinct session identities represented by Bookings, including sessions with no attended booking rows.
 
 - Domain: attendance
-- Source: Bookings.Attended; Bookings.Session Date
+- Source: Bookings.Attended; Bookings.Session ID; Bookings.UniqueID1; Bookings.UniqueID2; Bookings.Session Date; Bookings.Time; Bookings.Class; Bookings.Location
 - Table: bookings
-- Date / population: Booking/session date; outcome flags can overlap; exclusive outcome charts apply precedence.
+- Date / population: Session Date; one booking source row. Some views further restrict to late cancellations. Imported booking lead time is null. Flag-based counts can overlap; exclusive charts apply precedence.
 - Aggregation: weighted
 - Unit: decimal
-- Numerator / condition: attended
-- Denominator: COUNT(DISTINCT COALESCE(session_id,unique_id1,unique_id2,date||'|'||time||'|'||format||'|'||location))
+- Numerator / condition: COUNT(*) FILTER (WHERE attended)
+- Denominator: NULLIF(COUNT(DISTINCT COALESCE(session_id,unique_id1,unique_id2,date||'|'||time||'|'||format||'|'||location)),0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Bookings.Attended: Declared in configured source schema; live availability not verified · Bookings.Session ID: Read by implementation or required by metric, but absent from configured column list; live header availability unverified · Bookings.UniqueID1: Declared in configured source schema; live availability not verified · Bookings.UniqueID2: Declared in configured source schema; live availability not verified · Bookings.Session Date: Declared in configured source schema; live availability not verified · Bookings.Time: Read by implementation or required by metric, but absent from configured column list; live header availability unverified · Bookings.Class: Read by implementation or required by metric, but absent from configured column list; live header availability unverified · Bookings.Location: Read by implementation or required by metric, but absent from configured column list; live header availability unverified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Session identity falls back from session ID to source unique IDs and date/time/format/location. Sessions with no booking rows are absent; this is not a full timetable average.
 
 Calculation method: Count unique identities rather than source rows. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -2478,20 +2904,25 @@ COUNT(*) FILTER (WHERE attended)/NULLIF(COUNT(DISTINCT COALESCE(session_id,uniqu
 
 ## Empty sessions — booking_empty_sessions
 
-Empty sessions measures the result of the registered calculation over the applicable normalized source population. Count unique identities rather than source rows. Apply the conditional population/value rules shown in the formula. Source fields: Bookings.Attended; Bookings.Session Date.
+Sessions represented in Bookings with no attended booking.
+
+How we calculate it: Count different represented session identities, then subtract those with an attended row.
+
+Detailed definition: Distinct session identities in Bookings minus identities with an attended booking row.
 
 - Domain: attendance
-- Source: Bookings.Attended; Bookings.Session Date
+- Source: Bookings.Attended; Bookings.Session ID; Bookings.UniqueID1; Bookings.UniqueID2; Bookings.Session Date; Bookings.Time; Bookings.Class; Bookings.Location
 - Table: bookings
-- Date / population: Booking/session date; outcome flags can overlap; exclusive outcome charts apply precedence.
+- Date / population: Session Date; one booking source row. Some views further restrict to late cancellations. Imported booking lead time is null. Flag-based counts can overlap; exclusive charts apply precedence.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Bookings.Attended: Declared in configured source schema; live availability not verified · Bookings.Session ID: Read by implementation or required by metric, but absent from configured column list; live header availability unverified · Bookings.UniqueID1: Declared in configured source schema; live availability not verified · Bookings.UniqueID2: Declared in configured source schema; live availability not verified · Bookings.Session Date: Declared in configured source schema; live availability not verified · Bookings.Time: Read by implementation or required by metric, but absent from configured column list; live header availability unverified · Bookings.Class: Read by implementation or required by metric, but absent from configured column list; live header availability unverified · Bookings.Location: Read by implementation or required by metric, but absent from configured column list; live header availability unverified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Only sessions represented in Bookings can qualify; sessions with no bookings are not counted.
 
 Calculation method: Count unique identities rather than source rows. Apply the conditional population/value rules shown in the formula.
 
@@ -2509,20 +2940,25 @@ COUNT(DISTINCT COALESCE(session_id,unique_id1,unique_id2,date||'|'||time||'|'||f
 
 ## Cancellation rate — cancellation_rate
 
-Cancellation rate measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Bookings.Cancellation rate.
+The percentage of booking rows flagged Cancelled.
+
+How we calculate it: Cancelled booking rows divided by all booking rows, multiplied by 100.
+
+Detailed definition: Percentage of booking rows explicitly flagged Cancelled. Missing flags remain in the denominator without qualifying; cancellation can overlap other outcome flags.
 
 - Domain: attendance
-- Source: Bookings.Cancellation rate
+- Source: Bookings.Cancelled
 - Table: bookings
-- Date / population: Booking/session date; outcome flags can overlap; exclusive outcome charts apply precedence.
+- Date / population: Session Date; one booking source row. Some views further restrict to late cancellations. Imported booking lead time is null. Flag-based counts can overlap; exclusive charts apply precedence.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: cancelled
-- Denominator: (COUNT(*))
+- Numerator / condition: (COUNT(*) FILTER (WHERE cancelled))
+- Denominator: NULLIF((COUNT(*)),0)
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Bookings.Cancelled: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -2538,22 +2974,27 @@ Runtime template (rate preview = 1):
 (COUNT(*) FILTER (WHERE cancelled)) / NULLIF((COUNT(*)),0)
 ```
 
-## Late-cancel rate — booking_late_rate
+## Booking late-cancel rate — booking_late_rate
 
-Late-cancel rate measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Bookings.Late-cancel rate.
+The percentage of booking rows flagged Late Cancelled.
+
+How we calculate it: Late-cancelled booking rows divided by all booking rows, multiplied by 100.
+
+Detailed definition: Percentage of booking rows explicitly flagged late cancelled. Missing flags remain in the denominator without qualifying; outcomes can overlap.
 
 - Domain: attendance
-- Source: Bookings.Late-cancel rate
+- Source: Bookings.Late Cancelled
 - Table: bookings
-- Date / population: Booking/session date; outcome flags can overlap; exclusive outcome charts apply precedence.
+- Date / population: Session Date; one booking source row. Some views further restrict to late cancellations. Imported booking lead time is null. Flag-based counts can overlap; exclusive charts apply precedence.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: late_cancelled>0
-- Denominator: (COUNT(*))
+- Numerator / condition: (COUNT(*) FILTER (WHERE late_cancelled>0))
+- Denominator: NULLIF((COUNT(*)),0)
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Bookings.Late Cancelled: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -2571,20 +3012,25 @@ Runtime template (rate preview = 1):
 
 ## No-show rate — booking_no_show_rate
 
-No-show rate measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Bookings.No-show rate.
+The percentage of booking rows flagged No Show.
+
+How we calculate it: No-show booking rows divided by all booking rows, multiplied by 100.
+
+Detailed definition: Percentage of booking rows explicitly flagged No Show. Missing flags remain in the denominator without qualifying; outcomes can overlap.
 
 - Domain: attendance
-- Source: Bookings.No-show rate
+- Source: Bookings.No Show
 - Table: bookings
-- Date / population: Booking/session date; outcome flags can overlap; exclusive outcome charts apply precedence.
+- Date / population: Session Date; one booking source row. Some views further restrict to late cancellations. Imported booking lead time is null. Flag-based counts can overlap; exclusive charts apply precedence.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: no_show
-- Denominator: (COUNT(*))
+- Numerator / condition: (COUNT(*) FILTER (WHERE no_show))
+- Denominator: NULLIF((COUNT(*)),0)
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Bookings.No Show: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -2602,20 +3048,25 @@ Runtime template (rate preview = 1):
 
 ## Attended share — booking_attendance_rate
 
-Attended share measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Bookings.Attended share.
+The percentage of booking rows flagged Attended.
+
+How we calculate it: Attended booking rows divided by all booking rows, multiplied by 100.
+
+Detailed definition: Percentage of booking rows explicitly flagged Attended. Missing flags remain in the denominator without qualifying; this is not a capacity fill rate.
 
 - Domain: attendance
-- Source: Bookings.Attended share
+- Source: Bookings.Attended
 - Table: bookings
-- Date / population: Booking/session date; outcome flags can overlap; exclusive outcome charts apply precedence.
+- Date / population: Session Date; one booking source row. Some views further restrict to late cancellations. Imported booking lead time is null. Flag-based counts can overlap; exclusive charts apply precedence.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: attended
-- Denominator: (COUNT(*))
+- Numerator / condition: (COUNT(*) FILTER (WHERE attended))
+- Denominator: NULLIF((COUNT(*)),0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Bookings.Attended: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -2633,20 +3084,25 @@ Runtime template (rate preview = 1):
 
 ## Refund rate — refund_rate
 
-Refund rate measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Bookings.Refund rate.
+The percentage of booking rows flagged Refunded.
+
+How we calculate it: Refunded booking rows divided by all booking rows, multiplied by 100; this is not a refunded-money rate.
+
+Detailed definition: Percentage of booking rows explicitly flagged Refunded. Missing flags remain in the denominator without qualifying; this measures booking flags rather than refunded INR.
 
 - Domain: attendance
-- Source: Bookings.Refund rate
+- Source: Bookings.Refunded
 - Table: bookings
-- Date / population: Booking/session date; outcome flags can overlap; exclusive outcome charts apply precedence.
+- Date / population: Session Date; one booking source row. Some views further restrict to late cancellations. Imported booking lead time is null. Flag-based counts can overlap; exclusive charts apply precedence.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: refunded
-- Denominator: (COUNT(*))
+- Numerator / condition: (COUNT(*) FILTER (WHERE refunded))
+- Denominator: NULLIF((COUNT(*)),0)
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Bookings.Refunded: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -2664,20 +3120,25 @@ Runtime template (rate preview = 1):
 
 ## Effective attendance — effective_attendance
 
-Effective attendance measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Bookings.Attended; Bookings.Cancelled; Bookings.Late Cancelled; Bookings.No Show.
+The percentage of bookings attended without a known adverse outcome flag.
+
+How we calculate it: Attended rows without Cancelled, Late Cancelled or No Show flags divided by all booking rows, multiplied by 100.
+
+Detailed definition: Percentage of booking rows flagged Attended without a known Cancelled, Late Cancelled or No Show flag. Missing adverse flags are treated as false for this rule.
 
 - Domain: attendance
 - Source: Bookings.Attended; Bookings.Cancelled; Bookings.Late Cancelled; Bookings.No Show
 - Table: bookings
-- Date / population: Booking/session date; outcome flags can overlap; exclusive outcome charts apply precedence.
+- Date / population: Session Date; one booking source row. Some views further restrict to late cancellations. Imported booking lead time is null. Flag-based counts can overlap; exclusive charts apply precedence.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: attended AND NOT COALESCE(cancelled,FALSE) AND NOT COALESCE(late_cancelled>0,FALSE) AND NOT COALESCE(no_show,FALSE)
-- Denominator: COUNT(*)
+- Numerator / condition: COUNT(*) FILTER (WHERE attended AND NOT COALESCE(cancelled,FALSE) AND NOT COALESCE(late_cancelled>0,FALSE) AND NOT COALESCE(no_show,FALSE))::DOUBLE
+- Denominator: NULLIF(COUNT(*),0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Bookings.Attended: Declared in configured source schema; live availability not verified · Bookings.Cancelled: Declared in configured source schema; live availability not verified · Bookings.Late Cancelled: Declared in configured source schema; live availability not verified · Bookings.No Show: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -2695,20 +3156,25 @@ COUNT(*) FILTER (WHERE attended AND NOT COALESCE(cancelled,FALSE) AND NOT COALES
 
 ## Booking lead time — booking_lead_time_days
 
-Booking lead time measures the result of the registered calculation over the applicable normalized source population. Take the arithmetic mean of non-null qualifying values. Apply each FILTER condition only to its associated aggregate. Source fields: Bookings.Session Date; Bookings.Sale Date.
+Average recorded time from sale to session for nonimported bookings.
+
+How we calculate it: Average valid nonnegative elapsed days between Sale Date and Session Date.
+
+Detailed definition: Mean nonnegative elapsed days between recorded Sale Date and Session Date on nonimported bookings with valid dates. Fractional days preserve hours; the source sale date is used as the booking-time proxy.
 
 - Domain: attendance
 - Source: Bookings.Session Date; Bookings.Sale Date
 - Table: bookings
-- Date / population: Booking/session date; outcome flags can overlap; exclusive outcome charts apply precedence.
+- Date / population: Session Date; one booking source row. Some views further restrict to late cancellations. Imported booking lead time is null. Flag-based counts can overlap; exclusive charts apply precedence.
 - Aggregation: avg
 - Unit: days
-- Numerator / condition: lead_time>=0
-- Denominator: COUNT(lead_time) FILTER (WHERE lead_time>=0)
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: Observation population: non-null qualifying values; median is an order statistic, not a ratio.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Bookings.Session Date: Declared in configured source schema; live availability not verified · Bookings.Sale Date: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Take the arithmetic mean of non-null qualifying values. Apply each FILTER condition only to its associated aggregate.
 
@@ -2724,22 +3190,27 @@ Runtime template (rate preview = 1):
 AVG(lead_time) FILTER (WHERE lead_time>=0)
 ```
 
-## Same-day bookings — same_day_share
+## Bookings within 24 hours — same_day_share
 
-Same-day bookings measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Bookings.Session Date; Bookings.Sale Date.
+The percentage of nonimported bookings made less than 24 hours before the session.
+
+How we calculate it: Rows with valid sale-to-session elapsed time from zero to under 24 hours divided by all nonimported booking rows, multiplied by 100.
+
+Detailed definition: Non-imported booking rows with Sale Date at or before Session Date and elapsed time under 24 hours, divided by all non-imported booking rows.
 
 - Domain: attendance
 - Source: Bookings.Session Date; Bookings.Sale Date
 - Table: bookings
-- Date / population: Booking/session date; outcome flags can overlap; exclusive outcome charts apply precedence.
+- Date / population: Session Date; one booking source row. Some views further restrict to late cancellations. Imported booking lead time is null. Flag-based counts can overlap; exclusive charts apply precedence.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: lead_time>=0 AND lead_time<1
-- Denominator: (COUNT(*) FILTER (WHERE NOT imported))
+- Numerator / condition: (COUNT(*) FILTER (WHERE lead_time>=0 AND lead_time<1))
+- Denominator: NULLIF((COUNT(*) FILTER (WHERE NOT imported)),0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Bookings.Session Date: Declared in configured source schema; live availability not verified · Bookings.Sale Date: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: This is elapsed time, not the same calendar day. The denominator includes rows with missing or invalid lead time; imported rows have null lead time.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -2757,20 +3228,25 @@ Runtime template (rate preview = 1):
 
 ## Revenue / booking — revenue_per_booking
 
-Revenue / booking measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Add the specified numeric values across qualifying rows. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Bookings.Sale Value.
+Average recorded booking value per nonimported booking.
+
+How we calculate it: Recorded Sale Value on nonimported rows divided by all nonimported booking rows.
+
+Detailed definition: Recorded Sale Value in INR per nonimported booking row. Missing values contribute no revenue but those rows still contribute to the denominator; it is not collected cash per reservation.
 
 - Domain: revenue
 - Source: Bookings.Sale Value
 - Table: bookings
-- Date / population: Booking/session date; outcome flags can overlap; exclusive outcome charts apply precedence.
+- Date / population: Session Date; one booking source row. Some views further restrict to late cancellations. Imported booking lead time is null. Flag-based counts can overlap; exclusive charts apply precedence.
 - Aggregation: weighted
 - Unit: currency
-- Numerator / condition: NOT imported
-- Denominator: COUNT(*) FILTER (WHERE NOT imported)
+- Numerator / condition: SUM(revenue) FILTER (WHERE NOT imported)
+- Denominator: NULLIF(COUNT(*) FILTER (WHERE NOT imported),0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Bookings.Sale Value: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Add the specified numeric values across qualifying rows. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -2788,20 +3264,25 @@ SUM(revenue) FILTER (WHERE NOT imported)/NULLIF(COUNT(*) FILTER (WHERE NOT impor
 
 ## Leads — leads
 
-Leads measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Source fields: Leads.ID.
+How many lead records were created in the selected period.
+
+How we calculate it: Count selected lead rows without deduplicating people.
+
+Detailed definition: Number of lead source records in the selected creation-date cohort, without distinct-person deduplication.
 
 - Domain: people
 - Source: Leads.ID
 - Table: leads
-- Date / population: Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Leads.ID: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records.
 
@@ -2819,20 +3300,25 @@ COUNT(*)
 
 ## Lead win rate — lead_conversion_rate
 
-Lead records at the Membership Sold stage divided by all lead records in the selected creation-date cohort.
+The percentage of selected lead records currently at Membership Sold stage.
+
+How we calculate it: Membership Sold stage records divided by all creation-date cohort lead records, multiplied by 100.
+
+Detailed definition: Lead records at the Membership Sold stage divided by all lead records in the selected creation-date cohort.
 
 - Domain: people
 - Source: Leads.Stage Name
 - Table: leads
-- Date / population: Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: lower(trim(stage))='membership sold'
-- Denominator: (COUNT(*))
+- Numerator / condition: (COUNT(*) FILTER (WHERE lower(trim(stage))='membership sold'))
+- Denominator: NULLIF((COUNT(*)),0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Leads.Stage Name: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -2850,20 +3336,25 @@ Runtime template (rate preview = 1):
 
 ## First response time — response_time_hours
 
-First response time measures the result of the registered calculation over the applicable normalized source population. Take the arithmetic mean of non-null qualifying values. Apply each FILTER condition only to its associated aggregate. Source fields: Leads.Follow Up 1 Date; Leads.Created At.
+Average recorded hours from lead creation to first follow-up.
+
+How we calculate it: Average valid nonnegative elapsed hours between Created At and Follow Up 1 Date.
+
+Detailed definition: Mean nonnegative elapsed hours from Created At to Follow Up 1 Date where both dates are valid. This records the first follow-up date supplied by the source, not proof of a successful contact.
 
 - Domain: people
 - Source: Leads.Follow Up 1 Date; Leads.Created At
 - Table: leads
-- Date / population: Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: avg
 - Unit: decimal
-- Numerator / condition: response_hours>=0
-- Denominator: COUNT(response_hours) FILTER (WHERE response_hours>=0)
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: Observation population: non-null qualifying values; median is an order statistic, not a ratio.
 - Direction: lower preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Leads.Follow Up 1 Date: Declared in configured source schema; live availability not verified · Leads.Created At: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Take the arithmetic mean of non-null qualifying values. Apply each FILTER condition only to its associated aggregate.
 
@@ -2881,20 +3372,25 @@ AVG(response_hours) FILTER (WHERE response_hours>=0)
 
 ## Untouched leads — untouched_leads
 
-Untouched leads measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Evaluate relative-date rules against the application date. Source fields: Leads.Follow Up 1 Date; Leads.Created At; Leads.Status; Leads.Stage Name.
+Open lead records over 48 hours old with no recorded follow-up dates.
+
+How we calculate it: Count records with no Follow Up 1–4 dates, created over 48 hours before today's midnight, excluding Membership Sold, Lost and Disqualified records.
+
+Detailed definition: Lead records with no dates in Follow Up 1–4, created more than 48 hours before today's midnight, not at Membership Sold stage, and not explicitly Lost or Disqualified. Missing status remains eligible.
 
 - Domain: people
 - Source: Leads.Follow Up 1 Date; Leads.Created At; Leads.Status; Leads.Stage Name
 - Table: leads
-- Date / population: Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: touches=0 AND date_diff('hour',TRY_CAST(date AS TIMESTAMP),TIMESTAMP '{today}')>48 AND lower(trim(COALESCE(stage,'')))<>'membership sold' AND (status NOT IN ('Lost','Disqualified') OR status IS NULL)
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: lower preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Leads.Follow Up 1 Date: Declared in configured source schema; live availability not verified · Leads.Created At: Declared in configured source schema; live availability not verified · Leads.Status: Declared in configured source schema; live availability not verified · Leads.Stage Name: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate. Evaluate relative-date rules against the application date.
 
@@ -2912,20 +3408,25 @@ COUNT(*) FILTER (WHERE touches=0 AND date_diff('hour',TRY_CAST(date AS TIMESTAMP
 
 ## Average follow-ups — touches
 
-Average follow-ups measures the result of the registered calculation over the applicable normalized source population. Take the arithmetic mean of non-null qualifying values. Source fields: Leads.Follow Up 1 Date; Leads.Follow Up 2 Date; Leads.Follow Up 3 Date; Leads.Follow Up 4 Date.
+Average number of recorded follow-up date fields per lead.
+
+How we calculate it: Count populated Follow Up 1–4 dates per row, then average across selected leads.
+
+Detailed definition: Mean number of populated Follow Up 1–4 Date fields per lead row, from zero through four. This counts recorded date fields rather than all communication attempts.
 
 - Domain: people
 - Source: Leads.Follow Up 1 Date; Leads.Follow Up 2 Date; Leads.Follow Up 3 Date; Leads.Follow Up 4 Date
 - Table: leads
-- Date / population: Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: avg
 - Unit: decimal
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: COUNT(touches)
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: Observation population: non-null qualifying values; median is an order statistic, not a ratio.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Leads.Follow Up 1 Date: Declared in configured source schema; live availability not verified · Leads.Follow Up 2 Date: Declared in configured source schema; live availability not verified · Leads.Follow Up 3 Date: Declared in configured source schema; live availability not verified · Leads.Follow Up 4 Date: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Take the arithmetic mean of non-null qualifying values.
 
@@ -2943,20 +3444,25 @@ AVG(touches)
 
 ## Open pipeline — open_leads
 
-Open pipeline measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Source fields: Leads.Status; Leads.Stage Name.
+Lead records not recorded as sold, lost or disqualified.
+
+How we calculate it: Count records outside Membership Sold stage whose status is not Lost or Disqualified; missing status can qualify.
+
+Detailed definition: Lead records not at Membership Sold stage and not explicitly Lost or Disqualified. Missing stage or status can qualify; this is a rule-based open cohort rather than a verified opportunity count.
 
 - Domain: people
 - Source: Leads.Status; Leads.Stage Name
 - Table: leads
-- Date / population: Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: lower(trim(COALESCE(stage,'')))<>'membership sold' AND (status NOT IN ('Lost','Disqualified') OR status IS NULL)
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Leads.Status: Declared in configured source schema; live availability not verified · Leads.Stage Name: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
 
@@ -2974,19 +3480,24 @@ COUNT(*) FILTER (WHERE lower(trim(COALESCE(stage,'')))<>'membership sold' AND (s
 
 ## Estimated pipeline value — pipeline_value
 
-Open leads multiplied by the observed win rate and average paid first purchase of converted newcomers in the same global scope.
+Estimated value of the open lead pipeline.
+
+How we calculate it: Open lead count multiplied by the cohort Membership Sold rate and average positive first purchase of converted newcomers in the applicable scope.
+
+Detailed definition: Open leads multiplied by the observed win rate and average paid first purchase of converted newcomers in the same global scope.
 
 - Domain: people
-- Source: Leads.Stage Name; New.First Purchase Value
-- Table: new
-- Date / population: First-visit date cohort; latest source outcomes are distinct from dated conversion events.
+- Source: Leads.Stage Name; Leads.Status; New.First Purchase Value; New.Is New; New.Conversion Status
+- Table: leads
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: weighted
 - Unit: currency
-- Numerator / condition: lower(trim(COALESCE(stage,'')))<>'membership sold' AND (status NOT IN ('Lost','Disqualified') OR status IS NULL)
-- Denominator: COUNT(*)
+- Numerator / condition: (COUNT(*) FILTER (WHERE lower(trim(COALESCE(stage,'')))<>'membership sold' AND (status NOT IN ('Lost','Disqualified') OR status IS NULL)))*(COUNT(*) FILTER (WHERE lower(trim(stage))='membership sold'))::DOUBLE
+- Denominator: NULLIF(COUNT(*),0)*(SELECT AVG(first_purchase) FROM new WHERE {applicable_newcomer_filters} AND is_new AND conversion='Converted' AND first_purchase>0)
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
+- Source schema status: Leads.Stage Name: Declared in configured source schema; live availability not verified · Leads.Status: Declared in configured source schema; live availability not verified · New.First Purchase Value: Declared in configured source schema; live availability not verified · New.Is New: Declared in configured source schema; live availability not verified · New.Conversion Status: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: An estimate, not contracted sales. Newcomer data loads with Enquiries so results do not depend on tab visit order.
 
 Calculation method: Count qualifying records. Take the arithmetic mean of non-null qualifying values. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
@@ -3005,20 +3516,25 @@ Runtime template (rate preview = 1):
 
 ## Check-ins — checkins
 
-Check-ins measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Source fields: Checkins.Checked In.
+How many Checkins records are explicitly marked attended.
+
+How we calculate it: Count attended Checkins rows; repeat visits count again.
+
+Detailed definition: Number of Checkins rows explicitly marked attended/Checked In. These are visits rather than distinct people or sessions.
 
 - Domain: attendance
 - Source: Checkins.Checked In
 - Table: checkins
-- Date / population: Session date; one check-in row. Attendance-based revenue uses attended rows. Teaching duration is counted once per attended session with valid duration.
+- Date / population: Source Date or Date (IST); one check-in source row. attended is read from Attended, falling back to Checked In. Distinct session IDs, source rows and attended visits are different populations.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: attended
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Checkins.Checked In: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
 
@@ -3036,20 +3552,25 @@ COUNT(*) FILTER (WHERE attended)
 
 ## Unique attendees — unique_attendees
 
-Unique attendees measures the result of the registered calculation over the applicable normalized source population. Count unique identities rather than source rows. Apply each FILTER condition only to its associated aggregate. Source fields: Checkins.Member ID; Checkins.Checked In.
+How many identified members attended in the selected Checkins scope.
+
+How we calculate it: Count different recorded Member IDs on attended Checkins rows.
+
+Detailed definition: Distinct known Member IDs among attended Checkins rows. Attended rows missing Member ID do not add a person.
 
 - Domain: attendance
 - Source: Checkins.Member ID; Checkins.Checked In
 - Table: checkins
-- Date / population: Session date; one check-in row. Attendance-based revenue uses attended rows. Teaching duration is counted once per attended session with valid duration.
+- Date / population: Source Date or Date (IST); one check-in source row. attended is read from Attended, falling back to Checked In. Distinct session IDs, source rows and attended visits are different populations.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: attended
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Checkins.Member ID: Declared in configured source schema; live availability not verified · Checkins.Checked In: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count unique identities rather than source rows. Apply each FILTER condition only to its associated aggregate.
 
@@ -3067,20 +3588,25 @@ COUNT(DISTINCT member_id) FILTER (WHERE attended)
 
 ## Average class size — attendance_avg_class_size
 
-Average class size measures the result of the registered calculation over the applicable normalized source population. Count unique identities rather than source rows. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Checkins.Session ID; Checkins.Checked In.
+Average attended check-ins per session represented in Checkins.
+
+How we calculate it: Attended Checkins rows divided by different known Session IDs represented in Checkins.
+
+Detailed definition: Attended check-in row count divided by distinct non-null session IDs represented in Checkins.
 
 - Domain: attendance
 - Source: Checkins.Session ID; Checkins.Checked In
 - Table: checkins
-- Date / population: Session date; one check-in row. Attendance-based revenue uses attended rows. Teaching duration is counted once per attended session with valid duration.
+- Date / population: Source Date or Date (IST); one check-in source row. attended is read from Attended, falling back to Checked In. Distinct session IDs, source rows and attended visits are different populations.
 - Aggregation: weighted
 - Unit: decimal
-- Numerator / condition: attended
-- Denominator: COUNT(DISTINCT session_id) FILTER (WHERE session_id IS NOT NULL)
+- Numerator / condition: COUNT(*) FILTER (WHERE attended)
+- Denominator: NULLIF(COUNT(DISTINCT session_id) FILTER (WHERE session_id IS NOT NULL),0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Checkins.Session ID: Declared in configured source schema; live availability not verified · Checkins.Checked In: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: The numerator can include attended rows with missing session IDs. Sessions absent from the check-in source do not contribute to the denominator.
 
 Calculation method: Count unique identities rather than source rows. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -3098,20 +3624,25 @@ COUNT(*) FILTER (WHERE attended)/NULLIF(COUNT(DISTINCT session_id) FILTER (WHERE
 
 ## Empty sessions — attendance_empty_sessions
 
-Empty sessions measures the result of the registered calculation over the applicable normalized source population. Count unique identities rather than source rows. Apply each FILTER condition only to its associated aggregate. Apply the conditional population/value rules shown in the formula. Source fields: Checkins.Session ID; Checkins.Checked In.
+Sessions represented in Checkins with no attended row.
+
+How we calculate it: Count different known Session IDs, then subtract those with an attended row.
+
+Detailed definition: Distinct non-null session IDs in Checkins minus session IDs with an attended row.
 
 - Domain: attendance
 - Source: Checkins.Session ID; Checkins.Checked In
 - Table: checkins
-- Date / population: Session date; one check-in row. Attendance-based revenue uses attended rows. Teaching duration is counted once per attended session with valid duration.
+- Date / population: Source Date or Date (IST); one check-in source row. attended is read from Attended, falling back to Checked In. Distinct session IDs, source rows and attended visits are different populations.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: session_id IS NOT NULL
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Checkins.Session ID: Declared in configured source schema; live availability not verified · Checkins.Checked In: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Only source-represented sessions are counted; sessions with no check-in records cannot be identified as empty.
 
 Calculation method: Count unique identities rather than source rows. Apply each FILTER condition only to its associated aggregate. Apply the conditional population/value rules shown in the formula.
 
@@ -3129,20 +3660,25 @@ COUNT(DISTINCT session_id) FILTER (WHERE session_id IS NOT NULL) - COUNT(DISTINC
 
 ## Visits / member — visits_per_member
 
-Visits / member measures the result of the registered calculation over the applicable normalized source population. Count unique identities rather than source rows. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Checkins.Member ID; Checkins.Checked In.
+Average attended check-ins per identified attendee.
+
+How we calculate it: Attended Checkins rows divided by different known attended Member IDs.
+
+Detailed definition: Attended Checkins rows per distinct known attendee Member ID. Attended rows without an ID contribute visits but no person to the denominator.
 
 - Domain: attendance
 - Source: Checkins.Member ID; Checkins.Checked In
 - Table: checkins
-- Date / population: Session date; one check-in row. Attendance-based revenue uses attended rows. Teaching duration is counted once per attended session with valid duration.
+- Date / population: Source Date or Date (IST); one check-in source row. attended is read from Attended, falling back to Checked In. Distinct session IDs, source rows and attended visits are different populations.
 - Aggregation: weighted
 - Unit: decimal
-- Numerator / condition: attended
-- Denominator: COUNT(DISTINCT member_id) FILTER (WHERE attended)
+- Numerator / condition: COUNT(*) FILTER (WHERE attended)
+- Denominator: NULLIF(COUNT(DISTINCT member_id) FILTER (WHERE attended),0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Checkins.Member ID: Declared in configured source schema; live availability not verified · Checkins.Checked In: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count unique identities rather than source rows. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -3160,20 +3696,25 @@ COUNT(*) FILTER (WHERE attended)/NULLIF(COUNT(DISTINCT member_id) FILTER (WHERE 
 
 ## Complimentary share — complimentary_rate
 
-Complimentary share measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Sessions.Complimentary; Sessions.CheckedIn.
+Complimentary Sessions visits as a percentage of Sessions attendance.
+
+How we calculate it: Total numeric Sessions Complimentary visits divided by Sessions CheckedIn attendance, multiplied by 100.
+
+Detailed definition: Numeric Sessions Complimentary visits as a percentage of Sessions CheckedIn attendance. Member attendance supplies this from Sessions rather than boolean check-in complimentary flags.
 
 - Domain: attendance
 - Source: Sessions.Complimentary; Sessions.CheckedIn
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: SUM(checked_in)
+- Numerator / condition: SUM(complimentary_visits)
+- Denominator: NULLIF(SUM(checked_in),0)
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.Complimentary: Declared in configured source schema; live availability not verified · Sessions.CheckedIn: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -3191,20 +3732,25 @@ SUM(complimentary_visits)/NULLIF(SUM(checked_in),0)
 
 ## Revenue / check-in — revenue_per_checkin
 
-Attributed revenue on attended rows divided by attended check-ins.
+Average attributed revenue per attended check-in.
+
+How we calculate it: Recorded Paid value on attended Checkins rows divided by attended Checkins row count.
+
+Detailed definition: Attributed revenue on attended rows divided by attended check-ins.
 
 - Domain: revenue
 - Source: Checkins.Paid; Checkins.Checked In
 - Table: checkins
-- Date / population: Session date; one check-in row. Attendance-based revenue uses attended rows. Teaching duration is counted once per attended session with valid duration.
+- Date / population: Source Date or Date (IST); one check-in source row. attended is read from Attended, falling back to Checked In. Distinct session IDs, source rows and attended visits are different populations.
 - Aggregation: weighted
 - Unit: currency
 - Numerator / condition: Attended revenue
 - Denominator: Check-ins
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Checkins.Paid: Declared in configured source schema; live availability not verified · Checkins.Checked In: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Add the specified numeric values across qualifying rows. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -3222,19 +3768,24 @@ SUM(revenue) FILTER (WHERE attended)/NULLIF(COUNT(*) FILTER (WHERE attended),0)
 
 ## Recorded teaching hours — teaching_hours
 
-Recorded duration counted once per attended session, converted to hours.
+Recorded teaching duration counted once per attended session.
+
+How we calculate it: Add valid recorded session minutes once per known attended Session ID, then divide by 60.
+
+Detailed definition: Recorded duration counted once per attended session, converted to hours.
 
 - Domain: people
 - Source: Checkins.Duration (Minutes)
 - Table: checkins
-- Date / population: Session date; one check-in row. Attendance-based revenue uses attended rows. Teaching duration is counted once per attended session with valid duration.
+- Date / population: Source Date or Date (IST); one check-in source row. attended is read from Attended, falling back to Checked In. Distinct session IDs, source rows and attended visits are different populations.
 - Aggregation: sum
 - Unit: decimal
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: SUM(CASE WHEN teaching_session_rank=1 THEN duration END)
+- Denominator: 60
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
+- Source schema status: Checkins.Duration (Minutes): Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: Date-formatted minutes are decoded from the Sheets serial value; invalid or missing duration is excluded. Attendee rows never multiply teaching time.
 
 Calculation method: Add the specified numeric values across qualifying rows. Apply the conditional population/value rules shown in the formula.
@@ -3253,20 +3804,25 @@ SUM(CASE WHEN teaching_session_rank=1 THEN duration END)/60
 
 ## Revenue / recorded hour — revenue_per_hour
 
-Attended revenue with valid session duration divided by distinct-session teaching hours.
+Attributed attended revenue per recorded teaching hour.
+
+How we calculate it: Attended revenue on rows with positive valid duration divided by teaching hours counted once per known session.
+
+Detailed definition: Attended revenue with valid session duration divided by distinct-session teaching hours.
 
 - Domain: people
 - Source: Checkins.Paid; Checkins.Duration (Minutes)
 - Table: checkins
-- Date / population: Session date; one check-in row. Attendance-based revenue uses attended rows. Teaching duration is counted once per attended session with valid duration.
+- Date / population: Source Date or Date (IST); one check-in source row. attended is read from Attended, falling back to Checked In. Distinct session IDs, source rows and attended visits are different populations.
 - Aggregation: weighted
 - Unit: currency
-- Numerator / condition: attended AND duration>0
-- Denominator: SUM(CASE WHEN teaching_session_rank=1 THEN duration END)/60
+- Numerator / condition: SUM(revenue) FILTER (WHERE attended AND duration>0)
+- Denominator: NULLIF(SUM(CASE WHEN teaching_session_rank=1 THEN duration END)/60,0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Revenue and hours use the same duration-covered population.
+- Source schema status: Checkins.Paid: Declared in configured source schema; live availability not verified · Checkins.Duration (Minutes): Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Revenue requires attended=true and positive duration; hours additionally require a non-null session ID for deduplication. Revenue on missing-ID rows can therefore contribute without corresponding hours; interpret with this coverage caveat.
 
 Calculation method: Add the specified numeric values across qualifying rows. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero. Apply the conditional population/value rules shown in the formula.
 
@@ -3284,20 +3840,25 @@ SUM(revenue) FILTER (WHERE attended AND duration>0)/NULLIF(SUM(CASE WHEN teachin
 
 ## Active instructors — trainers
 
-Active instructors measures the result of the registered calculation over the applicable normalized source population. Count unique identities rather than source rows. Source fields: Teacher Recurring.TrainerID.
+How many identified instructors appear in Teacher Recurring.
+
+How we calculate it: Count different recorded TrainerIDs in selected Teacher Recurring rows.
+
+Detailed definition: Number of distinct known TrainerIDs in selected Teacher Recurring rows. Presence in this source defines activity; this is not the headcount of all employed instructors.
 
 - Domain: people
 - Source: Teacher Recurring.TrainerID
 - Table: teacher_recurring
-- Date / population: Applicable workspace source/date scope; consult normalization and query implementation.
+- Date / population: Teacher Recurring source date/month; aggregated instructor/schedule rows. sessions is the reported TotalSessions/Classes value, not source row count.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Teacher Recurring.TrainerID: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count unique identities rather than source rows.
 
@@ -3313,22 +3874,27 @@ Runtime template (rate preview = 1):
 COUNT(DISTINCT trainer_id)
 ```
 
-## Single-trainer dependence — teacher_dependency
+## Maximum listed-instructor share — teacher_dependency
 
-Single-trainer dependence measures the result of the registered calculation over the applicable normalized source population. Evaluate the expression over the qualifying source population. Source fields: Recurring.Top5Trainers.
+The largest listed top-instructor attendance share in the selected recurring rows.
+
+How we calculate it: For each row, divide the leading listed instructor's attendance by attendance across its Top5Trainers list; take the largest share.
+
+Detailed definition: Maximum row-level share of attendance attributed to the highest-attendance instructor in the parsed Top5Trainers list, divided by attendance across that list.
 
 - Domain: people
 - Source: Recurring.Top5Trainers
 - Table: recurring
-- Date / population: Recurring session date; do not use instructor-only slot baseline measures here.
-- Aggregation: last
+- Date / population: Recurring source date/month and aggregated schedule rows. MAX-based instructor list measures are not latest-state measures.
+- Aggregation: MAX of row-level values across scope (legacy registry tag: last); not latest state
 - Unit: percent
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Recurring.Top5Trainers: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: MAX across scoped rows, not latest state, the parser sorts listed instructors by attendance. Only instructors present in the supplied list contribute.
 
 Calculation method: Evaluate the expression over the qualifying source population.
 
@@ -3344,22 +3910,27 @@ Runtime template (rate preview = 1):
 MAX(teacher_dependency)
 ```
 
-## Trainer depth — trainer_depth
+## Maximum listed-instructor count — trainer_depth
 
-Trainer depth measures the result of the registered calculation over the applicable normalized source population. Evaluate the expression over the qualifying source population. Source fields: Recurring.Top5Trainers.
+The largest instructor-list size in the selected recurring rows.
+
+How we calculate it: Count instructors in each Top5Trainers list, then take the largest count.
+
+Detailed definition: Maximum number of parsed instructors in a Top5Trainers list across the selected recurring rows.
 
 - Domain: people
 - Source: Recurring.Top5Trainers
 - Table: recurring
-- Date / population: Recurring session date; do not use instructor-only slot baseline measures here.
-- Aggregation: last
+- Date / population: Recurring source date/month and aggregated schedule rows. MAX-based instructor list measures are not latest-state measures.
+- Aggregation: MAX of row-level values across scope (legacy registry tag: last); not latest state
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Recurring.Top5Trainers: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: MAX of source list lengths, not latest state or a distinct count of every instructor in the timetable. Missing/empty lists produce null.
 
 Calculation method: Evaluate the expression over the qualifying source population.
 
@@ -3379,17 +3950,22 @@ MAX(trainer_depth)
 
 Monthly instructor-attributed revenue reported by Payroll.
 
+How we calculate it: Add Payroll Total Paid; this is attributed revenue, not Sales cash collections.
+
+Detailed definition: Monthly instructor-attributed revenue reported by Payroll.
+
 - Domain: people
 - Source: Payroll.Total Paid
 - Table: payroll
-- Date / population: Calendar month; partial-month selections include corresponding payroll months; source amounts may be rounded.
+- Date / population: Calendar month from Month Year. Partial-month selections include corresponding full source months. Source revenue is monthly instructor attribution. Evidence n is SUM(sessions), not row count.
 - Aggregation: sum
 - Unit: currency
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
+- Source schema status: Payroll.Total Paid: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: Payroll is monthly and source amounts are rounded; it may differ slightly from Sessions.
 
 Calculation method: Add the specified numeric values across qualifying rows.
@@ -3408,20 +3984,25 @@ SUM(revenue)
 
 ## Estimated payroll — payroll_cost
 
-Estimated payroll measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Use the configured instructor cost per session. Source fields: Payroll.Total Sessions; Settings.rate_per_session.
+Estimated instructor cost using the configured flat session rate.
+
+How we calculate it: Payroll session count multiplied by the configured cost per session.
+
+Detailed definition: Scenario instructor cost in INR: recorded Payroll session count multiplied by the configured flat cost per session. This is not actual payroll expense.
 
 - Domain: people
 - Source: Payroll.Total Sessions; Settings.rate_per_session
 - Table: payroll
-- Date / population: Calendar month; partial-month selections include corresponding payroll months; source amounts may be rounded.
+- Date / population: Calendar month from Month Year. Partial-month selections include corresponding full source months. Source revenue is monthly instructor attribution. Evidence n is SUM(sessions), not row count.
 - Aggregation: sum
 - Unit: currency
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Payroll.Total Sessions: Declared in configured source schema; live availability not verified · Settings.rate_per_session: Configured application assumption; not a sheet column
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Use the configured instructor cost per session.
 
@@ -3439,20 +4020,25 @@ SUM(sessions)*1
 
 ## Estimated contribution — contribution
 
-Estimated contribution measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Use the configured instructor cost per session. Source fields: Payroll.Total Paid; Payroll.Total Sessions; Settings.rate_per_session.
+Payroll-attributed revenue after estimated flat instructor costs.
+
+How we calculate it: Payroll-attributed revenue minus session count multiplied by the configured cost per session.
+
+Detailed definition: Monthly instructor-attributed revenue less the scenario flat per-session instructor cost, in INR. It excludes other operating costs and is not net profit.
 
 - Domain: people
 - Source: Payroll.Total Paid; Payroll.Total Sessions; Settings.rate_per_session
 - Table: payroll
-- Date / population: Calendar month; partial-month selections include corresponding payroll months; source amounts may be rounded.
+- Date / population: Calendar month from Month Year. Partial-month selections include corresponding full source months. Source revenue is monthly instructor attribution. Evidence n is SUM(sessions), not row count.
 - Aggregation: sum
 - Unit: currency
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Payroll.Total Paid: Declared in configured source schema; live availability not verified · Payroll.Total Sessions: Declared in configured source schema; live availability not verified · Settings.rate_per_session: Configured application assumption; not a sheet column
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Use the configured instructor cost per session.
 
@@ -3470,20 +4056,25 @@ SUM(revenue)-SUM(sessions)*1
 
 ## Estimated contribution margin — contribution_margin
 
-Estimated contribution margin measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Use the configured instructor cost per session. Source fields: Payroll.Total Paid; Payroll.Total Sessions; Settings.rate_per_session.
+The percentage of Payroll-attributed revenue left after estimated instructor costs.
+
+How we calculate it: Scenario contribution divided by Payroll-attributed revenue, multiplied by 100.
+
+Detailed definition: Scenario contribution as a percentage of Payroll-attributed revenue, using the configured flat per-session instructor cost. Other studio costs are excluded.
 
 - Domain: people
 - Source: Payroll.Total Paid; Payroll.Total Sessions; Settings.rate_per_session
 - Table: payroll
-- Date / population: Calendar month; partial-month selections include corresponding payroll months; source amounts may be rounded.
+- Date / population: Calendar month from Month Year. Partial-month selections include corresponding full source months. Source revenue is monthly instructor attribution. Evidence n is SUM(sessions), not row count.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: (SUM(revenue))
+- Numerator / condition: (SUM(revenue)-SUM(sessions)*1)
+- Denominator: NULLIF((SUM(revenue)),0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Payroll.Total Paid: Declared in configured source schema; live availability not verified · Payroll.Total Sessions: Declared in configured source schema; live availability not verified · Settings.rate_per_session: Configured application assumption; not a sheet column
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Use the configured instructor cost per session.
 
@@ -3501,20 +4092,25 @@ Runtime template (rate preview = 1):
 
 ## Estimated payroll share — payroll_pct_of_revenue
 
-Estimated payroll share measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Use the configured instructor cost per session. Source fields: Payroll.Total Paid; Payroll.Total Sessions; Settings.rate_per_session.
+Estimated flat instructor costs as a percentage of Payroll-attributed revenue.
+
+How we calculate it: Session count multiplied by configured cost per session, divided by Payroll-attributed revenue, multiplied by 100.
+
+Detailed definition: Scenario flat instructor cost as a percentage of Payroll-attributed revenue; it does not measure actual payroll paid.
 
 - Domain: people
 - Source: Payroll.Total Paid; Payroll.Total Sessions; Settings.rate_per_session
 - Table: payroll
-- Date / population: Calendar month; partial-month selections include corresponding payroll months; source amounts may be rounded.
+- Date / population: Calendar month from Month Year. Partial-month selections include corresponding full source months. Source revenue is monthly instructor attribution. Evidence n is SUM(sessions), not row count.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: (SUM(revenue))
+- Numerator / condition: (SUM(sessions)*1)
+- Denominator: NULLIF((SUM(revenue)),0)
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Payroll.Total Paid: Declared in configured source schema; live availability not verified · Payroll.Total Sessions: Declared in configured source schema; live availability not verified · Settings.rate_per_session: Configured application assumption; not a sheet column
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Use the configured instructor cost per session.
 
@@ -3532,20 +4128,25 @@ Runtime template (rate preview = 1):
 
 ## Cost of empty sessions — empty_session_cost
 
-Cost of empty sessions measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Use the configured instructor cost per session. Source fields: Payroll.Total Empty Sessions; Settings.rate_per_session.
+Estimated instructor cost of recorded empty sessions.
+
+How we calculate it: Recorded empty sessions multiplied by the configured cost per session.
+
+Detailed definition: Estimated instructor cost in INR for recorded empty sessions, using the configured flat cost per session. It does not establish recoverable savings.
 
 - Domain: people
 - Source: Payroll.Total Empty Sessions; Settings.rate_per_session
 - Table: payroll
-- Date / population: Calendar month; partial-month selections include corresponding payroll months; source amounts may be rounded.
+- Date / population: Calendar month from Month Year. Partial-month selections include corresponding full source months. Source revenue is monthly instructor attribution. Evidence n is SUM(sessions), not row count.
 - Aggregation: sum
 - Unit: currency
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Payroll.Total Empty Sessions: Declared in configured source schema; live availability not verified · Settings.rate_per_session: Configured application assumption; not a sheet column
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Use the configured instructor cost per session.
 
@@ -3563,20 +4164,25 @@ SUM(empty)*1
 
 ## Break-even class size — break_even_class_size
 
-Break-even class size measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Use the configured instructor cost per session. Source fields: Sessions.Revenue; Sessions.CheckedIn; Settings.rate_per_session.
+Attendance per session needed to cover the configured instructor cost.
+
+How we calculate it: Configured cost per session divided by observed session revenue per attendance visit.
+
+Detailed definition: Attendance visits per session required to cover the configured instructor cost at the selected scope's observed revenue per attendee. This is an instructor-cost scenario rather than full studio break-even.
 
 - Domain: people
 - Source: Sessions.Revenue; Sessions.CheckedIn; Settings.rate_per_session
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: weighted
 - Unit: decimal
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: SUM(revenue)/NULLIF(SUM(checked_in),0)
+- Numerator / condition: 1
+- Denominator: NULLIF(SUM(revenue)/NULLIF(SUM(checked_in),0),0)
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.Revenue: Declared in configured source schema; live availability not verified · Sessions.CheckedIn: Declared in configured source schema; live availability not verified · Settings.rate_per_session: Configured application assumption; not a sheet column
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Use the configured instructor cost per session.
 
@@ -3594,20 +4200,25 @@ Runtime template (rate preview = 1):
 
 ## Instructor trial conversion — payroll_conversion
 
-Instructor trial conversion measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Payroll.Converted; Payroll.New.
+Payroll-reported conversions as a percentage of Payroll newcomers.
+
+How we calculate it: Total Payroll Converted divided by total Payroll New, multiplied by 100.
+
+Detailed definition: Payroll-reported Converted count as a percentage of Payroll-reported New count, weighted by source counts across months and instructors. It is not recalculated from individual newcomer records.
 
 - Domain: people
 - Source: Payroll.Converted; Payroll.New
 - Table: payroll
-- Date / population: Calendar month; partial-month selections include corresponding payroll months; source amounts may be rounded.
+- Date / population: Calendar month from Month Year. Partial-month selections include corresponding full source months. Source revenue is monthly instructor attribution. Evidence n is SUM(sessions), not row count.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: (SUM(new_count))
+- Numerator / condition: (SUM(converted))
+- Denominator: NULLIF((SUM(new_count)),0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Payroll.Converted: Declared in configured source schema; live availability not verified · Payroll.New: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -3625,20 +4236,25 @@ Runtime template (rate preview = 1):
 
 ## Instructor retention — payroll_retention
 
-Instructor retention measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Payroll.Retained; Payroll.New.
+Payroll-reported retained newcomers as a percentage of Payroll newcomers.
+
+How we calculate it: Total Payroll Retained divided by total Payroll New, multiplied by 100.
+
+Detailed definition: Payroll-reported Retained count as a percentage of Payroll-reported New count, weighted by source counts. No additional retention-duration window is imposed.
 
 - Domain: people
 - Source: Payroll.Retained; Payroll.New
 - Table: payroll
-- Date / population: Calendar month; partial-month selections include corresponding payroll months; source amounts may be rounded.
+- Date / population: Calendar month from Month Year. Partial-month selections include corresponding full source months. Source revenue is monthly instructor attribution. Evidence n is SUM(sessions), not row count.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: (SUM(new_count))
+- Numerator / condition: (SUM(retained))
+- Denominator: NULLIF((SUM(new_count)),0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Payroll.Retained: Declared in configured source schema; live availability not verified · Payroll.New: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -3656,20 +4272,25 @@ Runtime template (rate preview = 1):
 
 ## Newcomers taught — new_handled
 
-Newcomers taught measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Source fields: Payroll.New.
+Total newcomers attributed to instructors in Payroll.
+
+How we calculate it: Add Payroll New counts; people may repeat across instructor attributions.
+
+Detailed definition: Total newcomer count reported as New in selected Payroll rows. Attribution across instructors may repeat people and is not a distinct-member count.
 
 - Domain: people
 - Source: Payroll.New
 - Table: payroll
-- Date / population: Calendar month; partial-month selections include corresponding payroll months; source amounts may be rounded.
+- Date / population: Calendar month from Month Year. Partial-month selections include corresponding full source months. Source revenue is monthly instructor attribution. Evidence n is SUM(sessions), not row count.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Payroll.New: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows.
 
@@ -3687,20 +4308,25 @@ SUM(new_count)
 
 ## Source records — records
 
-Source records measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Source fields: Source.row.
+How many rows are in the current query population.
+
+How we calculate it: Count rows from the selected source; the source determines what one row represents.
+
+Detailed definition: Number of source rows in the current query population. Its meaning follows the selected source grain and it is not a universal member, session or transaction count.
 
 - Domain: attendance
 - Source: Source.row
 - Table: Context-dependent
-- Date / population: Applicable workspace source/date scope; consult normalization and query implementation.
+- Date / population: Workspace-dependent source population; no single fixed date basis.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 1
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Source.row: Context-dependent source-row count; no fixed sheet
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records.
 
@@ -3718,19 +4344,24 @@ COUNT(*)
 
 ## Draw premium vs slot — draw_premium_pp
 
-Attendance fill rate minus the capacity-weighted fill rate of comparable location, format, weekday and time slots.
+Session fill rate above or below the comparable schedule-slot baseline.
+
+How we calculate it: Subtract the capacity-weighted matching-slot baseline fill rate from session fill rate, expressed in percentage points; the baseline includes all instructors.
+
+Detailed definition: Attendance fill rate minus the capacity-weighted fill rate of comparable location, format, weekday and time slots.
 
 - Domain: people
-- Source: Sessions.CheckedIn; Sessions.Capacity; Sessions.Location; Sessions.Class; Sessions.Day; Sessions.Time
+- Source: Sessions.CheckedIn; Sessions.Capacity; Sessions.Location; Sessions.Class; Sessions.Day; Sessions.Time; Sessions.Trainer
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: SUM(capacity)
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
+- Source schema status: Sessions.CheckedIn: Declared in configured source schema; live availability not verified · Sessions.Capacity: Declared in configured source schema; live availability not verified · Sessions.Location: Declared in configured source schema; live availability not verified · Sessions.Class: Declared in configured source schema; live availability not verified · Sessions.Day: Declared in configured source schema; live availability not verified · Sessions.Time: Declared in configured source schema; live availability not verified · Sessions.Trainer: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: The slot baseline includes all instructors even when an instructor filter is selected. The overall portfolio premium is expected to be zero.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
@@ -3749,20 +4380,25 @@ SUM(checked_in)/NULLIF(SUM(capacity),0)-SUM(capacity*slot_fill)/NULLIF(SUM(capac
 
 ## Attended bookings — booking_attended
 
-Attended bookings measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Source fields: Bookings.Attended.
+How many booking records are flagged Attended.
+
+How we calculate it: Count booking rows flagged Attended, even if another outcome flag is also present.
+
+Detailed definition: Number of booking rows explicitly flagged Attended; a row can also carry another outcome flag.
 
 - Domain: attendance
 - Source: Bookings.Attended
 - Table: bookings
-- Date / population: Booking/session date; outcome flags can overlap; exclusive outcome charts apply precedence.
+- Date / population: Session Date; one booking source row. Some views further restrict to late cancellations. Imported booking lead time is null. Flag-based counts can overlap; exclusive charts apply precedence.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: attended
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Bookings.Attended: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
 
@@ -3780,20 +4416,25 @@ COUNT(*) FILTER (WHERE attended)
 
 ## Cancelled bookings — booking_cancelled
 
-Cancelled bookings measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Source fields: Bookings.Cancelled.
+How many booking records are flagged Cancelled.
+
+How we calculate it: Count booking rows flagged Cancelled.
+
+Detailed definition: Number of booking rows explicitly flagged Cancelled; this is not an exclusive outcome partition.
 
 - Domain: attendance
 - Source: Bookings.Cancelled
 - Table: bookings
-- Date / population: Booking/session date; outcome flags can overlap; exclusive outcome charts apply precedence.
+- Date / population: Session Date; one booking source row. Some views further restrict to late cancellations. Imported booking lead time is null. Flag-based counts can overlap; exclusive charts apply precedence.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: cancelled
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Bookings.Cancelled: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
 
@@ -3811,20 +4452,25 @@ COUNT(*) FILTER (WHERE cancelled)
 
 ## No-show bookings — booking_no_shows
 
-No-show bookings measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Source fields: Bookings.No Show.
+How many booking records are flagged No Show.
+
+How we calculate it: Count booking rows flagged No Show.
+
+Detailed definition: Number of booking rows explicitly flagged No Show, rather than a residual derived from seat totals.
 
 - Domain: attendance
 - Source: Bookings.No Show
 - Table: bookings
-- Date / population: Booking/session date; outcome flags can overlap; exclusive outcome charts apply precedence.
+- Date / population: Session Date; one booking source row. Some views further restrict to late cancellations. Imported booking lead time is null. Flag-based counts can overlap; exclusive charts apply precedence.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: no_show
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Bookings.No Show: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
 
@@ -3842,20 +4488,25 @@ COUNT(*) FILTER (WHERE no_show)
 
 ## Late-cancelled bookings — booking_late_cancelled
 
-Late-cancelled bookings measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Source fields: Bookings.Late Cancelled.
+How many booking records are flagged Late Cancelled.
+
+How we calculate it: Count booking rows flagged Late Cancelled.
+
+Detailed definition: Number of booking rows explicitly flagged Late Cancelled; this is a booking count rather than a session count or fee amount.
 
 - Domain: attendance
 - Source: Bookings.Late Cancelled
 - Table: bookings
-- Date / population: Booking/session date; outcome flags can overlap; exclusive outcome charts apply precedence.
+- Date / population: Session Date; one booking source row. Some views further restrict to late cancellations. Imported booking lead time is null. Flag-based counts can overlap; exclusive charts apply precedence.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: late_cancelled>0
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Bookings.Late Cancelled: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
 
@@ -3873,20 +4524,25 @@ COUNT(*) FILTER (WHERE late_cancelled>0)
 
 ## Membership purchase value — membership_revenue
 
-Membership purchase value measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Source fields: Lapsed.Amount Paid.
+Recorded purchase value attached to selected membership records.
+
+How we calculate it: Add membership Amount Paid; date scope follows membership expiry rather than payment date.
+
+Detailed definition: Total recorded Amount Paid in INR on selected membership records. Standard membership scope selects expiry dates, so this is purchase value attached to expiries rather than payment-date collections.
 
 - Domain: risk
 - Source: Lapsed.Amount Paid
 - Table: lapsed
-- Date / population: Membership expiry date cohort; current-stock measures override date scope as stated.
+- Date / population: End Date expiry cohort for standard dated queries, although normalized date stores Purchase Date. Member-expiry-month renewal cohorts and latest-eligible-member lapse counts are separate populations.
 - Aggregation: sum
 - Unit: currency
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Lapsed.Amount Paid: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows.
 
@@ -3904,20 +4560,25 @@ SUM(revenue)
 
 ## Attributed check-in revenue — checkin_revenue
 
-Attributed revenue from checked-in rows only.
+Recorded attributed revenue on attended Checkins rows.
+
+How we calculate it: Add recorded Paid value only on attended Checkins rows.
+
+Detailed definition: Attributed revenue from checked-in rows only.
 
 - Domain: revenue
 - Source: Checkins.Paid
 - Table: checkins
-- Date / population: Session date; one check-in row. Attendance-based revenue uses attended rows. Teaching duration is counted once per attended session with valid duration.
+- Date / population: Source Date or Date (IST); one check-in source row. attended is read from Attended, falling back to Checked In. Distinct session IDs, source rows and attended visits are different populations.
 - Aggregation: sum
 - Unit: currency
-- Numerator / condition: attended
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Unattended and late-cancelled rows are excluded, matching session attendance revenue.
+- Source schema status: Checkins.Paid: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Requires attended=true. Other booking flags are not separately excluded; reconciliation to Sessions depends on source consistency.
 
 Calculation method: Add the specified numeric values across qualifying rows. Apply each FILTER condition only to its associated aggregate.
 
@@ -3935,20 +4596,25 @@ SUM(revenue) FILTER (WHERE attended)
 
 ## Attributed revenue / session — payroll_revenue_per_session
 
-Attributed revenue / session measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Payroll.Total Paid; Payroll.Total Sessions.
+Payroll-attributed revenue per recorded Payroll session.
+
+How we calculate it: Total Payroll-attributed revenue divided by total Payroll sessions.
+
+Detailed definition: Payroll-attributed revenue in INR per recorded Payroll session; source monthly totals are summed before dividing.
 
 - Domain: people
 - Source: Payroll.Total Paid; Payroll.Total Sessions
 - Table: payroll
-- Date / population: Calendar month; partial-month selections include corresponding payroll months; source amounts may be rounded.
+- Date / population: Calendar month from Month Year. Partial-month selections include corresponding full source months. Source revenue is monthly instructor attribution. Evidence n is SUM(sessions), not row count.
 - Aggregation: weighted
 - Unit: currency
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: SUM(sessions)
+- Numerator / condition: SUM(revenue)
+- Denominator: NULLIF(SUM(sessions),0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Payroll.Total Paid: Declared in configured source schema; live availability not verified · Payroll.Total Sessions: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -3966,20 +4632,25 @@ SUM(revenue)/NULLIF(SUM(sessions),0)
 
 ## Non-empty reliability — nonempty_reliability
 
-Non-empty reliability measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Sessions.CheckedIn; Sessions.SessionID.
+The percentage of represented sessions not recorded as empty.
+
+How we calculate it: One minus empty sessions divided by represented sessions, multiplied by 100.
+
+Detailed definition: One minus recorded empty sessions divided by represented sessions, expressed as a percentage. Missing attendance can leave a session in the denominator without marking it empty.
 
 - Domain: attendance
 - Source: Sessions.CheckedIn; Sessions.SessionID
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: SUM(sessions)
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.CheckedIn: Declared in configured source schema; live availability not verified · Sessions.SessionID: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -3997,20 +4668,25 @@ Runtime template (rate preview = 1):
 
 ## Active schedule slots — active_slots
 
-Active schedule slots measures the result of the registered calculation over the applicable normalized source population. Count unique identities rather than source rows. Source fields: Sessions.Location; Sessions.Class; Sessions.Day; Sessions.Time.
+How many different recurring schedule patterns appear in Sessions.
+
+How we calculate it: Count different combinations of studio, full format, weekday and time.
+
+Detailed definition: Number of distinct location, full format, weekday and time combinations represented in Sessions. It measures recurring schedule patterns, not future published slots; missing components can form partial slot identities.
 
 - Domain: attendance
 - Source: Sessions.Location; Sessions.Class; Sessions.Day; Sessions.Time
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.Location: Declared in configured source schema; live availability not verified · Sessions.Class: Declared in configured source schema; live availability not verified · Sessions.Day: Declared in configured source schema; live availability not verified · Sessions.Time: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count unique identities rather than source rows.
 
@@ -4028,20 +4704,25 @@ COUNT(DISTINCT CONCAT_WS('|',location,format,day,time))
 
 ## Attendees above break-even — gap_to_break_even
 
-Attendees above break-even measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Use the configured instructor cost per session. Source fields: Sessions.Revenue; Sessions.CheckedIn; Sessions.SessionID; Settings.rate_per_session.
+Average attendance above or below the instructor-cost break-even level.
+
+How we calculate it: Average attendance per session minus instructor-cost break-even attendance per session.
+
+Detailed definition: Observed average session attendance less the instructor-cost break-even attendance at current revenue per attendee, expressed in attendees per session. It excludes other operating costs.
 
 - Domain: people
 - Source: Sessions.Revenue; Sessions.CheckedIn; Sessions.SessionID; Settings.rate_per_session
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: weighted
 - Unit: decimal
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: SUM(sessions)
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.Revenue: Declared in configured source schema; live availability not verified · Sessions.CheckedIn: Declared in configured source schema; live availability not verified · Sessions.SessionID: Declared in configured source schema; live availability not verified · Settings.rate_per_session: Configured application assumption; not a sheet column
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Use the configured instructor cost per session.
 
@@ -4059,20 +4740,25 @@ SUM(checked_in)/NULLIF(SUM(sessions),0)-1/NULLIF(SUM(revenue)/NULLIF(SUM(checked
 
 ## Pending / unconfirmed — booking_pending
 
-Pending / unconfirmed measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Source fields: Bookings.Attended; Bookings.Cancelled; Bookings.No Show; Bookings.Late Cancelled.
+Booking records with no known attendance or cancellation outcome.
+
+How we calculate it: Count rows without Attended, Cancelled, No Show or Late Cancelled flags; missing flags count as absent.
+
+Detailed definition: Booking rows without any known Attended, Cancelled, No Show or Late Cancelled flag. Missing flags are treated as false, so pending includes records with unknown outcomes.
 
 - Domain: attendance
 - Source: Bookings.Attended; Bookings.Cancelled; Bookings.No Show; Bookings.Late Cancelled
 - Table: bookings
-- Date / population: Booking/session date; outcome flags can overlap; exclusive outcome charts apply precedence.
+- Date / population: Session Date; one booking source row. Some views further restrict to late cancellations. Imported booking lead time is null. Flag-based counts can overlap; exclusive charts apply precedence.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: NOT COALESCE(attended,FALSE) AND NOT COALESCE(cancelled,FALSE) AND NOT COALESCE(no_show,FALSE) AND NOT COALESCE(late_cancelled>0,FALSE)
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: lower preferred
-- Minimum sample: 1
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Bookings.Attended: Declared in configured source schema; live availability not verified · Bookings.Cancelled: Declared in configured source schema; live availability not verified · Bookings.No Show: Declared in configured source schema; live availability not verified · Bookings.Late Cancelled: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
 
@@ -4090,20 +4776,25 @@ COUNT(*) FILTER (WHERE NOT COALESCE(attended,FALSE) AND NOT COALESCE(cancelled,F
 
 ## Converted leads — converted_leads
 
-Lead records whose Stage Name is exactly Membership Sold, ignoring case and surrounding spaces.
+How many lead records currently have Membership Sold as their stage.
+
+How we calculate it: Count records whose Stage Name is Membership Sold, ignoring case and surrounding spaces.
+
+Detailed definition: Lead records whose Stage Name is exactly Membership Sold, ignoring case and surrounding spaces.
 
 - Domain: people
 - Source: Leads.Stage Name
 - Table: leads
-- Date / population: Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: lower(trim(stage))='membership sold'
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Leads.Stage Name: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
 
@@ -4121,20 +4812,25 @@ COUNT(*) FILTER (WHERE lower(trim(stage))='membership sold')
 
 ## Trials completed — trials_completed
 
-Lead records whose Stage Name is exactly Trial Completed; stage variants do not qualify.
+How many lead records currently have Trial Completed as their stage.
+
+How we calculate it: Count records whose Stage Name is Trial Completed; later stages are not included automatically.
+
+Detailed definition: Lead records whose Stage Name is exactly Trial Completed; stage variants do not qualify.
 
 - Domain: people
 - Source: Leads.Stage Name
 - Table: leads
-- Date / population: Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: lower(trim(stage))='trial completed'
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Leads.Stage Name: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
 
@@ -4152,19 +4848,24 @@ COUNT(*) FILTER (WHERE lower(trim(stage))='trial completed')
 
 ## Complimentary visits — complimentary_visits
 
-Sum of numeric values in the Sessions Complimentary column within the selected scope.
+How many complimentary visits are recorded in Sessions.
+
+How we calculate it: Add numeric values from Sessions Complimentary.
+
+Detailed definition: Sum of numeric values in the Sessions Complimentary column within the selected scope.
 
 - Domain: attendance
 - Source: Sessions.Complimentary
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: lower preferred
-- Minimum sample: 1
 - Target: not declared
+- Source schema status: Sessions.Complimentary: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: Independent of NonPaid and check-in complimentary flags; missing source values stay unavailable.
 
 Calculation method: Add the specified numeric values across qualifying rows.
@@ -4183,20 +4884,25 @@ SUM(complimentary_visits)
 
 ## Complimentary share — session_complimentary_rate
 
-Sessions complimentary visit count divided by Sessions CheckedIn attendance.
+The percentage of Sessions attendance recorded as complimentary.
+
+How we calculate it: Sessions Complimentary visits divided by Sessions CheckedIn attendance, multiplied by 100.
+
+Detailed definition: Sessions complimentary visit count divided by Sessions CheckedIn attendance.
 
 - Domain: attendance
 - Source: Sessions.Complimentary; Sessions.CheckedIn
 - Table: sessions
-- Date / population: Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.
+- Date / population: Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: SUM(checked_in)
+- Numerator / condition: SUM(complimentary_visits)
+- Denominator: NULLIF(SUM(checked_in),0)
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sessions.Complimentary: Declared in configured source schema; live availability not verified · Sessions.CheckedIn: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -4214,19 +4920,24 @@ SUM(complimentary_visits)/NULLIF(SUM(checked_in),0)
 
 ## Affected sessions — late_affected_sessions
 
-Distinct source session identities with at least one late-cancelled booking in this scope.
+How many booking-source sessions have at least one late cancellation.
+
+How we calculate it: Count different session identities among late-cancelled booking rows.
+
+Detailed definition: Distinct source session identities with at least one late-cancelled booking in this scope.
 
 - Domain: attendance
-- Source: Bookings.Session Date; Bookings.Late Cancelled
+- Source: Bookings.Session ID; Bookings.UniqueID1; Bookings.UniqueID2; Bookings.Session Date; Bookings.Time; Bookings.Class; Bookings.Location; Bookings.Late Cancelled
 - Table: bookings
-- Date / population: Booking/session date; outcome flags can overlap; exclusive outcome charts apply precedence.
+- Date / population: Session Date; one booking source row. Some views further restrict to late cancellations. Imported booking lead time is null. Flag-based counts can overlap; exclusive charts apply precedence.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: late_cancelled>0
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
+- Source schema status: Bookings.Session ID: Read by implementation or required by metric, but absent from configured column list; live header availability unverified · Bookings.UniqueID1: Declared in configured source schema; live availability not verified · Bookings.UniqueID2: Declared in configured source schema; live availability not verified · Bookings.Session Date: Declared in configured source schema; live availability not verified · Bookings.Time: Read by implementation or required by metric, but absent from configured column list; live header availability unverified · Bookings.Class: Read by implementation or required by metric, but absent from configured column list; live header availability unverified · Bookings.Location: Read by implementation or required by metric, but absent from configured column list; live header availability unverified · Bookings.Late Cancelled: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: Uses session ID, source unique IDs, then date, time, format and studio when an ID is unavailable.
 
 Calculation method: Count unique identities rather than source rows. Apply each FILTER condition only to its associated aggregate.
@@ -4245,19 +4956,24 @@ COUNT(DISTINCT COALESCE(session_id,unique_id1,unique_id2,date||'|'||time||'|'||f
 
 ## Recorded booking value — late_recorded_value
 
-Source Sale Value attributed to late-cancelled booking rows, excluding imported bookings.
+Recorded booking value attached to nonimported late cancellations.
+
+How we calculate it: Add Sale Value on late-cancelled, nonimported Bookings rows; this is not measured lost cash.
+
+Detailed definition: Source Sale Value attributed to late-cancelled booking rows, excluding imported bookings.
 
 - Domain: attendance
 - Source: Bookings.Sale Value; Bookings.Late Cancelled
 - Table: bookings
-- Date / population: Booking/session date; outcome flags can overlap; exclusive outcome charts apply precedence.
+- Date / population: Session Date; one booking source row. Some views further restrict to late cancellations. Imported booking lead time is null. Flag-based counts can overlap; exclusive charts apply precedence.
 - Aggregation: sum
 - Unit: currency
-- Numerator / condition: late_cancelled>0 AND NOT imported
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
+- Source schema status: Bookings.Sale Value: Declared in configured source schema; live availability not verified · Bookings.Late Cancelled: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: Recorded booking value is not measured lost cash, a refund or a cancellation fee.
 
 Calculation method: Add the specified numeric values across qualifying rows. Apply each FILTER condition only to its associated aggregate.
@@ -4276,20 +4992,25 @@ SUM(revenue) FILTER (WHERE late_cancelled>0 AND NOT imported)
 
 ## Followed-up leads — website_contacted
 
-Followed-up leads measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Source fields: Leads.Follow Up 1 Date.
+Website lead records with at least one recorded follow-up date.
+
+How we calculate it: Count Website-cohort records with any populated Follow Up 1–4 date.
+
+Detailed definition: Website-cohort lead records with at least one populated Follow Up 1–4 Date field. A recorded follow-up date does not prove contact was successful.
 
 - Domain: people
-- Source: Leads.Follow Up 1 Date
+- Source: Leads.Follow Up 1 Date; Leads.Follow Up 2 Date; Leads.Follow Up 3 Date; Leads.Follow Up 4 Date
 - Table: leads
-- Date / population: Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: touches>0
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Leads.Follow Up 1 Date: Declared in configured source schema; live availability not verified · Leads.Follow Up 2 Date: Declared in configured source schema; live availability not verified · Leads.Follow Up 3 Date: Declared in configured source schema; live availability not verified · Leads.Follow Up 4 Date: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
 
@@ -4307,20 +5028,25 @@ COUNT(*) FILTER (WHERE touches>0)
 
 ## Completed trials — website_trials
 
-Website creation-date cohort records with Trial Status equal to Trial Completed. Outcomes are the latest recorded status, not trial events occurring during this period.
+Website lead records currently marked Trial Completed.
+
+How we calculate it: Count Website creation-date cohort records with Trial Status Trial Completed.
+
+Detailed definition: Lead creation-date cohort records with Trial Status equal to Trial Completed. Outcomes are the latest recorded status, not trial events occurring during this period.
 
 - Domain: people
 - Source: Leads.Trial Status
 - Table: leads
-- Date / population: Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: lower(trim(COALESCE(trial_status,'')))='trial completed'
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Leads.Trial Status: Read by implementation or required by metric, but absent from configured column list; live header availability unverified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
 
@@ -4338,20 +5064,25 @@ COUNT(*) FILTER (WHERE lower(trim(COALESCE(trial_status,'')))='trial completed')
 
 ## Converted leads — website_members
 
-Website creation-date cohort records with Conversion Status equal to Converted; current stage does not change this count.
+Website lead records currently marked Converted.
+
+How we calculate it: Count Website creation-date cohort records with Conversion Status Converted.
+
+Detailed definition: Lead creation-date cohort records with Conversion Status equal to Converted; current stage does not change this count.
 
 - Domain: people
 - Source: Leads.Conversion Status
 - Table: leads
-- Date / population: Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: lower(trim(COALESCE(conversion,'')))='converted'
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Leads.Conversion Status: Read by implementation or required by metric, but absent from configured column list; live header availability unverified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
 
@@ -4369,20 +5100,25 @@ COUNT(*) FILTER (WHERE lower(trim(COALESCE(conversion,'')))='converted')
 
 ## Retained leads — website_retained
 
-Website creation-date cohort records with Retention Status equal to Retained.
+Website lead records currently marked Retained.
+
+How we calculate it: Count Website creation-date cohort records with Retention Status Retained.
+
+Detailed definition: Lead creation-date cohort records with Retention Status equal to Retained.
 
 - Domain: people
 - Source: Leads.Retention Status
 - Table: leads
-- Date / population: Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: lower(trim(COALESCE(retention,'')))='retained'
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Leads.Retention Status: Read by implementation or required by metric, but absent from configured column list; live header availability unverified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
 
@@ -4400,20 +5136,25 @@ COUNT(*) FILTER (WHERE lower(trim(COALESCE(retention,'')))='retained')
 
 ## Converted trial leads — website_trial_members
 
-Converted trial leads measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Source fields: Leads.Conversion Status.
+Website lead records marked both Trial Completed and Converted.
+
+How we calculate it: Count Website-cohort rows with both statuses; event order is not established.
+
+Detailed definition: Website-cohort records with both Trial Status Trial Completed and Conversion Status Converted. This intersection does not establish the sequence or timing of the events.
 
 - Domain: people
-- Source: Leads.Conversion Status
+- Source: Leads.Trial Status; Leads.Conversion Status
 - Table: leads
-- Date / population: Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: lower(trim(COALESCE(trial_status,'')))='trial completed' AND lower(trim(COALESCE(conversion,'')))='converted'
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Leads.Trial Status: Read by implementation or required by metric, but absent from configured column list; live header availability unverified · Leads.Conversion Status: Read by implementation or required by metric, but absent from configured column list; live header availability unverified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
 
@@ -4431,20 +5172,25 @@ COUNT(*) FILTER (WHERE lower(trim(COALESCE(trial_status,'')))='trial completed' 
 
 ## Open Website pipeline — website_open
 
-Open Website pipeline measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Source fields: Leads.Conversion Status.
+Website lead records not converted, lost or disqualified.
+
+How we calculate it: Count Website records not marked Converted and not explicitly Lost or Disqualified.
+
+Detailed definition: Website-cohort records not marked Converted and not explicitly Lost or Disqualified. Missing conversion/status can qualify; Website population restriction is supplied by the workspace.
 
 - Domain: people
-- Source: Leads.Conversion Status
+- Source: Leads.Conversion Status; Leads.Status
 - Table: leads
-- Date / population: Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: NOT (lower(trim(COALESCE(conversion,'')))='converted') AND (status NOT IN ('Lost','Disqualified') OR status IS NULL)
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Leads.Conversion Status: Read by implementation or required by metric, but absent from configured column list; live header availability unverified · Leads.Status: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
 
@@ -4462,20 +5208,25 @@ COUNT(*) FILTER (WHERE NOT (lower(trim(COALESCE(conversion,'')))='converted') AN
 
 ## Untouched Website leads — website_untouched
 
-Untouched Website leads measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Evaluate relative-date rules against the application date. Source fields: Leads.Follow Up 1 Date.
+Open Website leads over 48 hours old with no recorded follow-up.
+
+How we calculate it: Count open Website records with no Follow Up 1–4 dates, created over 48 hours before today's midnight.
+
+Detailed definition: Open Website-cohort records with no populated Follow Up 1–4 dates and a creation date more than 48 hours before today's midnight. Converted, Lost and Disqualified records are excluded.
 
 - Domain: people
-- Source: Leads.Follow Up 1 Date
+- Source: Leads.Follow Up 1 Date; Leads.Follow Up 2 Date; Leads.Follow Up 3 Date; Leads.Follow Up 4 Date; Leads.Created At; Leads.Conversion Status; Leads.Status
 - Table: leads
-- Date / population: Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: touches=0 AND date_diff('hour',TRY_CAST(date AS TIMESTAMP),TIMESTAMP '{today}')>48 AND NOT (lower(trim(COALESCE(conversion,'')))='converted') AND (status NOT IN ('Lost','Disqualified') OR status IS NULL)
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Leads.Follow Up 1 Date: Declared in configured source schema; live availability not verified · Leads.Follow Up 2 Date: Declared in configured source schema; live availability not verified · Leads.Follow Up 3 Date: Declared in configured source schema; live availability not verified · Leads.Follow Up 4 Date: Declared in configured source schema; live availability not verified · Leads.Created At: Declared in configured source schema; live availability not verified · Leads.Conversion Status: Read by implementation or required by metric, but absent from configured column list; live header availability unverified · Leads.Status: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate. Evaluate relative-date rules against the application date.
 
@@ -4493,20 +5244,25 @@ COUNT(*) FILTER (WHERE touches=0 AND date_diff('hour',TRY_CAST(date AS TIMESTAMP
 
 ## Followed-up rate — website_contact_rate
 
-Followed-up rate measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Leads.Follow Up 1 Date.
+The percentage of Website lead records with recorded follow-up.
+
+How we calculate it: Website records with any follow-up date divided by all Website-cohort records, multiplied by 100.
+
+Detailed definition: Percentage of Website-cohort records with any populated Follow Up 1–4 Date field. It measures recorded follow-up coverage rather than confirmed member contact.
 
 - Domain: people
-- Source: Leads.Follow Up 1 Date
+- Source: Leads.Follow Up 1 Date; Leads.Follow Up 2 Date; Leads.Follow Up 3 Date; Leads.Follow Up 4 Date
 - Table: leads
-- Date / population: Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: touches>0
-- Denominator: (COUNT(*))
+- Numerator / condition: (COUNT(*) FILTER (WHERE touches>0))
+- Denominator: NULLIF((COUNT(*)),0)
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Leads.Follow Up 1 Date: Declared in configured source schema; live availability not verified · Leads.Follow Up 2 Date: Declared in configured source schema; live availability not verified · Leads.Follow Up 3 Date: Declared in configured source schema; live availability not verified · Leads.Follow Up 4 Date: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -4524,20 +5280,25 @@ Runtime template (rate preview = 1):
 
 ## Lead to trial — website_trial_rate
 
-Lead to trial measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Leads.Trial Status.
+The percentage of Website lead records currently marked Trial Completed.
+
+How we calculate it: Website Trial Completed records divided by all Website-cohort records, multiplied by 100.
+
+Detailed definition: Percentage of Website-cohort records whose latest Trial Status is Trial Completed. Missing status remains in the full lead-record denominator.
 
 - Domain: people
 - Source: Leads.Trial Status
 - Table: leads
-- Date / population: Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: lower(trim(COALESCE(trial_status,'')))='trial completed'
-- Denominator: (COUNT(*))
+- Numerator / condition: (COUNT(*) FILTER (WHERE lower(trim(COALESCE(trial_status,'')))='trial completed'))
+- Denominator: NULLIF((COUNT(*)),0)
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Leads.Trial Status: Read by implementation or required by metric, but absent from configured column list; live header availability unverified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -4555,20 +5316,25 @@ Runtime template (rate preview = 1):
 
 ## Lead to member — website_win_rate
 
-Converted Website lead records divided by all Website lead records in the creation-date cohort.
+The percentage of Website lead records currently marked Converted.
+
+How we calculate it: Website Converted records divided by all Website-cohort records, multiplied by 100.
+
+Detailed definition: Converted lead records divided by all lead records in the creation-date cohort.
 
 - Domain: people
 - Source: Leads.Conversion Status
 - Table: leads
-- Date / population: Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: lower(trim(COALESCE(conversion,'')))='converted'
-- Denominator: (COUNT(*))
+- Numerator / condition: (COUNT(*) FILTER (WHERE lower(trim(COALESCE(conversion,'')))='converted'))
+- Denominator: NULLIF((COUNT(*)),0)
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Leads.Conversion Status: Read by implementation or required by metric, but absent from configured column list; live header availability unverified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -4586,20 +5352,25 @@ Runtime template (rate preview = 1):
 
 ## Trial to member — website_trial_win_rate
 
-Website leads with both a completed trial and a conversion, divided by Website leads with a completed trial.
+The percentage of completed-trial Website records also marked Converted.
+
+How we calculate it: Website records marked both Trial Completed and Converted divided by Website Trial Completed records, multiplied by 100.
+
+Detailed definition: Lead records with both a completed trial and a conversion, divided by lead records with a completed trial.
 
 - Domain: people
 - Source: Leads.Trial Status; Leads.Conversion Status
 - Table: leads
-- Date / population: Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: lower(trim(COALESCE(trial_status,'')))='trial completed' AND lower(trim(COALESCE(conversion,'')))='converted'
-- Denominator: (COUNT(*) FILTER (WHERE lower(trim(COALESCE(trial_status,'')))='trial completed'))
+- Numerator / condition: (COUNT(*) FILTER (WHERE lower(trim(COALESCE(trial_status,'')))='trial completed' AND lower(trim(COALESCE(conversion,'')))='converted'))
+- Denominator: NULLIF((COUNT(*) FILTER (WHERE lower(trim(COALESCE(trial_status,'')))='trial completed')),0)
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Leads.Trial Status: Read by implementation or required by metric, but absent from configured column list; live header availability unverified · Leads.Conversion Status: Read by implementation or required by metric, but absent from configured column list; live header availability unverified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -4617,20 +5388,25 @@ Runtime template (rate preview = 1):
 
 ## LTV per converted lead — website_ltv
 
-LTV per converted lead measures the result of the registered calculation over the applicable normalized source population. Take the arithmetic mean of non-null qualifying values. Apply each FILTER condition only to its associated aggregate. Source fields: Leads.LTV; Leads.Conversion Status.
+Average positive lifetime spend recorded for converted Website leads.
+
+How we calculate it: Average positive recorded LTV among Website-cohort records marked Converted.
+
+Detailed definition: Mean strictly positive recorded LTV in INR among Website-cohort records marked Converted. Converted records with zero or missing LTV are excluded, so this is a positive-LTV subset average.
 
 - Domain: revenue
 - Source: Leads.LTV; Leads.Conversion Status
 - Table: leads
-- Date / population: Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: avg
 - Unit: currency
-- Numerator / condition: lower(trim(COALESCE(conversion,'')))='converted' AND ltv>0
-- Denominator: COUNT(ltv) FILTER (WHERE lower(trim(COALESCE(conversion,'')))='converted' AND ltv>0)
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: Observation population: non-null qualifying values; median is an order statistic, not a ratio.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Leads.LTV: Read by implementation or required by metric, but absent from configured column list; live header availability unverified · Leads.Conversion Status: Read by implementation or required by metric, but absent from configured column list; live header availability unverified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Take the arithmetic mean of non-null qualifying values. Apply each FILTER condition only to its associated aggregate.
 
@@ -4648,19 +5424,24 @@ AVG(ltv) FILTER (WHERE lower(trim(COALESCE(conversion,'')))='converted' AND ltv>
 
 ## Estimated Website pipeline value — website_pipeline_value
 
-Open Website leads × cohort conversion rate × average positive paid first purchase of converted newcomers in the same scope.
+Estimated value of open Website lead records.
+
+How we calculate it: Open Website leads multiplied by Website cohort conversion rate and average positive first purchase of converted newcomers in the applicable New-sheet scope.
+
+Detailed definition: Open lead records × cohort conversion rate × average positive paid first purchase of converted newcomers in the same scope.
 
 - Domain: revenue
-- Source: Leads.Conversion Status; New.First Purchase Value
-- Table: new
-- Date / population: First-visit date cohort; latest source outcomes are distinct from dated conversion events.
+- Source: Leads.Conversion Status; Leads.Status; New.First Purchase Value; New.Is New; New.Conversion Status
+- Table: leads
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: weighted
 - Unit: currency
-- Numerator / condition: NOT (lower(trim(COALESCE(conversion,'')))='converted') AND (status NOT IN ('Lost','Disqualified') OR status IS NULL)
-- Denominator: COUNT(*)
+- Numerator / condition: (COUNT(*) FILTER (WHERE NOT (lower(trim(COALESCE(conversion,'')))='converted') AND (status NOT IN ('Lost','Disqualified') OR status IS NULL)))*(COUNT(*) FILTER (WHERE lower(trim(COALESCE(conversion,'')))='converted'))::DOUBLE
+- Denominator: NULLIF(COUNT(*),0)*(SELECT AVG(first_purchase) FROM new WHERE {applicable_newcomer_filters} AND is_new AND conversion='Converted' AND first_purchase>0)
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
+- Source schema status: Leads.Conversion Status: Read by implementation or required by metric, but absent from configured column list; live header availability unverified · Leads.Status: Declared in configured source schema; live availability not verified · New.First Purchase Value: Declared in configured source schema; live availability not verified · New.Is New: Declared in configured source schema; live availability not verified · New.Conversion Status: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: An estimate, not measured revenue. The New sheet supplies the first-purchase basis.
 
 Calculation method: Count qualifying records. Take the arithmetic mean of non-null qualifying values. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
@@ -4679,20 +5460,25 @@ Runtime template (rate preview = 1):
 
 ## Meta source records — meta_records
 
-Meta source records measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Source fields: Meta.date.
+How many Meta reporting rows are selected.
+
+How we calculate it: Count Meta source rows; reporting rows are not unique ads or people.
+
+Detailed definition: Number of Meta reporting source rows in scope. Rows can represent reporting slices and are not unique ads, users or conversions.
 
 - Domain: people
 - Source: Meta.date
 - Table: meta
-- Date / population: Meta reporting date; platform attribution and row-level reach are separate from CRM identities.
+- Date / population: Meta reporting date; account/network scope without studio identity. Row reach is summed rather than audience-deduplicated; CRM and platform attribution are separate.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Meta.date: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records.
 
@@ -4710,20 +5496,25 @@ COUNT(*)
 
 ## Meta spend — meta_spend
 
-Meta spend measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Source fields: Meta.spend.
+Advertising spend reported by Meta.
+
+How we calculate it: Add recorded Meta spend across selected reporting rows.
+
+Detailed definition: Total Meta-reported spend in INR across selected source reporting rows. Overlapping reporting slices are not deduplicated by this measure.
 
 - Domain: revenue
 - Source: Meta.spend
 - Table: meta
-- Date / population: Meta reporting date; platform attribution and row-level reach are separate from CRM identities.
+- Date / population: Meta reporting date; account/network scope without studio identity. Row reach is summed rather than audience-deduplicated; CRM and platform attribution are separate.
 - Aggregation: sum
 - Unit: currency
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Meta.spend: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows.
 
@@ -4741,20 +5532,25 @@ SUM(spend)
 
 ## Impressions — meta_impressions
 
-Impressions measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Source fields: Meta.impressions.
+Advertising views reported by Meta, including repeated views.
+
+How we calculate it: Add recorded Meta impressions.
+
+Detailed definition: Total Meta-reported impression events across selected source reporting rows; repeated views by one person remain separate impressions.
 
 - Domain: growth
 - Source: Meta.impressions
 - Table: meta
-- Date / population: Meta reporting date; platform attribution and row-level reach are separate from CRM identities.
+- Date / population: Meta reporting date; account/network scope without studio identity. Row reach is summed rather than audience-deduplicated; CRM and platform attribution are separate.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Meta.impressions: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows.
 
@@ -4772,19 +5568,24 @@ SUM(impressions)
 
 ## Summed row reach — meta_reach
 
-Sum of reach across the source rows.
+Sum of Meta audience counts across reporting rows.
+
+How we calculate it: Add row-level reach; people appearing in several rows are counted again.
+
+Detailed definition: Sum of reach across the source rows.
 
 - Domain: growth
 - Source: Meta.reach
 - Table: meta
-- Date / population: Meta reporting date; platform attribution and row-level reach are separate from CRM identities.
+- Date / population: Meta reporting date; account/network scope without studio identity. Row reach is summed rather than audience-deduplicated; CRM and platform attribution are separate.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
+- Source schema status: Meta.reach: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: Audiences can repeat across dates, campaigns and platforms. This is not deduplicated reach.
 
 Calculation method: Add the specified numeric values across qualifying rows.
@@ -4803,20 +5604,25 @@ SUM(reach)
 
 ## Clicks — meta_clicks
 
-Clicks measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Source fields: Meta.clicks.
+All clicks reported by Meta.
+
+How we calculate it: Add recorded Meta clicks, including clicks beyond link clicks.
+
+Detailed definition: Total Meta-reported clicks across selected source rows. This uses clicks, not only outbound or link clicks.
 
 - Domain: growth
 - Source: Meta.clicks
 - Table: meta
-- Date / population: Meta reporting date; platform attribution and row-level reach are separate from CRM identities.
+- Date / population: Meta reporting date; account/network scope without studio identity. Row reach is summed rather than audience-deduplicated; CRM and platform attribution are separate.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Meta.clicks: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows.
 
@@ -4834,20 +5640,25 @@ SUM(clicks)
 
 ## Link clicks — meta_link_clicks
 
-Link clicks measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Source fields: Meta.inline_link_clicks.
+Inline link clicks reported by Meta.
+
+How we calculate it: Add Meta inline_link_clicks.
+
+Detailed definition: Total Meta-reported inline_link_clicks across selected source reporting rows, distinct from the broader clicks field.
 
 - Domain: growth
 - Source: Meta.inline_link_clicks
 - Table: meta
-- Date / population: Meta reporting date; platform attribution and row-level reach are separate from CRM identities.
+- Date / population: Meta reporting date; account/network scope without studio identity. Row reach is summed rather than audience-deduplicated; CRM and platform attribution are separate.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Meta.inline_link_clicks: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows.
 
@@ -4865,19 +5676,24 @@ SUM(inline_link_clicks)
 
 ## Meta-reported leads — meta_leads
 
-Sum of the Meta sheet's leads column within the reporting date scope.
+Lead events attributed by Meta.
+
+How we calculate it: Add Meta leads; these are platform events rather than identified CRM leads.
+
+Detailed definition: Sum of the Meta sheet's leads column within the reporting date scope.
 
 - Domain: people
 - Source: Meta.leads
 - Table: meta
-- Date / population: Meta reporting date; platform attribution and row-level reach are separate from CRM identities.
+- Date / population: Meta reporting date; account/network scope without studio identity. Row reach is summed rather than audience-deduplicated; CRM and platform attribution are separate.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
+- Source schema status: Meta.leads: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: Meta-reported conversions are not identified CRM people; do not add these to Website lead counts.
 
 Calculation method: Add the specified numeric values across qualifying rows.
@@ -4896,19 +5712,24 @@ SUM(meta_leads)
 
 ## On-Facebook leads — meta_instant_leads
 
-Sum of on_facebook_lead from Meta.
+On-Facebook lead events reported by Meta.
+
+How we calculate it: Add Meta on_facebook_lead events; these can overlap Meta leads.
+
+Detailed definition: Sum of on_facebook_lead from Meta.
 
 - Domain: people
 - Source: Meta.on_facebook_lead
 - Table: meta
-- Date / population: Meta reporting date; platform attribution and row-level reach are separate from CRM identities.
+- Date / population: Meta reporting date; account/network scope without studio identity. Row reach is summed rather than audience-deduplicated; CRM and platform attribution are separate.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
+- Source schema status: Meta.on_facebook_lead: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: May overlap the leads column; these counts are not added together.
 
 Calculation method: Add the specified numeric values across qualifying rows.
@@ -4927,20 +5748,25 @@ SUM(on_facebook_lead)
 
 ## Meta-reported purchases — meta_purchases
 
-Meta-reported purchases measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Source fields: Meta.purchases.
+Purchase events attributed by Meta.
+
+How we calculate it: Add Meta purchase events under the source's attribution settings.
+
+Detailed definition: Total Meta-reported purchase events across selected rows under the source's attribution settings; this is not a distinct Sales transaction count.
 
 - Domain: revenue
 - Source: Meta.purchases
 - Table: meta
-- Date / population: Meta reporting date; platform attribution and row-level reach are separate from CRM identities.
+- Date / population: Meta reporting date; account/network scope without studio identity. Row reach is summed rather than audience-deduplicated; CRM and platform attribution are separate.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Meta.purchases: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows.
 
@@ -4958,20 +5784,25 @@ SUM(meta_purchases)
 
 ## Meta purchase value — meta_purchase_value
 
-Meta purchase value measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Source fields: Meta.purchase_value.
+Purchase value attributed by Meta.
+
+How we calculate it: Add Meta-reported purchase value; this differs from reconciled Sales collections.
+
+Detailed definition: Total Meta-reported purchase value in INR across selected rows. It uses platform attribution rather than reconciled payment collections.
 
 - Domain: revenue
 - Source: Meta.purchase_value
 - Table: meta
-- Date / population: Meta reporting date; platform attribution and row-level reach are separate from CRM identities.
+- Date / population: Meta reporting date; account/network scope without studio identity. Row reach is summed rather than audience-deduplicated; CRM and platform attribution are separate.
 - Aggregation: sum
 - Unit: currency
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Meta.purchase_value: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows.
 
@@ -4989,20 +5820,25 @@ SUM(purchase_value)
 
 ## Add to cart — meta_add_to_cart
 
-Add to cart measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Source fields: Meta.add_to_cart.
+Add-to-cart events reported by Meta.
+
+How we calculate it: Add Meta add_to_cart events.
+
+Detailed definition: Total Meta-reported add_to_cart events across selected reporting rows, rather than distinct shoppers or paid orders.
 
 - Domain: growth
 - Source: Meta.add_to_cart
 - Table: meta
-- Date / population: Meta reporting date; platform attribution and row-level reach are separate from CRM identities.
+- Date / population: Meta reporting date; account/network scope without studio identity. Row reach is summed rather than audience-deduplicated; CRM and platform attribution are separate.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Meta.add_to_cart: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows.
 
@@ -5020,20 +5856,25 @@ SUM(add_to_cart)
 
 ## Checkout initiated — meta_checkout
 
-Checkout initiated measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Source fields: Meta.initiate_checkout.
+Checkout-start events reported by Meta.
+
+How we calculate it: Add Meta initiate_checkout events, not completed purchases.
+
+Detailed definition: Total Meta-reported initiate_checkout events across selected reporting rows, rather than completed purchases.
 
 - Domain: growth
 - Source: Meta.initiate_checkout
 - Table: meta
-- Date / population: Meta reporting date; platform attribution and row-level reach are separate from CRM identities.
+- Date / population: Meta reporting date; account/network scope without studio identity. Row reach is summed rather than audience-deduplicated; CRM and platform attribution are separate.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Meta.initiate_checkout: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows.
 
@@ -5051,20 +5892,25 @@ SUM(initiate_checkout)
 
 ## CTR — meta_ctr
 
-CTR measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Meta.impressions; Meta.clicks.
+The percentage of Meta impressions resulting in a reported click.
+
+How we calculate it: Total Meta clicks divided by total impressions, multiplied by 100.
+
+Detailed definition: Meta-reported clicks as a percentage of impressions, using summed source counts. This is all-click CTR rather than link-click CTR.
 
 - Domain: growth
 - Source: Meta.impressions; Meta.clicks
 - Table: meta
-- Date / population: Meta reporting date; platform attribution and row-level reach are separate from CRM identities.
+- Date / population: Meta reporting date; account/network scope without studio identity. Row reach is summed rather than audience-deduplicated; CRM and platform attribution are separate.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: SUM(impressions)
+- Numerator / condition: SUM(clicks)
+- Denominator: NULLIF(SUM(impressions),0)
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Meta.impressions: Declared in configured source schema; live availability not verified · Meta.clicks: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -5082,20 +5928,25 @@ SUM(clicks)/NULLIF(SUM(impressions),0)
 
 ## CPC — meta_cpc
 
-CPC measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Meta.clicks; Meta.spend.
+Meta spend per reported click.
+
+How we calculate it: Total Meta spend divided by total clicks.
+
+Detailed definition: Meta-reported spend in INR per reported click, using total spend divided by total clicks. Zero clicks makes it unavailable.
 
 - Domain: revenue
 - Source: Meta.clicks; Meta.spend
 - Table: meta
-- Date / population: Meta reporting date; platform attribution and row-level reach are separate from CRM identities.
+- Date / population: Meta reporting date; account/network scope without studio identity. Row reach is summed rather than audience-deduplicated; CRM and platform attribution are separate.
 - Aggregation: weighted
 - Unit: currency
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: SUM(clicks)
+- Numerator / condition: SUM(spend)
+- Denominator: NULLIF(SUM(clicks),0)
 - Direction: lower preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Meta.clicks: Declared in configured source schema; live availability not verified · Meta.spend: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -5113,20 +5964,25 @@ SUM(spend)/NULLIF(SUM(clicks),0)
 
 ## CPM — meta_cpm
 
-CPM measures the result of the registered calculation over the applicable normalized source population. Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Meta.impressions; Meta.spend.
+Meta spend per thousand reported impressions.
+
+How we calculate it: Total Meta spend divided by total impressions, multiplied by 1,000.
+
+Detailed definition: Meta-reported spend in INR per 1,000 reported impressions. Zero impressions makes it unavailable.
 
 - Domain: revenue
 - Source: Meta.impressions; Meta.spend
 - Table: meta
-- Date / population: Meta reporting date; platform attribution and row-level reach are separate from CRM identities.
+- Date / population: Meta reporting date; account/network scope without studio identity. Row reach is summed rather than audience-deduplicated; CRM and platform attribution are separate.
 - Aggregation: weighted
 - Unit: currency
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: SUM(impressions)
+- Numerator / condition: SUM(spend*1000)
+- Denominator: NULLIF(SUM(impressions),0)
 - Direction: lower preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Meta.impressions: Declared in configured source schema; live availability not verified · Meta.spend: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -5144,20 +6000,25 @@ SUM(spend*1000)/NULLIF(SUM(impressions),0)
 
 ## CPL — meta_cpl
 
-Summed Meta spend divided by summed Meta-reported leads. Unavailable when no leads are recorded.
+Meta spend per Meta-attributed lead event.
+
+How we calculate it: Total Meta spend divided by total Meta leads.
+
+Detailed definition: Summed Meta spend divided by summed Meta-reported leads. Unavailable when no leads are recorded.
 
 - Domain: revenue
 - Source: Meta.leads; Meta.spend
 - Table: meta
-- Date / population: Meta reporting date; platform attribution and row-level reach are separate from CRM identities.
+- Date / population: Meta reporting date; account/network scope without studio identity. Row reach is summed rather than audience-deduplicated; CRM and platform attribution are separate.
 - Aggregation: weighted
 - Unit: currency
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: SUM(meta_leads)
+- Numerator / condition: SUM(spend)
+- Denominator: NULLIF(SUM(meta_leads),0)
 - Direction: lower preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Meta.leads: Declared in configured source schema; live availability not verified · Meta.spend: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -5175,20 +6036,25 @@ SUM(spend)/NULLIF(SUM(meta_leads),0)
 
 ## Cost per purchase — meta_cpa
 
-Summed Meta spend divided by summed Meta-reported purchases. Unavailable when no purchases are recorded.
+Meta spend per Meta-attributed purchase event.
+
+How we calculate it: Total Meta spend divided by total Meta purchases.
+
+Detailed definition: Summed Meta spend divided by summed Meta-reported purchases. Unavailable when no purchases are recorded.
 
 - Domain: revenue
 - Source: Meta.purchases; Meta.spend
 - Table: meta
-- Date / population: Meta reporting date; platform attribution and row-level reach are separate from CRM identities.
+- Date / population: Meta reporting date; account/network scope without studio identity. Row reach is summed rather than audience-deduplicated; CRM and platform attribution are separate.
 - Aggregation: weighted
 - Unit: currency
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: SUM(meta_purchases)
+- Numerator / condition: SUM(spend)
+- Denominator: NULLIF(SUM(meta_purchases),0)
 - Direction: lower preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Meta.purchases: Declared in configured source schema; live availability not verified · Meta.spend: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -5206,19 +6072,24 @@ SUM(spend)/NULLIF(SUM(meta_purchases),0)
 
 ## ROAS — meta_roas
 
-Summed Meta purchase value divided by summed spend.
+Meta-attributed purchase value for each rupee of Meta spend.
+
+How we calculate it: Total Meta purchase value divided by total Meta spend.
+
+Detailed definition: Summed Meta purchase value divided by summed spend.
 
 - Domain: revenue
 - Source: Meta.spend; Meta.purchase_value
 - Table: meta
-- Date / population: Meta reporting date; platform attribution and row-level reach are separate from CRM identities.
+- Date / population: Meta reporting date; account/network scope without studio identity. Row reach is summed rather than audience-deduplicated; CRM and platform attribution are separate.
 - Aggregation: weighted
 - Unit: ratio
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: SUM(spend)
+- Numerator / condition: SUM(purchase_value)
+- Denominator: NULLIF(SUM(spend),0)
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
+- Source schema status: Meta.spend: Declared in configured source schema; live availability not verified · Meta.purchase_value: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: Uses the sheet's Meta reporting attribution. It is not CRM cash revenue or a CRM return on ad spend.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
@@ -5237,19 +6108,24 @@ SUM(purchase_value)/NULLIF(SUM(spend),0)
 
 ## Row-weighted frequency — meta_frequency
 
-Summed impressions divided by summed row reach.
+Impressions relative to summed row-level Meta reach.
+
+How we calculate it: Total impressions divided by summed row reach; repeated audiences prevent a unique-person frequency measure.
+
+Detailed definition: Summed impressions divided by summed row reach.
 
 - Domain: revenue
 - Source: Meta.reach; Meta.impressions
 - Table: meta
-- Date / population: Meta reporting date; platform attribution and row-level reach are separate from CRM identities.
+- Date / population: Meta reporting date; account/network scope without studio identity. Row reach is summed rather than audience-deduplicated; CRM and platform attribution are separate.
 - Aggregation: weighted
 - Unit: ratio
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: SUM(reach)
+- Numerator / condition: SUM(impressions)
+- Denominator: NULLIF(SUM(reach),0)
 - Direction: lower preferred
-- Minimum sample: 3
 - Target: not declared
+- Source schema status: Meta.reach: Declared in configured source schema; live availability not verified · Meta.impressions: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: Not deduplicated campaign frequency; the source does not supply a unique-audience denominator for combined periods.
 
 Calculation method: Add the specified numeric values across qualifying rows. Protect division by a zero denominator; return unavailable when it is zero.
@@ -5268,20 +6144,25 @@ SUM(impressions)/NULLIF(SUM(reach),0)
 
 ## Completed trials — crm_trials
 
-Completed trials measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Source fields: Leads.Trial Status.
+CRM lead records currently marked Trial Completed.
+
+How we calculate it: Count creation-date cohort lead rows with Trial Status Trial Completed.
+
+Detailed definition: CRM lead records whose latest Trial Status is Trial Completed, ignoring case and surrounding spaces. Creation-date scope does not imply a trial occurred during those dates.
 
 - Domain: people
 - Source: Leads.Trial Status
 - Table: leads
-- Date / population: Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: lower(trim(COALESCE(trial_status,'')))='trial completed'
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Leads.Trial Status: Read by implementation or required by metric, but absent from configured column list; live header availability unverified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
 
@@ -5299,20 +6180,25 @@ COUNT(*) FILTER (WHERE lower(trim(COALESCE(trial_status,'')))='trial completed')
 
 ## Converted leads — crm_members
 
-Converted leads measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Source fields: Leads.Conversion Status.
+CRM lead records currently marked Converted.
+
+How we calculate it: Count creation-date cohort lead rows with Conversion Status Converted.
+
+Detailed definition: CRM lead records whose latest Conversion Status is Converted, ignoring case and surrounding spaces. These are lead records rather than deduplicated community members.
 
 - Domain: people
 - Source: Leads.Conversion Status
 - Table: leads
-- Date / population: Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: lower(trim(COALESCE(conversion,'')))='converted'
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Leads.Conversion Status: Read by implementation or required by metric, but absent from configured column list; live header availability unverified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
 
@@ -5330,20 +6216,25 @@ COUNT(*) FILTER (WHERE lower(trim(COALESCE(conversion,'')))='converted')
 
 ## Retained leads — crm_retained
 
-Retained leads measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Source fields: Leads.Retention Status.
+CRM lead records currently marked Retained.
+
+How we calculate it: Count creation-date cohort lead rows with Retention Status Retained.
+
+Detailed definition: CRM lead records whose latest Retention Status is Retained, ignoring case and surrounding spaces. No fixed retention window is established by this expression.
 
 - Domain: people
 - Source: Leads.Retention Status
 - Table: leads
-- Date / population: Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: lower(trim(COALESCE(retention,'')))='retained'
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Leads.Retention Status: Read by implementation or required by metric, but absent from configured column list; live header availability unverified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
 
@@ -5361,20 +6252,25 @@ COUNT(*) FILTER (WHERE lower(trim(COALESCE(retention,'')))='retained')
 
 ## CRM lead to member — crm_win_rate
 
-CRM lead to member measures the result of the registered calculation over the applicable normalized source population. Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Leads.Conversion Status.
+The percentage of CRM lead records currently marked Converted.
+
+How we calculate it: Converted CRM records divided by all selected CRM lead records, multiplied by 100.
+
+Detailed definition: Percentage of CRM lead records whose latest Conversion Status is Converted. Missing outcomes remain in the all-record denominator.
 
 - Domain: people
 - Source: Leads.Conversion Status
 - Table: leads
-- Date / population: Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: weighted
 - Unit: percent
-- Numerator / condition: lower(trim(COALESCE(conversion,'')))='converted'
-- Denominator: (COUNT(*))
+- Numerator / condition: (COUNT(*) FILTER (WHERE lower(trim(COALESCE(conversion,'')))='converted'))
+- Denominator: NULLIF((COUNT(*)),0)
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Leads.Conversion Status: Read by implementation or required by metric, but absent from configured column list; live header availability unverified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -5392,19 +6288,24 @@ Runtime template (rate preview = 1):
 
 ## Google CRM leads — crm_google_leads
 
-Lead records explicitly tagged Google in UTM Source or Source Name. Conflicting Google/Meta tags are kept separate.
+CRM lead records explicitly classified as Google sourced.
+
+How we calculate it: Count records classified Google from Source Name or UTM Source tags, with conflicting channel tags kept separate.
+
+Detailed definition: Lead records explicitly tagged Google in UTM Source or Source Name. Conflicting Google/Meta tags are kept separate.
 
 - Domain: people
 - Source: Leads.Source Name; Leads.UTM Source
 - Table: leads
-- Date / population: Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: acquisition_channel='Google'
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
+- Source schema status: Leads.Source Name: Declared in configured source schema; live availability not verified · Leads.UTM Source: Read by implementation or required by metric, but absent from configured column list; live header availability unverified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: A channel tag does not establish paid acquisition. Website-only records cannot be assigned to Google.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
@@ -5423,19 +6324,24 @@ COUNT(*) FILTER (WHERE acquisition_channel='Google')
 
 ## Meta CRM leads — crm_meta_leads
 
-Lead records explicitly tagged Meta, Facebook, Instagram, fb or ig in UTM Source or Source Name. Conflicting Google/Meta tags are kept separate.
+CRM lead records explicitly classified as Meta sourced.
+
+How we calculate it: Count records classified Meta from Meta, Facebook or Instagram source tags, with conflicting channel tags kept separate.
+
+Detailed definition: Lead records explicitly tagged Meta, Facebook, Instagram, fb or ig in UTM Source or Source Name. Conflicting Google/Meta tags are kept separate.
 
 - Domain: people
 - Source: Leads.Source Name; Leads.UTM Source
 - Table: leads
-- Date / population: Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.
+- Date / population: Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: acquisition_channel='Meta'
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 3
 - Target: not declared
+- Source schema status: Leads.Source Name: Declared in configured source schema; live availability not verified · Leads.UTM Source: Read by implementation or required by metric, but absent from configured column list; live header availability unverified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: Includes platform-tagged records whose paid/organic status is unknown. Not directly matched to Meta-reported lead events.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
@@ -5454,20 +6360,25 @@ COUNT(*) FILTER (WHERE acquisition_channel='Meta')
 
 ## Purchases / member — purchase_frequency
 
-Purchases / member measures the result of the registered calculation over the applicable normalized source population. Count unique identities rather than source rows. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero. Source fields: Sales.Sale ID; Sales.Member ID.
+Average known sales transactions per identified buyer.
+
+How we calculate it: Different Sale IDs linked to a known Member ID divided by different known buyer Member IDs.
+
+Detailed definition: Distinct known Sale IDs attached to a known Member ID divided by distinct known buyer IDs, expressed as purchases per buyer. Missing sale/member IDs affect coverage; this is not an average for the entire active member base.
 
 - Domain: revenue
 - Source: Sales.Sale ID; Sales.Member ID
 - Table: sales
-- Date / population: Payment date; successful, non-voided payment lines. Membership balance is ranked once per membership within the selected sale cohort.
+- Date / population: Payment date; known voids are excluded, and Payment Status must be succeeded or missing. Missing void flags are accepted. Import exclusions follow the app toggle. Current membership balances are not historical balances.
 - Aggregation: weighted
 - Unit: decimal
-- Numerator / condition: member_id IS NOT NULL
-- Denominator: COUNT(DISTINCT member_id)
+- Numerator / condition: COUNT(DISTINCT sale_id) FILTER (WHERE member_id IS NOT NULL)::DOUBLE
+- Denominator: NULLIF(COUNT(DISTINCT member_id),0)
 - Direction: higher preferred
-- Minimum sample: 5
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sales.Sale ID: Declared in configured source schema; live availability not verified · Sales.Member ID: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count unique identities rather than source rows. Apply each FILTER condition only to its associated aggregate. Protect division by a zero denominator; return unavailable when it is zero.
 
@@ -5485,20 +6396,25 @@ COUNT(DISTINCT sale_id) FILTER (WHERE member_id IS NOT NULL)::DOUBLE/NULLIF(COUN
 
 ## Distinct products sold — product_breadth
 
-Distinct products sold measures the result of the registered calculation over the applicable normalized source population. Count unique identities rather than source rows. Source fields: Sales.Product.
+How many different normalized product names appear in eligible Sales lines.
+
+How we calculate it: Count different recorded normalized product names, rather than stock codes.
+
+Detailed definition: Number of distinct non-null normalized product names on eligible Sales lines. Normalization prefers Cleaned Product and can fall back to Membership Name or Sale Item; this counts product labels rather than SKUs.
 
 - Domain: revenue
-- Source: Sales.Product
+- Source: Sales.Cleaned Product; Sales.Sale Item
 - Table: sales
-- Date / population: Payment date; successful, non-voided payment lines. Membership balance is ranked once per membership within the selected sale cohort.
+- Date / population: Payment date; known voids are excluded, and Payment Status must be succeeded or missing. Missing void flags are accepted. Import exclusions follow the app toggle. Current membership balances are not historical balances.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: See the exact calculation; no separate numerator label is declared.
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: higher preferred
-- Minimum sample: 1
 - Target: not declared
-- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.
+- Source schema status: Sales.Cleaned Product: Declared in configured source schema; live availability not verified · Sales.Sale Item: Read by implementation or required by metric, but absent from configured column list; live header availability unverified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
+- Caveat: Source completeness, normalization and applicable workspace filters affect this measure. See source-schema status and implementation for row eligibility.
 
 Calculation method: Count unique identities rather than source rows.
 
@@ -5516,19 +6432,24 @@ COUNT(DISTINCT product)
 
 ## Lapsed membership count — lapsed_memberships
 
-Unique members per expiry month with a paid ongoing membership whose recorded Status is Lapsed and whose Churned Date is at least 30 days old. Zero-value, restricted, Not Activated, Active, New, Frozen and Renewed memberships are excluded; Lapsed under 30 days is a grace period. Counted by expiry date in the selected period. Matches the Expired / lapsed column of Renewals by expiry month.
+Confirmed lapsed outcomes in the eligible paid membership-expiry cohort.
+
+How we calculate it: Count lapsed outcomes after one-member-per-expiry-month deduplication and the 30-day grace rule, excluding restricted or unpaid memberships.
+
+Detailed definition: Unique members per expiry month with a paid ongoing membership whose recorded Status is Lapsed and whose Churned Date (or End Date when Churned Date is missing) is at least 30 days old. Zero-value, restricted, Not Activated, Active, New, Frozen and Renewed memberships are excluded; Lapsed under 30 days is a grace period. Counted by expiry date in the selected period. Matches the Expired / lapsed column of Renewals by expiry month.
 
 - Domain: risk
 - Source: Lapsed.Churned Date; Lapsed.End Date; Lapsed.Member ID; Lapsed.Start Date; Lapsed.Status; Lapsed.Amount Paid; Lapsed.Membership Name
 - Table: lapsed
-- Date / population: Membership expiry date cohort; current-stock measures override date scope as stated.
+- Date / population: End Date expiry cohort for standard dated queries, although normalized date stores Purchase Date. Member-expiry-month renewal cohorts and latest-eligible-member lapse counts are separate populations.
 - Aggregation: sum
 - Unit: integer
-- Numerator / condition: renewal_outcome='lapsed'
-- Denominator: No separately declared denominator; see calculation for nested ratios or non-ratio measures.
+- Numerator / condition: Not a single outer ratio; see full formula and definition.
+- Denominator: No single outer denominator; nested divisions and compound calculations are preserved in the full formula.
 - Direction: lower preferred
-- Minimum sample: 5
 - Target: not declared
+- Source schema status: Lapsed.Churned Date: Declared in configured source schema; live availability not verified · Lapsed.End Date: Declared in configured source schema; live availability not verified · Lapsed.Member ID: Declared in configured source schema; live availability not verified · Lapsed.Start Date: Declared in configured source schema; live availability not verified · Lapsed.Status: Declared in configured source schema; live availability not verified · Lapsed.Amount Paid: Declared in configured source schema; live availability not verified · Lapsed.Membership Name: Declared in configured source schema; live availability not verified
+- Runtime behavior: The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.
 - Caveat: Recent expiries move from grace period to lapsed 30 days after the Churned Date.
 
 Calculation method: Count qualifying records. Apply each FILTER condition only to its associated aggregate.
@@ -5549,7 +6470,7 @@ COUNT(*) FILTER (WHERE renewal_outcome='lapsed')
 
 ### server/agent-analytics.mjs
 
-Symbols: num, round, iso, dayMs, parse, isRate, additive, checkMetrics, id, metricRows, compiled, result, keyOf, scopeLabel, pctChange, describeChange, change, pct, material, comparePeriods, ids, groups, [a, b], keys, rows, ra, rb, out, id, va, vb, c, splitDrivers, [ta, tb], weight, driverSpecs, explainChange, id, dims, evidence, extra, [ta, tb], total, delta, output, spec, [da, db], ra, rb, drivers, dim, [ga, gb], keys, parts, a, b, trend, pts, n, mx, my, sxx, slope, forecast, id, today, start, base, scope, r, thisMonth, series, completed, current, daysIn, elapsed, t, output, target, projected, periodWindows, t, out, monday, i, from, i, from, scoreSeries, out, [key, values], latest, history, mean, sd, z, pct, findAnomalies, id, grain, windows, groups, base, results, w, series, samples, flat, row, k, eligible, scored, rankPerformance, ids, [key], r, min, rows, eligible, desc, values, peer, ranked, limit, quoteSQL, memberJourney, text, scope, sources, like, ids, s, r, row, [memberId, info], id, parts, evidence, q, s, r, whatIf, r, b, sessions, seatsPerClass, perClass, yieldPerVisit, s, rows, analysisTools, scopeField, periodField, groupEnum, analysisToolDefs, source, metric, fn, presentAnswerDef, UNIT, figuresIn, out, cleaned, re, m, [, rupee, , digits, unitRaw], prev, raw, unit, decimals, scale, candidates, set, add, e, rows, cols, row, [k, v], n, all, v, vals, i, j, a, b, unverifiedFigures, skip, pool, near, v, describeCall, label, list, by, briefingChecks, briefing, items, [source, id, label, minBaseline], { output }, s, up, good, change
+Symbols: num, round, iso, dayMs, parse, isRate, additive, checkMetrics, id, metricRows, compiled, result, keyOf, scopeLabel, pctChange, describeChange, change, pct, material, comparePeriods, ids, groups, [a, b], keys, rows, ra, rb, out, id, va, vb, c, splitDrivers, [ta, tb], weight, driverSpecs, explainChange, id, dims, evidence, extra, [ta, tb], total, delta, output, spec, [da, db], ra, rb, drivers, dim, [ga, gb], keys, parts, a, b, trend, pts, n, mx, my, sxx, slope, forecast, id, today, start, base, scope, r, thisMonth, series, completed, current, daysIn, elapsed, t, output, target, projected, periodWindows, t, out, monday, i, from, i, from, scoreSeries, out, [key, values], latest, history, mean, sd, z, pct, findAnomalies, id, grain, windows, groups, base, results, w, series, flat, row, k, scored, rankPerformance, ids, [key], r, min, rows, eligible, desc, values, peer, ranked, limit, quoteSQL, memberJourney, text, scope, sources, like, ids, s, r, row, [memberId, info], id, parts, evidence, q, s, r, whatIf, r, b, sessions, seatsPerClass, perClass, yieldPerVisit, s, rows, analysisTools, scopeField, periodField, groupEnum, analysisToolDefs, source, metric, fn, presentAnswerDef, UNIT, figuresIn, out, cleaned, re, m, [, rupee, , digits, unitRaw], prev, raw, unit, decimals, scale, candidates, set, add, e, rows, cols, row, [k, v], n, all, v, vals, i, j, a, b, unverifiedFigures, skip, pool, near, v, describeCall, label, list, by, briefingChecks, briefing, items, [source, id, label, minBaseline], { output }, s, up, good, change
 
 SQL output aliases: member, n, first_visit, visits, last_visit, studios, favourite_format, favourite_instructor, bookings, late_cancels, last_booking, in, cards, a, the
 
@@ -5692,7 +6613,7 @@ export async function explainChange(args, ctx) {
 /** Least-squares line through equally spaced points: slope per step and the next value. */
 export function trend(values) {
   const pts = values.map((v, i) => [i, v]).filter(([, v]) => v != null);
-  if (pts.length < 3) return null;
+  if (pts.length < 2) return null;
   const n = pts.length, mx = pts.reduce((s, [x]) => s + x, 0) / n, my = pts.reduce((s, [, y]) => s + y, 0) / n;
   const sxx = pts.reduce((s, [x]) => s + (x - mx) ** 2, 0);
   const slope = sxx ? pts.reduce((s, [x, y]) => s + (x - mx) * (y - my), 0) / sxx : 0;
@@ -5762,7 +6683,7 @@ export function scoreSeries(series, { minBaseline = 0 } = {}) {
   for (const [key, values] of Object.entries(series)) {
     const latest = values.at(-1);
     const history = values.slice(0, -1).filter((v) => v != null);
-    if (latest == null || history.length < 3) continue;
+    if (latest == null || history.length < 2) continue;
     const mean = history.reduce((s, v) => s + v, 0) / history.length;
     if (Math.abs(mean) < minBaseline) continue;
     const sd = Math.sqrt(history.reduce((s, v) => s + (v - mean) ** 2, 0) / history.length);
@@ -5784,19 +6705,15 @@ export async function findAnomalies(args, ctx) {
   for (const w of windows) results.push(await metricRows(ctx, args.source, [id], groups, JSON.stringify({ ...base, from: w.from, to: w.to }), { exclude_hosted: !!args.exclude_hosted }));
   if (results[0].snapshot) throw new Error(`${id} is a current snapshot; it has no weekly history.`);
   const series = {};
-  const samples = {};
   const flat = [];
   results.forEach((r, i) => {
     for (const row of r.rows) {
       const k = keyOf(row, groups);
       (series[k] ??= Array(windows.length).fill(null))[i] = num(row[id]);
-      (samples[k] ??= Array(windows.length).fill(0))[i] = num(row.source_records) ?? 0;
       flat.push({ period: windows[i].label, ...(groups.length ? { [groups[0]]: k } : {}), [id]: num(row[id]) });
     }
   });
-  // Small groups swing wildly; require a typical sample of at least 5 records.
-  const eligible = Object.fromEntries(Object.entries(series).filter(([k]) => samples[k].slice(0, -1).reduce((s, v) => s + v, 0) / (windows.length - 1) >= 5));
-  const scored = scoreSeries(eligible).map((s) => ({ [groups[0] || 'scope']: s.key, ...s, latest_period: windows.at(-1).label }));
+  const scored = scoreSeries(series).map((s) => ({ [groups[0] || 'scope']: s.key, ...s, latest_period: windows.at(-1).label }));
   return {
     output: { metric: id, label: metrics[id].label, grain, latest_period: windows.at(-1).label, baseline_periods: windows.length - 1, method: `latest complete ${grain} vs the mean of the previous ${windows.length - 1}; unusual = |z| ≥ 2 and ≥ 10% from baseline.`, unusual: scored.filter((s) => s.unusual), all: scored.slice(0, 25) },
     evidence: [{ sql: results.at(-1).sql, provenance: results.at(-1).provenance, rows: scored.length, result: scored.slice(0, 40), filters: results.at(-1).filters }, { sql: '-- series behind the anomaly scores', provenance: results.at(-1).provenance, rows: flat.length, result: flat.slice(-40), filters: results.at(-1).filters }],
@@ -5809,7 +6726,7 @@ export async function rankPerformance(args, ctx) {
   checkMetrics(args.source, ids, ctx.available);
   const [key] = ids;
   const r = await metricRows(ctx, args.source, ids, [args.group_by], args.scope_json, { exclude_hosted: !!args.exclude_hosted });
-  const min = Math.max(1, num(args.min_sample) ?? 3);
+  const min = Math.max(0, num(args.min_sample) ?? 0);
   const rows = r.rows.map((row) => ({ ...row, sample: num(row.source_records) }));
   const eligible = rows.filter((row) => row.sample >= min && num(row[key]) != null);
   const desc = args.order !== 'asc';
@@ -5826,7 +6743,7 @@ export async function rankPerformance(args, ctx) {
   }));
   const limit = Math.min(50, num(args.limit) || 10);
   return {
-    output: { ranking_metric: key, label: metrics[key].label, scope: scopeLabel(r.filters), peer_average: round(peer), ranked: ranked.slice(0, limit), eligible: ranked.length, excluded_low_sample: rows.filter((row) => row.sample < min).map((row) => ({ [args.group_by]: row[args.group_by], sample: row.sample })).slice(0, 15), sample_rule: `at least ${min} source records (classes for sessions)` },
+    output: { ranking_metric: key, label: metrics[key].label, scope: scopeLabel(r.filters), peer_average: round(peer), ranked: ranked.slice(0, limit), eligible: ranked.length, excluded_low_sample: rows.filter((row) => row.sample < min).map((row) => ({ [args.group_by]: row[args.group_by], sample: row.sample })).slice(0, 15), sample_rule: min > 0 ? `User-requested minimum: ${min} source records (classes for sessions)` : 'No minimum sample cutoff; all filtered groups with a valid metric are eligible' },
     evidence: [{ sql: r.sql, provenance: r.provenance, rows: ranked.length, result: ranked.slice(0, 40), filters: r.filters }],
   };
 }
@@ -5906,7 +6823,7 @@ export function analysisToolDefs(sources, metricIds) {
     fn('explain_change', 'Explain WHY a total changed between two periods: splits it into multiplicative drivers (classes × class size × yield; transactions × AOV; newcomers × conversion; bookings × late rate) whose contributions add up exactly, and shows which studios / formats / instructors / slots drove it. Use for "why", "what drove", "what caused".', { source, metric_id: metric, dimensions: { type: 'array', items: { type: 'string', enum: groupEnum } }, period_a: periodField, period_b: periodField, exclude_hosted: { type: 'boolean' } }),
     fn('forecast', 'Monthly history (12 months), linear trend on the last 6 completed months, month-end run-rate projection for totals, and gap / required daily pace to an optional target. Use for "will we hit", "on track", "projection", "month-end".', { source, metric_id: metric, target: { type: ['number', 'null'] }, scope_json: scopeField, exclude_hosted: { type: 'boolean' } }),
     fn('find_anomalies', 'Find unusual values: the latest complete week or month vs its own recent history (z-score), per studio / instructor / format etc. Use for "anything unusual", "what stands out", "spikes", "drops", "red flags".', { source, metric_id: metric, dimension: { type: ['string', 'null'], enum: [...groupEnum, null] }, grain: { type: 'string', enum: ['week', 'month'] }, scope_json: scopeField, exclude_hosted: { type: 'boolean' } }),
-    fn('rank_performance', 'Rank studios / instructors / formats / class slots etc. by a governed metric with a minimum sample, percentile and gap to the peer average. The first metric is the ranking metric; others are shown beside it. Use for best / worst / top / bottom / leaderboard.', { source, metric_ids: { type: 'array', items: metric }, group_by: { type: 'string', enum: groupEnum }, min_sample: { type: ['integer', 'null'] }, order: { type: 'string', enum: ['desc', 'asc'] }, limit: { type: ['integer', 'null'] }, scope_json: scopeField, exclude_hosted: { type: 'boolean' } }),
+    fn('rank_performance', 'Rank studios / instructors / formats / class slots etc. by a governed metric, percentile and gap to the peer average. Use the full filtered dataset by default; min_sample is an optional user-requested filter only. The first metric is the ranking metric; others are shown beside it. Use for best / worst / top / bottom / leaderboard.', { source, metric_ids: { type: 'array', items: metric }, group_by: { type: 'string', enum: groupEnum }, min_sample: { type: ['integer', 'null'], minimum: 0, description: 'Optional minimum source-record count, only when requested by the user. Null or 0 includes all filtered groups with valid metric values.' }, order: { type: 'string', enum: ['desc', 'asc'] }, limit: { type: ['integer', 'null'] }, scope_json: scopeField, exclude_hosted: { type: 'boolean' } }),
     fn('member_journey', "One member's history across all dates and studios: first visit and outcome, visits, favourite format and instructor, bookings and late cancels, purchases, memberships and lapse. Takes a name (partial is fine) or member ID. Never returns contact details.", { member: { type: 'string' } }),
     fn('what_if', 'Scenario model on regular classes: change fill rate (target %), class size %, number of classes % or revenue per visit %, and see attendance, fill and earned revenue vs the baseline. Use for "what if", "if we", "how much more".', { scope_json: scopeField, fill_rate_target_pct: { type: ['number', 'null'] }, class_size_change_pct: { type: ['number', 'null'] }, sessions_change_pct: { type: ['number', 'null'] }, yield_change_pct: { type: ['number', 'null'] } }),
   ];
@@ -6076,7 +6993,7 @@ export async function briefing(ctx) {
 
 ### server/agent-metrics.mjs
 
-Symbols: metricSource, metricCatalog, groupsAllowed, classSlotSQL, slotSources, compileMetricQuery, {source,metric_ids:ids,group_by:groups=[]}, snapshots, filters, today, facts, groupSQL, sql
+Symbols: unsupportedCrossSourceMetrics, metricSource, metricCatalog, groupsAllowed, classSlotSQL, slotSources, compileMetricQuery, {source,metric_ids:ids,group_by:groups=[]}, snapshots, filters, today, facts, groupSQL, sql
 
 SQL output aliases: membership_balance_rank, teaching_session_rank, month, class_slot, source_records
 
@@ -6084,9 +7001,10 @@ SQL output aliases: membership_balance_rank, teaching_session_rank, month, class
 import { metrics, metricSQL } from '../src/semantics/metrics.ts';
 import { currentSnapshotMetrics } from '../src/semantics/evidence.ts';
 import { toolScope } from './agent-scope.mjs';
+const unsupportedCrossSourceMetrics = new Set(['new_late_cancels']);
 export const metricSource = id => metrics[id]?.sources[0]?.split('.')[0].split(' →')[0].toLowerCase().replaceAll(' ', '_');
 export function metricCatalog(config) {
-  return Object.values(metrics).filter(m => config.some(s => s.key === metricSource(m.id))).map(m => ({id:m.id,label:m.label,source:metricSource(m.id),format:m.format}));
+  return Object.values(metrics).filter(m => !unsupportedCrossSourceMetrics.has(m.id) && config.some(s => s.key === metricSource(m.id))).map(m => ({id:m.id,label:m.label,source:metricSource(m.id),format:m.format}));
 }
 const groupsAllowed = new Set(['location','month','trainer','format','format_group','category','product','associate','payment_method','day','time','status','source','class_slot','session_type']);
 // A recurring class is one weekly slot: the class name on a given weekday and start time.
@@ -6095,6 +7013,7 @@ const slotSources = new Set(['sessions','checkins','bookings']);
 export function compileMetricQuery(args, defaults, available, rate = 1200) {
   const {source,metric_ids:ids,group_by:groups=[]} = args;
   if (!available.includes(source) || !Array.isArray(ids) || !ids.length || ids.length>12 || ids.some(id=>metricSource(id)!==source)) throw new Error('Choose 1–12 metrics from the same listed source.');
+  if (ids.some(id=>unsupportedCrossSourceMetrics.has(id))) throw new Error('Newcomer late cancellations require all-time matched Bookings. Use Acquisition or the metric catalogue; this scoped AI query does not support that cross-source measure.');
   if (!Array.isArray(groups) || groups.length>3 || groups.some(g=>!groupsAllowed.has(g))) throw new Error('Unsupported metric grouping.');
   const snapshots = ids.filter(id=>currentSnapshotMetrics.has(id));
   if (snapshots.length && snapshots.length !== ids.length) throw new Error('Query current snapshot metrics separately from period metrics.');
@@ -6210,7 +7129,7 @@ export function churnMaturity(rows,from,to,asOf,settleDays=60) {
 
 Symbols: performanceMarketingTopics
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 export const performanceMarketingTopics = [
@@ -6250,7 +7169,7 @@ export const performanceMarketingTopics = [
 
 Symbols: overrideFields, validateKraEdit, info, data, field, field
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 import {kraDefinitions} from './kra-metrics.mjs';
@@ -6272,7 +7191,7 @@ export function validateKraEdit(period,id,body) {
 
 Symbols: schedule, minutes, interviewRecords, interviewSummary, held, scheduled, byLevel
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 // Systems Executive (Automation Analyst) hiring interviews, taken from the calendar record for the KRA period.
@@ -6527,7 +7446,7 @@ export function kraPerformance(sources,asOf,{imports=false}={}) {
 
 Symbols: schedule, minutes, trainingRecords, trainingSummary, held, byCategory
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 // Team training sessions delivered in the KRA period, taken from the calendar record.
@@ -6563,7 +7482,7 @@ export function trainingSummary(records,from,to) {
 
 Symbols: kraRoutes, file, cache, asOf, auth, evidence, writes, resultKey, RESULT_TTL, UNCHANGED_TTL, KEYS, unchanged, sources, current, computations, computeOnce, key, compute, sources, revisions, source, data, normalized, index, result, decorate, info, imports, refresh, saved, cached, error, error, {info,data,expectedUpdatedAt}, key, job, saved, before, conflict, updatedAt, record, previousInfo, base, editedInfo, error, body, ids, stamp, job, records, written, id, record, body, record, job, records, requirements, expected, body, record, job, records
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 import {randomBytes} from 'node:crypto';
@@ -6699,7 +7618,7 @@ export function kraRoutes(app,root,config,load,store=createStore({root}),freshne
 
 ### src/App.tsx
 
-Symbols: blank, DataLabLazy, DataLab, AnalysisWorkbenchLazy, AnalysisWorkbench, StudioOperationsOverviewLazy, StudioOperationsOverview, StudioOperationsDeepDiveLazy, StudioOperationsDeepDive, StudioCommunityOperationsLazy, StudioCommunityOperations, StudioOperationsLazy, StudioOperations, PerformanceMarketingLazy, PerformanceMarketing, SqlElementBuilderLazy, SqlElementBuilder, AtlasSettingsLazy, AtlasSettings, ConversionJourneysLazy, ConversionJourneys, metricScope, source, predicate, App, s, { preferences: prefs, page: updatePage }, pagePrefs, bp, websiteMarketingView, marketingView, workspaceHeading, workspaceVersion, contentKey, content, contentVersion, ready, loaded, [error, setError], [analysis, setAnalysis], [busy, setBusy], [choices, setChoices], linked, [groups, setGroups], [columns, setColumns], [configuredTab, setConfiguredTab], [signals, setSignals], scopeKey, [drill, updateDrill], setDrill, [modal, setModal], [command, setCommand], [toast, setToast], [version, setVersion], instructorPayroll, [thresholdValues, setThresholdValues], main, [editing, setEditing], lastTab, sequence, shownView, notify, load, e, loaded, refresh, changed, idle, timer, onVisible, current, timer, root, section, id, view, timer, current, timer, handler, key, loaderLines, [loaderTick, setLoaderTick], timer, loaderLine, onDrill, base, scope, closeDrill, dismiss, d, recordGroups, sourceProblem, accentKey, overviewWorkspace, domainStyle, root, [key, value], commands, tab, includeWeeklyPattern, weeklyTitle, weeklyMetric, heatOptions, [heatMetric, setHeatMetric], start, [, from, to], name, TabIcon, active, name, views
+Symbols: blank, DataLabLazy, DataLab, StudioOperationsOverviewLazy, StudioOperationsOverview, StudioOperationsDeepDiveLazy, StudioOperationsDeepDive, StudioCommunityOperationsLazy, StudioCommunityOperations, StudioOperationsLazy, StudioOperations, PerformanceMarketingLazy, PerformanceMarketing, SqlElementBuilderLazy, SqlElementBuilder, AtlasSettingsLazy, AtlasSettings, ConversionJourneysLazy, ConversionJourneys, metricScope, source, predicate, MetricSummary, App, s, { preferences: prefs, page: updatePage }, pagePrefs, bp, websiteMarketingView, marketingView, workspaceHeading, workspaceVersion, contentKey, content, contentVersion, ready, loaded, [error, setError], [analysis, setAnalysis], [busy, setBusy], [choices, setChoices], linked, [groups, setGroups], [columns, setColumns], [configuredTab, setConfiguredTab], [signals, setSignals], scopeKey, [drill, updateDrill], setDrill, [modal, setModal], [command, setCommand], [toast, setToast], [version, setVersion], instructorPayroll, [thresholdValues, setThresholdValues], main, [editing, setEditing], lastTab, sequence, shownView, notify, load, e, loaded, refresh, changed, idle, timer, onVisible, current, timer, root, section, id, view, timer, current, timer, handler, key, loaderLines, [loaderTick, setLoaderTick], timer, loaderLine, onDrill, base, scope, closeDrill, dismiss, d, recordGroups, sourceProblem, accentKey, overviewWorkspace, domainStyle, root, [key, value], commands, tab, includeWeeklyPattern, weeklyTitle, weeklyMetric, heatOptions, [heatMetric, setHeatMetric], start, [, from, to], name, TabIcon, active, name, views
 
 SQL output aliases: getOptions, runInsights, HTMLElement, React, HTMLInputElement, PDF
 
@@ -6728,7 +7647,7 @@ import {
   themeOptions,
   sections,
 } from "./state/preferences";
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Save,
   Sun,
@@ -6812,6 +7731,7 @@ import {
 import { RenewalCohorts } from "./components/RenewalCohorts";
 import { SignalRail } from "./components/SignalRail";
 import { DrillPanel } from "./components/DrillPanel";
+import { MetricDefinitionReader } from "./components/MetricDefinitionReader";
 import { DataHealth } from "./components/DataHealth";
 import { Secondary } from "./components/Secondary";
 import { MetricIndex } from "./components/MetricIndex";
@@ -6854,8 +7774,7 @@ const blank: Analysis = {
 // source table and which record predicate explain that single number.
 const DataLabLazy = lazy(() => import("./components/DataLab").then(module => ({ default: module.DataLab })));
 function DataLab(props: React.ComponentProps<typeof DataLabLazy>) { return <Suspense fallback={<p role="status">Loading workspace…</p>}><DataLabLazy {...props} /></Suspense>; }
-const AnalysisWorkbenchLazy = lazy(() => import("./components/AnalysisWorkbench").then(module => ({ default: module.AnalysisWorkbench })));
-function AnalysisWorkbench(props: React.ComponentProps<typeof AnalysisWorkbenchLazy>) { return <Suspense fallback={<p role="status">Loading workspace…</p>}><AnalysisWorkbenchLazy {...props} /></Suspense>; }
+
 const StudioOperationsOverviewLazy = lazy(() => import("./components/StudioOperationsOverview").then(module => ({ default: module.StudioOperationsOverview })));
 function StudioOperationsOverview(props: React.ComponentProps<typeof StudioOperationsOverviewLazy>) { return <Suspense fallback={<p role="status">Loading workspace…</p>}><StudioOperationsOverviewLazy {...props} /></Suspense>; }
 const StudioOperationsDeepDiveLazy = lazy(() => import("./components/StudioOperationsDeepDive").then(module => ({ default: module.StudioOperationsDeepDive })));
@@ -6895,6 +7814,11 @@ function metricScope(
     predicate,
     filters: currentSnapshotMetrics.has(id) ? { ...filters, from: "", to: "" } : filters,
   };
+}
+
+function MetricSummary({ children, periods }: { children: ReactNode; periods?: ReactNode }) {
+  // Keep the Leads cards and period table together so saved section orders cannot put the table first.
+  return periods ? <section id="lead-metric-summary" style={{ display: 'block' }}>{children}{periods}</section> : <>{children}</>;
 }
 
 export default function App() {
@@ -7268,7 +8192,6 @@ export default function App() {
     return () => { delete document.documentElement.dataset.workspace; };
   }, [overviewWorkspace]);
   const commands = [
-    {name:"Advanced analysis builder",kind:"Analysis",run:()=>window.dispatchEvent(new Event("atlas-open-analysis"))},
     {name:"Back / undo scope",kind:"Navigation",run:s.undo},
     {name:"Forward / redo scope",kind:"Navigation",run:s.redo},
     ...tabs.map((name, i) => ({
@@ -7537,7 +8460,7 @@ export default function App() {
       </nav>
       <div className="workspace">
         {busy && <div className="loader-bar" />}
-        {busy && (
+        {busy && s.tab !== 11 && (
           <div className="loader-shell" role="status" aria-live="polite" aria-atomic="true" style={{ "--loader-accent": "var(--accent)" } as React.CSSProperties}>
             <div className="loader-graphic" aria-hidden="true">
               <svg className="loader-orbit" viewBox="0 0 88 88"><circle className="loader-orbit-track" cx="44" cy="44" r="38" /><circle className="loader-orbit-arc" cx="44" cy="44" r="38" /><circle className="loader-orbit-dot" cx="44" cy="6" r="3" /></svg>
@@ -7555,8 +8478,8 @@ export default function App() {
           id="main"
           ref={main}
           tabIndex={-1}
-          className={`canvas ${busy ? "loading" : ""}`}
-          aria-busy={busy}
+          className={`canvas ${busy && s.tab !== 11 ? "loading" : ""}`}
+          aria-busy={busy && s.tab !== 11}
         >
           <div className="print-context">
             <h2>Atlas / {s.view === "kra" ? "Jimmeey Gondaa · KRA performance" : websiteMarketingView ? "Website lead performance" : marketingView ? "Performance Marketing" : tabs[s.tab]}</h2>
@@ -7609,7 +8532,6 @@ export default function App() {
           />}
           {missingPrivateScope && <p className="notice">This link contains a member-specific scope saved in another browser. Open the saved analysis in its original browser to restore that scope.</p>}
           {s.tab !== 15 && <AnalysisNavigation />}
-          {s.tab !== 16 && s.tab !== 15 && <AnalysisWorkbench key={s.tab + s.view} version={version} onDrill={setDrill} />}
           {error && (
             <div className="notice">
               <TriangleAlert size={14} />
@@ -7677,9 +8599,12 @@ export default function App() {
           ) : s.tab === 13 ? (
             <IntelligenceWorkspace />
           ) : s.tab === 11 ? (
-            ready ? (
-              <DataHealth version={version} onRefresh={() => void load(true)} />
-            ) : null
+            <>
+              <Register index="MD" id="data-quality-metric-definitions" title="Metric definitions" subtitle="What each number means, how it is calculated, and where it comes from." dateIndependent>
+                <MetricDefinitionReader />
+              </Register>
+              {ready ? <DataHealth version={version} onRefresh={() => void load(true)} /> : <p role="status" className="small">Loading source quality checks. Metric definitions are available above.</p>}
+            </>
           ) : !ready || configuredTab !== s.tab ? null : marketingView ? (
             <PerformanceMarketing version={version} onDrill={setDrill} websiteOnly={websiteMarketingView} />
           ) : s.tab === 1 ? (
@@ -7704,6 +8629,7 @@ export default function App() {
                   </button>
                 </div>
               )}
+              <MetricSummary periods={s.tab === 8 ? <WebsiteLeadPeriods version={version} onDrill={setDrill} websiteOnly={false} expanded /> : undefined}>
               <div
                 className="metric-strip"
               >
@@ -7753,6 +8679,7 @@ export default function App() {
                   <MetricCard key={id} id={id} value={instructorPayroll?.total[id]} previous={instructorPayroll?.previous[id]} trend={instructorPayroll?.trend ?? []} n={instructorPayroll?.count ?? 0} evidence={instructorPayroll?.total ?? {}} compare={s.compare !== "none"} />
                 ))}
               </div>
+              </MetricSummary>
               <PinnedInsights page={s.tab} />
               <SavedElements page={s.tab} version={version} />
               {s.tab === 3 && (
@@ -7913,7 +8840,6 @@ export default function App() {
               {s.tab === 0 && <OverviewModules version={version} onDrill={setDrill} />}
               {s.tab === 14 && <PerformanceScorecard dimension="format_group" index="08" version={version} onDrill={setDrill} />}
               {s.tab === 14 && <FormatComparison version={version} />}
-              {s.tab === 8 && <WebsiteLeadPeriods version={version} onDrill={setDrill} websiteOnly={false} expanded />}
               <MoMTable version={workspaceVersion} ids={[...new Set([...bp.columns, ...bp.kpis, ...Object.keys(metrics)])].filter(id => metricTable(id) === bp.source)} />
               {s.tab === 4 && <SalesScorecards version={contentVersion} onDrill={setDrill} />}
               {s.tab === 5 && <><ConversionJourneys version={contentVersion} /><AcquisitionMainTables version={contentVersion} /></>}
@@ -8048,10 +8974,7 @@ export default function App() {
                 <X size={16} />
               </button>
             </div>
-            {modal === "metrics" && <>
-              <p className="small"><a href="/reference/metric-definitions.html" target="_blank" rel="noopener noreferrer">Open full reference</a> · <a href="/reference/metric-definitions.md" download>Download document</a></p>
-              <iframe title="Atlas metric definition document" src="/reference/metric-definitions.html" style={{ width: "100%", height: "70vh", border: "1px solid var(--border, #ddd)", borderRadius: 8, background: "white" }} />
-            </>}
+            {modal === "metrics" && <MetricDefinitionReader />}
             {modal === "command" && (
               <>
                 <input
@@ -8556,7 +9479,7 @@ export function AcquisitionReferenceTables({kind,version,onDrill}:{kind:Kind;ver
 
 ### src/components/AcquisitionTables.tsx
 
-Symbols: tableOptions, MetricTabs, valueText, changeText, c, p, deltaClass, difference, better, sortedRows, av, bv, diff, SortHeading, active, OutcomeBadge, DefinitionNote, ValueSelection, [search, setSearch], available, picked, CohortComparison, filters, transient, [levels, setLevels], group, childGroup, setGroup, setChildGroup, dimensions, [selectedValues, setSelectedValues], [allRows, setAllRows], [rows, setRows], [loading, setLoading], [error, setError], [metric, setMetric], [display, setDisplay], compareOff, [controls,setControls], [search, setSearch], [expanded, setExpanded], [sort, setSort], child, groupLabel, childLabel, selectedMonths, comparableMonths, months, monthGroups, measure, historyScope, active, scope, values, parentRows, lookup, parents, visible, children, map, parent, onSort, toggle, drillCell, scope, parentSQL, childSQL, parts, cell, current, priorKey, previous, value, prev, parent, open, columnSQL, MetricsTable, [search, setSearch], [metric, setMetric], [selectedValues, setSelectedValues], [sort, setSort], [page, setPage], measures, drill, predicates, matching, currentPage, total, onSort, Pagination, PurchaseLines, [rows, setRows], [status, setStatus], active, journeyTextFields, journeyColumns, Journeys, [search, setSearch], [page, setPage], [expanded, setExpanded], [sort, setSort], [columnView, setColumnView], [selectedMembers, setSelectedMembers], visibleColumns, imports, matching, currentPage, onSort, renderValue, key, open, values, additive, average, value, metricDefaults, AcquisitionTableView, filters, transient, scope, metrics, defaults, [savedGroups,setGroups], valid, groups, groupFields, dimensions, grouping, [rows,setRows], [loading,setLoading], [error,setError], [request,setRequest], active, facts, sql, CollapsedTable, [open,setOpen], AcquisitionMainTables, AcquisitionDeepDive
+Symbols: tableOptions, uniqueMeasureLabels, measureLabel, MetricTabs, valueText, changeText, c, p, deltaClass, difference, better, sortedRows, av, bv, diff, SortHeading, active, OutcomeBadge, DefinitionNote, ValueSelection, [search, setSearch], available, picked, CohortComparison, filters, transient, [levels, setLevels], group, childGroup, setGroup, setChildGroup, dimensions, [selectedValues, setSelectedValues], [allRows, setAllRows], [rows, setRows], [loading, setLoading], [error, setError], [metric, setMetric], [display, setDisplay], compareOff, [controls,setControls], [search, setSearch], [expanded, setExpanded], [sort, setSort], child, groupLabel, childLabel, selectedMonths, comparableMonths, months, monthGroups, measure, historyScope, active, scope, values, parentRows, lookup, parents, visible, children, map, parent, onSort, toggle, drillCell, scope, parentSQL, childSQL, parts, cell, current, priorKey, previous, value, prev, parent, open, columnSQL, MetricsTable, [search, setSearch], [metric, setMetric], [selectedValues, setSelectedValues], [sort, setSort], [page, setPage], measures, drill, predicates, matching, currentPage, total, onSort, Pagination, PurchaseLines, [rows, setRows], [status, setStatus], active, journeyTextFields, journeyColumns, Journeys, [search, setSearch], [page, setPage], [expanded, setExpanded], [sort, setSort], [columnView, setColumnView], [selectedMembers, setSelectedMembers], visibleColumns, imports, matching, currentPage, onSort, renderValue, key, open, values, additive, average, value, metricDefaults, AcquisitionTableView, filters, transient, scope, metrics, defaults, [savedGroups,setGroups], valid, groups, groupFields, dimensions, grouping, [rows,setRows], [loading,setLoading], [error,setError], [request,setRequest], active, facts, sql, CollapsedTable, [open,setOpen], AcquisitionMainTables, AcquisitionDeepDive
 
 SQL output aliases: columnLabel, const, text
 
@@ -8597,10 +9520,12 @@ const tableOptions = [
   { key: "trainers", label: "Instructor performance", description: "First-visit outcomes", icon: GraduationCap },
   { key: "journeys", label: "Purchase journeys", description: "Converted members", icon: Route },
 ] as const;
-function MetricTabs({ value, onChange, includeAll = false }: { value: string; onChange: (key: string) => void; includeAll?: boolean }) {
+const uniqueMeasureLabels: Record<string, string> = { newcomers: 'Unique newcomers', converted_members: 'Converted members (all visit types)', retained_members: 'Retained members (all visit types)', conversion_rate: 'Unique-newcomer conversion rate', retention_rate: 'Unique-newcomer retention rate', second_visit_rate: 'Unique-newcomer second-visit rate' };
+const measureLabel = (measure: Measure, unique = false) => unique ? uniqueMeasureLabels[measure[0]] || measure[1] : measure[1];
+function MetricTabs({ value, onChange, includeAll = false, unique = false }: { value: string; onChange: (key: string) => void; includeAll?: boolean; unique?: boolean }) {
   return <div className="acq-metric-tabs" aria-label="Choose table metric">
     {includeAll && <button aria-pressed={value === "all"} onClick={() => onChange("all")}>All metrics</button>}
-    {acquisitionMeasures.map(m => <button key={m[0]} aria-pressed={value === m[0]} onClick={() => onChange(m[0])}>{m[1]}</button>)}
+    {acquisitionMeasures.map(m => <button key={m[0]} aria-pressed={value === m[0]} onClick={() => onChange(m[0])}>{measureLabel(m, unique)}</button>)}
   </div>;
 }
 function valueText(measure: Measure, value: unknown) {
@@ -8777,10 +9702,10 @@ function MetricsTable({ rows, dimensions, kind, scope, onDrill, grouping }: { ro
     description={kind === "hosted" ? "Hosted first visits by experience and month, matching the reference. Selected global filters apply." : "First-visit instructor outcomes with unique member counts and recorded visits. Selected global filters apply."}
     onSearch={v => { setSearch(v); setPage(0); }}
     actions={<>{grouping}<ValueSelection options={[...new Set(rows.filter(r => !r.is_total).map(r => String(r[dimensions[0][0]] ?? "Unspecified")))].sort()} selected={selectedValues} onChange={values => { setSelectedValues(values); setPage(0); }} label={`${kind === "hosted" ? "Hosted" : "Instructor"} first-column values`} /></>}
-    metricBar={<MetricTabs value={metric} onChange={setMetric} includeAll />}
+    metricBar={<MetricTabs value={metric} onChange={setMetric} includeAll unique={kind === "trainers"} />}
     footer={<><Pagination count={matching.length} page={currentPage} setPage={setPage} /><span>{kind === "hosted" ? "First-visit acquisition cohorts; total event attendance and event revenue are not included." : "Instructor attribution follows the member’s first visit."} Footer totals cover the full filtered scope, independent of search.</span><DefinitionNote /></>}>
     <div className="acq-table-scroll" tabIndex={0} aria-label="Metrics table. Scroll horizontally for additional metrics."><table className="acq-table">
-      <thead><tr>{dimensions.map(([key, label], i) => <SortHeading key={key} label={label} name={key} sort={sort} onSort={onSort} className={i === 0 ? "acq-sticky acq-dimension" : "acq-dimension"} />)}{measures.map(m => <SortHeading key={m[0]} label={m[1]} name={m[0]} sort={sort} onSort={onSort} />)}</tr></thead>
+      <thead><tr>{dimensions.map(([key, label], i) => <SortHeading key={key} label={label} name={key} sort={sort} onSort={onSort} className={i === 0 ? "acq-sticky acq-dimension" : "acq-dimension"} />)}{measures.map(m => <SortHeading key={m[0]} label={measureLabel(m, kind === "trainers")} name={m[0]} sort={sort} onSort={onSort} />)}</tr></thead>
       <tbody>{matching.slice(currentPage * 25, currentPage * 25 + 25).map((r, i) => <tr key={JSON.stringify(dimensions.map(([key]) => r[key]))}>{dimensions.map(([key], j) => <td key={key} className={`${j === 0 ? "acq-sticky " : ""}acq-dimension`}>
         {j === 0 && kind === "trainers" && <span className="acq-rank">{currentPage * 25 + i + 1}</span>}{key === "month" ? acquisitionPeriodLabel(r[key]) : key === "entry" ? <span className="acq-badge neutral">{r[key] ?? "Unspecified"}</span> : key === "trainer" ? <InstructorName name={String(r[key] ?? "Unspecified")}/> : r[key] ?? "Unspecified"}
       </td>)}{measures.map(m => <td key={m[0]}><button className="acq-cell-button" onClick={() => drill(r, m[0])}><span className={r[m[0]] == null ? "acq-missing" : m[2] === "percent" ? "acq-rate" : "acq-value"}>{valueText(m, r[m[0]])}</span></button></td>)}</tr>)}</tbody>
@@ -13385,7 +14310,7 @@ export function DataLab({ version }: { version: number }) {
 
 Symbols: shownColumn, sheetColumns, keys, rest, renewalOutcomeLabel, DrillPanel, [page, setPage], [total, setTotal], [loading, setLoading], [sourceData, setSourceData], pageSize, EXPORT_LIMIT, [records, setRecords], [summary, setSummary], [trend, setTrend], [record, setRecord], [original, setOriginal], current, [err, setErr], [scope, setScope], [exporting, setExporting], s, panel, source, filters, metricIds, definition, old, listener, nodes, first, last, current, groupingPath, path, summaryPath, transient, metricContext, w, originals, all, e, index, index
 
-SQL output aliases: HTMLElement, n, a
+SQL output aliases: HTMLElement, n
 
 ```typescript
 import { InstructorAvatar, InstructorName } from "./InstructorAvatar";
@@ -13641,12 +14566,7 @@ export function DrillPanel({
                   <strong>{metrics[id].label}</strong>
                   <code>{metrics[id].description}</code>
                   <p className="small">
-                    Source columns: {metrics[id].sources.join(", ")}. Ranking
-                    minimum {metrics[id].minSample} records
-                    {Number(summary.n || 0) < metrics[id].minSample
-                      ? ` · this scope has ${Number(summary.n || 0)}, so read it as a hint rather than a result`
-                      : ""}
-                    .
+                    Source columns: {metrics[id].sources.join(", ")}. Uses the full eligible filtered dataset.
                   </p>
                 </div>
               ))}
@@ -14172,7 +15092,7 @@ export function FormatAllocationChart({
   const [measure, setMeasure] = useState<"attendance" | "revenue">(
     "attendance",
   );
-  const [minimum, setMinimum] = useState(1);
+  const [minimum, setMinimum] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const ref = useRef<HTMLDivElement>(null);
@@ -14314,10 +15234,10 @@ export function FormatAllocationChart({
           Minimum sessions{" "}
           <input
             type="number"
-            min={1}
+            min={0}
             value={minimum}
             onChange={(e) =>
-              setMinimum(Math.max(1, Number(e.target.value) || 1))
+              setMinimum(Math.max(0, Number(e.target.value) || 0))
             }
           />
         </label>
@@ -14355,7 +15275,7 @@ export function FormatAllocationChart({
 
 ### src/components/FormatComparison.tsx
 
-Symbols: SCORECARD, SCORECARD_IDS, SHARE_IDS, TREND_IDS, SLOT_IDS, MIN_SESSIONS, SLICE_DEFAULTS, empty, FormatComparison, s, [data, setData], [error, setError], [loading, setLoading], [trendMetric, setTrendMetric], [view, setView], sql, facts, labelled, history, historyFacts, keys, active, formats, total, row, best, higher, scored, record, Icon, fill, circumference, raw, values, max, leader, part, whole, part, whole, TrendTable, [controls,setControls], months, priorKey, d, monthLabel, cell, scored, top, values, high, low, SliceTable, [limit, setLimit], [groups, setGroups], registry, fields, key, chosen, v, custom, sliceSQL, [own, setOwn], live, rows, label, heading, ranked
+Symbols: SCORECARD, SCORECARD_IDS, SHARE_IDS, TREND_IDS, SLOT_IDS, SLICE_DEFAULTS, empty, FormatComparison, s, [data, setData], [error, setError], [loading, setLoading], [trendMetric, setTrendMetric], [minimumSessions, setMinimumSessions], [view, setView], sql, facts, minimumClause, labelled, history, historyFacts, keys, active, formats, total, row, best, higher, scored, record, Icon, fill, circumference, raw, values, max, leader, part, whole, part, whole, TrendTable, [controls,setControls], months, priorKey, d, monthLabel, cell, scored, top, values, high, low, SliceTable, [limit, setLimit], [groups, setGroups], registry, fields, key, chosen, v, custom, sliceSQL, [own, setOwn], live, rows, label, heading, ranked
 
 SQL output aliases: fg, is_total, n, trainer, location, const, Row, React
 
@@ -14391,7 +15311,6 @@ const SCORECARD_IDS = SCORECARD.flatMap((s) => s.ids);
 const SHARE_IDS = ["sessions", "capacity", "attendance", "revenue"];
 const TREND_IDS = SCORECARD_IDS.filter(id => id !== "trainers");
 const SLOT_IDS = ["sessions", "attendance", "fill_rate", "avg_class_size_incl", "revenue_per_session", "show_up_rate", "late_cancel_rate", "no_show_rate", "empty_session_rate", "rev_pas"];
-const MIN_SESSIONS = 5;
 const SLICE_DEFAULTS = { slots: ["day", "time"], trainers: ["trainer"], studios: ["location"] };
 
 type Section = { rows: Row[]; trend: Row[]; slots: Row[]; trainers: Row[]; studios: Row[] };
@@ -14403,10 +15322,12 @@ export function FormatComparison({ version }: { version: string | number }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [trendMetric, setTrendMetric] = useState("attendance");
+  const [minimumSessions, setMinimumSessions] = useState(0);
   const [view, setView] = useState<"value" | "index">("value");
 
   const sql = useMemo(() => {
     const facts = metricFacts(s.filters, "sessions", s.transient);
+    const minimumClause = minimumSessions > 0 ? ` HAVING SUM(sessions)>=${minimumSessions}` : "";
     const labelled = `WITH f AS (SELECT *, COALESCE(format_group,'Barre') AS fg FROM ${facts})`;
     // The trend ignores the page date filter so the shape of a format over the
     // year stays readable while the rest of the tab is scoped to a period.
@@ -14415,16 +15336,16 @@ export function FormatComparison({ version }: { version: string | number }) {
     return {
       rows: `${labelled} SELECT fg,GROUPING(fg) AS is_total,${metricSQL(SCORECARD_IDS, context(s.filters, s.transient))},COUNT(*) AS n FROM f GROUP BY GROUPING SETS ((fg),()) ORDER BY is_total,fg`,
       trend: `WITH f AS (SELECT *, COALESCE(format_group,'Barre') AS fg FROM ${historyFacts}) SELECT month,fg,${metricSQL(TREND_IDS, context(history, historicalTransient(s.transient)))} FROM f WHERE month IS NOT NULL GROUP BY month,fg ORDER BY month`,
-      slots: `${labelled} SELECT fg,day,time,${metricSQL(SLOT_IDS, context(s.filters, s.transient))} FROM f WHERE day IS NOT NULL AND time IS NOT NULL GROUP BY fg,day,time HAVING SUM(sessions)>=${MIN_SESSIONS}`,
-      trainers: `${labelled} SELECT fg,COALESCE(trainer,'Unspecified') AS trainer,${metricSQL(SLOT_IDS, context(s.filters, s.transient))} FROM f GROUP BY fg,trainer HAVING SUM(sessions)>=${MIN_SESSIONS}`,
+      slots: `${labelled} SELECT fg,day,time,${metricSQL(SLOT_IDS, context(s.filters, s.transient))} FROM f WHERE day IS NOT NULL AND time IS NOT NULL GROUP BY fg,day,time${minimumClause}`,
+      trainers: `${labelled} SELECT fg,COALESCE(trainer,'Unspecified') AS trainer,${metricSQL(SLOT_IDS, context(s.filters, s.transient))} FROM f GROUP BY fg,trainer${minimumClause}`,
       studios: `${labelled} SELECT fg,COALESCE(location,'Unspecified') AS location,${metricSQL(SLOT_IDS, context(s.filters, s.transient))} FROM f GROUP BY fg,location`,
       // A user-chosen regrouping of one slice table; fields are validated by groupable().
       slice: (groups: string[], minimum: boolean) => {
         const keys = groups.map((f) => groupValueSQL(f));
-        return `${labelled} SELECT fg,${keys.map((k, i) => `${k} AS "${groups[i]}"`).join(",")},${metricSQL(SLOT_IDS, context(s.filters, s.transient))} FROM f GROUP BY fg,${keys.join(",")}${minimum ? ` HAVING SUM(sessions)>=${MIN_SESSIONS}` : ""}`;
+        return `${labelled} SELECT fg,${keys.map((k, i) => `${k} AS "${groups[i]}"`).join(",")},${metricSQL(SLOT_IDS, context(s.filters, s.transient))} FROM f GROUP BY fg,${keys.join(",")}${minimum ? minimumClause : ""}`;
       },
     };
-  }, [s.filters, s.transient, s.rate]);
+  }, [s.filters, s.transient, s.rate, minimumSessions]);
 
   useEffect(() => {
     let active = true;
@@ -14609,6 +15530,10 @@ export function FormatComparison({ version }: { version: string | number }) {
       </Register>
 
       <TrendTable rows={data.trend} formats={formats} metric={trendMetric} onMetric={setTrendMetric} />
+      <div className="toolbar" style={{ margin: "16px 0" }}>
+        <label>Minimum sessions for slot and instructor tables <input aria-label="Minimum sessions for format comparison" type="number" min="0" step="1" value={minimumSessions} onChange={e => setMinimumSessions(Math.max(0, Math.floor(Number(e.target.value) || 0)))} style={{ width: 80, marginLeft: 8 }} /></label>
+        <span className="muted">0 includes the full filtered dataset.</span>
+      </div>
       <SliceTable
         index="F4"
         title="Where each format works"
@@ -14619,7 +15544,7 @@ export function FormatComparison({ version }: { version: string | number }) {
         build={(g) => sql.slice(g, true)}
         version={version}
         label={(r) => `${r.day} · ${r.time}`}
-        caption={`Slots with at least ${MIN_SESSIONS} sessions in scope.`}
+        caption={minimumSessions > 0 ? `Slots with at least ${minimumSessions} sessions in scope (user filter).` : "All slots in the full filtered dataset."}
       />
       <SliceTable
         index="F5"
@@ -14631,7 +15556,7 @@ export function FormatComparison({ version }: { version: string | number }) {
         build={(g) => sql.slice(g, true)}
         version={version}
         label={(r) => String(r.trainer)}
-        caption={`Instructors with at least ${MIN_SESSIONS} sessions of that format in scope.`}
+        caption={minimumSessions > 0 ? `Instructors with at least ${minimumSessions} sessions of that format in scope (user filter).` : "All instructors in the full filtered dataset."}
       />
       <SliceTable
         index="F6"
@@ -16842,7 +17767,7 @@ export function MetaMarketing({ version, onDrill, selected, setSelected }: { ver
 
 ### src/components/MetricIndex.tsx
 
-Symbols: MetricIndex, filters, transient, compare, [open, setOpen], [rows, setRows], [loading, setLoading], [search, setSearch], [domain, setDomain], [problems, setProblems], tables, active, measured, failed, prior, [table, entries], ids, [now, before], entry, drill, term, visible, grouped, thin, change
+Symbols: MetricIndex, filters, transient, compare, [open, setOpen], [rows, setRows], [loading, setLoading], [search, setSearch], [domain, setDomain], [problems, setProblems], tables, active, measured, failed, prior, [table, entries], required, ids, [now, before], entry, drill, term, visible, grouped, change
 
 SQL output aliases: n, Row, it, const, the, zero
 
@@ -16855,7 +17780,7 @@ import { ensureSource, usable } from "../data/loader";
 import { useStore } from "../state/store";
 import { metrics, metricSQL, contributorPredicate } from "../semantics/metrics";
 import { catalogue, domainLabels, domains } from "../semantics/catalogue";
-import { cellDelta, derived, provenance } from "../semantics/cells";
+import { cellDelta, provenance } from "../semantics/cells";
 import { fmt } from "../semantics/formats";
 import { sheets } from "../data/sheets.config";
 import { Register } from "./Register";
@@ -16907,7 +17832,9 @@ export function MetricIndex({
       for (const [table, entries] of tables) {
         if (!active) return;
         try {
-          if (!usable(table)) await ensureSource(table);
+          const required = new Set([table, ...entries.flatMap(entry => metrics[entry.id].sources.map(source => sheets.find(sheet => sheet.title === source.split('.')[0])?.key).filter((key): key is string => !!key))]);
+          await Promise.all([...required].filter(key => !usable(key)).map(key => ensureSource(key)));
+          if ([...required].some(key => !usable(key))) throw new Error("A required source is unavailable");
           if (!usable(table)) throw new Error("source unavailable");
           const ids = entries.map((e) => e.id);
           const [now, before] = await Promise.all([
@@ -17044,13 +17971,12 @@ export function MetricIndex({
               </h3>
               <div className="metric-index-grid">
                 {list.map((row) => {
-                  const thin = derived(row.id) && row.n > 0 && row.n < metrics[row.id].minSample;
                   const change = cellDelta(row.id, row.value, row.previous);
                   return (
                     <button
                       key={row.id}
-                      className={`metric-index-cell${thin ? " cell-thin" : ""}`}
-                      title={provenance(row.id, row.value, row.n, thin, row.previous)}
+                      className="metric-index-cell"
+                      title={provenance(row.id, row.value, row.n, row.previous)}
                       onClick={() => drill(row)}
                     >
                       <span className="metric-index-label">
@@ -17058,7 +17984,6 @@ export function MetricIndex({
                       </span>
                       <span className="metric-index-value">
                         {fmt(row.id, row.value, metrics[row.id].format === "currency")}
-                        {thin && <span aria-hidden="true">*</span>}
                       </span>
                       <span className="metric-index-foot">
                         <em>{sheets.find((s) => s.key === row.table)?.title}</em>
@@ -17207,7 +18132,7 @@ export function MonthlyMemberIntelligence({ kind, version }: { kind: 'frequency'
 
 ### src/components/NestedTable.tsx
 
-Symbols: TreeRow, NestedTable, store, tableKey, [expanded, setExpanded], [sorting, setSorting], [search, setSearch], [selected, setSelected], [picker, setPicker], [selectionTotal, setSelectionTotal], [compressed, setCompressed], parent, { preferences, page: updatePage }, sizing, groupFields, data, prior, map, node, walk, all, walk, r, chosen, terms, source, w, facts, active, defs, v, heat, n, thin, before, change, tableDefs, table, visible, virtual, rendered, top, bottom, next
+Symbols: TreeRow, NestedTable, store, tableKey, [expanded, setExpanded], [sorting, setSorting], [search, setSearch], [selected, setSelected], [picker, setPicker], [selectionTotal, setSelectionTotal], [compressed, setCompressed], parent, { preferences, page: updatePage }, sizing, groupFields, data, prior, map, node, walk, all, walk, r, chosen, terms, source, w, facts, active, defs, v, heat, n, before, change, tableDefs, table, visible, virtual, rendered, top, bottom, next
 
 SQL output aliases: n, HTMLElement
 
@@ -17242,7 +18167,7 @@ import {
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { metrics } from "../semantics/metrics";
 import { fmt } from "../semantics/formats";
-import { derived, cellDelta, provenance } from "../semantics/cells";
+import { cellDelta, provenance } from "../semantics/cells";
 import { query, quote, type Row } from "../data/duckdb";
 import { blueprints } from "../data/blueprints";
 import { where, context, metricFacts } from "../data/analytics";
@@ -17435,12 +18360,11 @@ export function NestedTable({
           const v = row.original.values[id];
           const heat = metrics[id].format === "percent";
           const n = Number(row.original.values.n ?? 0);
-          const thin = derived(id) && n > 0 && n < metrics[id].minSample;
           const before = prior.get(row.original.id)?.[id];
           const change = cellDelta(id, v, before);
           return (
             <button
-              className={`cell-value${thin ? " cell-thin" : ""}`}
+              className="cell-value"
               style={{
                 width: "100%",
                 textAlign: "right",
@@ -17449,12 +18373,11 @@ export function NestedTable({
                     ? `color-mix(in srgb,var(--accent) ${Math.min(25, Math.max(0, Number(v) * 25))}%,transparent)`
                     : undefined,
               }}
-              title={provenance(id, v, n, thin, before)}
+              title={provenance(id, v, n, before)}
               onClick={() => onDrill(row.original, id)}
             >
               <span className="cell-figure">
                 {fmt(id, v, metrics[id].format === "currency")}
-                {thin && <span aria-hidden="true" className="cell-thin-mark">*</span>}
               </span>
               {change && (
                 <span className={`cell-delta ${change.tone}`}>{change.text}</span>
@@ -18722,7 +19645,7 @@ export function SalesRankings({ version }: { version: number }) {
   const [group, setGroup] = useState("product"),
     [criterion, setCriterion] = useState("gross_revenue"),
     [limit, setLimit] = useState(5),
-    [minimum, setMinimum] = useState(1),
+    [minimum, setMinimum] = useState(0),
     [search, setSearch] = useState("");
   const [rows, setRows] = useState<Row[]>([]),
     [loading, setLoading] = useState(true),
@@ -18837,7 +19760,7 @@ export function SalesRankings({ version }: { version: number }) {
             value={minimum}
             onChange={(e) => setMinimum(Number(e.target.value))}
           >
-            {[1, 3, 5, 10].map((n) => (
+            {[0, 1, 3, 5, 10].map((n) => (
               <option key={n}>{n}</option>
             ))}
           </DropdownField>
@@ -19003,7 +19926,7 @@ export function SalesScorecards({version,onDrill}:{version:number;onDrill:(entry
     onDrill({id:`sales-${kind}-${id}`,label:`${specs.find(s=>s.kind===kind)!.title} · ${labels[id]}`,source:'sales',filters,metrics:['transactions','buyers','gross_revenue','net_revenue','discount_value','discount_rate'],path:[],predicate:`source_row IN (SELECT source_row FROM (${facts}) WHERE ${terms.join(' AND ')})`,values:row||totals[kind]||{},children:[]});
   }
   return <>{specs.map(spec=>{
-    const control=controls[spec.kind]??{sort:spec.kind==='people_month'?'month':'gross_revenue',minimum:1,pageSize:25};
+    const control=controls[spec.kind]??{sort:spec.kind==='people_month'?'month':'gross_revenue',minimum:0,pageSize:25};
     const {sort,minimum,pageSize}=control;
     const updateControl=(change:Partial<typeof control>)=>{setControls(current=>({...current,[spec.kind]:{...control,...change}}));setPages(current=>({...current,[spec.kind]:0}));};
     const dims=dimsOf(spec.kind),[,setDims]=grouping[spec.kind],initial=[...salesScorecardDefaults[spec.kind]];
@@ -19023,7 +19946,7 @@ export function SalesScorecards({version,onDrill}:{version:number;onDrill:(entry
           </div>
           <details className="scorecard-options"><summary>Table options <span>Grouping, minimum sales & page size</span></summary><div className="scorecard-options-body">
             <GroupByPicker name={spec.title} value={dims} fields={fieldsFor(spec.kind)} defaults={initial} onChange={next=>{setDims(next.length?next:initial);setPages({...pages,[spec.kind]:0});}}/>
-            <div className="scorecard-display-options"><label>Minimum sales<input type="number" min="1" value={minimum} onChange={e=>updateControl({minimum:Math.max(1,Number(e.target.value))})}/></label><label>Rows per page<select value={pageSize} onChange={e=>updateControl({pageSize:Number(e.target.value)})}>{[10,25,50,100].map(n=><option key={n}>{n}</option>)}</select></label></div>
+            <div className="scorecard-display-options"><label>Minimum sales<input type="number" min="0" value={minimum} onChange={e=>updateControl({minimum:Math.max(0,Number(e.target.value)||0)})}/></label><label>Rows per page<select value={pageSize} onChange={e=>updateControl({pageSize:Number(e.target.value)})}>{[10,25,50,100].map(n=><option key={n}>{n}</option>)}</select></label></div>
           </div></details>
         </div>
         <div className="table-scroll sales-scorecard-table" aria-busy={loading} tabIndex={0} role="region" aria-label={`${spec.title}. Scroll for all columns.`}><table><thead><tr>{dims.map(d=><th scope="col" className="sales-dimension" key={d}>{headings[d]??groupLabel(d)}</th>)}{ids.map(id=><th scope="col" data-metric={id} key={id}>{labels[id]}</th>)}</tr></thead><tbody>{matching.slice(page*pageSize,(page+1)*pageSize).map((row,i)=><tr key={i}>{dims.map(d=><td className="sales-dimension" key={d}><button className={`scorecard-cell${d==='discount_code'?' sales-code':''}`} title={String(row[d]??'—')} onClick={()=>drill(spec.kind,row,'transactions')}>{row[d]??'—'}</button></td>)}{ids.map(id=><td data-metric={id} key={id}><button className="scorecard-cell" onClick={()=>drill(spec.kind,row,id)}>{text(id,row[id])}</button></td>)}</tr>)}</tbody><tfoot><tr><th scope="row" colSpan={dims.length}>Full scope total</th>{ids.map(id=><td data-metric={id} key={id}><button className="scorecard-cell" onClick={()=>drill(spec.kind,null,id)}>{text(id,totals[spec.kind]?.[id])}</button></td>)}</tr></tfoot></table></div>
@@ -20255,7 +21178,7 @@ export function StickyNotes({reportId}: {reportId?:string} = {}) {
 
 Symbols: sections, SourceRegister, s, [chosen, setGroups], groupKey, groups, valid, [columns, setColumns], [data, setData], [priorRows, setPriorRows], [error, setError], [loading, setLoading], active, base, facts, sql, previous, previousBase, previousFacts, previousSql, [rows, total, prior], content, StudioCommunityOperations
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 import { communityOperationsSQL } from "../data/studio-operations";
@@ -20631,7 +21554,7 @@ export function StudioOperations({
   const [preset, setPreset] = useState("All Metrics (Default)");
   const [columns, setColumns] = useState(defaultColumns);
   const [criterion, setCriterion] = useState("fill_rate");
-  const [minimum, setMinimum] = useState(3);
+  const [minimum, setMinimum] = useState(0);
   const [limit, setLimit] = useState(5);
   const [excludeHosted, setExcludeHosted] = useState(false);
   const [search, setSearch] = useState("");
@@ -20757,7 +21680,7 @@ export function StudioOperations({
   }, [sql, version]);
   const data = useMemo(() => {
     let eligible = rows.filter(
-      (r) => Number(r.sessions) >= (isFlat ? 1 : minimum),
+      (r) => Number(r.sessions) >= (minimum),
     );
     if (view === "faceoff")
       eligible = comparableInstructors(eligible, [
@@ -20791,7 +21714,7 @@ export function StudioOperations({
     [prior, view, fields],
   );
   const rankings = useMemo(
-    () => rankOperations(data, criterion, isFlat ? 1 : minimum, limit),
+    () => rankOperations(data, criterion, minimum, limit),
     [data, criterion, minimum, limit, view, isFlat],
   );
   const tableData = useMemo(() => {
@@ -20806,7 +21729,7 @@ export function StudioOperations({
         rankOperations(
           data,
           criterion,
-          isFlat ? 1 : minimum,
+          minimum,
           data.length,
         ).eligible.map((r, i) => [String(r.entity), i + 1]),
       ),
@@ -21321,10 +22244,10 @@ export function StudioOperations({
                 Minimum sessions
                 <input
                   type="number"
-                  min="1"
+                  min="0"
                   value={minimum}
                   onChange={(e) =>
-                    setMinimum(Math.max(1, Number(e.target.value) || 1))
+                    setMinimum(Math.max(0, Number(e.target.value) || 0))
                   }
                 />
               </label>
@@ -21453,7 +22376,7 @@ export function StudioOperations({
                 {tableData.length.toLocaleString("en-IN")} groups / sessions
               </span>
               <span className="ops-sample-badge">
-                ≥ {isFlat ? 1 : minimum} sessions
+                ≥ {minimum} sessions
               </span>
               {minFill > 0 && (
                 <span className="ops-sample-badge">Fill ≥ {minFill}%</span>
@@ -22266,7 +23189,7 @@ export function StudioOperationsOverview({
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState("weekly");
   const [metric, setMetric] = useState("fill_rate");
-  const [minimum, setMinimum] = useState(1);
+  const [minimum, setMinimum] = useState(0);
   const [table, setTable] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const chart = useRef<echarts.ECharts | null>(null);
@@ -22544,9 +23467,9 @@ export function StudioOperationsOverview({
             Minimum sessions
             <input
               type="number"
-              min={1}
+              min={0}
               value={minimum}
-              onChange={(e) => setMinimum(Math.max(1, Number(e.target.value)))}
+              onChange={(e) => setMinimum(Math.max(0, Number(e.target.value) || 0))}
             />
           </label>
           <button
@@ -22854,7 +23777,7 @@ export function WebsiteLeadPeriods({ version, onDrill, expanded = false, website
 
 Symbols: funnels, ConversionFunnel, filters, transient, { data, loading, error }, table, rows, steps, steps
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 import { GitBranch } from "lucide-react";
@@ -24685,7 +25608,7 @@ export function ValueLedger({ findings }: { findings: Finding[] }) {
 
 ### src/data/acquisition-reference.ts
 
-Symbols: splitMembershipList, referenceNew, label, eligibleMembership, tokens, referenceConverted, referenceRetained, referenceHosted, membershipUsed, avg, known, referenceSummary, count, newcomers, converted, retained, ltvRows, metricFilter, inclusionReasons, AcquisitionDrillRequest, contributesToMetric, present, identified, sources
+Symbols: splitMembershipList, referenceNew, label, eligibleMembership, tokens, referenceConverted, referenceRetained, referenceHosted, membershipUsed, avg, known, referenceSummary, count, newcomers, converted, retained, newcomerRows, ltvRows, conversionRows, metricFilter, inclusionReasons, AcquisitionDrillRequest, contributesToMetric, present, identified, sources
 
 SQL output aliases: a, string, converted, retained
 
@@ -24703,6 +25626,7 @@ export const splitMembershipList = (value: unknown): string[] => String(value ??
 // Every Is New label containing the word new is a trial. "Not new" is excluded
 // so a future negated label cannot be counted as a trial.
 export const referenceNew = (row: Row) => {
+  if (typeof row.is_new === 'boolean') return row.is_new;
   const label = String(row.entry_type ?? '').trim();
   return /\bnew\b/i.test(label) && !/^not\b/i.test(label);
 };
@@ -24728,11 +25652,13 @@ export function referenceSummary(rows: Row[], uniqueOutcomes = false) {
   const newcomers = count(referenceNew);
   const converted = rows.some(r => r.conversion != null) ? count(referenceConverted) : null;
   const retained = rows.some(r => r.retention != null) ? count(referenceRetained) : null;
-  const ltvRows = rows.filter(r => r.ltv != null);
+  const newcomerRows = rows.filter(referenceNew);
+  const ltvRows = newcomerRows.filter(r => r.ltv != null);
+  const conversionRows = newcomerRows.filter(r => referenceConverted(r) && r.conversion_days != null && Number(r.conversion_days) >= 0);
   return { cohort_rows: rows.length, newcomers, converted_members: converted, retained_members: retained,
-    conversion_rate: newcomers && converted != null ? converted / newcomers : null, retention_rate: newcomers && retained != null ? retained / newcomers : null,
+    conversion_rate: newcomers ? count(row => referenceNew(row) && referenceConverted(row)) / newcomers : null, retention_rate: newcomers ? count(row => referenceNew(row) && referenceRetained(row)) / newcomers : null,
     total_ltv: ltvRows.length ? ltvRows.reduce((s,r) => s + Number(r.ltv),0) : null,
-    avg_ltv: avg(rows,'ltv'), conversion_span: avg(rows,'conversion_days',true), visits_post: avg(rows,'visits_post',true),
+    avg_ltv: avg(newcomerRows,'ltv'), conversion_span: avg(conversionRows,'conversion_days'), visits_post: avg(rows,'visits_post',true),
     avg_spend: avg(rows,'avg_purchase_value'), unique_members: new Set(rows.map(r => r.member_id).filter(Boolean)).size };
 }
 export function metricFilter(metric?: string) {
@@ -24759,19 +25685,22 @@ export function contributesToMetric(row: Row, metric?: string, uniqueOutcomes = 
   const present = (key: string) => row[key] != null && Number.isFinite(Number(row[key]));
   const identified = row.member_id != null && String(row.member_id) !== '';
   if (metric === 'newcomers') return referenceNew(row) && (!uniqueOutcomes || identified);
-  if (metric === 'converted_members' || metric === 'conversion_rate') return referenceConverted(row) && (!uniqueOutcomes || identified);
-  if (metric === 'retained_members' || metric === 'retention_rate') return referenceRetained(row) && (!uniqueOutcomes || identified);
+  if (metric === 'conversion_rate') return referenceNew(row) && referenceConverted(row) && (!uniqueOutcomes || identified);
+  if (metric === 'retention_rate') return referenceNew(row) && referenceRetained(row) && (!uniqueOutcomes || identified);
+  if (metric === 'converted_members') return referenceConverted(row) && (!uniqueOutcomes || identified);
+  if (metric === 'retained_members') return referenceRetained(row) && (!uniqueOutcomes || identified);
   if (metric === 'unique_members') return identified;
   if (metric === 'mature_30') return identified;
   if (metric === 'converted_30' || metric === 'conversion_30_rate') return Boolean(row.converted_in_30) && identified;
   if (metric === 'retained_30' || metric === 'retention_30_rate') return Boolean(row.returned_in_30) && identified;
   if (metric === 'converted_same_month' || metric === 'conversion_same_month_rate') return Boolean(row.converted_same_month);
   if (metric === 'retained_same_month' || metric === 'retention_same_month_rate') return Boolean(row.returned_same_month);
-  if (metric === 'conversion_span' || metric === 'median_span') return present('conversion_days') && Number(row.conversion_days) > 0;
+  if (metric === 'conversion_span' || metric === 'median_span') return referenceNew(row) && referenceConverted(row) && present('conversion_days') && Number(row.conversion_days) >= 0;
   if (metric === 'visits_post') return present('visits_post') && Number(row.visits_post) > 0;
   if (metric === 'second_visit_rate') return referenceNew(row) && Number(row.visits_post) > 0;
-  if (metric === 'first_purchase') return referenceConverted(row) && Number(row.first_purchase) > 0;
+  if (metric === 'first_purchase') return referenceNew(row) && referenceConverted(row) && Number(row.first_purchase) > 0;
   const sources: Record<string,string> = {avg_ltv:'ltv',total_ltv:'ltv',avg_spend:'avg_purchase_value',post_trial_ltv:'post_trial_ltv',purchases_post:'post_trial_purchases',purchase_freq:'post_trial_purchases',source_visits:'class_no',atv:'ltv',auv:'ltv'};
+  if (metric === 'avg_ltv' || metric === 'total_ltv') return referenceNew(row) && present('ltv');
   if (metric && sources[metric]) return present(sources[metric]);
   if (metric === 'units') return Boolean(String(row.purchase_journey ?? '').trim());
   return true;
@@ -24783,9 +25712,10 @@ export function contributesToMetric(row: Row, metric?: string, uniqueOutcomes = 
 
 Symbols: acquisitionMeasures, acquisitionFactsSQL, late, acquisitionAggregate, acquisitionMonths, now, priorMonth, acquisitionPeriodLabel, key, date, month, acquisitionDimensions, AcquisitionDimensionDef, acquisitionDimensionColumns, acquisitionDimension, requireAcquisitionDimension, dimension, acquisitionYoYMonths, months, order, acquisitionPivotSQL, dimensionSQL, selected, instructorAcquisitionAggregate, acquisitionMetricsSQL, aggregate, filter, keys
 
-SQL output aliases: const, BIGINT, late_cancels, entry, ref_new, ref_membership_eligible, ref_retained, ref_hosted, DATE, mature, ref_converted, converted_in_30, returned_in_30, converted_same_month, returned_same_month, cohort_rows, unique_members, newcomers, converted_members, retained_members, converted_30, retained_30, mature_30, conversion_rate, retention_rate, conversion_30_rate, retention_30_rate, avg_ltv, total_ltv, avg_spend, first_purchase, post_trial_ltv, conversion_span, median_span, the, second_visit_rate, visits_post, purchases_post, source_visits, retained_same_month, conversion_same_month_rate, retention_same_month_rate, post_trial_spend, post_trial_purchases_total, total_purchases, total_visits, revenue_per_visit, raw, text, parent_value, child_value, parent, child, is_total, is_parent, acq_group_
+SQL output aliases: const, BIGINT, late_cancels, late_cancels_available, entry, ref_new, ref_membership_eligible, ref_retained, ref_hosted, DATE, mature, ref_converted, converted_in_30, returned_in_30, converted_same_month, returned_same_month, cohort_rows, unique_members, newcomers, converted_members, retained_members, converted_30, retained_30, mature_30, conversion_rate, retention_rate, conversion_30_rate, retention_30_rate, avg_ltv, total_ltv, avg_spend, first_purchase, post_trial_ltv, conversion_span, median_span, the, second_visit_rate, visits_post, purchases_post, source_visits, retained_same_month, conversion_same_month_rate, retention_same_month_rate, post_trial_spend, post_trial_purchases_total, total_purchases, total_visits, revenue_per_visit, raw, text, parent_value, child_value, parent, child, is_total, is_parent, acq_group_
 
 ```typescript
+import { metrics } from '../semantics/metrics';
 import { assertGroupable, groupable, groupColumn, groupLabel, groupValueSQL } from './group-fields';
 
 // Cohort outcomes are grouped by first visit. Legacy _30 IDs remain stable for saved table preferences; their displayed definitions now use calendar-month purchases.
@@ -24793,8 +25723,8 @@ export const acquisitionMeasures = [
   ['cohort_rows', 'Clients / trials', 'integer'],
   ['unique_members', 'Unique members', 'integer'],
   ['newcomers', 'New clients', 'integer'],
-  ['converted_members', 'Converted members', 'integer'],
-  ['retained_members', 'Retained members', 'integer'],
+  ['converted_members', 'Converted records (all visit types)', 'integer'],
+  ['retained_members', 'Retained records (all visit types)', 'integer'],
   ['converted_30', 'Same-month converted', 'integer'],
   ['retained_30', 'Same-month converted & retained', 'integer'],
   ['mature_30', 'Calendar-month cohort members', 'integer'],
@@ -24833,8 +25763,8 @@ export function acquisitionFactsSQL(scope: string, today: string, bookings = fal
   const late = bookings
     ? `(SELECT COUNT(*) FROM bookings b WHERE b.member_id=new.member_id AND b.late_cancelled>0)`
     : `CAST(NULL AS BIGINT)`;
-  return `WITH flags AS (SELECT *, ${late} AS late_cancels, COALESCE(entry_type,'Unspecified') AS entry,
-    (regexp_matches(lower(trim(COALESCE(entry_type,''))), '(^|[^a-z])new([^a-z]|$)') AND NOT regexp_matches(lower(trim(COALESCE(entry_type,''))), '^not([^a-z]|$)')) AS ref_new,
+  return `WITH flags AS (SELECT *, ${late} AS late_cancels, ${bookings ? 'TRUE' : 'FALSE'} AS late_cancels_available, COALESCE(entry_type,'Unspecified') AS entry,
+    COALESCE(is_new, (regexp_matches(lower(trim(COALESCE(entry_type,''))), '(^|[^a-z])new([^a-z]|$)') AND NOT regexp_matches(lower(trim(COALESCE(entry_type,''))), '^not([^a-z]|$)'))) AS ref_new,
     (len(list_filter(regexp_split_to_array(COALESCE(purchase_journey,''), '[,;|/]+|\\s-\\s'), token -> trim(token)<>''))=0
       OR len(list_filter(regexp_split_to_array(COALESCE(purchase_journey,''), '[,;|/]+|\\s-\\s'), token -> trim(token)<>'' AND NOT regexp_matches(lower(regexp_replace(trim(token),'\\s+',' ','g')), '^money credits($| )')))>0) AS ref_membership_eligible,
     trim(COALESCE(retention,''))='Retained' AS ref_retained,
@@ -24856,28 +25786,28 @@ export const acquisitionAggregate = `COUNT(*) AS cohort_rows,
   CASE WHEN COUNT(first_purchase_date)>0 THEN COUNT(DISTINCT member_id) FILTER (WHERE converted_in_30) END AS converted_30,
   CASE WHEN COUNT(first_purchase_date)>0 AND COUNT(retention)>0 THEN COUNT(DISTINCT member_id) FILTER (WHERE returned_in_30) END AS retained_30,
   COUNT(DISTINCT member_id) AS mature_30,
-  CASE WHEN COUNT(conversion)>0 THEN COUNT(*) FILTER (WHERE ref_converted)::DOUBLE/NULLIF(COUNT(*) FILTER (WHERE ref_new),0) END AS conversion_rate,
-  CASE WHEN COUNT(retention)>0 THEN COUNT(*) FILTER (WHERE ref_retained)::DOUBLE/NULLIF(COUNT(*) FILTER (WHERE ref_new),0) END AS retention_rate,
+  ${metrics['conversion_rate'].sql({rate:1200,today:'1970-01-01'}).replaceAll('is_new','ref_new').replaceAll("conversion='Converted'",'ref_converted')} AS conversion_rate,
+  ${metrics['retention_rate'].sql({rate:1200,today:'1970-01-01'}).replaceAll('is_new','ref_new').replaceAll("retention='Retained'",'ref_retained')} AS retention_rate,
   CASE WHEN COUNT(first_purchase_date)>0 THEN COUNT(DISTINCT member_id) FILTER (WHERE converted_in_30)::DOUBLE/NULLIF(COUNT(DISTINCT member_id),0) END AS conversion_30_rate,
   CASE WHEN COUNT(first_purchase_date)>0 AND COUNT(retention)>0 THEN COUNT(DISTINCT member_id) FILTER (WHERE returned_in_30)::DOUBLE/NULLIF(COUNT(DISTINCT member_id),0) END AS retention_30_rate,
-  AVG(ltv) AS avg_ltv, SUM(ltv) AS total_ltv, AVG(avg_purchase_value) AS avg_spend,
-  AVG(first_purchase) FILTER (WHERE ref_converted AND first_purchase>0) AS first_purchase,
+  AVG(ltv) FILTER (WHERE ref_new) AS avg_ltv, SUM(ltv) FILTER (WHERE ref_new) AS total_ltv, AVG(avg_purchase_value) AS avg_spend,
+  AVG(first_purchase) FILTER (WHERE ref_new AND ref_converted AND first_purchase>0) AS first_purchase,
   AVG(post_trial_ltv) AS post_trial_ltv,
-  AVG(conversion_days) FILTER (WHERE conversion_days>0) AS conversion_span,
-  MEDIAN(conversion_days) FILTER (WHERE conversion_days>0) AS median_span,
+  AVG(conversion_days) FILTER (WHERE ref_new AND ref_converted AND conversion_days>=0) AS conversion_span,
+  MEDIAN(conversion_days) FILTER (WHERE ref_new AND ref_converted AND conversion_days>=0) AS median_span,
   -- Same trial cohort and same counting unit as the conversion and retention
   -- rates, so the three read against one another.
-  CASE WHEN COUNT(visits_post)>0 THEN COUNT(*) FILTER (WHERE ref_new AND visits_post>0)::DOUBLE/NULLIF(COUNT(*) FILTER (WHERE ref_new),0) END AS second_visit_rate,
+  ${metrics['second_visit_rate'].sql({rate:1200,today:'1970-01-01'}).replaceAll('is_new','ref_new')} AS second_visit_rate,
   AVG(visits_post) FILTER (WHERE visits_post>0) AS visits_post, AVG(post_trial_purchases) AS purchases_post,
   SUM(class_no) AS source_visits,
   CASE WHEN COUNT(first_purchase_date)>0 THEN COUNT(*) FILTER (WHERE converted_same_month) END AS converted_same_month,
   CASE WHEN COUNT(first_purchase_date)>0 AND COUNT(retention)>0 THEN COUNT(*) FILTER (WHERE returned_same_month) END AS retained_same_month,
   CASE WHEN COUNT(first_purchase_date)>0 THEN COUNT(*) FILTER (WHERE converted_same_month)::DOUBLE/NULLIF(COUNT(*) FILTER (WHERE ref_new),0) END AS conversion_same_month_rate,
   CASE WHEN COUNT(first_purchase_date)>0 AND COUNT(retention)>0 THEN COUNT(*) FILTER (WHERE returned_same_month)::DOUBLE/NULLIF(COUNT(*) FILTER (WHERE ref_new),0) END AS retention_same_month_rate,
-  SUM(post_trial_ltv) AS post_trial_spend, SUM(post_trial_purchases) AS post_trial_purchases_total,
-  SUM(purchases) AS total_purchases, SUM(visits) AS total_visits,
-  SUM(ltv)/NULLIF(SUM(visits) FILTER (WHERE ltv IS NOT NULL),0) AS revenue_per_visit,
-  SUM(late_cancels) AS late_cancels`;
+  SUM(post_trial_ltv) FILTER (WHERE ref_new) AS post_trial_spend, SUM(post_trial_purchases) FILTER (WHERE ref_new) AS post_trial_purchases_total,
+  SUM(purchases) FILTER (WHERE ref_new) AS total_purchases, SUM(visits) FILTER (WHERE ref_new) AS total_visits,
+  SUM(ltv) FILTER (WHERE ref_new)/NULLIF(SUM(visits) FILTER (WHERE ref_new AND ltv IS NOT NULL),0) AS revenue_per_visit,
+  CASE WHEN BOOL_OR(late_cancels_available) THEN COALESCE(LIST_SUM(LIST_TRANSFORM(LIST(DISTINCT STRUCT_PACK(member_id := member_id, cancels := late_cancels)) FILTER (WHERE ref_new AND member_id IS NOT NULL), item -> item.cancels)),0) END AS late_cancels`;
 
 export function acquisitionMonths(today: string, count = 14) {
   const now = new Date(today + 'T00:00:00Z');
@@ -24942,9 +25872,11 @@ export function acquisitionPivotSQL(scope: string, now: string, parent: Acquisit
 }
 
 export const instructorAcquisitionAggregate = acquisitionAggregate
-  .replace('COUNT(*) FILTER (WHERE ref_new) AS newcomers', 'COUNT(DISTINCT member_id) FILTER (WHERE ref_new) AS newcomers')
+  .replaceAll('COUNT(*) FILTER (WHERE ref_new)', 'COUNT(DISTINCT member_id) FILTER (WHERE ref_new)')
   .replaceAll('COUNT(*) FILTER (WHERE ref_converted)', 'COUNT(DISTINCT member_id) FILTER (WHERE ref_converted)')
   .replaceAll('COUNT(*) FILTER (WHERE ref_retained)', 'COUNT(DISTINCT member_id) FILTER (WHERE ref_retained)')
+  .replaceAll('COUNT(*) FILTER (WHERE ref_new AND ref_converted)', 'COUNT(DISTINCT member_id) FILTER (WHERE ref_new AND ref_converted)')
+  .replaceAll('COUNT(*) FILTER (WHERE ref_new AND ref_retained)', 'COUNT(DISTINCT member_id) FILTER (WHERE ref_new AND ref_retained)')
   .replaceAll('COUNT(*) FILTER (WHERE ref_new AND visits_post>0)', 'COUNT(DISTINCT member_id) FILTER (WHERE ref_new AND visits_post>0)')
   .replaceAll('NULLIF(COUNT(*) FILTER (WHERE ref_new),0)', 'NULLIF(COUNT(DISTINCT member_id) FILTER (WHERE ref_new),0)');
 /** Body over a `facts` CTE (acquisitionFactsSQL). Default grouping keeps the reference SQL; any other New-sheet columns group as text with NULL kept distinct. */
@@ -25471,11 +26403,12 @@ export function compileAnalyticalSQL({
 
 ### src/data/analytics.ts
 
-Symbols: today, context, allowed, carries, where, terms, field, t, advanced, comparison, Analysis, analysisCache, clearAnalyses, sessionFacts, baseline, metricFacts, scoped, monthlyHistorySQL, source, history, cross, historicalIds, aggregates, month, facts, conjunction, analyse, state, key, work, performAnalysis, start, b, { filters, compare }, ids, w, prev, aggregate, parts, groupExpressions, facts, sample, end, wide, rollup, [total, previous, groupRows, previousGroups, trend, heat, raw], growthIds, [g, p, monthly, active], cashIds, [cash, priorCash, monthlyCash], cashMonth, row, [lapsedNow, lapsedPrior, lapsedMonthly], sessionIds, [now, prior, monthly], lateCancels, [now, prior, monthly], currentIds, currentFilters, current, months, asOf, history, row, h, id, last, id, options, all, field, sourceTables, current, result, availableRows
+Symbols: today, context, allowed, carries, where, terms, field, t, advanced, comparison, Analysis, analysisCache, clearAnalyses, sessionFacts, baseline, metricFacts, scoped, monthlyHistorySQL, source, history, cross, historicalIds, aggregates, month, facts, conjunction, analyse, state, key, work, performAnalysis, start, b, { filters, compare }, ids, w, prev, aggregate, parts, groupExpressions, facts, sample, end, wide, rollup, [total, previous, groupRows, previousGroups, trend, heat, raw], growthIds, [g, p, monthly, active], cashIds, [cash, priorCash, monthlyCash], cashMonth, row, [lapsedNow, lapsedPrior, lapsedMonthly], sessionIds, [now, prior, monthly], currentIds, currentFilters, current, months, asOf, history, row, h, id, last, id, options, all, field, sourceTables, current, result, availableRows
 
-SQL output aliases: const, slot_fill, membership_balance_rank, teaching_session_rank, month, n, g, level, records_n, Row, growth_records, active_records, sales_records, lapsed_records, complimentary_source_records, new_late_cancels, current_records, of, DATE, active_memberships, revenue_at_risk_30d, m, value
+SQL output aliases: const, slot_fill, membership_balance_rank, teaching_session_rank, month, n, g, level, records_n, Row, growth_records, active_records, sales_records, lapsed_records, complimentary_source_records, current_records, of, DATE, m, value
 
 ```typescript
+import { retentionSnapshotSQL } from './metric-consistency';
 import { compileFilters } from "./advanced-controls";
 import { sqlTypes } from "./normalise";
 import { newSheetFields } from "./new-fields";
@@ -25742,19 +26675,6 @@ async function performAnalysis(
     Object.assign(total[0],now[0]);Object.assign(previous[0],prior[0]);
     trend.forEach(row=>Object.assign(row,monthly.find(m=>m.month===row.month)||{}));
   }
-  if (tab === 5 && ids.includes("new_late_cancels")) {
-    // Late cancellations come from the Bookings sheet: every late-cancelled booking
-    // made by the newcomers in scope (matched on member ID), whenever it happened.
-    const lateCancels = (f: Filters) => `SELECT COUNT(*) FILTER (WHERE late_cancelled>0) AS new_late_cancels FROM bookings WHERE member_id IN (SELECT member_id FROM new${where(f, "new")}${where(f, "new") ? " AND" : " WHERE"} is_new AND member_id IS NOT NULL)`;
-    const [now, prior, monthly] = await Promise.all([
-      query(lateCancels(filters)),
-      query(lateCancels(prev)),
-      query(`SELECT n.month, COUNT(*) FILTER (WHERE b.late_cancelled>0) AS new_late_cancels FROM (SELECT DISTINCT member_id, month FROM new${where(wide, "new")}${where(wide, "new") ? " AND" : " WHERE"} is_new AND member_id IS NOT NULL) n JOIN bookings b USING (member_id) GROUP BY n.month`),
-    ]);
-    Object.assign(total[0], now[0]);
-    Object.assign(previous[0], prior[0]);
-    trend.forEach((row) => { row.new_late_cancels = monthly.find((m) => m.month === row.month)?.new_late_cancels ?? null; });
-  }
   if (tab === 6) {
     const currentIds = b.kpis.filter((id) => currentSnapshotMetrics.has(id));
     const currentFilters = { ...filters, from: "", to: "" };
@@ -25762,14 +26682,14 @@ async function performAnalysis(
     Object.assign(total[0], current[0]);
     currentIds.forEach((id) => { previous[0][id] = null; trend.forEach((row) => delete row[id]); });
     // Access dates let us rebuild running memberships and upcoming expiry value as of
-    // each month end. Status history is not recorded, so history uses dates alone; the
+    // each month end. Status history is not recorded; apply current known status rules
+    // consistently to every point. Historical status changes cannot be reconstructed; the
     // latest point is the status-aware current value so the line ends on the card.
     const months = trend.map((row) => String(row.month)).filter((m) => /^\d{4}-\d{2}$/.test(m));
     if (months.length) {
       const asOf = `LEAST(LAST_DAY(CAST(m.month || '-01' AS DATE)), DATE '${context().today}')`;
       const history = await query(`SELECT m.month,
-        COUNT(*) FILTER (WHERE status NOT IN ('Not Activated','Frozen') AND TRY_CAST(start_date AS DATE)<=${asOf} AND (end_date IS NULL OR TRY_CAST(end_date AS DATE)>=${asOf})) AS active_memberships,
-        SUM(amount_paid) FILTER (WHERE status<>'Not Activated' AND TRY_CAST(end_date AS DATE) BETWEEN ${asOf} AND ${asOf}+INTERVAL 30 DAY) AS revenue_at_risk_30d
+        ${retentionSnapshotSQL(asOf, context())}
         FROM (VALUES ${months.map((m) => `(${quote(m)})`).join(",")}) AS m(month) CROSS JOIN (SELECT * FROM lapsed${where(currentFilters, "lapsed")}) l
         GROUP BY m.month`);
       for (const row of trend) {
@@ -26430,7 +27350,7 @@ blueprints.push({ title: "Data Lab", subtitle: "Connect sheets. Explore relation
 
 Symbols: database, request, readSnapshot, db, tx, req, writeSnapshot, db, tx
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 const database = () =>
@@ -26478,7 +27398,7 @@ export async function writeSnapshot(value: unknown) {
 
 Symbols: cleaningCache, HOSTED_CLASS_PATTERN, CLASS_PATTERNS, getCleanedClass, cacheKey, result, isExpress, getCleanedLocation, cacheKey, result, getCleanedDay, cacheKey, dayMap, result, getCleanedTime, cacheKey, result, generateCompositeKey, cleanedClass, cleanedDay, cleanedTime, cleanedLocation, parseCompositeKey, parts, clearCleaningCache
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 // Cache for cleaned values to improve performance
@@ -28050,7 +28970,7 @@ if (import.meta.env.DEV)
 
 Symbols: ExportReceipt, csvValue, text, buildCSV, keys
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 export interface ExportReceipt {
@@ -28093,7 +29013,7 @@ export function buildCSV(
 
 Symbols: formatAllocation, sum, values, supply, demand, supplyShare, demandShare
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 import type { Row } from "./duckdb";
@@ -28205,7 +29125,7 @@ export function withChosen(fields: GroupField[], chosen: readonly string[]) {
 
 Symbols: cache, groupFieldsFor, key, candidates, work, n, useGroupFields, version, [fields, setFields], live, key
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
@@ -28253,7 +29173,7 @@ export function useGroupFields(source: string | undefined, chosen: readonly stri
 
 Symbols: tree, roots, map, row, depth, path, id, node, node, parent
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 import type { Row } from "./duckdb";
@@ -28292,7 +29212,7 @@ export function tree(rows: Row[], groups: string[]): TreeRow[] {
 
 Symbols: instructorPortraits, instructorKey
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 // Official Physique 57 India instructor profiles; provenance in public/instructors/sources.json.
@@ -28617,7 +29537,7 @@ export async function revalidate(tab: number, minInterval = 10000) {
 
 Symbols: google, meta, clean, marketingChannel, s, u, utm, origin, sqlQuote, metaScope, terms
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 const google = new Set(["google", "google ads", "googleads", "adwords", "google adwords", "google paid ads"]);
@@ -28644,6 +29564,29 @@ const sqlQuote = (value: string) => `'${value.replaceAll("'","''")}'`;
 export function metaScope(from: string, to: string, selected: Record<string,string>) {
   const terms = [from ? `date>=${sqlQuote(from)}` : "",to ? `date<=${sqlQuote(to)}` : "",...Object.entries(selected).filter(([field,v])=>["account_id","campaign_id","publisher_platform","objective"].includes(field)&&v).map(([field,v])=>`${field}=${sqlQuote(v)}`)].filter(Boolean);
   return terms.length ? " WHERE "+terms.join(" AND ") : "";
+}
+
+```
+
+### src/data/metric-consistency.ts
+
+Symbols: retentionSnapshotSQL, expression
+
+SQL output aliases: cards, DATE, VARCHAR
+
+```typescript
+import { metrics, type QueryContext } from '../semantics/metrics';
+
+/** Historical points use the same population rules as cards, evaluated at the point's date. */
+export function retentionSnapshotSQL(asOf: string, ctx: QueryContext) {
+  return ['active_memberships', 'revenue_at_risk_30d'].map(id => {
+    const expression = metrics[id].sql(ctx)
+      .replaceAll(`DATE '${ctx.today}'`, '__P57_ASOF_DATE__')
+      .replaceAll(`'${ctx.today}'`, '__P57_ASOF_TEXT__')
+      .replaceAll('__P57_ASOF_DATE__', `CAST(${asOf} AS DATE)`)
+      .replaceAll('__P57_ASOF_TEXT__', `CAST(${asOf} AS VARCHAR)`);
+    return `${expression} AS ${id}`;
+  }).join(',');
 }
 
 ```
@@ -29438,7 +30381,7 @@ export function normalise(
 
 Symbols: noteRequest, response, content, body
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 export async function noteRequest(url: string, options?: RequestInit) {
@@ -29465,7 +30408,7 @@ export async function noteRequest(url: string, options?: RequestInit) {
 
 Symbols: elementSelector, anchor, prefix, path, child, siblings, segments, node, tag, siblings
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 export type NoteConnector = {
@@ -30008,7 +30951,7 @@ export function alignedComparisonPeriod(period:string|null,from:string,to:string
 
 Symbols: sourceRows, hash, res
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 import { health, type Row } from "./duckdb";
@@ -30305,7 +31248,7 @@ export function retentionSQL(
 
 Symbols: salesRankingCriteria, splitSalesRankings, eligible, top, seen, bottom, salesRankingDimensions, salesRankingGroup, entity, entity
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 import {metrics} from "../semantics/metrics";
@@ -30438,7 +31381,7 @@ export function salesScorecardQuery(facts: string, condition: string, dims: stri
 
 Symbols: scorecardSessionIds, topColumns, scorecardTops, compositeInputs, display, scorecardKey, scoped, w, scorecardSQL, key, tops, rank, scorecardTotalSQL, key, inScope, scorecardPredicate
 
-SQL output aliases: better, label, k, non_empty_sessions, n, v, a, new_visitors, converted, retained, bookings, late_cancelled, conversion_rate, retention_rate, late_cancel_rate, empty_share, composite_score, the
+SQL output aliases: better, label, k, non_empty_sessions, n, v, a, new_visitors, converted, retained, bookings, late_cancelled, conversion_rate, retention_rate, booking_late_rate, empty_share, composite_score, the
 
 ```typescript
 import { metricFacts, where, context } from "./analytics";
@@ -30487,7 +31430,7 @@ export const compositeInputs: [expression: string, inverse: boolean][] = [
   ["revenue_per_session", false],
   ["conversion_rate", false],
   ["retention_rate", false],
-  ["late_cancel_rate", true],
+  ["booking_late_rate", true],
   ["empty_share", true],
 ];
 
@@ -30522,7 +31465,7 @@ export function scorecardSQL(dimension: ScorecardDimension, filters: Filters, tr
     nw.new_visitors, nw.converted, nw.retained,
     nw.converted::DOUBLE/NULLIF(nw.new_visitors,0) AS conversion_rate,
     nw.retained::DOUBLE/NULLIF(nw.new_visitors,0) AS retention_rate,
-    bk.bookings, bk.late_cancelled, bk.late_cancelled::DOUBLE/NULLIF(bk.bookings,0) AS late_cancel_rate,
+    bk.bookings, bk.late_cancelled, bk.late_cancelled::DOUBLE/NULLIF(bk.bookings,0) AS booking_late_rate,
     s.empty_sessions::DOUBLE/NULLIF(s.sessions,0) AS empty_share
     FROM s ${tops.map(([id]) => `LEFT JOIN ${id} USING (k)`).join(" ")} LEFT JOIN nw USING (k) LEFT JOIN bk USING (k))
   SELECT *, ROUND(100*(${compositeInputs.map(([e, inverse]) => rank(e, inverse)).join(" + ")})/${compositeInputs.length}) AS composite_score
@@ -30546,7 +31489,7 @@ export function scorecardTotalSQL(dimension: ScorecardDimension, filters: Filter
   SELECT s.*, nw.new_visitors, nw.converted, nw.retained,
     nw.converted::DOUBLE/NULLIF(nw.new_visitors,0) AS conversion_rate,
     nw.retained::DOUBLE/NULLIF(nw.new_visitors,0) AS retention_rate,
-    bk.bookings, bk.late_cancelled, bk.late_cancelled::DOUBLE/NULLIF(bk.bookings,0) AS late_cancel_rate
+    bk.bookings, bk.late_cancelled, bk.late_cancelled::DOUBLE/NULLIF(bk.bookings,0) AS booking_late_rate
   FROM s CROSS JOIN nw CROSS JOIN bk`;
 }
 
@@ -30561,7 +31504,7 @@ export function scorecardPredicate(dimension: ScorecardDimension, key: string, e
 
 Symbols: sheets
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 import config from "../../server/sheets.json";
@@ -30573,7 +31516,7 @@ export const sheets = config;
 
 Symbols: soundClips
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 export const soundClips: {label:string;src:string}[] = [
@@ -31111,7 +32054,7 @@ CREATE OR REPLACE VIEW booking_sessions AS SELECT b.*,s.session_id AS resolved_s
 
 Symbols: workspaceIcons, titles, subtitles, useWorkspaceCopy, last, choose, options, candidates, index, [copy, setCopy]
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 import { useEffect, useRef, useState } from "react";
@@ -31335,7 +32278,7 @@ export function useWorkspaceCopy(tab: number, defaultSubtitle: string) {
 
 Symbols: distinctBreakdowns, seen, key, curatedBreakdowns, explorerBreakdowns
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 import type { ChapterSpec } from "./chapters";
@@ -31366,11 +32309,12 @@ export const explorerBreakdowns = (spec: Pick<ChapterSpec, "groups">, available:
 
 ### src/report/metric-contract.ts
 
-Symbols: NOT_THE_SAME_AS, basis, AGGREGATION, metricContract, def, note, formula, lookalikes, readingGuide, known, adverse, thin
+Symbols: NOT_THE_SAME_AS, basis, AGGREGATION, metricContract, def, note, formula, lookalikes, readingGuide, known, adverse
 
-SQL output aliases: well, what, independent, a, of, indicative
+SQL output aliases: well, what, a
 
 ```typescript
+import { businessDefinitions } from "../semantics/metric-business-definitions";
 import { definition } from "./definitions";
 import { currentSnapshotMetrics, metricNotes } from "../semantics/evidence";
 
@@ -31390,11 +32334,11 @@ const NOT_THE_SAME_AS: Record<string, [string, string][]> = {
   avg_class_size_incl: [["avg_class_size_excl", "this one counts empty sessions"]],
   avg_class_size_excl: [["avg_class_size_incl", "this one excludes empty sessions"]],
   lost_revenue: [["revenue", "a what-if at current yield, never lost sales or a forecast"]],
-  retention_rate: [["second_visit_rate", "in the current source these are the same number read from two columns; never present them as independent findings"]],
-  second_visit_rate: [["retention_rate", "same number from a different column; not independent evidence"]],
+  retention_rate: [["second_visit_rate", "status-based retention and visit-count return rate can agree in a source snapshot but use different columns; verify agreement before claiming equality"]],
+  second_visit_rate: [["retention_rate", "visit-count outcome rather than reported Retained status; equality depends on source consistency"]],
   conversion_rate: [["lead_conversion_rate", "this is newcomer-trial conversion; the other is lead-stage conversion on a different population"]],
   lead_conversion_rate: [["conversion_rate", "lead cohort by creation date, not newcomer trials"]],
-  active_base: [["active_memberships", "members versus memberships; both current snapshots with no history"]],
+  active_base: [["active_memberships", "members versus memberships; current cards differ from separately reconstructed access-date histories"]],
   active_memberships: [["active_base", "memberships versus distinct members"]],
   no_show_rate: [["late_cancel_rate", "no-shows exclude late cancellations; both divide by booked seats"]],
   late_cancel_rate: [["no_show_rate", "a late cancel is not a no-show"]],
@@ -31405,9 +32349,10 @@ const NOT_THE_SAME_AS: Record<string, [string, string][]> = {
 
 /** What population a measure describes, so a monthly cohort is never read as a snapshot or the reverse. */
 function basis(id: string, domain: string, aggregation: string) {
-  if (currentSnapshotMetrics.has(id)) return "current snapshot as of the source date; no historical or period comparison exists";
+  if (currentSnapshotMetrics.has(id)) return "current snapshot of source rows evaluated relative to the application date; standard card period comparisons are unavailable, and reconstructed workspace history uses a separate method";
   if (id.startsWith("meta_")) return "Meta account reporting, network context; not studio-attributed and not CRM people";
-  if (aggregation === "last") return "latest recorded state";
+  if (["teacher_dependency", "trainer_depth"].includes(id)) return "maximum row-level value across selected recurring rows; not latest state";
+  if (aggregation === "last") return "source-defined snapshot aggregation; see calculation";
   if (domain === "revenue" && id.startsWith("gross")) return "cash collected, by payment date";
   return "selected period";
 }
@@ -31433,23 +32378,22 @@ export function metricContract(id: string): string {
   const formula = String(def.description ?? "").replace(/\s+/g, " ");
   const lookalikes = (NOT_THE_SAME_AS[id] ?? []).filter(([other]) => definition(other));
   return [
-    `${id} (${def.label}): ${note?.definition ?? `Governed calculation ${formula.length > 220 ? formula.slice(0, 217) + "…" : formula}.`}`,
+    `${id} (${def.label}): ${note?.definition ?? businessDefinitions[id] ?? `Governed calculation ${formula.length > 220 ? formula.slice(0, 217) + "…" : formula}.`}`,
     note?.definition ? `Calculation: ${formula.length > 220 ? formula.slice(0, 217) + "…" : formula}.` : "",
-    `Format ${def.format}. Basis: ${basis(id, def.domain, def.aggregation)}. Aggregation: ${AGGREGATION[def.aggregation] ?? def.aggregation}.`,
-    `Direction: ${def.higherIsBetter ? "a rise is favourable" : "a rise is ADVERSE (lower is better)"}. Needs at least ${def.minSample} contributing records for a reliable reading.`,
+    `Format ${def.format}. Basis: ${basis(id, def.domain, def.aggregation)}. Aggregation: ${["teacher_dependency", "trainer_depth"].includes(id) ? "maximum across scoped rows; not latest state" : AGGREGATION[def.aggregation] ?? def.aggregation}.`,
+    `Direction: ${def.higherIsBetter ? "a rise is favourable" : "a rise is ADVERSE (lower is better)"}. Uses the full eligible filtered dataset; any group-size cutoff must be an explicit user filter.`,
     note?.caveat ? `Caveat: ${note.caveat}` : "",
     lookalikes.length ? "Not the same as: " + lookalikes.map(([other, why]) => `${other} (${definition(other)?.label}) — ${why}`).join("; ") + "." : "",
   ].filter(Boolean).join(" ");
 }
 
 /** The chapter-level reading rules: which movements are adverse, and which measures rest on too few records. */
-export function readingGuide(ids: string[], n: number): string {
+export function readingGuide(ids: string[], _n: number): string {
   const known = ids.filter(id => definition(id));
   const adverse = known.filter(id => definition(id)!.higherIsBetter === false);
-  const thin = known.filter(id => n < definition(id)!.minSample);
+
   return [
     adverse.length ? `Lower is better, so a rise is adverse: ${adverse.map(id => `${id} (${definition(id)!.label})`).join(", ")}. Every other measure here improves when it rises. Never call an adverse rise an improvement.` : "",
-    thin.length ? `Contributing records (${n}) are below the minimum sample for: ${thin.join(", ")}. Report these as indicative and give them no more than low confidence.` : "",
   ].filter(Boolean).join("\n");
 }
 
@@ -31459,7 +32403,7 @@ export function readingGuide(ids: string[], n: number): string {
 
 Symbols: HOME_FIRST, NEVER_OWN, populationKey, tabSource, tabMetricIds, source, explicit, homeChapter, same, rank, ownedMetricIds, home, homeSet, mine, reportedElsewhere, ownerOf, home
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 import { unsupportedReportMetrics } from "./policy";
@@ -31534,7 +32478,7 @@ export function ownerOf(spec: ChapterSpec, id: string): ChapterSpec | undefined 
 
 Symbols: EvidenceMatrix, measured, groupMatrix, rows, selected, periods, historyMatrix, rows, matrixDomain, values
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 import type { ChapterData, GroupTable } from './model';
@@ -31579,7 +32523,7 @@ export function matrixDomain(matrix: EvidenceMatrix) {
 
 Symbols: agentIntent, creates, artifact
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 /** Creation verbs alone are not authorization to save an analytical element. */
@@ -31597,12 +32541,11 @@ export function agentIntent(message: string, selected: "ask" | "build" = "ask"):
 
 Symbols: slotVerdict, revenueBridge, before, after, a0, a1, yield0, yield1
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 import type { Row } from "../data/duckdb";
 export function slotVerdict(row: Row, rate: number) {
-  if (Number(row.n) < 8) return "Low sample";
   if (row.fill_rate == null || row.revenue_per_session == null)
     return "Unavailable";
   if (Number(row.fill_rate) < 0.2) return "Cut";
@@ -31636,7 +32579,7 @@ export function revenueBridge(current: Row, previous: Row) {
 
 Symbols: bookingOutcomeCase
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 // One outcome per booking; source flags may overlap.
@@ -31737,7 +32680,7 @@ export function catalogue(): Map<string, CatalogueEntry[]> {
 
 Symbols: derived, m, cellDelta, now, was, text, change, provenance, m, lines
 
-SQL output aliases: a
+SQL output aliases: No SQL aliases
 
 ```typescript
 import { metrics } from "./metrics";
@@ -31780,7 +32723,6 @@ export function provenance(
   id: string,
   value: unknown,
   n: number,
-  thin: boolean,
   before: unknown,
 ) {
   const m = metrics[id];
@@ -31792,10 +32734,6 @@ export function provenance(
   ];
   if (before != null)
     lines.push(`Comparison period: ${fmt(id, before, true)}`);
-  if (thin)
-    lines.push(
-      `* Fewer than ${m.minSample} records. This is a derived value on a small sample — read it as a hint, not a result.`,
-    );
   lines.push("Click to inspect the records behind this cell.");
   return lines.join("\n");
 }
@@ -32021,17 +32959,28 @@ export function wantsFullHistory(message: string): boolean {
 
 Symbols: currentSnapshotMetrics, metricNotes, formulas, evidenceSQL, pair
 
-SQL output aliases: item
+SQL output aliases: empty, item, zero, the
 
 ```typescript
 export const currentSnapshotMetrics = new Set(["active_base", "active_memberships", "dormant_actives", "revenue_at_risk_30d"]);
 export const metricNotes: Record<string, { definition: string; caveat?: string; numerator?: string; denominator?: string }> = {
-  website_trials: { definition: "Website creation-date cohort records with Trial Status equal to Trial Completed. Outcomes are the latest recorded status, not trial events occurring during this period." },
-  website_members: { definition: "Website creation-date cohort records with Conversion Status equal to Converted; current stage does not change this count." },
-  website_retained: { definition: "Website creation-date cohort records with Retention Status equal to Retained." },
-  website_win_rate: { definition: "Converted Website lead records divided by all Website lead records in the creation-date cohort." },
-  website_trial_win_rate: { definition: "Website leads with both a completed trial and a conversion, divided by Website leads with a completed trial." },
-  website_pipeline_value: { definition: "Open Website leads × cohort conversion rate × average positive paid first purchase of converted newcomers in the same scope.", caveat: "An estimate, not measured revenue. The New sheet supplies the first-purchase basis." },
+  same_day_share: { definition: "Non-imported booking rows with Sale Date at or before Session Date and elapsed time under 24 hours, divided by all non-imported booking rows.", caveat: "This is elapsed time, not the same calendar day. The denominator includes rows with missing or invalid lead time; imported rows have null lead time." },
+  new_late_cancels: { definition: "In Acquisition, count all late-cancelled Bookings rows for member IDs belonging to the selected newcomer first-visit cohort, regardless of booking date.", caveat: "The shared calculation matches distinct newcomer member IDs within each filtered group to all-time Bookings. Duplicate newcomer rows do not multiply bookings. Booking dates/import flags do not restrict this measure. AI scoped queries do not offer this cross-source measure." },
+  unused_session_liability: { definition: "Remaining session credits multiplied by recorded revenue per credit, summed over selected membership rows. Retention uses Lapsed.Remaining Sessions and Lapsed.Revenue Per Session; the Sales variant uses membership classes-left and revenue-credit fields.", caveat: "A snapshot valuation proxy, not an accounting liability. The expression does not deduplicate repeated membership balances, and missing factors do not contribute." },
+  teacher_dependency: { definition: "Maximum row-level share of attendance attributed to the highest-attendance instructor in the parsed Top5Trainers list, divided by attendance across that list.", caveat: "MAX across scoped rows, not latest state, the parser sorts listed instructors by attendance. Only instructors present in the supplied list contribute." },
+  trainer_depth: { definition: "Maximum number of parsed instructors in a Top5Trainers list across the selected recurring rows.", caveat: "MAX of source list lengths, not latest state or a distinct count of every instructor in the timetable. Missing/empty lists produce null." },
+  churn_rate: { definition: "Confirmed lapsed member-expiry-month cohort rows divided by all rows in the shared eligible renewal cohort (renewed, lapsed, frozen and pending).", caveat: "A paid expiry-cohort outcome ratio, not churn divided by the active member base. Cohort deduplication and the 30-day grace policy are applied before counting." },
+  at_risk_actives: { definition: "New-sheet rows marked Lifecycle Status Active with recorded Days Since Last Visit above 21.", caveat: "Counts rows, not distinct members, within the selected first-visit date cohort. Separate from current-snapshot dormant active memberships on Lapsed." },
+  booking_avg_class_size: { definition: "Attended booking-row count divided by distinct session identities represented by Bookings, including sessions with no attended booking rows.", caveat: "Session identity falls back from session ID to source unique IDs and date/time/format/location. Sessions with no booking rows are absent; this is not a full timetable average." },
+  attendance_avg_class_size: { definition: "Attended check-in row count divided by distinct non-null session IDs represented in Checkins.", caveat: "The numerator can include attended rows with missing session IDs. Sessions absent from the check-in source do not contribute to the denominator." },
+  attendance_empty_sessions: { definition: "Distinct non-null session IDs in Checkins minus session IDs with an attended row.", caveat: "Only source-represented sessions are counted; sessions with no check-in records cannot be identified as empty." },
+  booking_empty_sessions: { definition: "Distinct session identities in Bookings minus identities with an attended booking row.", caveat: "Only sessions represented in Bookings can qualify; sessions with no bookings are not counted." },
+  website_trials: { definition: "Lead creation-date cohort records with Trial Status equal to Trial Completed. Outcomes are the latest recorded status, not trial events occurring during this period." },
+  website_members: { definition: "Lead creation-date cohort records with Conversion Status equal to Converted; current stage does not change this count." },
+  website_retained: { definition: "Lead creation-date cohort records with Retention Status equal to Retained." },
+  website_win_rate: { definition: "Converted lead records divided by all lead records in the creation-date cohort." },
+  website_trial_win_rate: { definition: "Lead records with both a completed trial and a conversion, divided by lead records with a completed trial." },
+  website_pipeline_value: { definition: "Open lead records × cohort conversion rate × average positive paid first purchase of converted newcomers in the same scope.", caveat: "An estimate, not measured revenue. The New sheet supplies the first-purchase basis." },
   meta_leads: { definition: "Sum of the Meta sheet's leads column within the reporting date scope.", caveat: "Meta-reported conversions are not identified CRM people; do not add these to Website lead counts." },
   meta_instant_leads: { definition: "Sum of on_facebook_lead from Meta.", caveat: "May overlap the leads column; these counts are not added together." },
   meta_reach: { definition: "Sum of reach across the source rows.", caveat: "Audiences can repeat across dates, campaigns and platforms. This is not deduplicated reach." },
@@ -32043,24 +32992,24 @@ export const metricNotes: Record<string, { definition: string; caveat?: string; 
   crm_meta_leads: { definition: "Lead records explicitly tagged Meta, Facebook, Instagram, fb or ig in UTM Source or Source Name. Conflicting Google/Meta tags are kept separate.", caveat: "Includes platform-tagged records whose paid/organic status is unknown. Not directly matched to Meta-reported lead events." },
   complimentary_visits: {definition:"Sum of numeric values in the Sessions Complimentary column within the selected scope.",caveat:"Independent of NonPaid and check-in complimentary flags; missing source values stay unavailable."},
   session_complimentary_rate: {definition:"Sessions complimentary visit count divided by Sessions CheckedIn attendance."},
-  lapsed_memberships: { definition: "Unique members per expiry month with a paid ongoing membership whose recorded Status is Lapsed and whose Churned Date is at least 30 days old. Zero-value, restricted, Not Activated, Active, New, Frozen and Renewed memberships are excluded; Lapsed under 30 days is a grace period. Counted by expiry date in the selected period. Matches the Expired / lapsed column of Renewals by expiry month.", caveat: "Recent expiries move from grace period to lapsed 30 days after the Churned Date." },
-  lapsed_members: { definition: "Distinct members whose most recent paid membership has a recorded Status of Lapsed with a Churned Date at least 30 days old, counted when that membership expires in the period. Zero-value memberships and restricted names (intro, 2 for 1, studio single class, private, credit, Copper + Cloves single class, test) are ignored when finding the most recent membership; a member whose latest membership is Frozen, Not Activated, Active, New, Renewed or within 30 days of its Churned Date is not lapsed.", caveat: "A member who bought another paid membership after the lapse is not counted. Restricted names follow the KRA churn rules in server/kra-churn.mjs." },
+  lapsed_memberships: { definition: "Unique members per expiry month with a paid ongoing membership whose recorded Status is Lapsed and whose Churned Date (or End Date when Churned Date is missing) is at least 30 days old. Zero-value, restricted, Not Activated, Active, New, Frozen and Renewed memberships are excluded; Lapsed under 30 days is a grace period. Counted by expiry date in the selected period. Matches the Expired / lapsed column of Renewals by expiry month.", caveat: "Recent expiries move from grace period to lapsed 30 days after the Churned Date." },
+  lapsed_members: { definition: "Distinct members whose most recent paid membership has a recorded Status of Lapsed with a Churned Date (or End Date when Churned Date is missing) at least 30 days old, counted when that membership expires in the period. Zero-value memberships and restricted names (intro, 2 for 1, studio single class, private, credit, Copper + Cloves single class, test) are ignored when finding the most recent membership; a member whose most recent eligible membership is Frozen, Not Activated, Active, New, Renewed or within 30 days of its Churned Date is not lapsed.", caveat: "A member who bought another paid membership after the lapse is not counted. Restricted names follow the KRA churn rules in server/kra-churn.mjs." },
   revenue: { definition: "Revenue attributed to studio sessions in the selected date range.", caveat: "Recognised earned revenue differs from cash collected on the Revenue & sales tab." },
   discount_value: { definition: "Sale-item unit discount multiplied by quantity, summed across payment lines.", caveat: "Sale-level discount totals repeat on multi-item sales and are not summed as item discounts." },
   discount_rate: { definition: "Item-level discounts divided by collected revenue plus those discounts.", caveat: "Uses unit discount × quantity, not the sale-level discount repeated on each row." },
-  gross_revenue: { definition: "Payments collected on successful, non-voided sale lines, by payment date.", caveat: "Cash collections and session-attributed revenue have different timing and populations." },
-  net_revenue: { definition: "Successful payment value less the GST recorded on those same payment lines.", caveat: "Uses collected payment and payment tax (legacy VAT field); the source catalogue price is not collected net revenue." },
+  gross_revenue: { definition: "Payment Value on non-voided sale rows whose Payment Status is succeeded or missing, by payment date. Voided=true rows and other payment statuses are excluded; a missing void flag is accepted.", caveat: "Cash collections and session-attributed revenue have different timing and populations." },
+  net_revenue: { definition: "Payment Value less payment GST/VAT on eligible sale rows, including only rows where both values are known. Eligible rows are non-voided with status succeeded or missing.", caveat: "Uses collected payment and payment tax (legacy VAT field); the source catalogue price is not collected net revenue." },
   late_affected_sessions: { definition: "Distinct source session identities with at least one late-cancelled booking in this scope.", caveat: "Uses session ID, source unique IDs, then date, time, format and studio when an ID is unavailable." },
   late_recorded_value: { definition: "Source Sale Value attributed to late-cancelled booking rows, excluding imported bookings.", caveat: "Recorded booking value is not measured lost cash, a refund or a cancellation fee." },
   fill_rate: { definition: "Attendees divided by available seats across the same sessions.", numerator: "Attendees", denominator: "Available seats" },
   avg_class_size_incl: { definition: "Total attendees divided by sessions, including empty sessions.", numerator: "Attendees", denominator: "Sessions" },
-  conversion_rate: { definition: "Trials whose Conversion Status is Converted, divided by every trial. A trial is any row whose Is New label contains the word new.", numerator: "Converted trials", denominator: "Trials", caveat: "Outcome is the source's latest status, not conversions occurring during this period." },
-  retention_rate: { definition: "Trials whose Retention Status is Retained, divided by every trial.", numerator: "Retained trials", denominator: "Trials", caveat: "In the current source Retained holds for exactly the trials with a post-trial visit, so this matches the second-visit rate." },
-  second_visit_rate: { definition: "Trials with at least one post-trial visit divided by every trial. Counted from Visits Post Trial, not from a status column.", numerator: "Returned trials", denominator: "Trials", caveat: "The source derives Retention Status from the same column, so this currently equals the retention rate." },
-  checkin_revenue: { definition: "Attributed revenue from checked-in rows only.", caveat: "Unattended and late-cancelled rows are excluded, matching session attendance revenue." },
+  conversion_rate: { definition: "Trials whose Conversion Status is Converted, divided by every trial. A trial is a row normalized to is_new=true: labels containing the word new qualify except labels beginning with not; recognized boolean true also qualifies.", numerator: "Converted trials", denominator: "Trials", caveat: "Outcome is the source's latest status, not conversions occurring during this period." },
+  retention_rate: { definition: "Trials whose Retention Status is Retained, divided by every trial.", numerator: "Retained trials", denominator: "Trials", caveat: "Uses the reported Retained status. Equality with the post-trial visit measure depends on source consistency and is not guaranteed." },
+  second_visit_rate: { definition: "Trials with at least one post-trial visit divided by every trial. Counted from Visits Post Trial, not from a status column.", numerator: "Returned trials", denominator: "Trials", caveat: "Measures reported visit counts. It may differ from the status-based retention rate; missing visits do not qualify as zero returns." },
+  checkin_revenue: { definition: "Attributed revenue from checked-in rows only.", caveat: "Requires attended=true. Other booking flags are not separately excluded; reconciliation to Sessions depends on source consistency." },
   revenue_per_checkin: { definition: "Attributed revenue on attended rows divided by attended check-ins.", numerator: "Attended revenue", denominator: "Check-ins" },
   teaching_hours: { definition: "Recorded duration counted once per attended session, converted to hours.", caveat: "Date-formatted minutes are decoded from the Sheets serial value; invalid or missing duration is excluded. Attendee rows never multiply teaching time." },
-  revenue_per_hour: { definition: "Attended revenue with valid session duration divided by distinct-session teaching hours.", caveat: "Revenue and hours use the same duration-covered population." },
+  revenue_per_hour: { definition: "Attended revenue with valid session duration divided by distinct-session teaching hours.", caveat: "Revenue requires attended=true and positive duration; hours additionally require a non-null session ID for deduplication. Revenue on missing-ID rows can therefore contribute without corresponding hours; interpret with this coverage caveat." },
   payroll_revenue: { definition: "Monthly instructor-attributed revenue reported by Payroll.", caveat: "Payroll is monthly and source amounts are rounded; it may differ slightly from Sessions." },
   deferred_revenue: { definition: "Remaining membership money, counted once per membership in the selected sale cohort.", caveat: "A current balance from the source snapshot; not a historical balance at the selected period end." },
   lost_revenue: { definition: "Unoccupied seats valued at the current average revenue per attendee.", caveat: "A scenario estimate; it assumes every available seat earns the observed yield. It is not measured lost sales or a forecast." },
@@ -32069,10 +33018,10 @@ export const metricNotes: Record<string, { definition: string; caveat?: string; 
   trials_completed: { definition: "Lead records whose Stage Name is exactly Trial Completed; stage variants do not qualify." },
   lead_conversion_rate: { definition: "Lead records at the Membership Sold stage divided by all lead records in the selected creation-date cohort." },
   pipeline_value: { definition: "Open leads multiplied by the observed win rate and average paid first purchase of converted newcomers in the same global scope.", caveat: "An estimate, not contracted sales. Newcomer data loads with Enquiries so results do not depend on tab visit order." },
-  active_base: { definition: "Distinct members whose latest lifecycle status is Active, across all first-visit dates.", caveat: "Current snapshot measure; period comparisons and historical trend are unavailable." },
-  dormant_actives: { definition: "Running memberships (started, not yet expired, not Lapsed, Not Activated or Frozen) with more than 21 days since the last visit.", caveat: "Current snapshot measure. Date filters and historical comparisons are excluded." },
-  revenue_at_risk_30d: { definition: "Purchase value of running memberships expiring from today through the next 30 days. Memberships already Renewed are excluded because their renewal is secured.", caveat: "Uses upcoming expiry dates relative to today; date filters and historical comparisons are excluded." },
-  active_memberships: { definition: "Running memberships: access started and not yet expired, with status Active, New or Renewed. Frozen, Lapsed and Not Activated memberships are excluded.", caveat: "Current snapshot. The trend counts memberships running at each month end by access dates only, because historical status is not recorded." },
+  active_base: { definition: "Distinct member IDs with a source row whose Lifecycle Status is Active, across all first-visit dates. No latest-row ranking is applied.", caveat: "Current snapshot measure; period comparisons and historical trend are unavailable." },
+  dormant_actives: { definition: "Membership rows whose start date is on or before today, whose end date is blank or on/after today, whose non-null status is not Lapsed, Not Activated or Frozen, and whose recorded Days Since Last Visit exceeds 21.", caveat: "Current snapshot measure. Date filters and historical comparisons are excluded." },
+  revenue_at_risk_30d: { definition: "Sum of Amount Paid on membership rows expiring from today through 30 days ahead, inclusive, with non-null status other than Renewed, Lapsed or Not Activated. Frozen rows and future-starting memberships can qualify; no start-date condition is applied.", caveat: "Uses upcoming expiry dates relative to today; card date filters and comparisons are excluded. The Retention trend applies the same current-status rule to expiry windows at earlier dates; past status changes remain unknown." },
+  active_memberships: { definition: "Membership rows with start date on/before today and end date blank or on/after today, whose non-null status is not Lapsed, Not Activated or Frozen. Other status values also qualify; no paid-product restriction or deduplication is applied.", caveat: "Current snapshot. Historical status is not recorded. Retention reconstructs past access dates using the same current-status eligibility rule as the card. Past status changes are not recorded, so this is a reconstruction rather than historical stock." },
 };
 const formulas: Record<string, [string, string]> = {
   fill_rate: ["SUM(checked_in)", "SUM(capacity)"],
@@ -32093,7 +33042,7 @@ export function evidenceSQL(id: string) {
 
 Symbols: fmt, n, delta, c, p, d, d, formatField, text, number, isCount
 
-SQL output aliases: 
+SQL output aliases: No SQL aliases
 
 ```typescript
 import { metrics } from "./metrics";
@@ -32203,6 +33152,994 @@ WHERE "${table}".row_id = r.row_id`;
 
 ```
 
+### src/semantics/metric-business-definitions.ts
+
+Symbols: businessDefinitions
+
+SQL output aliases: a, zero, sale, separate, false, the, Payroll, New, deduplicated, purchases
+
+```typescript
+/** Business meanings for every governed registry metric. Source-specific evidence notes may add more context. */
+export const businessDefinitions: Record<string, string> = {
+  "sessions": "Number of studio sessions represented by the selected source rows. Sessions rows contribute one each; recurring and Payroll rows contribute their recorded session totals. This is not a distinct SessionID count.",
+  "capacity": "Total recorded seats offered across selected sessions; missing capacity values do not contribute.",
+  "attendance": "Total recorded session check-ins, counting visits rather than distinct community members.",
+  "fill_rate": "Recorded attendance as a percentage of recorded offered seats across the selected sessions. Numerator and denominator are separately summed, so missing values can give different coverage.",
+  "booking_fill_rate": "Recorded booked seats as a percentage of recorded offered seats across selected sessions; this measures reservations rather than attendance.",
+  "show_up_rate": "Recorded attendance divided by recorded booked seats, expressed as a percentage. Separate column totals can have different missing-value coverage.",
+  "booked": "Total booked seats recorded on the selected studio sessions, rather than distinct people or booking transaction rows.",
+  "no_shows": "Estimated unfulfilled bookings: for each session with all three counts present, booked seats less attendance less late cancellations, floored at zero. Sessions with a missing input are excluded.",
+  "no_show_rate": "Estimated no-show seats as a percentage of all recorded booked seats. Missing attendance or late-cancel counts exclude a session from the numerator but not necessarily the booked-seat denominator.",
+  "late_cancel_rate": "Recorded late-cancelled seats as a percentage of recorded booked seats; a missing count is not explicitly treated as zero.",
+  "avg_class_size_incl": "Attendance visits per represented studio session, including sessions with zero attendance. Sessions with missing attendance still contribute to the session denominator.",
+  "avg_class_size_excl": "Attendance visits per represented non-empty session. Only rows with positive attendance supply the non-empty session denominator.",
+  "empty_sessions": "Number of represented studio sessions with explicitly recorded zero attendance. Missing attendance does not establish an empty session.",
+  "empty_session_rate": "Explicitly empty studio sessions as a percentage of all represented sessions, including sessions whose attendance is missing in the denominator.",
+  "unsold_seats": "Unoccupied attendance capacity: available seats less recorded attendance, floored at zero per session. Both values must be present. This is not a measure of unsold paid inventory.",
+  "overbooked_sessions": "Count of source rows whose booked seats exceed recorded capacity; rows missing either count cannot qualify.",
+  "attendance_cv": "Population standard deviation of recorded session attendance divided by its mean, a unitless measure of variability. Missing attendance is excluded and a zero mean makes the value unavailable.",
+  "revenue": "Revenue attributed to the selected studio sessions, in INR, rather than payments collected during the same dates.",
+  "gross_revenue": "Recorded payment collections in INR from eligible Sales lines by payment date. Standard Sales scope excludes known voids and accepts succeeded or missing payment status.",
+  "net_revenue": "Recorded payment value less recorded GST on the same eligible Sales lines, in INR. Lines missing either payment or tax are excluded; missing tax is not assumed zero.",
+  "vat": "Total recorded payment GST, in INR, from eligible Sales lines. The source may use the legacy VAT column name; missing tax does not contribute.",
+  "transactions": "Number of distinct non-null Sale IDs in eligible Sales lines. Missing sale IDs are excluded, so this is the known transaction count rather than proof of a complete count.",
+  "units": "Total recorded sale-item quantities on eligible payment lines; not the number of payment lines or distinct products.",
+  "revenue_per_session": "Session-attributed revenue in INR per represented studio session. Revenue and session counts are summed separately.",
+  "rev_pac": "Session-attributed revenue in INR per recorded attendance visit. This is a visit yield, not revenue per unique member.",
+  "rev_pas": "Session-attributed revenue in INR per recorded offered seat, including unoccupied capacity.",
+  "lost_revenue": "Scenario value in INR of unoccupied seats at the selected scope's observed revenue per attendance visit. It assumes each additional seat earns the current yield and is not measured lost cash.",
+  "aov": "Eligible payment collections in INR per distinct known Sale ID. Collections with missing Sale ID can contribute revenue without contributing to the transaction denominator.",
+  "arpu": "Eligible payment collections in INR per distinct known buyer Member ID. Collections with missing Member ID can contribute revenue without contributing a buyer.",
+  "buyers": "Number of distinct non-null Member IDs represented on eligible Sales lines; not all active community members.",
+  "discount_value": "Total INR item discounts, calculated as sale-item unit discount multiplied by quantity on each eligible payment line. Both item values must be recorded.",
+  "discount_rate": "Item discounts as a percentage of collected payment value plus item discounts. This is a reconstructed discount basis rather than a catalogue-price discount percentage.",
+  "deferred_revenue": "Current recorded membership money remaining, in INR, counted once using the latest payment-date/source-row record per membership within the selected Sales cohort. Missing membership IDs are treated as separate rows.",
+  "unused_session_liability": "Remaining session credits valued at the recorded revenue per session, in INR. The Renewals workspace uses Lapsed Remaining Sessions and Revenue Per Session; Sales contexts use membership classes left and revenue per event credit. Missing inputs exclude a row.",
+  "membership_rev_share": "Share of eligible Sales payment value whose normalized category is exactly Memberships, expressed as a percentage of all recorded payment value.",
+  "paid_attendance": "Total recorded attendance less total recorded NonPaid visits. The two columns are summed separately; this is a residual count, not individually verified paid check-ins.",
+  "non_paid_rate": "Recorded NonPaid visits as a percentage of total recorded session attendance; NonPaid is independent of the Complimentary column.",
+  "membership_att_share": "Membership visits as a percentage of the combined membership, package, intro and single-class visit counts. A missing component excludes that row's combined count from the denominator.",
+  "intro_penetration": "Recorded IntroOffers attendance visits per represented studio session; this is a visit count per session, not a percentage or unique-newcomer count.",
+  "new_clients": "Number of New-sheet cohort rows classified is_new by normalization. These are newcomer records, not deduplicated Member IDs.",
+  "conversion_rate": "Percentage of is_new cohort rows whose latest recorded Conversion Status is exactly Converted. All is_new rows, including missing outcomes, remain in the denominator.",
+  "second_visit_rate": "Percentage of is_new cohort rows with a recorded positive Visits Post Trial count. Missing visit counts do not qualify but remain in the cohort denominator.",
+  "zero_return_rate": "Percentage of is_new cohort rows with Visits Post Trial explicitly equal to zero. Missing visit counts are not classified as zero return.",
+  "avg_conversion_span": "Mean nonnegative recorded Conversion Span in days among is_new rows whose Conversion Status is exactly Converted. Missing and negative spans are excluded.",
+  "median_conversion_span": "Median nonnegative recorded Conversion Span in days among is_new rows whose Conversion Status is exactly Converted. Missing and negative spans are excluded.",
+  "avg_ltv": "Mean recorded lifetime spend in INR among is_new cohort rows with an Ltv value. This is observed source spend, not a forecast of future lifetime value.",
+  "first_visitors": "Number of selected New-sheet rows, including rows not classified is_new. No distinct-member deduplication is applied.",
+  "new_converted": "Number of is_new cohort rows whose latest recorded Conversion Status is exactly Converted; not conversions dated within the reporting period.",
+  "new_retained": "Number of is_new cohort rows whose latest recorded Retention Status is exactly Retained; this is a source-status count rather than a dated retention event.",
+  "new_total_spend": "Total recorded Ltv in INR for is_new cohort rows. The amount is lifetime spend associated with the first-visit cohort, not revenue collected during the selected dates.",
+  "new_post_trial_spend": "Total recorded Ltv Post Trial in INR for is_new cohort rows, using the source's accumulated post-trial spend.",
+  "new_post_trial_purchases": "Total recorded Purchase Count Post Trial for is_new cohort rows; the selected period identifies first visits rather than purchase-event dates.",
+  "new_total_purchases": "Total recorded all-time purchase counts for is_new cohort rows, rather than transactions occurring during the selected reporting dates.",
+  "new_visits": "Total recorded No of Visits for is_new cohort rows; this is accumulated source visit history associated with the first-visit cohort.",
+  "new_revenue_per_visit": "Recorded newcomer lifetime spend in INR per recorded visit among cohort rows with a non-null Ltv. A row with spend but missing visit count can contribute only to the numerator.",
+  "new_late_cancels": "In Conversion & Acquisition, count of all late-cancelled booking rows belonging to known Member IDs in the selected is_new first-visit cohort, regardless of booking date. The shared calculation counts each matched booking once within each newcomer cohort, even if New contains duplicate member rows.",
+  "avg_first_purchase": "Mean positive recorded First Purchase Value in INR among is_new cohort rows whose Conversion Status is exactly Converted. Zero, negative and missing values are excluded.",
+  "ltv_to_first_purchase": "Mean recorded lifetime spend divided by mean positive first-purchase value among converted is_new rows with a positive first purchase, expressed as a multiple. Missing lifetime spend can make the two means use different record counts.",
+  "retention_rate": "Percentage of is_new cohort rows whose latest Retention Status is exactly Retained. All is_new rows remain in the denominator; this does not define a fixed elapsed retention window.",
+  "active_base": "Distinct known Member IDs with an exactly Active lifecycle row across the current source snapshot. No latest-row ranking is applied. Unavailable when no lifecycle value is recorded anywhere in scope.",
+  "at_risk_actives": "Count of New-sheet rows with lifecycle exactly Active and more than 21 recorded days since last visit. This counts rows rather than distinct Member IDs.",
+  "visits_post_trial": "Total recorded Visits Post Trial across all selected New-sheet rows; unlike most newcomer metrics, this expression does not itself restrict rows to is_new.",
+  "active_memberships": "Current count of membership rows that have started, have no recorded end date or have not ended, and have a non-null status other than Lapsed, Not Activated or Frozen. This counts memberships rather than distinct members.",
+  "churn_rate": "Confirmed lapsed outcomes as a percentage of the deduplicated eligible paid renewal cohort, including renewed, frozen and grace-period outcomes in the denominator. It is an expiry-cohort outcome rate, not lost members divided by the active base.",
+  "lapsed_members": "Distinct known members whose latest eligible paid, unrestricted membership is recorded Lapsed at least 30 days after Churned Date, falling back to End Date when absent. Selected dates constrain the flagged membership's expiry date.",
+  "utilisation": "Used session credits as a percentage of session allowance across memberships with a positive limit and remaining credits between zero and that limit. Both numerator and denominator use the same valid bounded-credit population.",
+  "zero_usage_memberships": "Membership rows started more than seven days ago, with non-null status other than Renewed, whose recorded completed count is zero; when absent, valid allowance less remaining credits is used. Rows with neither usage evidence nor a last-visit date also qualify, so this includes unknown usage.",
+  "dormant_actives": "Current running membership rows with more than 21 recorded days since last visit, excluding Lapsed, Not Activated and Frozen statuses. Missing start date, status or absence duration cannot qualify.",
+  "revenue_at_risk_30d": "Recorded purchase value in INR for memberships expiring from today through 30 days ahead, excluding Renewed, Lapsed and Not Activated statuses. Frozen rows and future-start memberships can qualify; this is neither unpaid debt nor a forecast of lost revenue.",
+  "risk_score": "Average heuristic score combining unused allowance (30%), absence scaled to 60 days (35%), recorded cancellation rate (15%) and inverse attendance rate (20%), multiplied by 100. Usage falls back to attendance or 0.5; other missing components can exclude a row. This is not a calibrated probability and is not guaranteed to stay between zero and 100.",
+  "memberships_count": "Number of selected Lapsed-sheet membership records, including multiple memberships held by one community member.",
+  "remaining_sessions": "Total recorded remaining session credits across selected membership records. Missing balances do not contribute; unlimited or invalid allowances are not separately filtered here.",
+  "days_absent": "Mean recorded Days Since Last Visit across membership rows with that value. Multiple memberships can give the same member multiple contributions.",
+  "bookings": "Number of selected booking source rows, including attended, cancelled, no-show, late-cancelled and unconfirmed records.",
+  "unique_bookers": "Distinct known Member IDs represented in the selected booking rows, regardless of booking outcome.",
+  "booking_avg_class_size": "Attended booking rows per distinct session identity represented in Bookings. Session identity falls back from Session ID to source unique IDs to date, time, format and location; sessions with no booking rows are invisible.",
+  "booking_empty_sessions": "Distinct session identities represented in Bookings with no attended booking row. This cannot count scheduled sessions absent from the booking source.",
+  "cancellation_rate": "Percentage of booking rows explicitly flagged Cancelled. Missing flags remain in the denominator without qualifying; cancellation can overlap other outcome flags.",
+  "booking_late_rate": "Percentage of booking rows explicitly flagged late cancelled. Missing flags remain in the denominator without qualifying; outcomes can overlap.",
+  "booking_no_show_rate": "Percentage of booking rows explicitly flagged No Show. Missing flags remain in the denominator without qualifying; outcomes can overlap.",
+  "booking_attendance_rate": "Percentage of booking rows explicitly flagged Attended. Missing flags remain in the denominator without qualifying; this is not a capacity fill rate.",
+  "refund_rate": "Percentage of booking rows explicitly flagged Refunded. Missing flags remain in the denominator without qualifying; this measures booking flags rather than refunded INR.",
+  "effective_attendance": "Percentage of booking rows flagged Attended without a known Cancelled, Late Cancelled or No Show flag. Missing adverse flags are treated as false for this rule.",
+  "booking_lead_time_days": "Mean nonnegative elapsed days between recorded Sale Date and Session Date on nonimported bookings with valid dates. Fractional days preserve hours; the source sale date is used as the booking-time proxy.",
+  "same_day_share": "Percentage of nonimported booking rows with a valid elapsed lead time from zero to less than 24 hours. This can span calendar dates; nonimported rows with invalid or missing dates remain in the denominator.",
+  "revenue_per_booking": "Recorded Sale Value in INR per nonimported booking row. Missing values contribute no revenue but those rows still contribute to the denominator; it is not collected cash per reservation.",
+  "leads": "Number of lead source records in the selected creation-date cohort, without distinct-person deduplication.",
+  "lead_conversion_rate": "Percentage of lead records whose current Stage Name is Membership Sold, ignoring case and surrounding spaces. It is a creation-date cohort stage share, not a dated sale-event conversion rate.",
+  "response_time_hours": "Mean nonnegative elapsed hours from Created At to Follow Up 1 Date where both dates are valid. This records the first follow-up date supplied by the source, not proof of a successful contact.",
+  "untouched_leads": "Lead records with no dates in Follow Up 1–4, created more than 48 hours before today's midnight, not at Membership Sold stage, and not explicitly Lost or Disqualified. Missing status remains eligible.",
+  "touches": "Mean number of populated Follow Up 1–4 Date fields per lead row, from zero through four. This counts recorded date fields rather than all communication attempts.",
+  "open_leads": "Lead records not at Membership Sold stage and not explicitly Lost or Disqualified. Missing stage or status can qualify; this is a rule-based open cohort rather than a verified opportunity count.",
+  "pipeline_value": "Estimated INR pipeline: open lead records multiplied by the cohort Membership Sold stage rate and mean positive first purchase of converted newcomers in the applicable New-sheet scope. No lead-to-purchase identity match is implied.",
+  "checkins": "Number of Checkins rows explicitly marked attended/Checked In. These are visits rather than distinct people or sessions.",
+  "unique_attendees": "Distinct known Member IDs among attended Checkins rows. Attended rows missing Member ID do not add a person.",
+  "attendance_avg_class_size": "Attended Checkins rows per distinct known Session ID represented in the source, including sessions represented only by unattended rows. Attended rows missing Session ID still contribute to the numerator.",
+  "attendance_empty_sessions": "Distinct known Session IDs represented in Checkins without an attended row. Sessions absent from the source and missing-ID records cannot be classified.",
+  "visits_per_member": "Attended Checkins rows per distinct known attendee Member ID. Attended rows without an ID contribute visits but no person to the denominator.",
+  "complimentary_rate": "Numeric Sessions Complimentary visits as a percentage of Sessions CheckedIn attendance. Member attendance supplies this from Sessions rather than boolean check-in complimentary flags.",
+  "revenue_per_checkin": "Recorded Paid value in INR on attended Checkins rows divided by attended row count. Missing Paid values are ignored in revenue but their attended rows remain in the denominator.",
+  "teaching_hours": "Recorded valid duration in hours counted once per attended, known Session ID within the selected Checkins scope. Sessions lacking valid duration or a known ID do not supply teaching time.",
+  "revenue_per_hour": "Recorded attended revenue with positive valid duration divided by deduplicated recorded teaching hours. Revenue rows lacking a Session ID can contribute revenue without adding hours; this is not a complete payroll productivity measure.",
+  "trainers": "Number of distinct known TrainerIDs in selected Teacher Recurring rows. Presence in this source defines activity; this is not the headcount of all employed instructors.",
+  "teacher_dependency": "Largest row-level top-instructor share across selected Recurring records. Each row divides its highest parsed Top5Trainers attendance by summed attendance in that listed group; this is not a portfolio-wide instructor concentration measure.",
+  "trainer_depth": "Largest number of instructors parsed from a selected row's Top5Trainers list. It describes the supplied list, not a distinct instructor count across the whole scope.",
+  "payroll_revenue": "Total monthly instructor-attributed revenue reported as Payroll Total Paid, in INR. It is source attribution rather than gross Sales collections.",
+  "payroll_cost": "Scenario instructor cost in INR: recorded Payroll session count multiplied by the configured flat cost per session. This is not actual payroll expense.",
+  "contribution": "Monthly instructor-attributed revenue less the scenario flat per-session instructor cost, in INR. It excludes other operating costs and is not net profit.",
+  "contribution_margin": "Scenario contribution as a percentage of Payroll-attributed revenue, using the configured flat per-session instructor cost. Other studio costs are excluded.",
+  "payroll_pct_of_revenue": "Scenario flat instructor cost as a percentage of Payroll-attributed revenue; it does not measure actual payroll paid.",
+  "empty_session_cost": "Estimated instructor cost in INR for recorded empty sessions, using the configured flat cost per session. It does not establish recoverable savings.",
+  "break_even_class_size": "Attendance visits per session required to cover the configured instructor cost at the selected scope's observed revenue per attendee. This is an instructor-cost scenario rather than full studio break-even.",
+  "payroll_conversion": "Payroll-reported Converted count as a percentage of Payroll-reported New count, weighted by source counts across months and instructors. It is not recalculated from individual newcomer records.",
+  "payroll_retention": "Payroll-reported Retained count as a percentage of Payroll-reported New count, weighted by source counts. No additional retention-duration window is imposed.",
+  "new_handled": "Total newcomer count reported as New in selected Payroll rows. Attribution across instructors may repeat people and is not a distinct-member count.",
+  "records": "Number of source rows in the current query population. Its meaning follows the selected source grain and it is not a universal member, session or transaction count.",
+  "draw_premium_pp": "Session fill rate minus the capacity-weighted fill baseline for matching location, format, weekday and time slots, shown in percentage points. Baselines include instructors excluded by the instructor filter.",
+  "booking_attended": "Number of booking rows explicitly flagged Attended; a row can also carry another outcome flag.",
+  "booking_cancelled": "Number of booking rows explicitly flagged Cancelled; this is not an exclusive outcome partition.",
+  "booking_no_shows": "Number of booking rows explicitly flagged No Show, rather than a residual derived from seat totals.",
+  "booking_late_cancelled": "Number of booking rows explicitly flagged Late Cancelled; this is a booking count rather than a session count or fee amount.",
+  "membership_revenue": "Total recorded Amount Paid in INR on selected membership records. Standard membership scope selects expiry dates, so this is purchase value attached to expiries rather than payment-date collections.",
+  "checkin_revenue": "Total recorded Paid value in INR from attended Checkins rows. Unattended rows contribute no revenue, regardless of their recorded Paid value.",
+  "payroll_revenue_per_session": "Payroll-attributed revenue in INR per recorded Payroll session; source monthly totals are summed before dividing.",
+  "nonempty_reliability": "One minus recorded empty sessions divided by represented sessions, expressed as a percentage. Missing attendance can leave a session in the denominator without marking it empty.",
+  "active_slots": "Number of distinct location, full format, weekday and time combinations represented in Sessions. It measures recurring schedule patterns, not future published slots; missing components can form partial slot identities.",
+  "gap_to_break_even": "Observed average session attendance less the instructor-cost break-even attendance at current revenue per attendee, expressed in attendees per session. It excludes other operating costs.",
+  "booking_pending": "Booking rows without any known Attended, Cancelled, No Show or Late Cancelled flag. Missing flags are treated as false, so pending includes records with unknown outcomes.",
+  "converted_leads": "Number of lead records whose Stage Name is exactly Membership Sold after case and whitespace normalization; Conversion Status is not used for this measure.",
+  "trials_completed": "Number of lead records whose Stage Name is exactly Trial Completed after case and whitespace normalization. Later-stage records are not inferred to have completed a trial.",
+  "complimentary_visits": "Total numeric visits recorded in Sessions Complimentary. This is separate from Sessions NonPaid and from boolean complimentary flags on attendance records.",
+  "session_complimentary_rate": "Numeric Sessions Complimentary visits divided by recorded Sessions CheckedIn attendance, expressed as a percentage; the two source totals may have different missing-value coverage.",
+  "late_affected_sessions": "Distinct booking-source session identities with at least one Late Cancelled row. Identity uses Session ID, then source unique IDs, then date, time, format and location.",
+  "late_recorded_value": "Total recorded Sale Value in INR on late-cancelled, nonimported booking rows. This is attributed booking value rather than lost cash, refunds or cancellation fees.",
+  "website_contacted": "Website-cohort lead records with at least one populated Follow Up 1–4 Date field. A recorded follow-up date does not prove contact was successful.",
+  "website_trials": "Website-cohort records whose latest Trial Status is Trial Completed, ignoring case and surrounding spaces. The cohort uses lead creation dates, not trial-event dates.",
+  "website_members": "Website-cohort records whose latest Conversion Status is Converted, ignoring case and surrounding spaces. Stage Name is not used for this count.",
+  "website_retained": "Website-cohort records whose latest Retention Status is Retained, ignoring case and surrounding spaces; no elapsed retention window is added.",
+  "website_trial_members": "Website-cohort records with both Trial Status Trial Completed and Conversion Status Converted. This intersection does not establish the sequence or timing of the events.",
+  "website_open": "Website-cohort records not marked Converted and not explicitly Lost or Disqualified. Missing conversion/status can qualify; Website population restriction is supplied by the workspace.",
+  "website_untouched": "Open Website-cohort records with no populated Follow Up 1–4 dates and a creation date more than 48 hours before today's midnight. Converted, Lost and Disqualified records are excluded.",
+  "website_contact_rate": "Percentage of Website-cohort records with any populated Follow Up 1–4 Date field. It measures recorded follow-up coverage rather than confirmed member contact.",
+  "website_trial_rate": "Percentage of Website-cohort records whose latest Trial Status is Trial Completed. Missing status remains in the full lead-record denominator.",
+  "website_win_rate": "Percentage of Website-cohort records whose latest Conversion Status is Converted. All cohort records, including missing outcomes, remain in the denominator.",
+  "website_trial_win_rate": "Converted Website records among those with Trial Status Trial Completed, expressed as a percentage of completed-trial records. This is a latest-status intersection rather than dated event progression.",
+  "website_ltv": "Mean strictly positive recorded LTV in INR among Website-cohort records marked Converted. Converted records with zero or missing LTV are excluded, so this is a positive-LTV subset average.",
+  "website_pipeline_value": "Estimated INR value of open Website leads multiplied by the Website cohort conversion-status rate and mean positive first purchase of converted newcomers in applicable New-sheet scope. It is not matched or contracted revenue.",
+  "meta_records": "Number of Meta reporting source rows in scope. Rows can represent reporting slices and are not unique ads, users or conversions.",
+  "meta_spend": "Total Meta-reported spend in INR across selected source reporting rows. Overlapping reporting slices are not deduplicated by this measure.",
+  "meta_impressions": "Total Meta-reported impression events across selected source reporting rows; repeated views by one person remain separate impressions.",
+  "meta_reach": "Sum of row-level Meta reach counts. People can appear in several rows, so this is not deduplicated reach for the combined period or campaign scope.",
+  "meta_clicks": "Total Meta-reported clicks across selected source rows. This uses clicks, not only outbound or link clicks.",
+  "meta_link_clicks": "Total Meta-reported inline_link_clicks across selected source reporting rows, distinct from the broader clicks field.",
+  "meta_leads": "Total Meta-reported leads across selected reporting rows. These are platform-attributed events rather than identified CRM lead records.",
+  "meta_instant_leads": "Total Meta-reported on_facebook_lead events across selected rows. They can overlap the general leads field and should not automatically be added to it.",
+  "meta_purchases": "Total Meta-reported purchase events across selected rows under the source's attribution settings; this is not a distinct Sales transaction count.",
+  "meta_purchase_value": "Total Meta-reported purchase value in INR across selected rows. It uses platform attribution rather than reconciled payment collections.",
+  "meta_add_to_cart": "Total Meta-reported add_to_cart events across selected reporting rows, rather than distinct shoppers or paid orders.",
+  "meta_checkout": "Total Meta-reported initiate_checkout events across selected reporting rows, rather than completed purchases.",
+  "meta_ctr": "Meta-reported clicks as a percentage of impressions, using summed source counts. This is all-click CTR rather than link-click CTR.",
+  "meta_cpc": "Meta-reported spend in INR per reported click, using total spend divided by total clicks. Zero clicks makes it unavailable.",
+  "meta_cpm": "Meta-reported spend in INR per 1,000 reported impressions. Zero impressions makes it unavailable.",
+  "meta_cpl": "Meta-reported spend in INR per Meta-reported lead event. It is not acquisition cost per identified CRM prospect or converted member.",
+  "meta_cpa": "Meta-reported spend in INR per Meta-reported purchase event. It uses the source's attribution and is unavailable with zero purchases.",
+  "meta_roas": "Meta-reported purchase value divided by Meta-reported spend, expressed as a unitless multiple. It is not a return calculated from CRM or Sales cash collections.",
+  "meta_frequency": "Summed Meta impressions divided by summed row-level reach, expressed as a multiple. Repeated audiences across rows prevent interpretation as deduplicated campaign frequency.",
+  "crm_trials": "CRM lead records whose latest Trial Status is Trial Completed, ignoring case and surrounding spaces. Creation-date scope does not imply a trial occurred during those dates.",
+  "crm_members": "CRM lead records whose latest Conversion Status is Converted, ignoring case and surrounding spaces. These are lead records rather than deduplicated community members.",
+  "crm_retained": "CRM lead records whose latest Retention Status is Retained, ignoring case and surrounding spaces. No fixed retention window is established by this expression.",
+  "crm_win_rate": "Percentage of CRM lead records whose latest Conversion Status is Converted. Missing outcomes remain in the all-record denominator.",
+  "crm_google_leads": "CRM lead records classified Google from explicit Source Name or UTM Source tags. Conflicting Google/Meta tags are separate, and a Google tag does not establish paid acquisition.",
+  "crm_meta_leads": "CRM lead records classified Meta from explicit Meta/Facebook/Instagram tags in Source Name or UTM Source. This does not match individuals to Meta-reported lead events or prove paid attribution.",
+  "purchase_frequency": "Distinct known Sale IDs attached to a known Member ID divided by distinct known buyer IDs, expressed as purchases per buyer. Missing sale/member IDs affect coverage; this is not an average for the entire active member base.",
+  "product_breadth": "Number of distinct non-null normalized product names on eligible Sales lines. Normalization prefers Cleaned Product and can fall back to Membership Name or Sale Item; this counts product labels rather than SKUs.",
+  "lapsed_memberships": "Count of confirmed lapsed outcomes in the eligible paid renewal cohort, deduplicated to one member per expiry month before scope filters. Lapsed status must be at least 30 days beyond Churned Date, falling back to End Date; grace-period, renewed and frozen outcomes do not count."
+};
+
+```
+
+### src/semantics/metric-reference.ts
+
+Symbols: referenceScopes, referenceRatio, depth, quote, index, i, c, sourceReference, dot, title, column, sheet, metricReference, metric, note, table, runtime, ratio, sampleUnit, population, metricAuditFindings
+
+SQL output aliases: a, placeholders, the, current
+
+```typescript
+import { metrics } from './metrics';
+import { metricNotes, currentSnapshotMetrics } from './evidence';
+import { metricTable } from './catalogue';
+import { sheets } from '../data/sheets.config';
+
+export const referenceScopes: Record<string, string> = {
+  sessions: 'Session date; one Sessions source row. Session-count fields can differ on recurring rollups. Instructor slot baselines are calculated before instructor filters.',
+  recurring: 'Recurring source date/month and aggregated schedule rows. MAX-based instructor list measures are not latest-state measures.',
+  teacher_recurring: 'Teacher Recurring source date/month; aggregated instructor/schedule rows. sessions is the reported TotalSessions/Classes value, not source row count.',
+  sales: 'Payment date; known voids are excluded, and Payment Status must be succeeded or missing. Missing void flags are accepted. Import exclusions follow the app toggle. Current membership balances are not historical balances.',
+  checkins: 'Source Date or Date (IST); one check-in source row. attended is read from Attended, falling back to Checked In. Distinct session IDs, source rows and attended visits are different populations.',
+  new: 'First Visit Date cohort. is_new=true uses normalized Is New labels/booleans. Latest reported statuses are not dated conversion events; row counts are not guaranteed distinct members.',
+  leads: 'Created At cohort; selected source filters apply. website_* formulas do not themselves restrict Source to Website: Website views add this scope, general Leads views retain their selected sources.',
+  lapsed: 'End Date expiry cohort for standard dated queries, although normalized date stores Purchase Date. Member-expiry-month renewal cohorts and latest-eligible-member lapse counts are separate populations.',
+  payroll: 'Calendar month from Month Year. Partial-month selections include corresponding full source months. Source revenue is monthly instructor attribution. Evidence n is SUM(sessions), not row count.',
+  bookings: 'Session Date; one booking source row. Some views further restrict to late cancellations. Imported booking lead time is null. Flag-based counts can overlap; exclusive charts apply precedence.',
+  meta: 'Meta reporting date; account/network scope without studio identity. Row reach is summed rather than audience-deduplicated; CRM and platform attribution are separate.',
+};
+
+/** Only expose a unique outer division as a ratio; nested/compound formulas need their full expression. */
+export function referenceRatio(expression: string): { numerator: string; denominator: string } | null {
+  let depth = 0, quote = '', index = -1;
+  for (let i = 0; i < expression.length; i++) {
+    const c = expression[i];
+    if (quote) { if (c === quote) { if (expression[i + 1] === quote) i++; else quote = ''; } continue; }
+    if (c === "'" || c === '"') { quote = c; continue; }
+    if (c === '(') depth++;
+    else if (c === ')') depth--;
+    else if (depth === 0 && c === '/') { if (index >= 0) return null; index = i; }
+    else if (depth === 0 && (c === '+' || c === '-')) return null;
+  }
+  return index < 0 ? null : { numerator: expression.slice(0, index).trim(), denominator: expression.slice(index + 1).trim() };
+}
+
+export function sourceReference(source: string) {
+  const dot = source.indexOf('.');
+  const title = dot < 0 ? source : source.slice(0, dot);
+  const column = dot < 0 ? '' : source.slice(dot + 1);
+  if (title === 'Settings') return { source, status: 'Configured application assumption; not a sheet column' };
+  if (title === 'Source') return { source, status: 'Context-dependent source-row count; no fixed sheet' };
+  const sheet = sheets.find(s => s.title === title);
+  return { source, status: !sheet ? 'Unresolved source title' : sheet.columns.includes(column) ? 'Declared in configured source schema; live availability not verified' : 'Read by implementation or required by metric, but absent from configured column list; live header availability unverified' };
+}
+
+export function metricReference(id: string) {
+  const metric = metrics[id];
+  const note = metricNotes[id];
+  const table = metricTable(id);
+  const runtime = metric.sql({ rate: 1, today: '{today}', newWhere: ' WHERE {applicable_newcomer_filters}' });
+  const ratio = referenceRatio(runtime);
+  const sampleUnit = table === 'payroll' ? 'teaching sessions (SUM(sessions)) in the standard Payroll workspace' : 'source records in standard grouped queries; specialist views can use a different evidence population';
+  const population = id === 'new_late_cancels' ? 'Acquisition first-visit cohort from New; all-time Bookings matched by member ID. Uses the same shared formula in Acquisition and the metric catalogue.'
+    : currentSnapshotMetrics.has(id) ? 'Current source snapshot relative to today in Asia/Kolkata. Standard cards exclude selected period dates and comparisons; not a reconstructed historical balance.'
+    : referenceScopes[table || ''] || 'Workspace-dependent source population; no single fixed date basis.';
+  return {
+    table, runtime, population, sampleUnit,
+    sources: metric.sources.map(sourceReference),
+    numerator: note?.numerator || ratio?.numerator || 'Not a single outer ratio; see full formula and definition.',
+    denominator: note?.denominator || ratio?.denominator || (['avg', 'median'].includes(metric.aggregation) ? 'Observation population: non-null qualifying values; median is an order statistic, not a ratio.' : 'No single outer denominator; nested divisions and compound calculations are preserved in the full formula.'),
+    aggregation: ['teacher_dependency', 'trainer_depth'].includes(id) ? 'MAX of row-level values across scope (legacy registry tag: last); not latest state' : metric.aggregation,
+    runtimeNote: id === 'new_late_cancels' ? 'Matches each group’s distinct newcomer member IDs to all-time Bookings. Load both sources. AI scoped queries do not offer this cross-source calculation.'
+      : 'The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.',
+
+  };
+}
+
+export const metricAuditFindings = [
+  { severity: 'Corrected', area: 'Source lineage', detail: 'Booking-rate pseudo-columns, malformed utilisation references, product-count lineage, and the primary Retention source for unused-credit valuation were corrected. Missing secondary inputs were added.' },
+  { severity: 'Corrected', area: 'Population wording', detail: 'Active base counts identities with an Active row without latest-row ranking. Active memberships use status exclusions rather than a three-status whitelist. Expiring purchase value includes Frozen and future-start rows.' },
+  { severity: 'Corrected', area: 'Timing and eligibility', detail: 'Bookings within 24 hours replaces same-day wording. Payment eligibility includes missing status. Lapse definitions disclose End Date fallback. Retention and return-visit equality is not guaranteed.' },
+  { severity: 'Corrected', area: 'Aggregation and confidence', detail: 'Instructor-list metrics use MAX, not latest state. Renewal counts are additive counts, not weighted rates. Payroll contributing-observation units are teaching sessions. Fixed minimum-sample rules were removed.' },
+  { severity: 'Corrected', area: 'Full filtered dataset', detail: 'Fixed metric-level minimums, automatic low-sample badges and confidence restrictions were removed. Names no longer gain Derived merely for a sample threshold. User-selected group/session/transaction filters remain available and default to no sample cutoff.' },
+  { severity: 'Corrected', area: 'Cross-tab calculations', detail: 'Acquisition rates, LTV and conversion timing now follow the same newcomer eligibility as the shared registry. Acquisition and catalogue late cancellations share one distinct-member matched booking formula. Retention reconstructions use the same status predicates as current cards. AI queries skip filters on absent source fields; the all-time cross-source booking metric is explicitly unavailable in scoped AI queries.' },
+  { severity: 'Unverified source availability', area: 'Optional/missing configured columns', detail: 'Required Leads status/LTV/UTM fields and optional Sales membership-balance fields are absent from the configured column list. Normalization can read dynamic headers; live headers were not refreshed in this audit.' },
+  { severity: 'Remaining calculation caveat', area: 'Unequal coverage', detail: 'Some ratios use differing non-null populations. Revenue per hour can include revenue on rows without session IDs while hours require IDs; membership credit valuation can repeat balances. Retention history uses current status eligibility at earlier access dates; past status changes cannot be recovered. These need a separately governed numerical correction.' },
+  { severity: 'Coverage boundary', area: 'Specialist measures', detail: 'All 175 registry entries were inspected against formulas and normalization. The code appendix locates specialist implementations but is not an individually approved business definition for every local or user-generated measure. No live source totals were reconciled. Existing saved reports retain their frozen content until rebuilt.' },
+];
+
+```
+
+### src/semantics/metric-simple-definitions.ts
+
+Symbols: simpleMetricDefinitions
+
+SQL output aliases: a, late, empty, NonPaid, newcomers, new, lapsed, sold, absent, their, complimentary, Google, Meta
+
+```typescript
+/** Plain-language summaries. Detailed source, scope and missing-data rules remain in the metric reference. */
+export const simpleMetricDefinitions: Record<string, { meaning: string; calculation: string }> = {
+  "sessions": {
+    "meaning": "The number of studio sessions in your filtered selection.",
+    "calculation": "Count one per Sessions-sheet row. For summary sheets, add the session totals recorded on each row."
+  },
+  "capacity": {
+    "meaning": "How many seats were offered across the selected sessions.",
+    "calculation": "Add recorded seat capacities."
+  },
+  "attendance": {
+    "meaning": "How many attendance visits were recorded across the selected sessions.",
+    "calculation": "Add recorded check-ins; repeat visits count again."
+  },
+  "fill_rate": {
+    "meaning": "The percentage of offered seats filled by attendance.",
+    "calculation": "Total attendance divided by total offered seats, multiplied by 100."
+  },
+  "booking_fill_rate": {
+    "meaning": "The percentage of offered seats reserved.",
+    "calculation": "Total booked seats divided by total offered seats, multiplied by 100."
+  },
+  "show_up_rate": {
+    "meaning": "Attendance compared with the number of booked seats.",
+    "calculation": "Total attendance divided by total booked seats, multiplied by 100."
+  },
+  "booked": {
+    "meaning": "How many seats were booked across the selected sessions.",
+    "calculation": "Add recorded booked-seat counts."
+  },
+  "no_shows": {
+    "meaning": "An estimate of booked seats left unused without a late cancellation.",
+    "calculation": "For sessions with all inputs recorded, subtract attendance and late cancellations from bookings, use zero for negative results, then add."
+  },
+  "no_show_rate": {
+    "meaning": "Estimated no-shows as a percentage of recorded bookings.",
+    "calculation": "Estimated no-show seats divided by all recorded booked seats, multiplied by 100."
+  },
+  "late_cancel_rate": {
+    "meaning": "The percentage of booked seats recorded as late cancellations.",
+    "calculation": "Total late-cancelled seats divided by total booked seats, multiplied by 100."
+  },
+  "avg_class_size_incl": {
+    "meaning": "Average attendance per session, including empty sessions.",
+    "calculation": "Total attendance divided by total represented sessions."
+  },
+  "avg_class_size_excl": {
+    "meaning": "Average attendance per non-empty session.",
+    "calculation": "Total attendance divided by recorded non-empty sessions on rows with positive attendance."
+  },
+  "empty_sessions": {
+    "meaning": "How many represented sessions had explicitly recorded zero attendance.",
+    "calculation": "Add recorded empty-session counts."
+  },
+  "empty_session_rate": {
+    "meaning": "The percentage of represented sessions recorded as empty.",
+    "calculation": "Empty sessions divided by all represented sessions, multiplied by 100."
+  },
+  "unsold_seats": {
+    "meaning": "How many offered seats were left unoccupied.",
+    "calculation": "For rows with capacity and attendance, subtract attendance from capacity, use zero for negative results, then add."
+  },
+  "overbooked_sessions": {
+    "meaning": "How many source rows show bookings above seat capacity.",
+    "calculation": "Count rows where recorded bookings exceed recorded capacity."
+  },
+  "attendance_cv": {
+    "meaning": "How much recorded session attendance varies relative to its average.",
+    "calculation": "Population standard deviation of attendance divided by average attendance."
+  },
+  "revenue": {
+    "meaning": "Revenue attributed to the selected studio sessions.",
+    "calculation": "Add session-attributed revenue; this differs from cash collected by payment date."
+  },
+  "gross_revenue": {
+    "meaning": "Cash collected on eligible Sales payment lines in the selected payment dates.",
+    "calculation": "Add Payment Value on non-voided lines with succeeded or missing payment status."
+  },
+  "net_revenue": {
+    "meaning": "Eligible cash collections after subtracting recorded payment tax.",
+    "calculation": "Subtract GST from Payment Value on eligible Sales lines where both are recorded, then add."
+  },
+  "vat": {
+    "meaning": "Recorded payment GST on eligible Sales lines.",
+    "calculation": "Add recorded payment GST, including source columns named VAT."
+  },
+  "transactions": {
+    "meaning": "How many known sales transactions appear in eligible payment lines.",
+    "calculation": "Count different recorded Sale IDs."
+  },
+  "units": {
+    "meaning": "How many sale-item units appear in eligible payment lines.",
+    "calculation": "Add recorded item quantities."
+  },
+  "revenue_per_session": {
+    "meaning": "Session-attributed revenue earned per represented session.",
+    "calculation": "Total session-attributed revenue divided by represented sessions."
+  },
+  "rev_pac": {
+    "meaning": "Session-attributed revenue earned per attendance visit.",
+    "calculation": "Total session-attributed revenue divided by total attendance."
+  },
+  "rev_pas": {
+    "meaning": "Session-attributed revenue earned per offered seat.",
+    "calculation": "Total session-attributed revenue divided by total seat capacity."
+  },
+  "lost_revenue": {
+    "meaning": "Estimated value of unoccupied seats at the current revenue per visit.",
+    "calculation": "Unoccupied seats multiplied by session revenue per attendance visit; this is a scenario, not measured lost cash."
+  },
+  "aov": {
+    "meaning": "Average collected revenue per known sales transaction.",
+    "calculation": "Eligible Sales collections divided by different known Sale IDs."
+  },
+  "arpu": {
+    "meaning": "Average collected revenue per known buyer.",
+    "calculation": "Eligible Sales collections divided by different known buyer Member IDs."
+  },
+  "buyers": {
+    "meaning": "How many identified buyers appear in eligible Sales lines.",
+    "calculation": "Count different recorded buyer Member IDs."
+  },
+  "discount_value": {
+    "meaning": "Total recorded item-level discounts on eligible payment lines.",
+    "calculation": "Multiply each item's unit discount by its quantity, then add."
+  },
+  "discount_rate": {
+    "meaning": "Discounts as a share of collections plus discounts.",
+    "calculation": "Total item discounts divided by collections plus item discounts, multiplied by 100."
+  },
+  "deferred_revenue": {
+    "meaning": "Current unused membership money attached to the selected Sales cohort.",
+    "calculation": "Add the latest recorded money-left balance once per membership within the selected cohort."
+  },
+  "unused_session_liability": {
+    "meaning": "Estimated value of remaining session credits.",
+    "calculation": "Multiply remaining credits by recorded revenue per credit, then add; the membership fields used depend on the workspace."
+  },
+  "membership_rev_share": {
+    "meaning": "The percentage of eligible Sales collections from the Memberships category.",
+    "calculation": "Memberships-category payment value divided by all eligible payment value, multiplied by 100."
+  },
+  "paid_attendance": {
+    "meaning": "Attendance remaining after subtracting recorded NonPaid visits.",
+    "calculation": "Total attendance minus total NonPaid visits."
+  },
+  "non_paid_rate": {
+    "meaning": "The percentage of attendance recorded as NonPaid visits.",
+    "calculation": "Total NonPaid visits divided by total attendance, multiplied by 100."
+  },
+  "membership_att_share": {
+    "meaning": "Membership visits as a share of the recorded access-type visit mix.",
+    "calculation": "Membership visits divided by combined membership, package, intro and single-class visits, multiplied by 100."
+  },
+  "intro_penetration": {
+    "meaning": "Average intro-offer visits per represented session.",
+    "calculation": "Total IntroOffers attendance divided by represented sessions."
+  },
+  "new_clients": {
+    "meaning": "How many selected New-sheet records are classified as newcomers.",
+    "calculation": "Count records classified as new; repeated member records are not deduplicated."
+  },
+  "conversion_rate": {
+    "meaning": "The percentage of newcomer records currently marked Converted.",
+    "calculation": "Converted newcomer records divided by all newcomer records, multiplied by 100; dates select first visits."
+  },
+  "second_visit_rate": {
+    "meaning": "The percentage of newcomer records with a recorded visit after trial.",
+    "calculation": "Newcomer records with positive Visits Post Trial divided by all newcomer records, multiplied by 100."
+  },
+  "zero_return_rate": {
+    "meaning": "The percentage of newcomer records explicitly reporting no post-trial visits.",
+    "calculation": "Newcomer records with Visits Post Trial equal to zero divided by all newcomer records, multiplied by 100."
+  },
+  "avg_conversion_span": {
+    "meaning": "Average recorded days to conversion for converted newcomers.",
+    "calculation": "Average nonnegative recorded conversion days among converted newcomer records."
+  },
+  "median_conversion_span": {
+    "meaning": "The middle recorded conversion time for converted newcomers.",
+    "calculation": "Take the median of nonnegative recorded conversion days among converted newcomer records."
+  },
+  "avg_ltv": {
+    "meaning": "Average recorded lifetime spend of the selected newcomer cohort.",
+    "calculation": "Average recorded Ltv values among newcomer records; this is observed spend, not a forecast."
+  },
+  "first_visitors": {
+    "meaning": "How many New-sheet records fall in the selected first-visit scope.",
+    "calculation": "Count all selected New-sheet rows, including rows not classified as newcomers."
+  },
+  "new_converted": {
+    "meaning": "How many newcomer records currently have Converted status.",
+    "calculation": "Count newcomer records whose latest recorded Conversion Status is Converted."
+  },
+  "new_retained": {
+    "meaning": "How many newcomer records currently have Retained status.",
+    "calculation": "Count newcomer records whose latest recorded Retention Status is Retained."
+  },
+  "new_total_spend": {
+    "meaning": "Recorded lifetime spend attached to the selected newcomer cohort.",
+    "calculation": "Add newcomer Ltv values; dates select first visits, not payment dates."
+  },
+  "new_post_trial_spend": {
+    "meaning": "Recorded spending after trial attached to the newcomer cohort.",
+    "calculation": "Add recorded Ltv Post Trial for newcomer records."
+  },
+  "new_post_trial_purchases": {
+    "meaning": "Recorded purchases after trial attached to the newcomer cohort.",
+    "calculation": "Add recorded Purchase Count Post Trial for newcomer records."
+  },
+  "new_total_purchases": {
+    "meaning": "Recorded all-time purchases attached to the newcomer cohort.",
+    "calculation": "Add recorded all-time purchase counts for newcomer records."
+  },
+  "new_visits": {
+    "meaning": "Recorded accumulated visits attached to the newcomer cohort.",
+    "calculation": "Add recorded No of Visits for newcomer records."
+  },
+  "new_revenue_per_visit": {
+    "meaning": "Recorded lifetime spend per visit for the newcomer cohort.",
+    "calculation": "Newcomer lifetime spend divided by visits on newcomer records with a recorded Ltv."
+  },
+  "new_late_cancels": {
+    "meaning": "Late-cancelled bookings belonging to the selected newcomer cohort.",
+    "calculation": "Count late-cancelled bookings linked to the group’s distinct newcomer member IDs, regardless of booking date."
+  },
+  "avg_first_purchase": {
+    "meaning": "Average positive first-purchase value for converted newcomers.",
+    "calculation": "Average positive recorded First Purchase Value among converted newcomer records."
+  },
+  "ltv_to_first_purchase": {
+    "meaning": "Recorded lifetime spend compared with first-purchase value for converted newcomers.",
+    "calculation": "Average Ltv divided by average first-purchase value among converted newcomer records with a positive first purchase."
+  },
+  "retention_rate": {
+    "meaning": "The percentage of newcomer records currently marked Retained.",
+    "calculation": "Retained newcomer records divided by all newcomer records, multiplied by 100; no fixed retention window is implied."
+  },
+  "active_base": {
+    "meaning": "How many identified members have an Active lifecycle row in the current snapshot.",
+    "calculation": "Count different Member IDs with an Active lifecycle row across all first-visit dates."
+  },
+  "at_risk_actives": {
+    "meaning": "Active New-sheet records reporting more than 21 days since a visit.",
+    "calculation": "Count selected New-sheet rows marked Active with recorded absence above 21 days."
+  },
+  "visits_post_trial": {
+    "meaning": "Recorded post-trial visits across all selected New-sheet rows.",
+    "calculation": "Add Visits Post Trial without separately restricting rows to newcomers."
+  },
+  "active_memberships": {
+    "meaning": "How many membership rows are currently running under the app's status rules.",
+    "calculation": "Count rows started by today and not ended, with a recorded status other than Lapsed, Not Activated or Frozen."
+  },
+  "churn_rate": {
+    "meaning": "The percentage of the eligible paid renewal cohort confirmed as lapsed.",
+    "calculation": "Confirmed lapsed outcomes divided by all eligible renewal outcomes, multiplied by 100, after one-member-per-expiry-month deduplication and the 30-day grace rule."
+  },
+  "lapsed_members": {
+    "meaning": "How many identified members have a latest eligible paid membership confirmed lapsed.",
+    "calculation": "Count different members whose latest eligible membership is Lapsed at least 30 days after its churn date, or end date when missing, with expiry in scope."
+  },
+  "utilisation": {
+    "meaning": "The percentage of valid limited membership credits already used.",
+    "calculation": "Total allowance minus remaining credits divided by total allowance, multiplied by 100, using only positive allowances with valid remaining balances."
+  },
+  "zero_usage_memberships": {
+    "meaning": "Memberships started over seven days ago with zero or unknown recorded usage.",
+    "calculation": "Count non-Renewed rows over seven days old with zero completed usage, or no usage evidence and no last visit; valid allowance minus balance supplies missing usage."
+  },
+  "dormant_actives": {
+    "meaning": "Currently running membership rows reporting more than 21 days since a visit.",
+    "calculation": "Count current active-membership rows whose recorded Days Since Last Visit exceeds 21."
+  },
+  "revenue_at_risk_30d": {
+    "meaning": "Recorded purchase value attached to memberships expiring in the next 30 days.",
+    "calculation": "Add Amount Paid for expiries from today through 30 days ahead, excluding Renewed, Lapsed and Not Activated statuses."
+  },
+  "risk_score": {
+    "meaning": "An uncalibrated score combining credit usage, absence and booking behaviour.",
+    "calculation": "Average a score weighted 30% to unused allowance, 35% to absence scaled to 60 days, 15% to cancellation rate and 20% to inverse attendance rate, then multiply by 100."
+  },
+  "memberships_count": {
+    "meaning": "How many selected membership records appear in Lapsed.",
+    "calculation": "Count selected membership rows, including multiple memberships for one member."
+  },
+  "remaining_sessions": {
+    "meaning": "Total recorded session credits remaining on selected memberships.",
+    "calculation": "Add recorded remaining credits."
+  },
+  "days_absent": {
+    "meaning": "Average recorded days since the last visit across membership rows.",
+    "calculation": "Average recorded Days Since Last Visit; members with several memberships can contribute more than once."
+  },
+  "bookings": {
+    "meaning": "How many booking records are in the selected scope.",
+    "calculation": "Count all selected Bookings rows, regardless of outcome."
+  },
+  "unique_bookers": {
+    "meaning": "How many identified members appear in selected bookings.",
+    "calculation": "Count different recorded Member IDs across all booking outcomes."
+  },
+  "booking_avg_class_size": {
+    "meaning": "Average attended bookings per session represented in Bookings.",
+    "calculation": "Attended booking rows divided by different session identities represented in Bookings, including those with no attendance."
+  },
+  "booking_empty_sessions": {
+    "meaning": "Sessions represented in Bookings with no attended booking.",
+    "calculation": "Count different represented session identities, then subtract those with an attended row."
+  },
+  "cancellation_rate": {
+    "meaning": "The percentage of booking rows flagged Cancelled.",
+    "calculation": "Cancelled booking rows divided by all booking rows, multiplied by 100."
+  },
+  "booking_late_rate": {
+    "meaning": "The percentage of booking rows flagged Late Cancelled.",
+    "calculation": "Late-cancelled booking rows divided by all booking rows, multiplied by 100."
+  },
+  "booking_no_show_rate": {
+    "meaning": "The percentage of booking rows flagged No Show.",
+    "calculation": "No-show booking rows divided by all booking rows, multiplied by 100."
+  },
+  "booking_attendance_rate": {
+    "meaning": "The percentage of booking rows flagged Attended.",
+    "calculation": "Attended booking rows divided by all booking rows, multiplied by 100."
+  },
+  "refund_rate": {
+    "meaning": "The percentage of booking rows flagged Refunded.",
+    "calculation": "Refunded booking rows divided by all booking rows, multiplied by 100; this is not a refunded-money rate."
+  },
+  "effective_attendance": {
+    "meaning": "The percentage of bookings attended without a known adverse outcome flag.",
+    "calculation": "Attended rows without Cancelled, Late Cancelled or No Show flags divided by all booking rows, multiplied by 100."
+  },
+  "booking_lead_time_days": {
+    "meaning": "Average recorded time from sale to session for nonimported bookings.",
+    "calculation": "Average valid nonnegative elapsed days between Sale Date and Session Date."
+  },
+  "same_day_share": {
+    "meaning": "The percentage of nonimported bookings made less than 24 hours before the session.",
+    "calculation": "Rows with valid sale-to-session elapsed time from zero to under 24 hours divided by all nonimported booking rows, multiplied by 100."
+  },
+  "revenue_per_booking": {
+    "meaning": "Average recorded booking value per nonimported booking.",
+    "calculation": "Recorded Sale Value on nonimported rows divided by all nonimported booking rows."
+  },
+  "leads": {
+    "meaning": "How many lead records were created in the selected period.",
+    "calculation": "Count selected lead rows without deduplicating people."
+  },
+  "lead_conversion_rate": {
+    "meaning": "The percentage of selected lead records currently at Membership Sold stage.",
+    "calculation": "Membership Sold stage records divided by all creation-date cohort lead records, multiplied by 100."
+  },
+  "response_time_hours": {
+    "meaning": "Average recorded hours from lead creation to first follow-up.",
+    "calculation": "Average valid nonnegative elapsed hours between Created At and Follow Up 1 Date."
+  },
+  "untouched_leads": {
+    "meaning": "Open lead records over 48 hours old with no recorded follow-up dates.",
+    "calculation": "Count records with no Follow Up 1–4 dates, created over 48 hours before today's midnight, excluding Membership Sold, Lost and Disqualified records."
+  },
+  "touches": {
+    "meaning": "Average number of recorded follow-up date fields per lead.",
+    "calculation": "Count populated Follow Up 1–4 dates per row, then average across selected leads."
+  },
+  "open_leads": {
+    "meaning": "Lead records not recorded as sold, lost or disqualified.",
+    "calculation": "Count records outside Membership Sold stage whose status is not Lost or Disqualified; missing status can qualify."
+  },
+  "pipeline_value": {
+    "meaning": "Estimated value of the open lead pipeline.",
+    "calculation": "Open lead count multiplied by the cohort Membership Sold rate and average positive first purchase of converted newcomers in the applicable scope."
+  },
+  "checkins": {
+    "meaning": "How many Checkins records are explicitly marked attended.",
+    "calculation": "Count attended Checkins rows; repeat visits count again."
+  },
+  "unique_attendees": {
+    "meaning": "How many identified members attended in the selected Checkins scope.",
+    "calculation": "Count different recorded Member IDs on attended Checkins rows."
+  },
+  "attendance_avg_class_size": {
+    "meaning": "Average attended check-ins per session represented in Checkins.",
+    "calculation": "Attended Checkins rows divided by different known Session IDs represented in Checkins."
+  },
+  "attendance_empty_sessions": {
+    "meaning": "Sessions represented in Checkins with no attended row.",
+    "calculation": "Count different known Session IDs, then subtract those with an attended row."
+  },
+  "visits_per_member": {
+    "meaning": "Average attended check-ins per identified attendee.",
+    "calculation": "Attended Checkins rows divided by different known attended Member IDs."
+  },
+  "complimentary_rate": {
+    "meaning": "Complimentary Sessions visits as a percentage of Sessions attendance.",
+    "calculation": "Total numeric Sessions Complimentary visits divided by Sessions CheckedIn attendance, multiplied by 100."
+  },
+  "revenue_per_checkin": {
+    "meaning": "Average attributed revenue per attended check-in.",
+    "calculation": "Recorded Paid value on attended Checkins rows divided by attended Checkins row count."
+  },
+  "teaching_hours": {
+    "meaning": "Recorded teaching duration counted once per attended session.",
+    "calculation": "Add valid recorded session minutes once per known attended Session ID, then divide by 60."
+  },
+  "revenue_per_hour": {
+    "meaning": "Attributed attended revenue per recorded teaching hour.",
+    "calculation": "Attended revenue on rows with positive valid duration divided by teaching hours counted once per known session."
+  },
+  "trainers": {
+    "meaning": "How many identified instructors appear in Teacher Recurring.",
+    "calculation": "Count different recorded TrainerIDs in selected Teacher Recurring rows."
+  },
+  "teacher_dependency": {
+    "meaning": "The largest listed top-instructor attendance share in the selected recurring rows.",
+    "calculation": "For each row, divide the leading listed instructor's attendance by attendance across its Top5Trainers list; take the largest share."
+  },
+  "trainer_depth": {
+    "meaning": "The largest instructor-list size in the selected recurring rows.",
+    "calculation": "Count instructors in each Top5Trainers list, then take the largest count."
+  },
+  "payroll_revenue": {
+    "meaning": "Monthly instructor-attributed revenue reported by Payroll.",
+    "calculation": "Add Payroll Total Paid; this is attributed revenue, not Sales cash collections."
+  },
+  "payroll_cost": {
+    "meaning": "Estimated instructor cost using the configured flat session rate.",
+    "calculation": "Payroll session count multiplied by the configured cost per session."
+  },
+  "contribution": {
+    "meaning": "Payroll-attributed revenue after estimated flat instructor costs.",
+    "calculation": "Payroll-attributed revenue minus session count multiplied by the configured cost per session."
+  },
+  "contribution_margin": {
+    "meaning": "The percentage of Payroll-attributed revenue left after estimated instructor costs.",
+    "calculation": "Scenario contribution divided by Payroll-attributed revenue, multiplied by 100."
+  },
+  "payroll_pct_of_revenue": {
+    "meaning": "Estimated flat instructor costs as a percentage of Payroll-attributed revenue.",
+    "calculation": "Session count multiplied by configured cost per session, divided by Payroll-attributed revenue, multiplied by 100."
+  },
+  "empty_session_cost": {
+    "meaning": "Estimated instructor cost of recorded empty sessions.",
+    "calculation": "Recorded empty sessions multiplied by the configured cost per session."
+  },
+  "break_even_class_size": {
+    "meaning": "Attendance per session needed to cover the configured instructor cost.",
+    "calculation": "Configured cost per session divided by observed session revenue per attendance visit."
+  },
+  "payroll_conversion": {
+    "meaning": "Payroll-reported conversions as a percentage of Payroll newcomers.",
+    "calculation": "Total Payroll Converted divided by total Payroll New, multiplied by 100."
+  },
+  "payroll_retention": {
+    "meaning": "Payroll-reported retained newcomers as a percentage of Payroll newcomers.",
+    "calculation": "Total Payroll Retained divided by total Payroll New, multiplied by 100."
+  },
+  "new_handled": {
+    "meaning": "Total newcomers attributed to instructors in Payroll.",
+    "calculation": "Add Payroll New counts; people may repeat across instructor attributions."
+  },
+  "records": {
+    "meaning": "How many rows are in the current query population.",
+    "calculation": "Count rows from the selected source; the source determines what one row represents."
+  },
+  "draw_premium_pp": {
+    "meaning": "Session fill rate above or below the comparable schedule-slot baseline.",
+    "calculation": "Subtract the capacity-weighted matching-slot baseline fill rate from session fill rate, expressed in percentage points; the baseline includes all instructors."
+  },
+  "booking_attended": {
+    "meaning": "How many booking records are flagged Attended.",
+    "calculation": "Count booking rows flagged Attended, even if another outcome flag is also present."
+  },
+  "booking_cancelled": {
+    "meaning": "How many booking records are flagged Cancelled.",
+    "calculation": "Count booking rows flagged Cancelled."
+  },
+  "booking_no_shows": {
+    "meaning": "How many booking records are flagged No Show.",
+    "calculation": "Count booking rows flagged No Show."
+  },
+  "booking_late_cancelled": {
+    "meaning": "How many booking records are flagged Late Cancelled.",
+    "calculation": "Count booking rows flagged Late Cancelled."
+  },
+  "membership_revenue": {
+    "meaning": "Recorded purchase value attached to selected membership records.",
+    "calculation": "Add membership Amount Paid; date scope follows membership expiry rather than payment date."
+  },
+  "checkin_revenue": {
+    "meaning": "Recorded attributed revenue on attended Checkins rows.",
+    "calculation": "Add recorded Paid value only on attended Checkins rows."
+  },
+  "payroll_revenue_per_session": {
+    "meaning": "Payroll-attributed revenue per recorded Payroll session.",
+    "calculation": "Total Payroll-attributed revenue divided by total Payroll sessions."
+  },
+  "nonempty_reliability": {
+    "meaning": "The percentage of represented sessions not recorded as empty.",
+    "calculation": "One minus empty sessions divided by represented sessions, multiplied by 100."
+  },
+  "active_slots": {
+    "meaning": "How many different recurring schedule patterns appear in Sessions.",
+    "calculation": "Count different combinations of studio, full format, weekday and time."
+  },
+  "gap_to_break_even": {
+    "meaning": "Average attendance above or below the instructor-cost break-even level.",
+    "calculation": "Average attendance per session minus instructor-cost break-even attendance per session."
+  },
+  "booking_pending": {
+    "meaning": "Booking records with no known attendance or cancellation outcome.",
+    "calculation": "Count rows without Attended, Cancelled, No Show or Late Cancelled flags; missing flags count as absent."
+  },
+  "converted_leads": {
+    "meaning": "How many lead records currently have Membership Sold as their stage.",
+    "calculation": "Count records whose Stage Name is Membership Sold, ignoring case and surrounding spaces."
+  },
+  "trials_completed": {
+    "meaning": "How many lead records currently have Trial Completed as their stage.",
+    "calculation": "Count records whose Stage Name is Trial Completed; later stages are not included automatically."
+  },
+  "complimentary_visits": {
+    "meaning": "How many complimentary visits are recorded in Sessions.",
+    "calculation": "Add numeric values from Sessions Complimentary."
+  },
+  "session_complimentary_rate": {
+    "meaning": "The percentage of Sessions attendance recorded as complimentary.",
+    "calculation": "Sessions Complimentary visits divided by Sessions CheckedIn attendance, multiplied by 100."
+  },
+  "late_affected_sessions": {
+    "meaning": "How many booking-source sessions have at least one late cancellation.",
+    "calculation": "Count different session identities among late-cancelled booking rows."
+  },
+  "late_recorded_value": {
+    "meaning": "Recorded booking value attached to nonimported late cancellations.",
+    "calculation": "Add Sale Value on late-cancelled, nonimported Bookings rows; this is not measured lost cash."
+  },
+  "website_contacted": {
+    "meaning": "Website lead records with at least one recorded follow-up date.",
+    "calculation": "Count Website-cohort records with any populated Follow Up 1–4 date."
+  },
+  "website_trials": {
+    "meaning": "Website lead records currently marked Trial Completed.",
+    "calculation": "Count Website creation-date cohort records with Trial Status Trial Completed."
+  },
+  "website_members": {
+    "meaning": "Website lead records currently marked Converted.",
+    "calculation": "Count Website creation-date cohort records with Conversion Status Converted."
+  },
+  "website_retained": {
+    "meaning": "Website lead records currently marked Retained.",
+    "calculation": "Count Website creation-date cohort records with Retention Status Retained."
+  },
+  "website_trial_members": {
+    "meaning": "Website lead records marked both Trial Completed and Converted.",
+    "calculation": "Count Website-cohort rows with both statuses; event order is not established."
+  },
+  "website_open": {
+    "meaning": "Website lead records not converted, lost or disqualified.",
+    "calculation": "Count Website records not marked Converted and not explicitly Lost or Disqualified."
+  },
+  "website_untouched": {
+    "meaning": "Open Website leads over 48 hours old with no recorded follow-up.",
+    "calculation": "Count open Website records with no Follow Up 1–4 dates, created over 48 hours before today's midnight."
+  },
+  "website_contact_rate": {
+    "meaning": "The percentage of Website lead records with recorded follow-up.",
+    "calculation": "Website records with any follow-up date divided by all Website-cohort records, multiplied by 100."
+  },
+  "website_trial_rate": {
+    "meaning": "The percentage of Website lead records currently marked Trial Completed.",
+    "calculation": "Website Trial Completed records divided by all Website-cohort records, multiplied by 100."
+  },
+  "website_win_rate": {
+    "meaning": "The percentage of Website lead records currently marked Converted.",
+    "calculation": "Website Converted records divided by all Website-cohort records, multiplied by 100."
+  },
+  "website_trial_win_rate": {
+    "meaning": "The percentage of completed-trial Website records also marked Converted.",
+    "calculation": "Website records marked both Trial Completed and Converted divided by Website Trial Completed records, multiplied by 100."
+  },
+  "website_ltv": {
+    "meaning": "Average positive lifetime spend recorded for converted Website leads.",
+    "calculation": "Average positive recorded LTV among Website-cohort records marked Converted."
+  },
+  "website_pipeline_value": {
+    "meaning": "Estimated value of open Website lead records.",
+    "calculation": "Open Website leads multiplied by Website cohort conversion rate and average positive first purchase of converted newcomers in the applicable New-sheet scope."
+  },
+  "meta_records": {
+    "meaning": "How many Meta reporting rows are selected.",
+    "calculation": "Count Meta source rows; reporting rows are not unique ads or people."
+  },
+  "meta_spend": {
+    "meaning": "Advertising spend reported by Meta.",
+    "calculation": "Add recorded Meta spend across selected reporting rows."
+  },
+  "meta_impressions": {
+    "meaning": "Advertising views reported by Meta, including repeated views.",
+    "calculation": "Add recorded Meta impressions."
+  },
+  "meta_reach": {
+    "meaning": "Sum of Meta audience counts across reporting rows.",
+    "calculation": "Add row-level reach; people appearing in several rows are counted again."
+  },
+  "meta_clicks": {
+    "meaning": "All clicks reported by Meta.",
+    "calculation": "Add recorded Meta clicks, including clicks beyond link clicks."
+  },
+  "meta_link_clicks": {
+    "meaning": "Inline link clicks reported by Meta.",
+    "calculation": "Add Meta inline_link_clicks."
+  },
+  "meta_leads": {
+    "meaning": "Lead events attributed by Meta.",
+    "calculation": "Add Meta leads; these are platform events rather than identified CRM leads."
+  },
+  "meta_instant_leads": {
+    "meaning": "On-Facebook lead events reported by Meta.",
+    "calculation": "Add Meta on_facebook_lead events; these can overlap Meta leads."
+  },
+  "meta_purchases": {
+    "meaning": "Purchase events attributed by Meta.",
+    "calculation": "Add Meta purchase events under the source's attribution settings."
+  },
+  "meta_purchase_value": {
+    "meaning": "Purchase value attributed by Meta.",
+    "calculation": "Add Meta-reported purchase value; this differs from reconciled Sales collections."
+  },
+  "meta_add_to_cart": {
+    "meaning": "Add-to-cart events reported by Meta.",
+    "calculation": "Add Meta add_to_cart events."
+  },
+  "meta_checkout": {
+    "meaning": "Checkout-start events reported by Meta.",
+    "calculation": "Add Meta initiate_checkout events, not completed purchases."
+  },
+  "meta_ctr": {
+    "meaning": "The percentage of Meta impressions resulting in a reported click.",
+    "calculation": "Total Meta clicks divided by total impressions, multiplied by 100."
+  },
+  "meta_cpc": {
+    "meaning": "Meta spend per reported click.",
+    "calculation": "Total Meta spend divided by total clicks."
+  },
+  "meta_cpm": {
+    "meaning": "Meta spend per thousand reported impressions.",
+    "calculation": "Total Meta spend divided by total impressions, multiplied by 1,000."
+  },
+  "meta_cpl": {
+    "meaning": "Meta spend per Meta-attributed lead event.",
+    "calculation": "Total Meta spend divided by total Meta leads."
+  },
+  "meta_cpa": {
+    "meaning": "Meta spend per Meta-attributed purchase event.",
+    "calculation": "Total Meta spend divided by total Meta purchases."
+  },
+  "meta_roas": {
+    "meaning": "Meta-attributed purchase value for each rupee of Meta spend.",
+    "calculation": "Total Meta purchase value divided by total Meta spend."
+  },
+  "meta_frequency": {
+    "meaning": "Impressions relative to summed row-level Meta reach.",
+    "calculation": "Total impressions divided by summed row reach; repeated audiences prevent a unique-person frequency measure."
+  },
+  "crm_trials": {
+    "meaning": "CRM lead records currently marked Trial Completed.",
+    "calculation": "Count creation-date cohort lead rows with Trial Status Trial Completed."
+  },
+  "crm_members": {
+    "meaning": "CRM lead records currently marked Converted.",
+    "calculation": "Count creation-date cohort lead rows with Conversion Status Converted."
+  },
+  "crm_retained": {
+    "meaning": "CRM lead records currently marked Retained.",
+    "calculation": "Count creation-date cohort lead rows with Retention Status Retained."
+  },
+  "crm_win_rate": {
+    "meaning": "The percentage of CRM lead records currently marked Converted.",
+    "calculation": "Converted CRM records divided by all selected CRM lead records, multiplied by 100."
+  },
+  "crm_google_leads": {
+    "meaning": "CRM lead records explicitly classified as Google sourced.",
+    "calculation": "Count records classified Google from Source Name or UTM Source tags, with conflicting channel tags kept separate."
+  },
+  "crm_meta_leads": {
+    "meaning": "CRM lead records explicitly classified as Meta sourced.",
+    "calculation": "Count records classified Meta from Meta, Facebook or Instagram source tags, with conflicting channel tags kept separate."
+  },
+  "purchase_frequency": {
+    "meaning": "Average known sales transactions per identified buyer.",
+    "calculation": "Different Sale IDs linked to a known Member ID divided by different known buyer Member IDs."
+  },
+  "product_breadth": {
+    "meaning": "How many different normalized product names appear in eligible Sales lines.",
+    "calculation": "Count different recorded normalized product names, rather than stock codes."
+  },
+  "lapsed_memberships": {
+    "meaning": "Confirmed lapsed outcomes in the eligible paid membership-expiry cohort.",
+    "calculation": "Count lapsed outcomes after one-member-per-expiry-month deduplication and the 30-day grace rule, excluding restricted or unpaid memberships."
+  }
+};
+
+```
+
 ### src/semantics/metrics.ts
 
 Symbols: QueryContext, MetricDef, metrics, metricSQL, contributorPredicate, expression, start, depth, i, from, metricDenominatorSQL, expression, match, start, depth, i
@@ -32227,7 +34164,6 @@ export interface MetricDef {
   aggregation: "sum" | "weighted" | "median" | "avg" | "last";
   higherIsBetter: boolean;
   target?: number;
-  minSample: number;
   sources: string[];
 }
 export const metrics: Record<string, MetricDef> = Object.fromEntries(
@@ -32272,6 +34208,29 @@ export function metricDenominatorSQL(id:string,ctx:QueryContext):string|null {
   const start=expression.indexOf('NULLIF(');if(start<0)return null;
   let depth=0;for(let i=start+7;i<expression.length;i++){if(expression[i]==='(')depth++;else if(expression[i]===')')depth--;else if(expression[i]===','&&depth===0)return expression.slice(start+7,i).trim();}
   return null;
+}
+
+```
+
+### src/semantics/source-scope.ts
+
+Symbols: scopeFields, collectPresentFields, row, field, sourceCarries
+
+SQL output aliases: No SQL aliases
+
+```typescript
+const scopeFields = ['location','trainer','format','format_group','source','category','day','time',
+  'member','month','status','product','associate','capacity','payment_method','session_type','is_new'];
+/** Populated fields, rather than shared schema columns, determine applicable filters. */
+export function collectPresentFields(rows: Record<string, unknown>[], present = new Set<string>()) {
+  for (const row of rows) for (const field of scopeFields) {
+    if (!present.has(field) && row[field] !== null && row[field] !== undefined) present.add(field);
+  }
+  return present;
+}
+/** Unknown coverage preserves filters; measured all-null fields cannot constrain a source. */
+export function sourceCarries(present: ReadonlySet<string> | undefined, field: string) {
+  return !present || present.has(field);
 }
 
 ```

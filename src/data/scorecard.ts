@@ -44,7 +44,7 @@ export const compositeInputs: [expression: string, inverse: boolean][] = [
   ["revenue_per_session", false],
   ["conversion_rate", false],
   ["retention_rate", false],
-  ["late_cancel_rate", true],
+  ["booking_late_rate", true],
   ["empty_share", true],
 ];
 
@@ -67,7 +67,7 @@ export function scorecardSQL(dimension: ScorecardDimension, filters: Filters, tr
     `PERCENT_RANK() OVER (ORDER BY COALESCE(${inverse ? `-${expression}` : expression}, ${inverse ? "-1" : "0"}))`;
   return `WITH f AS (SELECT * FROM ${metricFacts(filters, "sessions", transient)} WHERE ${display(dimension)} IS NOT NULL),
   s AS (SELECT ${display(dimension)} AS label, ${key} AS k, ${metricSQL(scorecardSessionIds, context(filters, transient))},
-    SUM(sessions)-COALESCE(SUM(empty),0) AS non_empty_sessions, COUNT(*) AS n FROM f GROUP BY 1, 2),
+    COUNT(DISTINCT session_id) FILTER (WHERE checked_in>0) AS non_empty_sessions, COUNT(*) AS n FROM f GROUP BY 1, 2),
   ${tops.map(([id, column]) => `${id} AS (SELECT k, ARG_MAX(v, a) AS ${id} FROM (SELECT ${key} AS k, ${column} AS v, SUM(checked_in) AS a FROM f WHERE ${column} IS NOT NULL GROUP BY 1, 2) GROUP BY k)`).join(",\n  ")},
   nw AS (SELECT ${key} AS k, COUNT(*) FILTER (WHERE is_new) AS new_visitors,
     COUNT(*) FILTER (WHERE is_new AND conversion='Converted') AS converted,
@@ -79,7 +79,7 @@ export function scorecardSQL(dimension: ScorecardDimension, filters: Filters, tr
     nw.new_visitors, nw.converted, nw.retained,
     nw.converted::DOUBLE/NULLIF(nw.new_visitors,0) AS conversion_rate,
     nw.retained::DOUBLE/NULLIF(nw.new_visitors,0) AS retention_rate,
-    bk.bookings, bk.late_cancelled, bk.late_cancelled::DOUBLE/NULLIF(bk.bookings,0) AS late_cancel_rate,
+    bk.bookings, bk.late_cancelled, bk.late_cancelled::DOUBLE/NULLIF(bk.bookings,0) AS booking_late_rate,
     s.empty_sessions::DOUBLE/NULLIF(s.sessions,0) AS empty_share
     FROM s ${tops.map(([id]) => `LEFT JOIN ${id} USING (k)`).join(" ")} LEFT JOIN nw USING (k) LEFT JOIN bk USING (k))
   SELECT *, ROUND(100*(${compositeInputs.map(([e, inverse]) => rank(e, inverse)).join(" + ")})/${compositeInputs.length}) AS composite_score
@@ -93,7 +93,7 @@ export function scorecardTotalSQL(dimension: ScorecardDimension, filters: Filter
   return `WITH f AS (SELECT * FROM ${metricFacts(filters, "sessions", transient)} WHERE ${display(dimension)} IS NOT NULL),
   keys AS (SELECT DISTINCT ${key} AS k FROM f),
   s AS (SELECT ${metricSQL(scorecardSessionIds, context(filters, transient))},
-    SUM(sessions)-COALESCE(SUM(empty),0) AS non_empty_sessions, COUNT(*) AS n FROM f),
+    COUNT(DISTINCT session_id) FILTER (WHERE checked_in>0) AS non_empty_sessions, COUNT(*) AS n FROM f),
   nw AS (SELECT COUNT(*) FILTER (WHERE is_new) AS new_visitors,
     COUNT(*) FILTER (WHERE is_new AND conversion='Converted') AS converted,
     COUNT(*) FILTER (WHERE is_new AND retention='Retained') AS retained
@@ -103,7 +103,7 @@ export function scorecardTotalSQL(dimension: ScorecardDimension, filters: Filter
   SELECT s.*, nw.new_visitors, nw.converted, nw.retained,
     nw.converted::DOUBLE/NULLIF(nw.new_visitors,0) AS conversion_rate,
     nw.retained::DOUBLE/NULLIF(nw.new_visitors,0) AS retention_rate,
-    bk.bookings, bk.late_cancelled, bk.late_cancelled::DOUBLE/NULLIF(bk.bookings,0) AS late_cancel_rate
+    bk.bookings, bk.late_cancelled, bk.late_cancelled::DOUBLE/NULLIF(bk.bookings,0) AS booking_late_rate
   FROM s CROSS JOIN nw CROSS JOIN bk`;
 }
 

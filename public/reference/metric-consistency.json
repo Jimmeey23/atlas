@@ -1,0 +1,218 @@
+{
+  "checkedAt": "2026-10-18T04:43:47.009Z",
+  "scope": {
+    "from": "2026-09-01",
+    "to": "2026-09-30",
+    "location": "All studios",
+    "imports": false
+  },
+  "snapshots": {
+    "new": {
+      "fetchedAt": "2026-10-18T04:24:33.365Z",
+      "hash": "1927a15a35974bf7046f2c981e22f1134472a1b9",
+      "rows": 21250
+    },
+    "bookings": {
+      "fetchedAt": "2026-10-18T04:25:08.817Z",
+      "hash": "db8971816b1d0267e64e6d938103677a408176cb",
+      "rows": 215228
+    },
+    "sales": {
+      "fetchedAt": "2026-10-18T04:24:35.193Z",
+      "hash": "9ed03a6e31440e5421c99e45533c35acfa205395",
+      "rows": 25271
+    },
+    "lapsed": {
+      "fetchedAt": "2026-10-18T04:23:56.082Z",
+      "hash": "ff9df469f3060283d5a7cf76eee030b4d60f03da",
+      "rows": 29343
+    }
+  },
+  "checks": [
+    {
+      "area": "Acquisition tables ↔ shared metrics",
+      "metric": "conversion_rate",
+      "sharedValue": 0.12919896640826872,
+      "viewValue": 0.12919896640826872,
+      "pass": true
+    },
+    {
+      "area": "Acquisition tables ↔ shared metrics",
+      "metric": "retention_rate",
+      "sharedValue": 0.15503875968992248,
+      "viewValue": 0.15503875968992248,
+      "pass": true
+    },
+    {
+      "area": "Acquisition tables ↔ shared metrics",
+      "metric": "second_visit_rate",
+      "sharedValue": 0.1731266149870801,
+      "viewValue": 0.1731266149870801,
+      "pass": true
+    },
+    {
+      "area": "Acquisition tables ↔ shared metrics",
+      "metric": "avg_ltv",
+      "sharedValue": 1297.3901808785529,
+      "viewValue": 1297.3901808785529,
+      "pass": true
+    },
+    {
+      "area": "Acquisition tables ↔ shared metrics",
+      "metric": "avg_first_purchase",
+      "sharedValue": 7650.12,
+      "viewValue": 7650.12,
+      "pass": true
+    },
+    {
+      "area": "Acquisition tables ↔ shared metrics",
+      "metric": "avg_conversion_span",
+      "sharedValue": 7.8,
+      "viewValue": 7.8,
+      "pass": true
+    },
+    {
+      "area": "Acquisition tables ↔ shared metrics",
+      "metric": "median_conversion_span",
+      "sharedValue": 5,
+      "viewValue": 5,
+      "pass": true
+    },
+    {
+      "area": "Acquisition tables ↔ shared metrics",
+      "metric": "new_total_spend",
+      "sharedValue": 502090,
+      "viewValue": 502090,
+      "pass": true
+    },
+    {
+      "area": "Acquisition tables ↔ shared metrics",
+      "metric": "new_post_trial_spend",
+      "sharedValue": 398653,
+      "viewValue": 398653,
+      "pass": true
+    },
+    {
+      "area": "Acquisition tables ↔ shared metrics",
+      "metric": "new_post_trial_purchases",
+      "sharedValue": 68,
+      "viewValue": 68,
+      "pass": true
+    },
+    {
+      "area": "Acquisition tables ↔ shared metrics",
+      "metric": "new_total_purchases",
+      "sharedValue": 144,
+      "viewValue": 144,
+      "pass": true
+    },
+    {
+      "area": "Acquisition tables ↔ shared metrics",
+      "metric": "new_visits",
+      "sharedValue": 600,
+      "viewValue": 600,
+      "pass": true
+    },
+    {
+      "area": "Acquisition tables ↔ shared metrics",
+      "metric": "new_revenue_per_visit",
+      "sharedValue": 836.8166666666667,
+      "viewValue": 836.8166666666667,
+      "pass": true
+    },
+    {
+      "area": "Acquisition tables ↔ shared metrics",
+      "metric": "new_late_cancels",
+      "sharedValue": 42,
+      "viewValue": 42,
+      "pass": true
+    },
+    {
+      "area": "Sales scorecards ↔ shared metrics",
+      "metric": "gross_revenue",
+      "sharedValue": 5954184.939999998,
+      "viewValue": 5954184.9399999995,
+      "pass": true
+    },
+    {
+      "area": "Sales scorecards ↔ shared metrics",
+      "metric": "net_revenue",
+      "sharedValue": 5669923.990000009,
+      "viewValue": 5669923.990000014,
+      "pass": true
+    },
+    {
+      "area": "Sales scorecards ↔ shared metrics",
+      "metric": "transactions",
+      "sharedValue": 867,
+      "viewValue": 867,
+      "pass": true
+    },
+    {
+      "area": "Sales scorecards ↔ shared metrics",
+      "metric": "buyers",
+      "sharedValue": 529,
+      "viewValue": 529,
+      "pass": true
+    },
+    {
+      "area": "Sales scorecards ↔ shared metrics",
+      "metric": "aov",
+      "sharedValue": 6867.572018454438,
+      "viewValue": 6867.57201845444,
+      "pass": true
+    },
+    {
+      "area": "Sales scorecards ↔ shared metrics",
+      "metric": "arpu",
+      "sharedValue": 11255.548090737235,
+      "viewValue": 11255.548090737238,
+      "pass": true
+    },
+    {
+      "area": "Sales scorecards ↔ shared metrics",
+      "metric": "purchase_frequency",
+      "sharedValue": 1.6389413988657846,
+      "viewValue": 1.6389413988657846,
+      "pass": true
+    },
+    {
+      "area": "Sales scorecards ↔ shared metrics",
+      "metric": "product_breadth",
+      "sharedValue": 36,
+      "viewValue": 36,
+      "pass": true
+    },
+    {
+      "area": "Sales scorecards ↔ shared metrics",
+      "metric": "discount_value",
+      "sharedValue": 520468.75,
+      "viewValue": 520468.75,
+      "pass": true
+    },
+    {
+      "area": "Sales scorecards ↔ shared metrics",
+      "metric": "discount_rate",
+      "sharedValue": 0.08038557348694278,
+      "viewValue": 0.08038557348694275,
+      "pass": true
+    },
+    {
+      "area": "Retention reconstruction at today ↔ current cards",
+      "metric": "active_memberships",
+      "sharedValue": 610,
+      "viewValue": 610,
+      "pass": true
+    },
+    {
+      "area": "Retention reconstruction at today ↔ current cards",
+      "metric": "revenue_at_risk_30d",
+      "sharedValue": 2514228.5099999993,
+      "viewValue": 2514228.5099999993,
+      "pass": true
+    }
+  ],
+  "passed": 26,
+  "failed": 0,
+  "limits": "Source-snapshot calculation comparisons, not a click-through of every tab or a live upstream reconciliation. Session-based tabs use shared registry queries; intentionally distinct cash/session, Website/all-lead, row/distinct-member and frozen-report scopes must not be forced to agree."
+}

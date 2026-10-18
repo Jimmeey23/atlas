@@ -54,10 +54,10 @@ test("placeholder emails are excluded from contactability", () => {
   assert.equal(contactable("noemail+382@gmail.com"), false);
   assert.equal(contactable("test@example.com"), true);
 });
-test("every registry metric defines sources and a minimum sample", () => {
+test("every registry metric defines sources without a fixed minimum sample", () => {
   for (const metric of Object.values(metrics)) {
     assert.ok(metric.sources.length);
-    assert.ok(metric.minSample > 0);
+    assert.equal('minSample' in metric, false);
     assert.ok(metric.sql({ rate: 1200, today: "2026-10-05" }));
   }
   assert.equal(metrics.fill_rate.aggregation, "weighted");

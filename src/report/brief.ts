@@ -121,8 +121,6 @@ export function performerContext(table: GroupTable, metric: string, top: Perform
   if (risers.length > 1) lines.push(`Biggest improvement vs last month: ${risers[0].g} (${fmt(metric, risers[0].change)} change); biggest slip: ${risers.at(-1)!.g} (${fmt(metric, risers.at(-1)!.change)}).`);
   const lift = table.analysis?.medianLift;
   if (lift && lift.metric === metric && lift.groupsBelow) lines.push(`Lifting the ${lift.groupsBelow} groups below the median to it is worth about ${fmt(lift.metric, lift.units)} (indicative).`);
-  const thin = bottom.filter(p => p.n < 5).length;
-  if (thin) lines.push(`${thin} of the bottom ${bottom.length} rest on fewer than five records — read as signals, not verdicts.`);
   return lines;
 }
 

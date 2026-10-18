@@ -28,7 +28,7 @@ function Row({ p, rank, metric, peak, table, lane, chapter }: { p: Performer; ra
       </button>
       <strong>{fmt(metric, p.value)}</strong>
       <span className="dk-perf-delta" data-tone={t} title="Change against the previous month">{p.prior != null ? <><Arrow size={12}/>{delta(metric, p.value, p.prior)}</> : "new"}</span>
-      {p.n > 0 && p.n < 5 && <span className="dk-perf-thin" title={`${p.n} records — read as a signal, not a verdict`}>n={p.n}</span>}
+      {p.n > 0 && <span className="small" title={`${p.n} contributing records`}>n={p.n}</span>}
       <span className="dk-perf-actions">
         <button type="button" className="icon-button" aria-label={`Show details for ${p.g}`} onClick={() => setOpen(o => !o)}><ChevronDown size={14}/></button>
         {drill && <button type="button" className="icon-button" aria-label={`Open source records for ${p.g}`} title="Source records" onClick={() => drill({ chapterId: chapter, table, group: p.g, metric })}><Database size={14}/></button>}

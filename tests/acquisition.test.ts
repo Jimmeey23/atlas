@@ -75,7 +75,7 @@ test('reference conversion eligibility and exact metric contributors preserve mi
   assert.equal(referenceNew({entry_type:'Newcomer'}),false);
   assert.equal(contributesToMetric({...credits,ltv:0},'avg_ltv'),true);
   assert.equal(contributesToMetric(credits,'avg_ltv'),false);
-  assert.equal(contributesToMetric({...credits,conversion_days:0},'conversion_span'),false);
+  assert.equal(contributesToMetric({...credits,conversion_days:0},'conversion_span'),true);
   assert.equal(contributesToMetric({...credits,conversion_days:5},'conversion_span'),true);
   assert.equal(contributesToMetric({...credits,mature:false,converted_in_30:true,member_id:'a'},'converted_30'),true);
   assert.equal(referenceSummary([credits]).avg_ltv,null);

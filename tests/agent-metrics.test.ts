@@ -28,9 +28,9 @@ test('recurring classes group by class name, weekday and time, and can drop host
  const db=await DuckDBInstance.create(':memory:');const c=await db.connect();
  try{
   await c.run(`CREATE TABLE sessions AS SELECT * FROM (VALUES
-   ('Mat 57','Saturday','10:15','Regular',12,1,1),('Mat 57','Saturday','10:15','Regular',13,1,1),
-   ('Mat 57','Monday','08:30','Regular',8,1,1),
-   ('Hosted Class','Sunday','09:00','Hosted',20,1,1)) t(format,day,time,session_type,checked_in,sessions,non_empty)`);
+   ('Mat 57','Saturday','10:15','Regular',12,1,1,'s1'),('Mat 57','Saturday','10:15','Regular',13,1,1,'s2'),
+   ('Mat 57','Monday','08:30','Regular',8,1,1,'s3'),
+   ('Hosted Class','Sunday','09:00','Hosted',20,1,1,'s4')) t(format,day,time,session_type,checked_in,sessions,non_empty,session_id)`);
   const compiled=compileMetricQuery({source:'sessions',metric_ids:['avg_class_size_excl','sessions'],group_by:['class_slot'],exclude_hosted:true,scope_json:null},{},['sessions']);
   const rows=(await c.runAndReadAll(compiled.sql)).getRowObjectsJS();
   assert.deepEqual(rows.map(r=>r.class_slot),['Mat 57 · Monday 08:30','Mat 57 · Saturday 10:15']);
@@ -62,3 +62,19 @@ test('question pre-pass resolves fuzzy names without matching ordinary words',()
  assert.deepEqual(names('what did shifa sell in sept'),['Shifa Ali']);
  assert.deepEqual(names('how many people came yesterday'),[]);
 });
+
+test('scoped AI queries do not advertise an unsupported all-time booking cohort calculation', () => {
+ assert.throws(()=>compileMetricQuery({source:'new',metric_ids:['new_late_cancels'],group_by:[],scope_json:null},{},['new','bookings']),/all-time matched Bookings/);
+});
+
+ test('agent session counts use distinct IDs and payroll counts preserve reported totals',async()=>{
+ const db=await DuckDBInstance.create(':memory:');const c=await db.connect();
+ try {
+ await c.run("CREATE TABLE sessions AS SELECT * FROM (VALUES ('s1',1),('s1',1),('s2',1),(NULL,1)) t(session_id,sessions)");
+ const raw=compileMetricQuery({source:'sessions',metric_ids:['sessions']},{},['sessions']);
+ assert.equal((await c.runAndReadAll(raw.sql)).getRowObjectsJS()[0].sessions,2n);
+ await c.run("CREATE TABLE payroll AS SELECT * FROM (VALUES (12),(9)) t(sessions)");
+ const summary=compileMetricQuery({source:'payroll',metric_ids:['payroll_sessions']},{},['payroll']);
+ assert.equal((await c.runAndReadAll(summary.sql)).getRowObjectsJS()[0].payroll_sessions,21n);
+ } finally {c.closeSync();db.closeSync();}
+ });

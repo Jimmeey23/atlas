@@ -1,9 +1,10 @@
 import { metrics, metricSQL } from '../src/semantics/metrics.ts';
 import { currentSnapshotMetrics } from '../src/semantics/evidence.ts';
 import { toolScope } from './agent-scope.mjs';
+const unsupportedCrossSourceMetrics = new Set(['new_late_cancels']);
 export const metricSource = id => metrics[id]?.sources[0]?.split('.')[0].split(' →')[0].toLowerCase().replaceAll(' ', '_');
 export function metricCatalog(config) {
-  return Object.values(metrics).filter(m => config.some(s => s.key === metricSource(m.id))).map(m => ({id:m.id,label:m.label,source:metricSource(m.id),format:m.format}));
+  return Object.values(metrics).filter(m => !unsupportedCrossSourceMetrics.has(m.id) && config.some(s => s.key === metricSource(m.id))).map(m => ({id:m.id,label:m.label,source:metricSource(m.id),format:m.format}));
 }
 const groupsAllowed = new Set(['location','month','trainer','format','format_group','category','product','associate','payment_method','day','time','status','source','class_slot','session_type']);
 // A recurring class is one weekly slot: the class name on a given weekday and start time.
@@ -12,6 +13,7 @@ const slotSources = new Set(['sessions','checkins','bookings']);
 export function compileMetricQuery(args, defaults, available, rate = 1200) {
   const {source,metric_ids:ids,group_by:groups=[]} = args;
   if (!available.includes(source) || !Array.isArray(ids) || !ids.length || ids.length>12 || ids.some(id=>metricSource(id)!==source)) throw new Error('Choose 1–12 metrics from the same listed source.');
+  if (ids.some(id=>unsupportedCrossSourceMetrics.has(id))) throw new Error('Newcomer late cancellations require all-time matched Bookings. Use Acquisition or the metric catalogue; this scoped AI query does not support that cross-source measure.');
   if (!Array.isArray(groups) || groups.length>3 || groups.some(g=>!groupsAllowed.has(g))) throw new Error('Unsupported metric grouping.');
   const snapshots = ids.filter(id=>currentSnapshotMetrics.has(id));
   if (snapshots.length && snapshots.length !== ids.length) throw new Error('Query current snapshot metrics separately from period metrics.');
@@ -28,6 +30,6 @@ export function compileMetricQuery(args, defaults, available, rate = 1200) {
     if(ids.includes('draw_premium_pp')) throw new Error('Draw premium needs an independently scoped pooled slot baseline. Use the instructor performance workspace or a baseline query; do not estimate it.');
   }
   const groupSQL=groups.map(g=>g==='month' && source==='lapsed' ? 'SUBSTR(end_date,1,7) AS month' : g==='class_slot' ? `${classSlotSQL} AS class_slot` : `"${g}"`).join(',');
-  const sql=`SELECT ${groupSQL ? groupSQL+', ' : ''}${metricSQL(ids,{today,rate})},COUNT(*) AS source_records FROM ${facts}${groups.length ? ' GROUP BY '+groups.map((_,i)=>i+1).join(',')+' ORDER BY '+groups.map((_,i)=>i+1).join(',') : ''}`;
+  const sql=`SELECT ${groupSQL ? groupSQL+', ' : ''}${metricSQL(ids,{today,rate,source})},COUNT(*) AS source_records FROM ${facts}${groups.length ? ' GROUP BY '+groups.map((_,i)=>i+1).join(',')+' ORDER BY '+groups.map((_,i)=>i+1).join(',') : ''}`;
   return {sql,filters,snapshot:!!snapshots.length,definitions:ids.map(id=>({id,label:metrics[id].label,expression:metrics[id].description,format:metrics[id].format}))};
 }

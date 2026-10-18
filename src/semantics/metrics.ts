@@ -15,7 +15,6 @@ export interface MetricDef {
   aggregation: "sum" | "weighted" | "median" | "avg" | "last";
   higherIsBetter: boolean;
   target?: number;
-  minSample: number;
   sources: string[];
 }
 export const metrics: Record<string, MetricDef> = Object.fromEntries(

@@ -78,7 +78,7 @@ React 18 + strict TypeScript + Vite; DuckDB-WASM executes SQL in its worker; Tan
 
 ## Add a metric or workspace
 
-Add a metric to `registry.json` with original sheet columns, a SQL expression, format, aggregation, direction and minimum sample. Normalise any required new input once in `normalise.ts` and increment the snapshot schema version. Add its ID to the relevant blueprint. Cards, tables, rankings and monthly registers share that definition.
+Add a metric to `registry.json` with original sheet columns, a SQL expression, format, aggregation and direction. Metrics always use the full eligible filtered dataset; do not add built-in sample-size gates. Users set any group-size minimum through view filters. Normalise any required new input once in `normalise.ts` and increment the snapshot schema version. Add its ID to the relevant blueprint. Cards, tables, rankings and monthly registers share that definition.
 
 Add a workspace blueprint with its actual source, ordered hierarchy, KPI IDs, table columns and focused registers. Add its name to the tab registry and any genuinely different chart query to the chart component. Use the shared table, formatting, filter and drill contracts rather than duplicating metric formulas.
 
@@ -90,7 +90,7 @@ npm run build
 FLOOR_URL=http://localhost:5174 npm run verify
 ```
 
-`npm run verify` loads real sources, captures all workspaces at 1600px and 1280px in both themes, exercises the scoped Slots drill journey and writes `PERFORMANCE.json`. Screenshots are in `screenshots/`. `METRICS.md` is the generated implemented dictionary. `DECISIONS.md` records source and design assumptions. `PERFORMANCE.md` reports measured limits, not inferred acceptance from a successful build.
+`npm run verify` loads real sources, captures all workspaces at 1600px and 1280px in both themes, exercises the scoped Slots drill journey and writes `PERFORMANCE.json`. Screenshots are in `screenshots/`. `METRICS.md` is the generated metric summary; the detailed searchable reference is available through the app’s Metric definitions button. The reference is also embedded in Data quality and uses plain-language definitions with expandable technical detail. Run `npm run check:metric-consistency` to compare shared calculations using saved source snapshots. Regenerate it with `npm run docs:metrics` (also runs before builds). Verify viewing and user-controlled ranking filters with `npm run verify:metrics` while the dev server is running. `DECISIONS.md` records source and design assumptions. `PERFORMANCE.md` reports measured limits, not inferred acceptance from a successful build.
 
 Upgrade verification: `node scripts/verify-upgrades.mjs` checks selected-source loading, snapshot startup, retention worklists, original-row viewing, follow-up interaction, CSV download and failed-refresh recovery. UI follow-up writes use isolated test state; persistence tests use temporary files. Results are in `UPGRADES-VERIFICATION.json`.
 

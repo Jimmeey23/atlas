@@ -20,7 +20,7 @@ export function FormatAllocationChart({
   const [measure, setMeasure] = useState<"attendance" | "revenue">(
     "attendance",
   );
-  const [minimum, setMinimum] = useState(1);
+  const [minimum, setMinimum] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const ref = useRef<HTMLDivElement>(null);
@@ -162,10 +162,10 @@ export function FormatAllocationChart({
           Minimum sessions{" "}
           <input
             type="number"
-            min={1}
+            min={0}
             value={minimum}
             onChange={(e) =>
-              setMinimum(Math.max(1, Number(e.target.value) || 1))
+              setMinimum(Math.max(0, Number(e.target.value) || 0))
             }
           />
         </label>

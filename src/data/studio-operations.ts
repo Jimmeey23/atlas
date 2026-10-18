@@ -306,7 +306,7 @@ export function operationsSQL(
   return `SELECT ${group},${metricSQL(operationMetrics, ctx)},${referenceMetricsSQL}${referenceMetadataSQL(fields) ? "," + referenceMetadataSQL(fields) : ""},COUNT(*) AS n FROM ${facts} GROUP BY ${group}`;
 }
 export function operationsMonthlySQL(facts: string, ctx: QueryContext) {
-  return `SELECT month,location,format,day,time,string_agg(DISTINCT trainer,' / ' ORDER BY trainer) AS instructor_roster,SUM(capacity)/NULLIF(SUM(sessions),0) AS capacity_per_session,${metricSQL(operationMetrics, ctx)} FROM ${facts} WHERE month IS NOT NULL AND day IS NOT NULL AND time IS NOT NULL GROUP BY month,location,format,day,time`;
+  return `SELECT month,location,format,day,time,string_agg(DISTINCT trainer,' / ' ORDER BY trainer) AS instructor_roster,SUM(capacity)/NULLIF(COUNT(DISTINCT session_id),0) AS capacity_per_session,${metricSQL(operationMetrics, ctx)} FROM ${facts} WHERE month IS NOT NULL AND day IS NOT NULL AND time IS NOT NULL GROUP BY month,location,format,day,time`;
 }
 
 export const operationDimensions = {

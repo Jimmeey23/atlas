@@ -23,7 +23,7 @@ export function SalesRankings({ version }: { version: number }) {
   const [group, setGroup] = useState("product"),
     [criterion, setCriterion] = useState("gross_revenue"),
     [limit, setLimit] = useState(5),
-    [minimum, setMinimum] = useState(1),
+    [minimum, setMinimum] = useState(0),
     [search, setSearch] = useState("");
   const [rows, setRows] = useState<Row[]>([]),
     [loading, setLoading] = useState(true),
@@ -138,7 +138,7 @@ export function SalesRankings({ version }: { version: number }) {
             value={minimum}
             onChange={(e) => setMinimum(Number(e.target.value))}
           >
-            {[1, 3, 5, 10].map((n) => (
+            {[0, 1, 3, 5, 10].map((n) => (
               <option key={n}>{n}</option>
             ))}
           </DropdownField>

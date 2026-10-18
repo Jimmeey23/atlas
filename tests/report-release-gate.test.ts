@@ -44,9 +44,9 @@ test('payroll contribution ranks profit rather than fill; missing costs remain u
   const rows=operationalIntelligence(sources,'2026-09','2026-10-15').tables.find(t=>t.title==='Slot contribution ranking')!.rows;
   assert.match(String(rows[0][0]),/Cycle/);assert.equal(rows[0][4],700);
 });
-test('confidence intervals and control limits respect minimum evidence',()=>{
+test('confidence intervals and control limits retain only mathematical validity requirements',()=>{
   const interval=wilson(0,6)!;assert.equal(interval[0],0);assert.ok(interval[1]>.3);assert.equal(wilson(0,0),null);
-  assert.equal(controlLimits([1,2,3]),null);const limits=controlLimits([...Array(12).fill(10),100])!;assert.equal(limits.mean,10);assert.equal(limits.upper,10);
+  assert.equal(controlLimits([1,2]),null);assert.equal(controlLimits([1,2,3])!.n,2);const limits=controlLimits([...Array(12).fill(10),100])!;assert.equal(limits.mean,10);assert.equal(limits.upper,10);
 });
 test('derived attendance prose must reconcile to the selected studio bridge',()=>{
   const m=report();m.narratives.sessions.summary='Attendance by format moved −1,768.';

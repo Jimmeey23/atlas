@@ -29,7 +29,6 @@ const SCORECARD_IDS = SCORECARD.flatMap((s) => s.ids);
 const SHARE_IDS = ["sessions", "capacity", "attendance", "revenue"];
 const TREND_IDS = SCORECARD_IDS.filter(id => id !== "trainers");
 const SLOT_IDS = ["sessions", "attendance", "fill_rate", "avg_class_size_incl", "revenue_per_session", "show_up_rate", "late_cancel_rate", "no_show_rate", "empty_session_rate", "rev_pas"];
-const MIN_SESSIONS = 5;
 const SLICE_DEFAULTS = { slots: ["day", "time"], trainers: ["trainer"], studios: ["location"] };
 
 type Section = { rows: Row[]; trend: Row[]; slots: Row[]; trainers: Row[]; studios: Row[] };
@@ -41,10 +40,12 @@ export function FormatComparison({ version }: { version: string | number }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [trendMetric, setTrendMetric] = useState("attendance");
+  const [minimumSessions, setMinimumSessions] = useState(0);
   const [view, setView] = useState<"value" | "index">("value");
 
   const sql = useMemo(() => {
     const facts = metricFacts(s.filters, "sessions", s.transient);
+    const minimumClause = minimumSessions > 0 ? ` HAVING COUNT(DISTINCT session_id)>=${minimumSessions}` : "";
     const labelled = `WITH f AS (SELECT *, COALESCE(format_group,'Barre') AS fg FROM ${facts})`;
     // The trend ignores the page date filter so the shape of a format over the
     // year stays readable while the rest of the tab is scoped to a period.
@@ -53,16 +54,16 @@ export function FormatComparison({ version }: { version: string | number }) {
     return {
       rows: `${labelled} SELECT fg,GROUPING(fg) AS is_total,${metricSQL(SCORECARD_IDS, context(s.filters, s.transient))},COUNT(*) AS n FROM f GROUP BY GROUPING SETS ((fg),()) ORDER BY is_total,fg`,
       trend: `WITH f AS (SELECT *, COALESCE(format_group,'Barre') AS fg FROM ${historyFacts}) SELECT month,fg,${metricSQL(TREND_IDS, context(history, historicalTransient(s.transient)))} FROM f WHERE month IS NOT NULL GROUP BY month,fg ORDER BY month`,
-      slots: `${labelled} SELECT fg,day,time,${metricSQL(SLOT_IDS, context(s.filters, s.transient))} FROM f WHERE day IS NOT NULL AND time IS NOT NULL GROUP BY fg,day,time HAVING SUM(sessions)>=${MIN_SESSIONS}`,
-      trainers: `${labelled} SELECT fg,COALESCE(trainer,'Unspecified') AS trainer,${metricSQL(SLOT_IDS, context(s.filters, s.transient))} FROM f GROUP BY fg,trainer HAVING SUM(sessions)>=${MIN_SESSIONS}`,
+      slots: `${labelled} SELECT fg,day,time,${metricSQL(SLOT_IDS, context(s.filters, s.transient))} FROM f WHERE day IS NOT NULL AND time IS NOT NULL GROUP BY fg,day,time${minimumClause}`,
+      trainers: `${labelled} SELECT fg,COALESCE(trainer,'Unspecified') AS trainer,${metricSQL(SLOT_IDS, context(s.filters, s.transient))} FROM f GROUP BY fg,trainer${minimumClause}`,
       studios: `${labelled} SELECT fg,COALESCE(location,'Unspecified') AS location,${metricSQL(SLOT_IDS, context(s.filters, s.transient))} FROM f GROUP BY fg,location`,
       // A user-chosen regrouping of one slice table; fields are validated by groupable().
       slice: (groups: string[], minimum: boolean) => {
         const keys = groups.map((f) => groupValueSQL(f));
-        return `${labelled} SELECT fg,${keys.map((k, i) => `${k} AS "${groups[i]}"`).join(",")},${metricSQL(SLOT_IDS, context(s.filters, s.transient))} FROM f GROUP BY fg,${keys.join(",")}${minimum ? ` HAVING SUM(sessions)>=${MIN_SESSIONS}` : ""}`;
+        return `${labelled} SELECT fg,${keys.map((k, i) => `${k} AS "${groups[i]}"`).join(",")},${metricSQL(SLOT_IDS, context(s.filters, s.transient))} FROM f GROUP BY fg,${keys.join(",")}${minimum ? minimumClause : ""}`;
       },
     };
-  }, [s.filters, s.transient, s.rate]);
+  }, [s.filters, s.transient, s.rate, minimumSessions]);
 
   useEffect(() => {
     let active = true;
@@ -247,6 +248,10 @@ export function FormatComparison({ version }: { version: string | number }) {
       </Register>
 
       <TrendTable rows={data.trend} formats={formats} metric={trendMetric} onMetric={setTrendMetric} />
+      <div className="toolbar" style={{ margin: "16px 0" }}>
+        <label>Minimum sessions for slot and instructor tables <input aria-label="Minimum sessions for format comparison" type="number" min="0" step="1" value={minimumSessions} onChange={e => setMinimumSessions(Math.max(0, Math.floor(Number(e.target.value) || 0)))} style={{ width: 80, marginLeft: 8 }} /></label>
+        <span className="muted">0 includes the full filtered dataset.</span>
+      </div>
       <SliceTable
         index="F4"
         title="Where each format works"
@@ -257,7 +262,7 @@ export function FormatComparison({ version }: { version: string | number }) {
         build={(g) => sql.slice(g, true)}
         version={version}
         label={(r) => `${r.day} · ${r.time}`}
-        caption={`Slots with at least ${MIN_SESSIONS} sessions in scope.`}
+        caption={minimumSessions > 0 ? `Slots with at least ${minimumSessions} sessions in scope (user filter).` : "All slots in the full filtered dataset."}
       />
       <SliceTable
         index="F5"
@@ -269,7 +274,7 @@ export function FormatComparison({ version }: { version: string | number }) {
         build={(g) => sql.slice(g, true)}
         version={version}
         label={(r) => String(r.trainer)}
-        caption={`Instructors with at least ${MIN_SESSIONS} sessions of that format in scope.`}
+        caption={minimumSessions > 0 ? `Instructors with at least ${minimumSessions} sessions of that format in scope (user filter).` : "All instructors in the full filtered dataset."}
       />
       <SliceTable
         index="F6"
