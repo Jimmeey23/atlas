@@ -58,22 +58,25 @@ export function Rankings({
       title="Worth your attention"
       actions={
         <>
-          <label className="small">Minimum group size <input aria-label="Ranking minimum group size" type="number" min={0} value={minimum} onChange={e => setMinimum(Math.max(0, Number(e.target.value) || 0))} style={{ width: 70 }} /></label>
-          <ChartControls rows={eligible} title="Rankings" />
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-            <DropdownField
-              aria-label="Ranking measure"
-              value={id}
-              style={{ fontSize: 11, minHeight: 28, padding: "3px 7px" }}
-              onChange={(e) => setChosen(e.target.value)}
-            >
-              {validColumns.map((x) => (
-                <option key={x} value={x}>
-                  {metrics[x].label}
-                </option>
-              ))}
-            </DropdownField>
-            <MetricInfoHint id={id} />
+          <div className="ranking-toolbar">
+            <label className="ranking-filter ranking-minimum"><span>Minimum group size</span><input aria-label="Ranking minimum group size" type="number" min={0} value={minimum} onChange={e => setMinimum(Math.max(0, Number(e.target.value) || 0))} /></label>
+            <div className="ranking-filter ranking-measure">
+              <label htmlFor="ranking-measure">Measure</label>
+              <DropdownField
+                id="ranking-measure"
+                aria-label="Ranking measure"
+                value={id}
+                onChange={(e) => setChosen(e.target.value)}
+              >
+                {validColumns.map((x) => (
+                  <option key={x} value={x}>
+                    {metrics[x].label}
+                  </option>
+                ))}
+              </DropdownField>
+              <MetricInfoHint id={id} />
+            </div>
+            <ChartControls rows={eligible} title="Rankings" />
           </div>
         </>
       }

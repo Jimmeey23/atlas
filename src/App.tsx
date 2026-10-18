@@ -1,4 +1,5 @@
 import { WorkspaceEditor } from "./components/WorkspaceEditor";
+import { useSectionNumbers } from "./components/useSectionNumbers";
 import { useWorkspaceDrag } from "./components/useWorkspaceDrag";
 import { saveWorkspace, workspaceKey, workspaceScopes, workspaceDrills } from "./state/workspaceLayout";
 import { missingPrivateScope } from "./state/store";
@@ -253,6 +254,7 @@ export default function App() {
   const [editing, setEditing] = useState(false);
   useEffect(() => { if (!editing && modal === "settings") setModal(""); }, [editing, modal]);
   useWorkspaceDrag(main, scopeKey, !busy, editing);
+  useSectionNumbers(main, scopeKey);
   const lastTab = useRef(s.tab);
   const sequence = useRef(0);
   const shownView = useRef("");

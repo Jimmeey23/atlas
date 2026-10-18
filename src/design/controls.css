@@ -122,3 +122,117 @@
 @media (prefers-reduced-motion: no-preference) {
   select.atlas-dropdown { transition: border-color 140ms ease, box-shadow 140ms ease; }
 }
+
+/* Shared action geometry keeps icons centered in every workspace. */
+.register-head { flex-wrap: wrap; gap: 14px; }
+.register-actions { flex-wrap: wrap; min-width: 0; row-gap: 8px; }
+.register-actions .chart-controls { margin: 0; position: relative; }
+.chart-control-buttons { align-items: center; flex-wrap: wrap; }
+.chart-control-buttons > button {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--text-2);
+  border-radius: 8px;
+}
+:is(.chart-control-buttons > button, .icon-button, .tabbar .tab, .subtabbar .subtab) > svg {
+  display: block;
+  flex-shrink: 0;
+}
+:root[data-theme] .tabbar .tab,
+.subtabbar .subtab { display: inline-flex; align-items: center; justify-content: center; gap: 7px; line-height: 1; }
+:root[data-theme] .tabbar .tab > svg { width: 16px; height: 16px; }
+:root[data-theme] .tabbar .tab.active > svg { transform: none; }
+.icon-button { display: inline-flex; align-items: center; justify-content: center; }
+
+.ranking-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: var(--surface-2);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.ranking-filter { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ranking-filter > :is(span, label) { font-size: 10px; font-weight: 600; color: var(--text-3); white-space: nowrap; }
+.ranking-minimum input {
+  box-sizing: border-box;
+  width: 64px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 7px;
+  background: var(--surface-1);
+  color: var(--text-1);
+  font: inherit;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.ranking-measure select { width: 190px; max-width: 100%; }
+.ranking-measure .metric-info-hint { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; margin: 0; width: 24px; height: 32px; }
+.ranking-toolbar .chart-controls { padding-left: 10px; border-left: 1px solid var(--hairline); }
+.ranking-toolbar .chart-control-buttons { gap: 4px; }
+.ranking-toolbar .chart-data-preview { position: absolute; top: 100%; right: 0; z-index: 10; width: min(560px, 75vw); background: var(--surface-1); box-shadow: var(--elev-2); }
+:is(.ranking-minimum input, .chart-control-buttons > button):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 700px) {
+  .register-head:has(.ranking-toolbar) .register-actions { width: 100%; }
+  .ranking-toolbar { flex: 1 1 100%; }
+  .ranking-measure { flex: 1 1 220px; }
+  .ranking-measure select { flex: 1; width: auto; }
+  .ranking-toolbar .chart-controls { padding-left: 0; border-left: 0; flex-basis: 100%; }
+  .ranking-toolbar .chart-control-buttons { justify-content: flex-start; }
+}
+
+/* One discoverable AI action, anchored to its element rather than its toolbar. */
+.ai-summary-owner { position: relative; }
+.ai-summary-owner > .ai-summary-corner {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ai-summary-owner > .ai-summary-corner ~ .ai-summary-corner { display: none; }
+.ai-summary-owner > :is(.register-head, .panel-headline, .metric-strip-head) { padding-right: 46px; }
+.ai-summary-owner.insight > h3 { padding-right: 46px; }
+.ai-summary-owner.chart-surface > .chart-controls { padding-right: 44px; min-height: 36px; }
+.ai-summary-corner > .ai-summary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 11px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--hairline));
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface-1));
+  box-shadow: inset 0 1px 0 #ffffff25, 0 2px 6px #00000008;
+}
+.ai-summary-corner > .ai-summary-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 17%, var(--surface-1));
+  border-color: var(--accent);
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.ai-summary-corner > .ai-summary-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.ai-summary-corner > .ai-summary-btn:disabled { opacity: .65; cursor: progress; }
+@media print { .ai-summary-corner { display: none !important; } }
+/* Allow toolbar filters to wrap inside narrow dashboard columns. */
+.two-up > .register { min-width: 0; }
+.register:has(.ranking-toolbar) .register-actions { max-width: 100%; box-sizing: border-box; }
+@media (max-width: 700px) {
+  .register:has(.ranking-toolbar) .register-title { min-width: 0; flex-wrap: wrap; }
+  .register:has(.ranking-toolbar) .ranking-minimum { flex-wrap: wrap; }
+}

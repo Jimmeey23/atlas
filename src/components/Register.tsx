@@ -26,7 +26,7 @@ export function Register({
     <section id={id} className="register" data-index={index}>
       <div className="register-head">
         <div className="register-title">
-          <span className="index" aria-hidden="true">{index}</span>
+          <span className="index" data-section-number aria-hidden="true" />
           <h2>{heading}</h2>
           {subtitle && <p>{subtitle}</p>}
         </div>

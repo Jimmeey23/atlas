@@ -54,7 +54,8 @@ export function DataInsightAction({ subject, detail, buttonLabel = "Section insi
   const saved = usePreferences(s => s.preferences.sectionInsights?.[key]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const anchor = useRef<HTMLButtonElement>(null);
+  const anchor = useRef<HTMLSpanElement>(null);
+  const [corner, setCorner] = useState<HTMLElement | null>(null);
   const owner = useRef<HTMLElement | null>(null);
   const request = useRef<AbortController>();
   const [target, setTarget] = useState<HTMLElement | null>(null);
@@ -68,10 +69,15 @@ export function DataInsightAction({ subject, detail, buttonLabel = "Section insi
     owner.current = (metricHeading?.parentElement || button.closest(OWNER) || button.parentElement) as HTMLElement;
     if (metricHeading) metricHeading.nextElementSibling?.after(host);
     else (button.closest(OWNER) || button.parentElement)?.append(host);
+    const cornerHost = document.createElement("div");
+    cornerHost.className = "ai-summary-corner";
+    owner.current?.classList.add("ai-summary-owner");
+    owner.current?.append(cornerHost);
+    setCorner(cornerHost);
     setTarget(host);
     setError("");
     setBusy(false);
-    return () => { request.current?.abort(); host.remove(); };
+    return () => { request.current?.abort(); host.remove(); cornerHost.remove(); };
   }, [key]);
 
   function patch(next: Partial<NonNullable<typeof saved>>) {
@@ -197,9 +203,10 @@ export function DataInsightAction({ subject, detail, buttonLabel = "Section insi
     ...(layout.floating ? { left: `${layout.x ?? Math.max(16, window.innerWidth - (layout.width ?? 520) - 40)}px`, top: `${layout.y ?? 120}px`, maxHeight: `calc(100vh - ${(layout.y ?? 120) + 16}px)` } : {}),
   } as React.CSSProperties;
   return <>
-    <button ref={anchor} className={`ai-insight-btn ai-summary-btn ${compact ? "" : "with-label"} ${busy ? "is-thinking" : ""}`} aria-label={`Generate insights for ${subject}`} title={`Generate an AI summary for ${subject}`} disabled={busy} onClick={() => void run()}>
+    <span ref={anchor} hidden />
+    {corner && createPortal(<button className={`ai-insight-btn ai-summary-btn ${compact ? "" : "with-label"} ${busy ? "is-thinking" : ""}`} aria-label={`Generate insights for ${subject}`} title={`Generate an AI summary for ${subject}`} disabled={busy} onClick={() => void run()}>
       <span className="ai-summary-mark" aria-hidden="true"><WandSparkles size={16} strokeWidth={1.8} /><span className="ai-summary-twinkle" /></span>{!compact && buttonLabel}
-    </button>
+    </button>, corner)}
     {target && (saved || busy || error) && createPortal(
       <article
         ref={panel}
