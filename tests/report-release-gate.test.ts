@@ -40,9 +40,20 @@ test('member bridge reconciles unique IDs and excludes promotional access',()=>{
   assert.deepEqual(bridge,[2,1,1,0,2,.5]);assert.equal(Number(bridge[0])+Number(bridge[1])-Number(bridge[2])+Number(bridge[3]),bridge[4]);
 });
 test('payroll contribution ranks profit rather than fill; missing costs remain unknown',()=>{
-  const sources={sessions:[{date:'2026-09-01',trainer:'A',format:'Mat',sessions:1,capacity:10,checked_in:10,revenue:500},{date:'2026-09-01',trainer:'B',format:'Cycle',sessions:1,capacity:20,checked_in:5,revenue:900}],payroll:[{date:'2026-09-01',trainer:'A',sessions:1,revenue:400},{date:'2026-09-01',trainer:'B',sessions:1,revenue:200}]};
+  const sources={sessions:[{session_id:'mat-1',date:'2026-09-01',trainer:'A',format:'Mat',sessions:1,capacity:10,checked_in:10,revenue:500},{session_id:'cycle-1',date:'2026-09-01',trainer:'B',format:'Cycle',sessions:1,capacity:20,checked_in:5,revenue:900}],payroll:[{date:'2026-09-01',trainer:'A',sessions:1,revenue:400},{date:'2026-09-01',trainer:'B',sessions:1,revenue:200}]};
   const rows=operationalIntelligence(sources,'2026-09','2026-10-15').tables.find(t=>t.title==='Slot contribution ranking')!.rows;
   assert.match(String(rows[0][0]),/Cycle/);assert.equal(rows[0][4],700);
+  assert.equal(rows[0][3],200);assert.equal(rows[0][5],700);
+  const ranking=(input:Record<string,any[]>)=>operationalIntelligence(input,'2026-09','2026-10-15').tables.find(t=>t.title==='Slot contribution ranking')!.rows;
+  const withoutCosts=ranking({...sources,payroll:[]});
+  assert.ok(withoutCosts.every(row=>row[3]===null&&row[4]===null&&row[5]===null));
+  const withoutIds=ranking({...sources,sessions:sources.sessions.map(({session_id,...row})=>row)});
+  assert.ok(withoutIds.every(row=>row[3]===null&&row[4]===null&&row[5]===null));
+  const partialIds=ranking({...sources,sessions:[sources.sessions[0],{...sources.sessions[0],session_id:null}]});
+  assert.equal(partialIds[0][4],null);
+  const duplicate=ranking({...sources,sessions:[sources.sessions[0],sources.sessions[0]]});
+  assert.equal(duplicate[0][1],1);assert.equal(duplicate[0][3],400);
+
 });
 test('confidence intervals and control limits retain only mathematical validity requirements',()=>{
   const interval=wilson(0,6)!;assert.equal(interval[0],0);assert.ok(interval[1]>.3);assert.equal(wilson(0,0),null);
