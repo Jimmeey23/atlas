@@ -1,4 +1,5 @@
 import { chapters, type ChapterSpec } from "./chapters";
+import { REFERENCE_FORMAT, referenceTemplate } from './reference-standard.mjs';
 import { definition, reportFmt as fmt, reportDelta as delta } from "./definitions";
 import { monthLabel } from "./period";
 import type { ChapterData, InsightCard, ReportModel, SpeakerNotes } from "./model";
@@ -55,6 +56,10 @@ export const verdictOf = (model: ReportModel, id: string): InsightCard | undefin
 
 export function deckTabs(model: ReportModel): DeckTab[] {
   if (model.importedChapters?.length) return model.importedChapters.map(c => ({ id: c.id, label: c.title, title: c.title, chapter: c.id, sections: [c.id === "overview" ? "cover" : "summary", "insights", "tables", "trends"] }));
+  if (model.customization?.generationFormat === REFERENCE_FORMAT) return model.customization.chapterIds.flatMap(id => {
+    const template = referenceTemplate(id), spec = chapters.find(chapter => chapter.id === id);
+    return template ? [{ id, chapter: id, label: spec?.nav ?? template.title, title: template.title, spec, sections: ['summary'] as DeckSection[] }] : [];
+  });
   const ordered = model.customization ? model.customization.chapterIds.flatMap(id => chapters.find(c => c.id === id) ?? []) : chapters;
   const available = ordered.filter(spec => model.chapters[spec.id] || model.narratives[spec.id]);
   const exec = available.find(spec => spec.id === EXECUTIVE);

@@ -17,12 +17,14 @@
     "verify:report-deck": "node scripts/verify-report-deck.mjs",
     "check:report": "tsx --test tests/report-release-gate.test.ts",
     "verify:report-layouts": "node scripts/verify-report-layouts.mjs",
+    "verify:report-customizer": "node scripts/verify-report-customizer.mjs",
     "verify:report-editorial": "node scripts/verify-report-editorial.mjs",
     "verify:workspace": "node scripts/verify-workspace-editor.mjs",
     "docs:metrics": "tsx scripts/build-metric-reference.ts",
     "prebuild": "npm run docs:metrics",
     "verify:metrics": "node scripts/verify-metric-reference.mjs",
-    "check:metric-consistency": "tsx scripts/check-metric-consistency.ts"
+    "check:metric-consistency": "tsx scripts/check-metric-consistency.ts",
+    "verify:report-reference": "node scripts/verify-report-reference.mjs"
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.30.0",
@@ -40,6 +42,7 @@
     "lucide-react": "^0.468.0",
     "mammoth": "^1.13.0",
     "openai": "^6.49.0",
+    "parse5": "^8.0.1",
     "pdf-parse": "^1.1.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

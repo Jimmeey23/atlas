@@ -1,10 +1,13 @@
+import { REFERENCE_FORMAT, referenceTemplate, referenceReviewIssues } from './reference-standard.mjs';
 /** Shared by generation, storage API and export. Population keys prevent comparing unlike scopes. */
 export function reportReleaseIssues(report) {
   const issues = [];
   const selected = report.customization?.chapterIds ?? Object.keys(report.chapters ?? {});
   if (!selected.length) issues.push("No report chapters selected");
+  if (report.customization?.generationFormat === REFERENCE_FORMAT && selected.some(id => !referenceTemplate(id))) issues.push('No supplied reference exists for one or more selected chapters; choose the flexible report format for those chapters');
   for (const id of selected) {
     const n = report.narratives?.[id];
+    if (report.customization?.generationFormat === REFERENCE_FORMAT && referenceTemplate(id)) issues.push(...referenceReviewIssues(n?.referenceReview, id, { month: report.scope?.month, model: report }));
     if (id === 'executive-summary' && (n?.cards?.length < 3 || n?.cards?.length > 5)) issues.push('Executive brief requires three to five verdicts');
     const heads = new Set();
     for (const card of n?.cards ?? []) {

@@ -1,3 +1,4 @@
+import { REFERENCE_FORMAT, REFERENCE_CHAPTERS } from '../../report/reference-standard.mjs';
 import { ReportLayoutPicker } from "./ReportLayoutPicker";
 import { reportTemplate } from "../../report/templates";
 import "../../design/report-builder-studio.css";
@@ -67,8 +68,8 @@ export function ReportBuilder({ version }: { version: string | number }) {
   const { studio, month, model, stage, status, pending } = job;
   const customization: ReportCustomization = useMemo(() => job.customization ?? {
     title: 'Monthly performance report', subtitle: '', preparedFor: '', preparedBy: '', audience: 'Studio leadership', tone: 'Professional',
-    detail: 'Comprehensive', instructions: '', chapterIds: chapters.map(c => c.id), theme: reportTheme, targets: storedTargets(),
-    density: 'comfortable', layout: 'adaptive', evidenceView: 'auto', historyMonths: 12, accent: 'navy', focusAreas: [], ...storedPreferences(),
+    instructions: '', theme: reportTheme, targets: storedTargets(),
+    density: 'comfortable', layout: 'adaptive', evidenceView: 'auto', historyMonths: 12, accent: 'navy', focusAreas: [], ...storedPreferences(), generationFormat: REFERENCE_FORMAT, detail: 'Comprehensive', chapterIds: [...REFERENCE_CHAPTERS],
   }, [job.customization, reportTheme]);
   useEffect(() => { if (!job.customization) job.set({ customization }); }, [job.customization, customization]);
   const running = status === "running";
@@ -171,7 +172,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
   const previewFindings = useMemo(() => model ? ledger(findingsFor(model)) : [], [model]);
   const ready = !!studio && !!month && customization.chapterIds.length > 0;
   const busy = running || !!opening;
-  const analysisPreferences = (c?: ReportCustomization) => JSON.stringify([c?.audience, c?.tone, c?.detail, c?.instructions, c?.focusAreas ?? [], c?.targets ?? {}, c?.lenses ?? [], c?.insightsPerChapter, c?.includeActions, c?.quantifyImpact, c?.comparisonFocus]);
+  const analysisPreferences = (c?: ReportCustomization) => JSON.stringify([c?.generationFormat, c?.audience, c?.tone, c?.detail, c?.instructions, c?.focusAreas ?? [], c?.targets ?? {}, c?.lenses ?? [], c?.insightsPerChapter, c?.includeActions, c?.quantifyImpact, c?.comparisonFocus]);
   const needsRewrite = !!model && !running && (analysisPreferences(model.customization) !== analysisPreferences(customization) || customization.chapterIds.some(id => !model.narratives[id]));
   const estimate = estimateSeconds(customization);
   const remaining = remainingSeconds({ estimatedSeconds: job.estimatedSeconds, elapsed, pending: pending.length, chapterSeconds: job.chapterSeconds });
@@ -201,7 +202,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
                 </DropdownField></label>
             </div>
           </section>
-          <ReportLayoutPicker value={customization.reportTemplate} onChange={reportTemplate => patch({ reportTemplate })} disabled={busy}/>
+          {customization.generationFormat === REFERENCE_FORMAT ? <section className="rs-card" aria-label="Reference report format"><header className="rs-card-head"><span className="rs-step">02</span><div><h3>Original reference edition</h3><p>Navy, ivory and gold · original covers, numbered sections, tables and charts.</p></div></header><p>Instructor Performance: 13 sections · Class Performance: 13 sections · Sales &amp; Revenue: 12 sections. Each report retains the supplied reference’s full analytical depth.</p></section> : <ReportLayoutPicker value={customization.reportTemplate} onChange={reportTemplate => patch({ reportTemplate })} disabled={busy}/>}
           <details className="rs-card rs-settings-card" aria-label="Report design">
             <summary className="rs-card-head"><span className="rs-step">03</span><div><h3>Report settings & chapters</h3><p>{customization.chapterIds.length} chapters · {customization.detail} · expand to customize</p></div></summary>
             <ReportSettings value={customization} patch={patch} busy={busy} onTarget={setTarget} moveChapter={moveChapter}/>
@@ -211,10 +212,10 @@ export function ReportBuilder({ version }: { version: string | number }) {
         <aside className="rs-side">
           <section className="rs-card rs-generate" aria-label="Generate report">
             <header className="rs-card-head"><span className="rs-step">04</span><div><h3>Generate</h3><p>{studio || "Studio"} · {month ? monthLabel(month) : "Month"}</p></div></header>
-            <div className="rt-build-design"><LayoutTemplate size={18}/><span><small>Report layout</small><b>{reportTemplate(customization.reportTemplate).name}</b></span><span>Selected</span></div>
+            <div className="rt-build-design"><LayoutTemplate size={18}/><span><small>Report layout</small><b>{customization.generationFormat === REFERENCE_FORMAT ? "Original reference edition" : reportTemplate(customization.reportTemplate).name}</b></span><span>Selected</span></div>
             <dl className="rs-summary">
               <div><dt><Layers3 size={13}/>Chapters</dt><dd>{customization.chapterIds.length}</dd></div>
-              <div><dt><Lightbulb size={13}/>Insights each</dt><dd>{options.insightsPerChapter}</dd></div>
+              <div><dt><Lightbulb size={13}/>{customization.generationFormat === REFERENCE_FORMAT ? "Review depth" : "Insights each"}</dt><dd>{customization.generationFormat === REFERENCE_FORMAT ? "Full reference" : options.insightsPerChapter}</dd></div>
               <div><dt><Clock3 size={13}/>Estimate</dt><dd>{clock(estimate)}</dd></div>
             </dl>
             {running
@@ -244,7 +245,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
             <div className="rs-ready-actions">
               {!model.importedChapters?.length && <button className="button" disabled={busy} title="Writes failed, missing or changed chapters and reuses unchanged analysis" onClick={() => void startReport({ regenerate: true })}><RefreshCw size={14} />Rewrite insights</button>}
               {!model.id && <button className="button" disabled={busy} onClick={() => void persistReport(model)}><Database size={14}/>{status === "stopped" ? "Save partial" : "Save"}</button>}
-              <button className="button" disabled={busy} onClick={() => job.set({ model: null, status: "idle", narrativeError: "", error: "", storageError: "" })}><FilePlus2 size={14}/>New</button>
+              <button className="button" disabled={busy} onClick={() => job.set({ model: null, customization: { ...customization, generationFormat: REFERENCE_FORMAT, detail: "Comprehensive", chapterIds: [...REFERENCE_CHAPTERS] }, status: "idle", narrativeError: "", error: "", storageError: "" })}><FilePlus2 size={14}/>New</button>
             </div>
             <GenerationStats model={model}/>
             {model.schemaVersion != null && model.schemaVersion <= 3 && <p className="rs-hint" data-tone="warn"><TriangleAlert size={13}/>Saved in an earlier report format. Rebuild for current definitions.</p>}

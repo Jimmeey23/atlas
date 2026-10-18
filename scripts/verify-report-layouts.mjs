@@ -64,6 +64,9 @@ try {
     await page.locator('.leadership-front').waitFor();
     signatures.push(await page.locator('.report-doc').evaluate(el=>{const cover=getComputedStyle(el.querySelector('.leadership-front>header'));const head=getComputedStyle(el.querySelector('.cr-chapter-head'));const chapter=getComputedStyle(el.querySelector('.cr-chapter'));return [cover.backgroundColor,cover.textAlign,cover.display,cover.padding,cover.borderLeftWidth,head.display,head.gridTemplateColumns,chapter.padding,el.style.cssText,getComputedStyle(el).getPropertyValue('--rt-report-width')].join('|');}));
     await page.evaluate(()=>window.scrollTo(0,0));await page.screenshot({path:`${shots}/${template.id}.png`});
+    await page.locator('#chapter-sessions').evaluate(el=>el.scrollIntoView({block:'start'}));await page.screenshot({path:`${shots}/${template.id}-chapter.png`});
+    assert.ok(await page.locator('#chapter-sessions .rp-prose').allTextContents().then(values=>values.some(value=>value.includes('Visits increased'))),'chapter prose remains visible');
+    await page.evaluate(()=>window.scrollTo(0,0));
     const html=await page.evaluate(()=>window.exportDocument());assert.ok(html.includes('data-report-template="'+template.id+'"'));assert.ok(html.includes('Ten content-preserving document templates'),'template CSS embedded offline');
     assert.ok(html.includes('WRITTEN_REVIEW'),'analysis survives export');
     const offline=await browser.newPage({viewport:{width:1440,height:1050}});
@@ -72,7 +75,7 @@ try {
     const offlineFont=await offline.locator('.leadership-front h1').evaluate(el=>getComputedStyle(el).fontFamily);
     const readerFont=await page.locator('.leadership-front h1').evaluate(el=>getComputedStyle(el).fontFamily);
     assert.equal(offlineFont,readerFont,'offline typography matches the reviewed report');await offline.close();
-    await page.setViewportSize({width:390,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${template.id} document fits mobile`);await page.setViewportSize({width:1440,height:1050});
+    await page.setViewportSize({width:390,height:844});await page.screenshot({path:`${shots}/${template.id}-mobile.png`});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${template.id} document fits mobile`);await page.setViewportSize({width:1440,height:1050});
   }
   assert.equal(new Set(signatures).size,10,'ten structurally distinct designs');
   await page.evaluate(()=>window.showDocument('studio','dark'));await page.waitForFunction(()=>document.querySelector('.report-doc')?.dataset.reportTheme==='dark');

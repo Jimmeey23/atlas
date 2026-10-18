@@ -1,4 +1,6 @@
 import { ImportedContentElement } from './ImportedContentElement';
+import { ReferenceEdition } from './ReferenceEdition';
+import { REFERENCE_FORMAT, referenceTemplate } from '../../../report/reference-standard.mjs';
 import { ReportAssistant } from "./ReportAssistant";
 import { reportAppearance } from "../../../report/appearance";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
@@ -91,6 +93,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
   const [exportMounted, setExportMounted] = useState(false);
   // One flipped metric card at a time; leaving the page resets it.
   const [flipped, setFlipped] = useState("");
+  const customizerRef = useRef<HTMLElement>(null);
   const exportRef = useRef<HTMLElement>(null);
   const main = useRef<HTMLElement>(null);
   const dirty = JSON.stringify([model.narratives, model.replacements ?? {}, model.importedChapters,model.customization,model.documentEdits]) !== JSON.stringify([saved.narratives, saved.replacements ?? {}, saved.importedChapters,saved.customization,saved.documentEdits]);
@@ -133,7 +136,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
   const go = useCallback((step: number) => { const next = pages[Math.max(0, Math.min(pages.length - 1, index + step))]; if (next) setPage(next); }, [pages, index]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement).closest("input,textarea,select,[contenteditable=true]") || e.metaKey || e.ctrlKey || e.altKey) return;
+      if ((e.target as HTMLElement).closest("input,textarea,select,[contenteditable=true],.deck-customizer-panel") || e.metaKey || e.ctrlKey || e.altKey) return;
       if (["ArrowRight", "PageDown"].includes(e.key)) { e.preventDefault(); go(1); }
       else if (["ArrowLeft", "PageUp"].includes(e.key)) { e.preventDefault(); go(-1); }
       else if (e.key.toLowerCase() === "n") setDrawer(d => !d);
@@ -155,7 +158,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
     try {
       const stored = model.id ? await updateReport(model) : await saveReport(model);
       setModel(m => ({ ...m, id: stored.id, savedAt: stored.savedAt, editedAt: stored.editedAt, pinned: stored.pinned }));
-      setSaved(stored); setMessage("Changes saved to the database.");
+      setSaved(stored); setEditing(false); setMessage("Changes saved to the database.");
       if (!model.id && stored.id) { const url = new URL(location.href); url.searchParams.delete("draft"); url.searchParams.set("id", stored.id); history.replaceState(null, "", url); }
     } catch (e) { setMessage((e as Error).message); if (/Unlock admin/.test((e as Error).message)) { lockAdmin(); setAdmin(false); } }
     finally { setBusy(""); }
@@ -173,6 +176,23 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     try { if (!exportRef.current) throw new Error("The export view is not ready. Retry."); await (print ? printReport : downloadReport)(exportRef.current, model); } catch (e) { setMessage((e as Error).message); } finally { setBusy(""); setExportMounted(false); }
   }
+
+  useEffect(() => {
+    if (!appearance) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const panel = customizerRef.current;
+    panel?.querySelector<HTMLElement>('button')?.focus();
+    const key = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); setAppearance(false); }
+      if (event.key !== 'Tab' || !panel) return;
+      const controls = Array.from(panel.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),textarea,select,summary,a[href]')).filter(el => el.getClientRects().length > 0);
+      const first = controls[0], last = controls.at(-1);
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener('keydown',key);
+    return () => { document.removeEventListener('keydown',key); previous?.focus(); };
+  }, [appearance]);
 
   const options = reportOptions(model.customization);
   const findings = useMemo(() => findingsFor(model), [model.chapters]);
@@ -224,14 +244,14 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
           <div className="deck-nav-actions"><button className="button primary" onClick={() => window.dispatchEvent(new Event("p57-open-report-assistant"))}><Sparkles size={14}/>Atlas AI</button>
             <button className="button" aria-pressed={continuous} onClick={() => setContinuous(value => !value)}>{continuous ? "Presentation view" : "Single-page report"}</button>
             {dirty && <span className="deck-unsaved"><CircleDot size={11}/>Unsaved changes</span>}
-            {admin && dirty && <button className="button" onClick={() => setModel(saved)} disabled={!!busy}><Undo2 size={14}/>Discard</button>}
-            {admin && <button className="button primary" onClick={() => void save()} disabled={!dirty || !!busy}>{busy === "save" ? <Loader2 size={14} className="rb2-spin"/> : <Save size={14}/>}Save</button>}
+            {dirty && <button className="button" onClick={() => setModel(saved)} disabled={!!busy}><Undo2 size={14}/>Discard</button>}
+            <button className="button primary" onClick={() => admin ? void save() : setUnlocking(true)} disabled={!dirty || !!busy}>{busy === "save" ? <Loader2 size={14} className="rb2-spin"/> : <Save size={14}/>}Save changes</button>
             {admin && <button className="button" aria-pressed={editing} onClick={() => setEditing(e => !e)}><PencilLine size={14}/>{editing ? "Done editing" : "Edit"}</button>}
             <button className="icon-button" title={admin ? "Lock admin editing" : adminConfigured ? "Unlock admin editing" : "Admin editing is not configured on the server"} aria-label={admin ? "Lock admin editing" : "Unlock admin editing"} disabled={!admin && !adminConfigured}
               onClick={() => { if (admin) { lockAdmin(); setAdmin(false); setEditing(false); } else setUnlocking(true); }}>{admin ? <LockOpen size={16}/> : <Lock size={16}/>}</button>
             <button className="icon-button" title={model.pinned ? "Unpin report" : "Pin report (kept beyond the latest five)"} aria-label={model.pinned ? "Unpin report" : "Pin report"} aria-pressed={!!model.pinned} disabled={!model.id || !!busy} onClick={() => void togglePin()}>{model.pinned ? <PinOff size={16}/> : <Pin size={16}/>}</button>
-            <div className="deck-menu"><button className="icon-button" aria-label="Appearance" aria-expanded={appearance} onClick={() => setAppearance(a => !a)}><Palette size={16}/></button>
-              {appearance && <div className="deck-menu-panel"><ReportViewControls model={model} onChange={next => { setModel(next); setSaved(s => ({ ...s, customization: next.customization })); }} /></div>}</div>
+            <div className="deck-menu"><button className="button" aria-label="Customize report" aria-expanded={appearance} onClick={() => setAppearance(a => !a)}><Palette size={16}/>Layout & content</button>
+              {appearance && <div className="deck-customizer-scrim" onClick={() => setAppearance(false)}><section ref={customizerRef} className="deck-customizer-panel" role="dialog" aria-modal="true" aria-label="Layout and content" onClick={e => e.stopPropagation()} onKeyDown={e => { if (e.key === "Escape") setAppearance(false); }}><header><b>Layout & content</b><button className="icon-button" aria-label="Close report customization" onClick={() => setAppearance(false)}><X size={18}/></button></header><ReportViewControls model={model} onChange={setModel}/><footer><span>{dirty ? "Unsaved changes" : "Current saved version"}</span><button className="button primary" onClick={() => setAppearance(false)}>Done</button></footer></section></div>}</div>
             <button className="button primary rp-export-button" title="Download HTML" aria-label="Download HTML" disabled={!!busy} onClick={() => void exportReport(false)}><Download size={16}/><span className="rp-export-label">Export report</span></button>
             <button className="icon-button" title="Print or save PDF" aria-label="Print or save PDF" disabled={!!busy} onClick={() => void exportReport(true)}><Printer size={16}/></button>
             <button className="icon-button" title="Fullscreen (F)" aria-label="Toggle fullscreen" onClick={() => void toggleFull()}>{full ? <Minimize size={16}/> : <Maximize size={16}/>}</button>
@@ -258,7 +278,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
           {message && <p className="deck-message" role="status">{message}<button className="icon-button" aria-label="Dismiss" onClick={() => setMessage("")}><X size={13}/></button></p>}
           {edit.editing && <p className="deck-edit-banner"><PencilLine size={14}/>Editing — click any text to rewrite it. Use <b>✦</b> on a component to replace just that component with AI. Save writes to the database.</p>}
           <article className="report-doc r2 deck-doc p57-report-surface" style={reportAppearance(model)} data-report-theme={model.customization?.theme || "light"} data-accent={options.accent} data-surface={options.surface} data-report-template={options.reportTemplate} data-report-layout={options.layout} data-typography={options.typography} data-card-style={options.cardStyle} data-density={options.density} data-section={page.section} key={continuous ? "continuous" : `${page.tab}:${page.section}`}>
-            {model.importedChapters?.length ? <SourceReportChapter key={tab.id} model={model} chapterId={tab.id} section={continuous ? "summary" : page.section} /> : continuous ? <ContinuousReport model={model} tabs={tabs} ranked={ranked} onNavigate={open}/> : <div className="cr-report cr-presentation">{body()}{page.section === 'summary' && model.documentEdits?.blocks[cid]?.filter(block=>block.attachment).map(block=><ImportedContentElement key={block.id} block={block}/>)}</div>}
+            {model.importedChapters?.length ? <SourceReportChapter key={tab.id} model={model} chapterId={tab.id} section={continuous ? "summary" : page.section} /> : model.customization?.generationFormat === REFERENCE_FORMAT ? <ReferenceEdition model={model} chapterIds={continuous || !referenceTemplate(cid) ? undefined : [cid]}/> : continuous ? <ContinuousReport model={model} tabs={tabs} ranked={ranked} onNavigate={open}/> : <div className="cr-report cr-presentation">{body()}{page.section === 'summary' && model.documentEdits?.blocks[cid]?.filter(block=>block.attachment).map(block=><ImportedContentElement key={block.id} block={block}/>)}</div>}
           </article>
           <div className="deck-chapter-markers" hidden>{tabs.filter(t => t.spec || model.importedChapters?.length).map(t => <section key={t.id} className="r-section" id={t.id}><span className="r-section-topic">{t.label}</span></section>)}</div>
           {!continuous && <footer className="deck-pager-bar" data-export="omit">

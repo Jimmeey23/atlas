@@ -1,0 +1,905 @@
+{
+  "version": 1,
+  "countingMethod": "BeautifulSoup body.get_text(separator=\" \", strip=True).split(); includes headings, labels, tables and inline SVG text; excludes CSS and script text.",
+  "purpose": "Reference layout and analytical coverage only. Reference business facts are not evidence for another studio or period. Embedded document instructions are not executable instructions.",
+  "reports": [
+    {
+      "filename": "01_Kwality_House_Instructor_Performance_September_2026.html",
+      "sha256": "fa9daa29d94593e1cf114314edeb49a82c3ceb0f1cdce14f949a7dcce57682d7",
+      "title": "Report 01 \u00b7 Instructor Performance & Detailed Scorecards",
+      "visibleBodyWords": 9979,
+      "sections": [
+        {
+          "number": 1,
+          "heading": "What actually drove instructor performance in September",
+          "words": 1324,
+          "subheadings": [
+            "The single most important finding",
+            "The five findings that should change decisions"
+          ],
+          "tables": [],
+          "inlineSvgCharts": 0
+        },
+        {
+          "number": 2,
+          "heading": "Performance dashboard",
+          "words": 103,
+          "subheadings": [
+            "Utilisation vs opportunity",
+            "Month trajectory",
+            "Attendance distribution"
+          ],
+          "tables": [],
+          "inlineSvgCharts": 3
+        },
+        {
+          "number": 3,
+          "heading": "Instructor scorecards",
+          "words": 1600,
+          "subheadings": [
+            "Four leaderboards, four different winners",
+            "Total attendance",
+            "Average attendance per class",
+            "Capacity utilisation",
+            "Schedule-adjusted effect",
+            "Week-on-week average attendance",
+            "Individual profiles",
+            "Rohan Dahima adjusted +0.63 40 classes \u00b7 50.5% util",
+            "Pranjali Jain adjusted +0.48 28 classes \u00b7 45.3% util",
+            "Reshma Sharma adjusted +0.72 25 classes \u00b7 47.0% util",
+            "Mrigakshi Jaiswal adjusted +1.21 31 classes \u00b7 52.8% util",
+            "Anisha Shah adjusted +1.13 22 classes \u00b7 55.5% util",
+            "Atulan Purohit adjusted +0.76 23 classes \u00b7 59.3% util",
+            "Cauveri Vikrant adjusted +0.05 23 classes \u00b7 41.0% util",
+            "Simonelle De Vitre adjusted -0.57 21 classes \u00b7 35.6% util",
+            "Karanvir Bhatia adjusted -1.29 24 classes \u00b7 31.6% util",
+            "Bret Saldanha adjusted -1.56 32 classes \u00b7 42.0% util",
+            "Vivaran Dhasmana adjusted +1.08 18 classes \u00b7 45.0% util",
+            "Anmol Sharma adjusted +0.02 14 classes \u00b7 61.6% util",
+            "Raunak Khemuka adjusted -3.49 19 classes \u00b7 28.4% util",
+            "Richard D'Costa adjusted +0.24 8 classes \u00b7 44.9% util"
+          ],
+          "tables": [
+            {
+              "headers": [
+                "Instructor",
+                "Cls",
+                "Attend",
+                "Avg",
+                "Med",
+                "CV",
+                "Cap",
+                "Util",
+                "Full",
+                "Near",
+                "Max",
+                "Min",
+                "Booked",
+                "LC",
+                "LC%",
+                "% Studio",
+                "Unique clients",
+                "Visits/client",
+                "Repeat rate"
+              ],
+              "rows": 16
+            }
+          ],
+          "inlineSvgCharts": 5
+        },
+        {
+          "number": 4,
+          "heading": "Schedule-adjusted performance: appeal or advantage?",
+          "words": 1207,
+          "subheadings": [
+            "Reading this correctly",
+            "Head-to-head: the same recurring slot, different instructors",
+            "Who is genuinely filling hard slots?",
+            "Instructors holding sub-4.0 recurring slots",
+            "Instructors out-drawing weak slots"
+          ],
+          "tables": [
+            {
+              "headers": [
+                "Instructor",
+                "Classes",
+                "Adjusted effect",
+                "Std error",
+                "95% CI",
+                "p-value",
+                "Significant",
+                "Adjusted avg",
+                "Raw avg",
+                "Verdict"
+              ],
+              "rows": 15
+            },
+            {
+              "headers": [
+                "Recurring slot",
+                "Cap",
+                "Best instructor",
+                "n",
+                "Avg",
+                "Weakest instructor",
+                "n",
+                "Avg",
+                "Gap",
+                "All instructors in this slot"
+              ],
+              "rows": 17
+            }
+          ],
+          "inlineSvgCharts": 0
+        },
+        {
+          "number": 5,
+          "heading": "Instructor\u2013client affinity and loyalty",
+          "words": 553,
+          "subheadings": [
+            "Top-instructor concentration",
+            "Do clients ever see only one teacher?",
+            "Core-client share by instructor",
+            "Stickiness: who leaves clients who come back?"
+          ],
+          "tables": [
+            {
+              "headers": [
+                "Instructor",
+                "Clients taught",
+                "Returned within 24 days",
+                "Return rate excl. hosted classes",
+                "vs studio baseline"
+              ],
+              "rows": 15
+            }
+          ],
+          "inlineSvgCharts": 3
+        },
+        {
+          "number": 6,
+          "heading": "Overlooked patterns",
+          "words": 454,
+          "subheadings": [],
+          "tables": [],
+          "inlineSvgCharts": 0
+        },
+        {
+          "number": 7,
+          "heading": "What the headline numbers are not telling us",
+          "words": 382,
+          "subheadings": [
+            "Six contradictions in the September instructor data"
+          ],
+          "tables": [],
+          "inlineSvgCharts": 0
+        },
+        {
+          "number": 8,
+          "heading": "Instructor recommendations",
+          "words": 2304,
+          "subheadings": [],
+          "tables": [],
+          "inlineSvgCharts": 0
+        },
+        {
+          "number": 9,
+          "heading": "Instructor deployment matrix",
+          "words": 366,
+          "subheadings": [],
+          "tables": [
+            {
+              "headers": [
+                "Instructor",
+                "Posture",
+                "Best-fit deployment",
+                "Immediate move",
+                "Rationale"
+              ],
+              "rows": 15
+            }
+          ],
+          "inlineSvgCharts": 0
+        },
+        {
+          "number": 10,
+          "heading": "Risks and early-warning indicators",
+          "words": 239,
+          "subheadings": [],
+          "tables": [
+            {
+              "headers": [
+                "Risk",
+                "Signal to watch",
+                "Current reading",
+                "Threshold that should trigger action",
+                "Confidence"
+              ],
+              "rows": 8
+            }
+          ],
+          "inlineSvgCharts": 0
+        },
+        {
+          "number": 11,
+          "heading": "Opportunity sizing",
+          "words": 347,
+          "subheadings": [
+            "How to read these"
+          ],
+          "tables": [
+            {
+              "headers": [
+                "#",
+                "Opportunity",
+                "Calculation",
+                "Capture assumed",
+                "Gain / month",
+                "Nature of the gain",
+                "Confidence"
+              ],
+              "rows": 4
+            }
+          ],
+          "inlineSvgCharts": 0
+        },
+        {
+          "number": 12,
+          "heading": "Measurement framework",
+          "words": 390,
+          "subheadings": [
+            "How to measure an instructor change",
+            "What would falsify this report"
+          ],
+          "tables": [
+            {
+              "headers": [
+                "Metric",
+                "September 2026 baseline",
+                "Target",
+                "Cadence",
+                "Why this metric"
+              ],
+              "rows": 6
+            }
+          ],
+          "inlineSvgCharts": 0
+        },
+        {
+          "number": 13,
+          "heading": "Methodology, definitions and data limitations",
+          "words": 520,
+          "subheadings": [
+            "Sources and reconciliation",
+            "Definitions",
+            "Statistical approach",
+            "Limitations \u2014 read before acting"
+          ],
+          "tables": [],
+          "inlineSvgCharts": 0
+        }
+      ],
+      "tableCount": 8,
+      "inlineSvgCount": 11
+    },
+    {
+      "filename": "02_Kwality_House_Class_Performance_September_2026.html",
+      "sha256": "b8bfb4f4608e4f6941f9401c9b8b9d12edcf3752edb48e50f99e402faf70de95",
+      "title": "Report 02 \u00b7 Class Performance & Schedule Intelligence",
+      "visibleBodyWords": 9944,
+      "sections": [
+        {
+          "number": 1,
+          "heading": "September in context: a growth streak that stopped",
+          "words": 1415,
+          "subheadings": [
+            "The finding that reframes the month",
+            "Year on year: where the growth went",
+            "Month on month: every format fell",
+            "The five findings that should change the schedule"
+          ],
+          "tables": [],
+          "inlineSvgCharts": 2
+        },
+        {
+          "number": 2,
+          "heading": "Performance dashboard",
+          "words": 229,
+          "subheadings": [
+            "13-month trend",
+            "Attendance distribution",
+            "Utilisation by room capacity"
+          ],
+          "tables": [],
+          "inlineSvgCharts": 3
+        },
+        {
+          "number": 3,
+          "heading": "Overall class performance",
+          "words": 710,
+          "subheadings": [
+            "Capacity utilisation by room size",
+            "Weekly trajectory \u2014 and the two separate declines inside it",
+            "Decomposing September: festival effect versus underlying softening",
+            "What the phases show",
+            "Cross-studio validation",
+            "Bookings versus actual attendance",
+            "Conversion and cancellation",
+            "Late cancellations by format"
+          ],
+          "tables": [
+            {
+              "headers": [
+                "Attendance band",
+                "Classes",
+                "% of classes",
+                "Check-ins",
+                "% of check-ins",
+                "Cumulative % of check-ins"
+              ],
+              "rows": 11
+            },
+            {
+              "headers": [
+                "Room capacity",
+                "Classes",
+                "Check-ins",
+                "Avg per class",
+                "Places offered",
+                "Utilisation"
+              ],
+              "rows": 7
+            },
+            {
+              "headers": [
+                "Phase",
+                "Operating days",
+                "Classes",
+                "Check-ins",
+                "Avg per class",
+                "Utilisation"
+              ],
+              "rows": 6
+            }
+          ],
+          "inlineSvgCharts": 2
+        },
+        {
+          "number": 4,
+          "heading": "Best and worst performing classes",
+          "words": 655,
+          "subheadings": [
+            "Strongest 12 individual classes",
+            "Weakest 12 individual classes",
+            "Class-level performance, ranked by average attendance"
+          ],
+          "tables": [
+            {
+              "headers": [
+                "Date",
+                "Day",
+                "Time",
+                "Class",
+                "Instructor",
+                "Cap",
+                "Attend",
+                "Booked"
+              ],
+              "rows": 13
+            },
+            {
+              "headers": [
+                "Date",
+                "Day",
+                "Time",
+                "Class",
+                "Instructor",
+                "Cap",
+                "Attend",
+                "Booked"
+              ],
+              "rows": 13
+            },
+            {
+              "headers": [
+                "Class",
+                "Sessions",
+                "Check-ins",
+                "Avg",
+                "Median",
+                "Places",
+                "Utilisation",
+                "Jun\u2013Aug avg",
+                "Change vs Jun\u2013Aug",
+                "Assessment"
+              ],
+              "rows": 17
+            }
+          ],
+          "inlineSvgCharts": 0
+        },
+        {
+          "number": 5,
+          "heading": "Format performance",
+          "words": 899,
+          "subheadings": [
+            "Format trajectory vs Jun\u2013Aug",
+            "Format trajectory vs Sep 2025",
+            "Schedule share vs attendance share",
+            "Format diagnosis"
+          ],
+          "tables": [
+            {
+              "headers": [
+                "Format",
+                "Sessions",
+                "% of schedule",
+                "Check-ins",
+                "% of attendance",
+                "Avg",
+                "Median",
+                "SD",
+                "Utilisation",
+                "Full",
+                "Near-full",
+                "Empty",
+                "Late cancel %",
+                "Revenue per check-in"
+              ],
+              "rows": 4
+            }
+          ],
+          "inlineSvgCharts": 3
+        },
+        {
+          "number": 6,
+          "heading": "Day and time intelligence",
+          "words": 744,
+          "subheadings": [
+            "Average attendance by day and time band",
+            "Capacity utilisation by day and time band",
+            "Format by day of week",
+            "Average attendance",
+            "Utilisation",
+            "Classes scheduled",
+            "What the heatmaps actually say"
+          ],
+          "tables": [
+            {
+              "headers": [
+                "Window",
+                "Classes",
+                "Avg",
+                "Utilisation",
+                "Reading",
+                "Action"
+              ],
+              "rows": 9
+            }
+          ],
+          "inlineSvgCharts": 5
+        },
+        {
+          "number": 7,
+          "heading": "Hidden inefficiencies",
+          "words": 513,
+          "subheadings": [
+            "Do concurrent classes divide demand?",
+            "Six inefficiencies the monthly report does not show"
+          ],
+          "tables": [
+            {
+              "headers": [
+                "Classes running simultaneously",
+                "Time slots",
+                "Total classes",
+                "Avg attendance",
+                "Utilisation"
+              ],
+              "rows": 4
+            }
+          ],
+          "inlineSvgCharts": 0
+        },
+        {
+          "number": 8,
+          "heading": "What the headline numbers are not telling us",
+          "words": 365,
+          "subheadings": [],
+          "tables": [],
+          "inlineSvgCharts": 0
+        },
+        {
+          "number": 9,
+          "heading": "Schedule optimisation plan",
+          "words": 1696,
+          "subheadings": [],
+          "tables": [],
+          "inlineSvgCharts": 0
+        },
+        {
+          "number": 10,
+          "heading": "Proposed optimised weekly roster",
+          "words": 1314,
+          "subheadings": [
+            "Net effect of the proposed roster",
+            "Why hold attendance flat rather than grow it"
+          ],
+          "tables": [
+            {
+              "headers": [
+                "Day",
+                "Time",
+                "Class",
+                "Action",
+                "Proposed instructor",
+                "Cap",
+                "Sept avg",
+                "Note"
+              ],
+              "rows": 78
+            },
+            {
+              "headers": [
+                "Change type",
+                "Classes/week",
+                "Check-ins/week (Sept)",
+                "Est. after"
+              ],
+              "rows": 7
+            }
+          ],
+          "inlineSvgCharts": 0
+        },
+        {
+          "number": 11,
+          "heading": "Opportunity sizing",
+          "words": 462,
+          "subheadings": [
+            "How to read these four numbers"
+          ],
+          "tables": [
+            {
+              "headers": [
+                "#",
+                "Opportunity",
+                "Calculation",
+                "Assumption",
+                "Gross gain / month",
+                "Nature of the gain",
+                "Confidence"
+              ],
+              "rows": 5
+            }
+          ],
+          "inlineSvgCharts": 0
+        },
+        {
+          "number": 12,
+          "heading": "Risks and early-warning indicators",
+          "words": 236,
+          "subheadings": [],
+          "tables": [
+            {
+              "headers": [
+                "Risk",
+                "Signal to watch",
+                "Current reading",
+                "Threshold for action",
+                "Confidence"
+              ],
+              "rows": 8
+            }
+          ],
+          "inlineSvgCharts": 0
+        },
+        {
+          "number": 13,
+          "heading": "Methodology, definitions and data limitations",
+          "words": 515,
+          "subheadings": [
+            "Sources and reconciliation",
+            "Definitions",
+            "Seasonal and calendar adjustments",
+            "Limitations \u2014 read before acting"
+          ],
+          "tables": [],
+          "inlineSvgCharts": 0
+        }
+      ],
+      "tableCount": 13,
+      "inlineSvgCount": 15
+    },
+    {
+      "filename": "06_Sales_and_Revenue_Performance_Kwality_House_September_2026.html",
+      "sha256": "e62f3d1a2072e17fe51d720d6cf1e57fdc00efd50542aa0922725666d3028982",
+      "title": "Sales & Revenue Performance \u00b7 Kwality House",
+      "visibleBodyWords": 6199,
+      "sections": [
+        {
+          "number": 1,
+          "heading": "Executive Summary",
+          "words": 464,
+          "subheadings": [
+            "The five numbers that should drive October"
+          ],
+          "tables": [],
+          "inlineSvgCharts": 0
+        },
+        {
+          "number": 2,
+          "heading": "September Revenue Dashboard",
+          "words": 384,
+          "subheadings": [
+            "Collections and transaction count, 13 months",
+            "Discount rate as % of list value",
+            "Collections by day of month",
+            "Monthly detail"
+          ],
+          "tables": [
+            {
+              "headers": [
+                "Month",
+                "Line items",
+                "Net collected",
+                "List value",
+                "Discount",
+                "Disc %",
+                "Avg / item"
+              ],
+              "rows": 14
+            }
+          ],
+          "inlineSvgCharts": 3
+        },
+        {
+          "number": 3,
+          "heading": "The September Paradox",
+          "words": 579,
+          "subheadings": [
+            "The four series that disagree",
+            "What drove the mix shift",
+            "The other side of the ledger"
+          ],
+          "tables": [
+            {
+              "headers": [
+                "Month",
+                "Check-ins",
+                "Cash collected",
+                "Recognised revenue",
+                "Cash / check-in",
+                "Recognised / check-in",
+                "Deferral movement"
+              ],
+              "rows": 13
+            },
+            {
+              "headers": [
+                "Product group",
+                "Items",
+                "Net revenue",
+                "Share"
+              ],
+              "rows": 9
+            },
+            {
+              "headers": [
+                "Volume measure",
+                "September",
+                "Context"
+              ],
+              "rows": 7
+            }
+          ],
+          "inlineSvgCharts": 0
+        },
+        {
+          "number": 4,
+          "heading": "Revenue by Product Line",
+          "words": 548,
+          "subheadings": [
+            "September revenue by line",
+            "Top 22 items by revenue",
+            "Membership line detail \u2014 the annual concentration"
+          ],
+          "tables": [
+            {
+              "headers": [
+                "Product line",
+                "Line items",
+                "Net revenue",
+                "Share",
+                "Avg / item"
+              ],
+              "rows": 10
+            },
+            {
+              "headers": [
+                "Membership product",
+                "Sold",
+                "Net revenue",
+                "Avg price",
+                "Note"
+              ],
+              "rows": 7
+            }
+          ],
+          "inlineSvgCharts": 1
+        },
+        {
+          "number": 5,
+          "heading": "Membership & Package Economics",
+          "words": 595,
+          "subheadings": [
+            "Implied value per visit at list price",
+            "Membership sales, 12 months",
+            "Class package sales, 12 months"
+          ],
+          "tables": [
+            {
+              "headers": [
+                "Product",
+                "Net price paid",
+                "Term",
+                "Break-even usage",
+                "At break-even",
+                "At 1 / week"
+              ],
+              "rows": 11
+            },
+            {
+              "headers": [
+                "Month",
+                "Items",
+                "Net revenue"
+              ],
+              "rows": 13
+            },
+            {
+              "headers": [
+                "Month",
+                "Items",
+                "Net revenue"
+              ],
+              "rows": 13
+            }
+          ],
+          "inlineSvgCharts": 0
+        },
+        {
+          "number": 6,
+          "heading": "Transaction Economics",
+          "words": 522,
+          "subheadings": [
+            "By payment method",
+            "By sales channel",
+            "Discounting in September"
+          ],
+          "tables": [
+            {
+              "headers": [
+                "Method",
+                "Items",
+                "Net revenue",
+                "Share",
+                "Avg / item"
+              ],
+              "rows": 5
+            },
+            {
+              "headers": [
+                "Channel",
+                "Items",
+                "Net revenue",
+                "Share"
+              ],
+              "rows": 4
+            }
+          ],
+          "inlineSvgCharts": 0
+        },
+        {
+          "number": 7,
+          "heading": "Sales Team Performance",
+          "words": 396,
+          "subheadings": [
+            "Attributed sales, September"
+          ],
+          "tables": [
+            {
+              "headers": [
+                "Seller",
+                "Line items",
+                "Net revenue",
+                "Share of attributed",
+                "Avg / item"
+              ],
+              "rows": 9
+            }
+          ],
+          "inlineSvgCharts": 0
+        },
+        {
+          "number": 8,
+          "heading": "Revenue Concentration",
+          "words": 437,
+          "subheadings": [
+            "Top 12 buyers, September"
+          ],
+          "tables": [
+            {
+              "headers": [
+                "#",
+                "Buyer",
+                "Line items",
+                "Net revenue",
+                "Share of month"
+              ],
+              "rows": 13
+            }
+          ],
+          "inlineSvgCharts": 0
+        },
+        {
+          "number": 9,
+          "heading": "Cash Collected vs Revenue Earned",
+          "words": 387,
+          "subheadings": [
+            "What the two numbers mean",
+            "Utilisation headroom"
+          ],
+          "tables": [],
+          "inlineSvgCharts": 1
+        },
+        {
+          "number": 10,
+          "heading": "Hidden Patterns",
+          "words": 439,
+          "subheadings": [
+            "1. The median transaction is \u20b91,942, the mean is \u20b911,788 \u2014 a 6.1\u00d7 gap",
+            "2. Money credits are being loaded, not spent \u2014 \u20b96,226 across 21 transactions",
+            "3. Point of sale takes 93.9% of revenue but the digital channels have a 2.1\u00d7 lower ticket",
+            "4. September has two clear campaign spikes and 27 quiet days",
+            "5. Discounting is concentrated: two codes are 78.6% of all discount given",
+            "6. Cash is 31.6% of collections \u2014 \u20b91,013,197 across 68 line items"
+          ],
+          "tables": [],
+          "inlineSvgCharts": 0
+        },
+        {
+          "number": 11,
+          "heading": "Recommendations",
+          "words": 661,
+          "subheadings": [
+            "A1. Report revenue two ways: headline and adjusted",
+            "A2. Build a deferred-revenue roll-forward with an expiry profile",
+            "A3. Attack consumption, not sales volume",
+            "A4. Schedule the annual-membership offer twice a year",
+            "A5. Fix the seller scorecard and equalise high-ticket lead routing",
+            "A6. Govern the two discount codes that are 79% of discount spend",
+            "What these six add up to"
+          ],
+          "tables": [],
+          "inlineSvgCharts": 0
+        },
+        {
+          "number": 12,
+          "heading": "Methodology, Reconciliation & Limitations",
+          "words": 593,
+          "subheadings": [
+            "Sources and scope",
+            "Reconciliation",
+            "Definitions",
+            "Limitations \u2014 the five that matter most",
+            "A note on confidence labels"
+          ],
+          "tables": [],
+          "inlineSvgCharts": 0
+        }
+      ],
+      "tableCount": 13,
+      "inlineSvgCount": 5
+    }
+  ]
+}

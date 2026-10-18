@@ -14,6 +14,7 @@ import { reportReleaseIssues } from "./release-gate.mjs";
 import { directionIssues } from "./audit";
 import { reviewMetricIds } from "./review";
 import { addCall, type CallUsage, type ChapterUsage } from "./usage";
+import { REFERENCE_FORMAT, referenceTemplate, referenceSectionIssues, referenceReviewIssues, htmlText, referenceWordBudgets, referenceLengthPlan, applyReferenceLength } from './reference-standard.mjs';
 
 const CACHE_PREFIX = "atlas-report-narrative:v19:";
 /** Exact evidence and request identity, independent of presentation settings. */
@@ -493,6 +494,76 @@ async function verifyCards(cards: InsightCard[], figures: string, earlier: strin
   }
 }
 
+/** Reference reports are written and audited section by section, without the short-card contract. */
+async function generateReferenceChapter(model: ReportModel, spec: ChapterSpec, figures: string, providerIdentity: string,
+  signal: AbortSignal | undefined, progress: (label: string) => void): Promise<ChapterNarrative> {
+  const template = referenceTemplate(spec.id, model.scope.month)!;
+  if (!model.chapters[spec.id]?.n) return { summary: '', cards: [], generated: false, error: 'No contributing source records are available for this reference report.', referenceReview: { version: 1, templateHash: template.sha256, sections: [] } };
+  const settings = { audience: model.customization?.audience, tone: model.customization?.tone, instructions: model.customization?.instructions, targets: model.customization?.targets };
+  const identity = await analysisKey({ format: REFERENCE_FORMAT, version: 2, template: template.sha256, scope: model.scope, freeze: model.builtAt, figures, providerIdentity, settings, rules: [ANALYST_ROLE, ACCURACY_RULES, BUSINESS_CONTEXT] });
+  const previous = model.narratives[spec.id];
+  if (providerIdentity && previous?.generated && previous.analysisKey === identity && !referenceReviewIssues(previous.referenceReview, spec.id, { month: model.scope.month, model }).length) return { ...previous, usage: { model: providerIdentity.split('|')[0], calls: 0, inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, reasoningTokens: 0, durationMs: 0, costUsd: 0, fromCache: true } };
+  const review: NonNullable<ChapterNarrative['referenceReview']> = { version: 1, templateHash: template.sha256, sections: [] };
+  let usage: ChapterUsage | undefined;
+  const onUsage = (call: CallUsage) => { usage = addCall(usage, call); };
+  const metricIds = [...new Set(chapters.flatMap(chapter => citableMetrics(model, chapter)))];
+  const summaries: string[] = [];
+  const budgets = referenceWordBudgets(model, spec.id);
+  try {
+    for (const section of template.sections) {
+      const wordTarget = budgets[review.sections.length];
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+      progress(`${template.title} · ${review.sections.length + 1}/${template.sections.length} · ${section.title}`);
+      const key = `${CACHE_PREFIX}reference:${identity}:${section.id}`;
+      let cached: { html: string; summary: string; verified: boolean } | null = null;
+      if (providerIdentity) { try { cached = JSON.parse(localStorage.getItem(key) || 'null'); } catch { /* regenerate */ } }
+      if (cached?.verified && !referenceSectionIssues(cached.html, template, section, { words: wordTarget }).length) {
+        review.sections.push({ id: section.id, html: cached.html, verified: true }); summaries.push(cached.summary); continue;
+      }
+      let correction = '';
+      for (let repair = 0; repair < 3; repair++) {
+        try {
+          const message = chapterPrompt([
+            ANALYST_ROLE, ACCURACY_RULES,
+            `BUSINESS CONTEXT (fixed definitions):\n${BUSINESS_CONTEXT}`,
+            `Write section ${section.id} of ${template.title} for ${model.scope.studio}, ${monthLabel(model.scope.month)}. Evidence freeze: ${model.builtAt}.`,
+            `Match the supplied reference section's full structure and ${section.words}-word reading length. Every table and chart must be populated from these figures or explicitly show the missing evidence. Do not repeat the historical sample's business story.`,
+            `Editorial preferences (subordinate to evidence): ${JSON.stringify(settings).slice(0, 6000)}.`,
+            correction ? `CORRECTION REQUIRED: ${correction}` : '',
+          ], [{ label: 'FIGURES AND GOVERNED DEFINITIONS (the only current evidence):', text: figures }]);
+          const parsed = JSON.parse(await askModel(message, [], signal, onUsage, { editorial: false, referenceSection: { chapter: spec.id, id: section.id, month: model.scope.month }, analysisKey: identity }));
+          const structural = referenceSectionIssues(parsed.html, template, section, { draft: true });
+          if (structural.length) throw new Error(`Analysis reference section rejected: ${structural.join('; ')}`);
+          const lengthPlan = referenceLengthPlan(parsed.html, wordTarget);
+          if (lengthPlan.length) {
+            const edited = JSON.parse(await askModel(`Copy edit the selected existing paragraphs in the ${template.title} report for ${model.scope.studio}, ${monthLabel(model.scope.month)}. Preserve all substantive content and qualifications. The paragraph arrays must match their exact schema lengths.`, [], signal, onUsage, { editorial: false, referenceLength: { paragraphs: lengthPlan.map(({ id, text, words }) => ({ id, text, words })) }, analysisKey: identity }));
+            parsed.html = applyReferenceLength(parsed.html, lengthPlan, edited.paragraphs, wordTarget);
+          }
+          const issues = referenceSectionIssues(parsed.html, template, section, { words: wordTarget });
+          if (issues.length) throw new Error(`Analysis reference section rejected: ${issues.join('; ')}`);
+          const card: InsightCard = { headline: htmlText(parsed.html).slice(0, 150), meaning: htmlText(parsed.html), evidence: parsed.summary, action: '', focus: 'kpis', lens: 'driver', confidence: 'medium', metrics: [] };
+          validateNarrativeCards([card], metricIds, [], model, spec.id, figures);
+          const verdicts = await verifyCards([card], figures, '', signal, onUsage);
+          if (!verdicts || verdicts.length !== 1 || verdicts[0].index !== 0 || verdicts[0].verdict !== 'supported') throw new Error(`Analysis reference audit rejected: ${verdicts?.map(v => v.reason).join('; ') || 'Independent evidence verification was unavailable'}`);
+          review.sections.push({ id: section.id, html: parsed.html, verified: true }); summaries.push(parsed.summary);
+          if (providerIdentity) { try { localStorage.setItem(key, JSON.stringify({ html: parsed.html, summary: parsed.summary, verified: true })); } catch { /* server cache remains available */ } }
+          break;
+        } catch (error) {
+          if (signal?.aborted) throw error;
+          const message = error instanceof Error ? error.message : String(error);
+          if (repair < 2 && /^Analysis |reference/i.test(message)) { correction = message.slice(0, 5000); continue; }
+          throw error;
+        }
+      }
+    }
+    const summary = summaries[0] ?? '';
+    return { summary, cards: [{ headline: template.title, meaning: summary, evidence: summary, action: '', focus: 'kpis', lens: 'driver', confidence: 'medium' }], generated: true, referenceReview: review, analysisKey: identity, usage };
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    return { summary: summaries[0] ?? '', cards: [], generated: false, error: error instanceof Error ? error.message : String(error), referenceReview: review, analysisKey: identity, usage };
+  }
+}
+
 export async function generateNarratives(
   model: ReportModel,
   onProgress?: (done: number, total: number, label: string) => void,
@@ -519,7 +590,7 @@ export async function generateNarratives(
   let done = 0;
   const finish = (spec: ChapterSpec, written: ChapterNarrative) => {
     // Each fact is stated once: drop what earlier chapters already carry.
-    const narrative = uniqueNarrative(spec, written, out);
+    const narrative = written.referenceReview ? written : uniqueNarrative(spec, written, out);
     out[spec.id] = narrative;
     onChapter?.(spec.id, narrative);
     done++;
@@ -537,6 +608,13 @@ export async function generateNarratives(
         const own = findings[spec.id] ?? [];
         const portfolio = portfolioPayload(model, findings, spec);
         const figures = spec.derived ? portfolio : data ? chapterPayload(spec,data,model,own) : "";
+        if (model.customization?.generationFormat === REFERENCE_FORMAT && referenceTemplate(spec.id)) {
+          const connected = spec.id === 'instructors' ? ['instructor-outcomes', 'conversion-funnel', 'sessions', 'community-attendance'] : spec.id === 'sessions' ? ['formats', 'recurring', 'late-cancellations', 'community-attendance', 'instructors'] : ['conversion-funnel', 'renewals', 'lapsed', 'sessions', 'community-attendance'];
+          const fullEvidence = [figures, ...connected.flatMap(id => { const sibling = chapters.find(c => c.id === id), source = model.chapters[id]; return sibling && source ? [chapterPayload(sibling, source, model, findings[id] ?? [])] : []; }), portfolio].join('\n\n');
+          finish(spec, await generateReferenceChapter(model, spec, fullEvidence, providerModel && providerPolicy ? `${providerModel}|${providerPolicy}` : '', signal,
+            label => onProgress?.(done, selected.length, label)));
+          continue;
+        }
         if (!figures) {
           finish(spec, fallbackNarrative(spec, data, own, model));
           continue;

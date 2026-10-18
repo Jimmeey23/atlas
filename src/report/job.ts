@@ -1,4 +1,5 @@
 import { assertReportRelease } from "./release-gate.mjs";
+import { REFERENCE_FORMAT, referenceTemplate } from './reference-standard.mjs';
 import { create } from "zustand";
 import { chapters } from "./chapters";
 import { fallbackNarrative, generateNarratives } from "./narrative";
@@ -60,6 +61,7 @@ function rememberPace(chapterSeconds: number[]) {
   try { localStorage.setItem(PACE_KEY, String(Math.round(chapterSeconds.reduce((a, b) => a + b, 0) / chapterSeconds.length))); } catch { /* the default pace applies */ }
 }
 export function estimateSeconds(c: ReportCustomization) {
+  if (c.generationFormat === REFERENCE_FORMAT) return 20 + c.chapterIds.reduce((sum, id) => sum + (referenceTemplate(id)?.sections.length ?? 1) * 90, 0);
   return 20 + c.chapterIds.length * (rememberedPace() ?? (c.detail === "Concise" ? 45 : 60));
 }
 

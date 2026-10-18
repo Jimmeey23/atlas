@@ -194,3 +194,166 @@
 @media print {.report-doc.r2.p57-report-surface[data-report-template] .cr-rail {display:none;}}
 .report-doc.r2.p57-report-surface[data-report-template][data-report-layout=full] .p57-adaptive-grid {grid-template-columns:minmax(0,1fr);}
 .report-doc.r2.p57-report-surface[data-report-template] .source-hero :is(h1,h2) {font-family:var(--rt-heading);}
+
+/* Document composition: layouts change the reading rhythm beyond the cover. */
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review {
+  --rt-body-size:15px;--rt-leading:1.7;--rt-block-space:24px;
+  font-family:'Segoe UI',Arial,sans-serif;line-height:var(--rt-leading);
+}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .leadership-front>header {box-shadow:none;min-height:180px;box-sizing:border-box}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .leadership-front>section {margin:0;min-width:0}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .leadership-front>section>h2 {font-size:19px;line-height:1.35;color:var(--rt-ink);margin:0 0 16px;letter-spacing:-.02em}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .leadership-front {display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:24px}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .leadership-front>* {grid-column:1/-1;min-width:0}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .leadership-front>header {margin:0}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .leadership-verdicts {display:block;padding:0;list-style:none}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .leadership-verdicts>li {padding:0 0 18px;margin:0 0 18px;border-bottom:1px solid var(--rt-rule);background:transparent}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .leadership-verdicts h3 {font-size:16px;line-height:1.45;color:var(--rt-ink);margin:0 0 12px}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .leadership-verdicts p {font-size:14px;line-height:1.65;color:var(--rt-muted);margin:8px 0}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .leadership-verdicts strong {display:block;margin-top:8px;font-size:12px;color:var(--rt-muted)}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .p57-executive-verdict {padding:24px 0;border-block:1px solid var(--rt-rule)}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .rp-prose p {font-size:var(--rt-body-size);line-height:var(--rt-leading);color:var(--rt-ink);margin:12px 0;max-width:82ch}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .rt-chapter-opening {display:grid;gap:24px;margin:24px 0;align-items:start}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review :is(.rt-chapter-measures,.rt-chapter-story) {min-width:0}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .rp-chapter-story {margin:0;padding:0;background:transparent}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .rp-reading-basis {font-size:12px;color:var(--rt-muted);padding:16px 0;margin:20px 0 0;border-top:1px solid var(--rt-rule);background:transparent}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .rp-reading-basis p {font-size:12px;line-height:1.6;max-width:70ch}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .p57-editorial-findings {gap:24px;margin:24px 0;align-items:start}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .p57-editorial-finding {margin:0;padding:26px;box-sizing:border-box}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .p57-editorial-finding h3 {font-size:22px;line-height:1.3;color:var(--rt-ink);margin:0 0 14px;letter-spacing:-.02em}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .p57-finding-meta {border-bottom:1px solid var(--rt-rule);padding-bottom:12px;margin-bottom:18px;font-size:11px;letter-spacing:.03em;color:var(--rt-muted)}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .p57-editorial-callout {background:var(--rt-tint);border:0;border-left:3px solid var(--accent);border-radius:0;padding:18px 20px;margin:20px 0}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .p57-editorial-callout p {font-size:14px;line-height:1.65}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .intelligence-scroll {border:1px solid var(--rt-rule);border-radius:0;overflow:auto}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .intelligence-scroll table {width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;background:var(--rt-paper)}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review table caption {text-align:left;font-size:13px;font-weight:650;padding:16px;color:var(--rt-ink);background:var(--rt-tint);border-bottom:1px solid var(--rt-rule)}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .intelligence-scroll :is(th,td) {padding:12px 16px;border-bottom:1px solid var(--rt-rule);color:var(--rt-ink);text-align:right}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .intelligence-scroll :is(th,td):first-child {text-align:left}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .intelligence-scroll thead th {background:var(--rt-tint);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--rt-muted)}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .cr-contents {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 24px;margin-block:36px;padding:24px;background:var(--rt-paper);border:1px solid var(--rt-rule)}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .cr-contents>.deck-eyebrow {grid-column:1/-1;margin-bottom:8px}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .cr-contents a {padding:12px 0;border-bottom:1px solid var(--rt-rule);color:var(--rt-ink);font-size:14px;min-width:0}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .cr-chapter-head {margin-bottom:26px}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .cr-disclosure {margin:16px 0;border:1px solid var(--rt-rule);border-radius:6px;background:var(--rt-paper)}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .cr-disclosure>summary {padding:16px;font-size:13px;color:var(--rt-ink);line-height:1.5}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .cr-disclosure>summary span {color:var(--rt-muted)}
+
+/* Executive: three decision columns, followed by a split evidence/story opening. */
+.report-doc.r2.p57-report-surface[data-report-template=executive] .p57-reference-review .leadership-front>.rt-verdict-group {grid-column:span 4;border-top:3px solid var(--accent);padding-top:20px}
+.report-doc.r2.p57-report-surface[data-report-template=executive] .p57-reference-review .rt-chapter-opening {grid-template-columns:minmax(0,1fr) minmax(0,1.5fr)}
+.report-doc.r2.p57-report-surface[data-report-template=executive] .p57-reference-review .p57-executive-verdict .rp-prose p {font-size:19px;max-width:80ch}
+
+/* Editorial: a journal with marginal section labels and uninterrupted prose. */
+.report-doc.r2.p57-report-surface[data-report-template=editorial] {--rt-report-width:1120px;--rt-cover-size:56px}
+.report-doc.r2.p57-report-surface[data-report-template=editorial] .p57-reference-review {--rt-body-size:17px;--rt-leading:1.85}
+.report-doc.r2.p57-report-surface[data-report-template=editorial] .p57-reference-review .leadership-front>.rt-verdict-group {display:grid;grid-template-columns:180px minmax(0,1fr);gap:30px;border-top:1px solid var(--rt-rule);padding-top:26px}
+.report-doc.r2.p57-report-surface[data-report-template=editorial] .p57-reference-review .rt-chapter-story {max-width:76ch;margin-inline:auto}
+.report-doc.r2.p57-report-surface[data-report-template=editorial] .p57-reference-review .p57-editorial-finding {padding:32px 0;border:0;border-top:1px solid var(--rt-rule);border-radius:0}
+.report-doc.r2.p57-report-surface[data-report-template=editorial] .p57-reference-review .p57-editorial-finding h3 {font-size:30px;font-weight:400;max-width:30ch}
+
+/* Boardroom: a formal brief, paired decision boxes and framed chapter folios. */
+.report-doc.r2.p57-report-surface[data-report-template=boardroom] .p57-reference-review .leadership-front>.rt-verdict-group {grid-column:span 6;border:1px solid var(--rt-rule);padding:26px}
+.report-doc.r2.p57-report-surface[data-report-template=boardroom] .p57-reference-review .leadership-front>.rt-verdict-group:last-of-type {grid-column:1/-1}
+.report-doc.r2.p57-report-surface[data-report-template=boardroom] .p57-reference-review .leadership-front>header {min-height:270px;display:flex;flex-direction:column;justify-content:center}
+.report-doc.r2.p57-report-surface[data-report-template=boardroom] .p57-reference-review .p57-editorial-finding {border:1px solid var(--rt-rule);border-top:4px solid var(--accent);padding:30px}
+.report-doc.r2.p57-report-surface[data-report-template=boardroom] .p57-reference-review .cr-chapter-head {padding:16px;background:var(--rt-tint)}
+
+/* Dashboard: performance tiles and compact, self-contained finding cards. */
+.report-doc.r2.p57-report-surface[data-report-template=dashboard] {--rt-tint:#f2f5f8}
+.report-doc.r2.p57-report-surface[data-report-template=dashboard] .p57-reference-review .leadership-front>.rt-verdict-group {grid-column:span 4;background:var(--rt-tint);border:1px solid var(--rt-rule);padding:22px;border-radius:14px}
+.report-doc.r2.p57-report-surface[data-report-template=dashboard] .p57-reference-review .p57-executive-verdict {background:var(--rt-tint);padding:24px;border:0;border-radius:14px}
+.report-doc.r2.p57-report-surface[data-report-template=dashboard] .p57-reference-review .leadership-front>header {min-height:140px;background:var(--rt-ink);color:var(--rt-paper);border-radius:14px;display:block}
+.report-doc.r2.p57-report-surface[data-report-template=dashboard] .p57-reference-review .leadership-front>header .deck-eyebrow {color:inherit}
+.report-doc.r2.p57-report-surface[data-report-template=dashboard] .p57-reference-review .p57-editorial-finding {border-radius:14px;background:var(--rt-tint);padding:24px}
+.report-doc.r2.p57-report-surface[data-report-template=dashboard] .p57-reference-review .p57-adaptive-grid {grid-template-columns:repeat(2,minmax(0,1fr))}
+.report-doc.r2.p57-report-surface[data-report-template=dashboard] .p57-reference-review .rt-chapter-story {border:1px solid var(--rt-rule);padding:24px;border-radius:14px}
+
+/* Ledger: compact ruled rows and a table-like metric register. */
+.report-doc.r2.p57-report-surface[data-report-template=ledger] {--rt-heading:'Segoe UI',Arial,sans-serif;--rt-cover-size:30px;--rt-chapter-gap:26px}
+.report-doc.r2.p57-report-surface[data-report-template=ledger] .p57-reference-review {--rt-body-size:14px;--rt-leading:1.65}
+.report-doc.r2.p57-report-surface[data-report-template=ledger] .p57-reference-review .leadership-front {gap:18px}
+.report-doc.r2.p57-report-surface[data-report-template=ledger] .p57-reference-review .leadership-front>.rt-verdict-group {display:grid;grid-template-columns:210px minmax(0,1fr);gap:24px;border-top:1px solid var(--rt-rule);padding-top:18px}
+.report-doc.r2.p57-report-surface[data-report-template=ledger] .p57-reference-review .leadership-front>.rt-verdict-group>h2 {font:600 12px/1.6 ui-monospace,monospace;text-transform:uppercase;letter-spacing:.05em}
+.report-doc.r2.p57-report-surface[data-report-template=ledger] .p57-reference-review .rt-chapter-opening {grid-template-columns:280px minmax(0,1fr)}
+.report-doc.r2.p57-report-surface[data-report-template=ledger] .p57-reference-review .rt-chapter-measures .deck-metric-grid {grid-template-columns:1fr!important;gap:0}
+.report-doc.r2.p57-report-surface[data-report-template=ledger] .p57-reference-review .deck-kpi {border:0;border-bottom:1px solid var(--rt-rule);border-radius:0;box-shadow:none;padding:12px}
+.report-doc.r2.p57-report-surface[data-report-template=ledger] .p57-reference-review .p57-editorial-finding {padding:20px 0;border:0;border-top:2px solid var(--rt-rule);border-radius:0}
+
+/* Magazine: oversized editorial masthead, feature column and numbered essays. */
+.report-doc.r2.p57-report-surface[data-report-template=magazine] {--rt-cover-size:72px;--rt-report-width:1320px}
+.report-doc.r2.p57-report-surface[data-report-template=magazine] .p57-reference-review .leadership-front>header {min-height:320px;background:var(--rt-ink);color:var(--rt-paper);padding:48px;text-align:left;border:0}
+.report-doc.r2.p57-report-surface[data-report-template=magazine] .p57-reference-review .leadership-front>header h1 {max-width:18ch;font-weight:400}
+.report-doc.r2.p57-report-surface[data-report-template=magazine] .p57-reference-review .leadership-front>header .deck-eyebrow {color:inherit}
+.report-doc.r2.p57-report-surface[data-report-template=magazine] .p57-reference-review .leadership-front>.p57-executive-verdict {grid-column:span 5;border:0;border-right:1px solid var(--rt-rule);padding:24px}
+.report-doc.r2.p57-report-surface[data-report-template=magazine] .p57-reference-review .p57-executive-verdict .rp-prose p {font:400 25px/1.55 Georgia,serif}
+.report-doc.r2.p57-report-surface[data-report-template=magazine] .p57-reference-review .leadership-front>.rt-verdict-group {grid-column:span 7;padding:24px;border-bottom:1px solid var(--rt-rule)}
+.report-doc.r2.p57-report-surface[data-report-template=magazine] .p57-reference-review .leadership-front>.rt-verdict-group:nth-of-type(n+3) {grid-column:span 6}
+.report-doc.r2.p57-report-surface[data-report-template=magazine] .p57-reference-review .p57-editorial-finding {border:0;border-top:4px solid var(--rt-ink);padding:30px 0}
+.report-doc.r2.p57-report-surface[data-report-template=magazine] .p57-reference-review .p57-editorial-finding h3 {font-size:36px;font-weight:400}
+
+/* Essential: a restrained, narrow memo with plain text and fine dividers. */
+.report-doc.r2.p57-report-surface[data-report-template=minimal] {--rt-report-width:900px;--rt-cover-size:34px}
+.report-doc.r2.p57-report-surface[data-report-template=minimal] .p57-reference-review .leadership-front {gap:32px}
+.report-doc.r2.p57-report-surface[data-report-template=minimal] .p57-reference-review .leadership-front>header {min-height:0;padding:20px 0 30px;border:0;border-bottom:1px solid var(--rt-ink);background:transparent}
+.report-doc.r2.p57-report-surface[data-report-template=minimal] .p57-reference-review .p57-executive-verdict {border:0;padding:0}
+.report-doc.r2.p57-report-surface[data-report-template=minimal] .p57-reference-review .p57-editorial-finding {padding:24px 0;border:0;border-bottom:1px solid var(--rt-rule);border-radius:0}
+.report-doc.r2.p57-report-surface[data-report-template=minimal] .p57-reference-review .p57-editorial-callout {background:transparent;border-left:1px solid var(--rt-ink)}
+
+/* Dossier: persistent marginal labels, numbered dividers and a metric sidebar. */
+.report-doc.r2.p57-report-surface[data-report-template=dossier] .p57-reference-review .leadership-front>.rt-verdict-group {display:grid;grid-template-columns:180px minmax(0,1fr);gap:28px;border-left:3px solid var(--accent);padding:20px 24px;background:var(--rt-tint)}
+.report-doc.r2.p57-report-surface[data-report-template=dossier] .p57-reference-review .rt-chapter-opening {grid-template-columns:220px minmax(0,1fr)}
+.report-doc.r2.p57-report-surface[data-report-template=dossier] .p57-reference-review .rt-chapter-measures .deck-metric-grid {grid-template-columns:1fr!important}
+.report-doc.r2.p57-report-surface[data-report-template=dossier] .p57-reference-review .p57-editorial-finding {padding:28px;border:1px solid var(--rt-rule);border-left:5px solid var(--accent);border-radius:0}
+
+/* Studio: a warm journal with spacious, softly framed community insights. */
+.report-doc.r2.p57-report-surface[data-report-template=studio] {--rt-paper:#fffcf8;--rt-tint:#f5eee5;--rt-rule:#e4d9cc;--rt-ink:#302923;--rt-muted:#6d6055;--rt-cover-size:54px}
+.report-doc.r2.p57-report-surface[data-report-template=studio] .p57-reference-review .leadership-front>.rt-verdict-group {grid-column:span 4;background:var(--rt-tint);border-radius:20px;padding:28px}
+.report-doc.r2.p57-report-surface[data-report-template=studio] .p57-reference-review .leadership-front>header {min-height:240px;padding:48px;border:1px solid var(--rt-rule);border-radius:24px}
+.report-doc.r2.p57-report-surface[data-report-template=studio] .p57-reference-review .p57-editorial-finding {border-radius:20px;padding:32px;background:var(--rt-paper);box-shadow:0 12px 32px -24px #49372345}
+.report-doc.r2.p57-report-surface[data-report-template=studio] .p57-reference-review .rt-chapter-story {padding:28px;border-radius:20px;background:var(--rt-tint)}
+
+/* Panorama: a landscape brief with three full-width evidence lanes. */
+.report-doc.r2.p57-report-surface[data-report-template=panorama] .p57-reference-review .leadership-front>.rt-verdict-group {grid-column:span 4;padding:24px 28px;border-left:1px solid var(--rt-rule)}
+.report-doc.r2.p57-report-surface[data-report-template=panorama] .p57-reference-review .leadership-front>header {display:grid;grid-template-columns:2fr 1fr;gap:12px 32px;min-height:200px}
+.report-doc.r2.p57-report-surface[data-report-template=panorama] .p57-reference-review .leadership-front>header :is(.deck-eyebrow,h1) {grid-column:1}
+.report-doc.r2.p57-report-surface[data-report-template=panorama] .p57-reference-review .leadership-front>header p {grid-column:2;margin:0;align-self:center}
+.report-doc.r2.p57-report-surface[data-report-template=panorama] .p57-reference-review .rt-chapter-opening {grid-template-columns:minmax(0,1fr) minmax(0,2fr)}
+.report-doc.r2.p57-report-surface[data-report-template=panorama] .p57-reference-review .p57-adaptive-grid {grid-template-columns:repeat(3,minmax(0,1fr))}
+.report-doc.r2.p57-report-surface[data-report-template=panorama] .p57-reference-review .cr-contents {grid-template-columns:repeat(3,minmax(0,1fr))}
+
+/* Explicit style choices are shared by the reader and standalone export. */
+.report-doc.r2.p57-report-surface[data-report-template][data-surface=warm]:not([data-report-theme=dark]) {--rt-paper:#fffcf7;--rt-tint:#f6f0e7;--rt-rule:#e3d9cc}
+.report-doc.r2.p57-report-surface[data-report-template][data-surface=mist]:not([data-report-theme=dark]) {--rt-paper:#f8fafc;--rt-tint:#edf2f7;--rt-rule:#d9e2ec}
+.report-doc.r2.p57-report-surface[data-report-template][data-report-theme=dark] {--rt-paper:#142238;--rt-ink:#edf1f9;--rt-muted:#bdcadd;--rt-rule:#35465c;--rt-tint:#1c2e46}
+.report-doc.r2.p57-report-surface[data-report-template][data-density=comfortable] .p57-reference-review {--rt-block-space:36px;--rt-body-size:16px;--rt-leading:1.85}
+.report-doc.r2.p57-report-surface[data-report-template][data-density=comfortable] .p57-reference-review .p57-editorial-finding {padding:36px}
+.report-doc.r2.p57-report-surface[data-report-template][data-card-style=elevated] .p57-reference-review .p57-editorial-finding {border:1px solid var(--rt-rule);box-shadow:0 8px 32px -14px #0f1b2e38;border-radius:12px}
+.report-doc.r2.p57-report-surface[data-report-template][data-card-style=minimal] .p57-reference-review .p57-editorial-finding {border:0;border-bottom:1px solid var(--rt-rule);border-radius:0;box-shadow:none;padding:24px 0}
+.report-doc.r2.p57-report-surface[data-report-template][data-report-layout=grid] .p57-reference-review .p57-adaptive-grid {grid-template-columns:repeat(2,minmax(0,1fr))}
+.report-doc.r2.p57-report-surface[data-report-template][data-report-layout=full] .p57-reference-review .p57-adaptive-grid,
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review[data-reader-layout=single] .p57-adaptive-grid {grid-template-columns:minmax(0,1fr)}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .p57-adaptive-grid>[data-reader-span=full] {grid-column:1/-1}
+@container p57-reader (max-width:850px) {
+  .report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .leadership-front>.rt-verdict-group {grid-column:1/-1;display:block}
+  .report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .leadership-front>.p57-executive-verdict {grid-column:1/-1;border-right:0}
+  .report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .rt-chapter-opening {grid-template-columns:1fr}
+  .report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .p57-adaptive-grid {grid-template-columns:1fr}
+}
+@media(max-width:900px) {
+  .report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .leadership-front>.rt-verdict-group {grid-column:1/-1;display:block}
+  .report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .leadership-front>.p57-executive-verdict {grid-column:1/-1;border-right:0}
+  .report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .rt-chapter-opening {grid-template-columns:1fr}
+  .report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .p57-adaptive-grid {grid-template-columns:1fr}
+}
+@media(max-width:650px) {
+  .report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .leadership-front>header {display:block;min-height:0;padding:26px 20px}
+  .report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .leadership-front>header h1 {font-size:32px}
+  .report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .cr-contents {grid-template-columns:1fr}
+  .report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .p57-editorial-finding {padding:20px 0;border-inline:0;box-shadow:none}
+  .report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .p57-editorial-finding h3 {font-size:24px}
+}
+@media print {
+  .report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .leadership-front>.rt-verdict-group {grid-column:1/-1;display:block}
+  .report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .rt-chapter-opening {grid-template-columns:1fr}
+  .report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review .leadership-front>header {min-height:0;break-inside:avoid}
+}

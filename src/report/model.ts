@@ -152,6 +152,8 @@ export interface LeadershipDecision {
   horizon?: string;
 }
 export interface ChapterNarrative {
+  /** Complete reference edition; older saved reports keep their original reader. */
+  referenceReview?: import('./reference-standard.mjs').ReferenceReview;
   /** Prose under the chapter header. Empty when no provider answered. */
   summary: string;
   cards: InsightCard[];
@@ -175,6 +177,7 @@ export interface ChapterNarrative {
   verification?: { checked: number; removed: { headline: string; verdict: string; reason: string }[]; unavailable?: boolean };
 }
 export interface ReportCustomization {
+  generationFormat?: 'reference-v1' | 'flexible';
   title: string; subtitle: string; preparedFor: string; preparedBy: string;
   audience: string; tone: string; detail: string; instructions: string;
   chapterIds: string[]; theme: "light" | "dark";

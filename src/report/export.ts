@@ -1,4 +1,5 @@
 import layoutsCSS from "../design/report-layouts.css?raw";
+import { REFERENCE_FORMAT, referenceDocument } from './reference-standard.mjs';
 import { reportOptions } from "./options";
 import { assertReportRelease, assertRenderedReport } from "./release-gate.mjs";
 import baseCSS from "../design/report.css?raw";
@@ -54,6 +55,7 @@ export const reportFileName = (model: ReportModel) =>
  */
 export async function serialiseReport(element: HTMLElement, model: ReportModel) {
   if (!model.importedChapters?.length) assertReportRelease(model);
+  if (model.customization?.generationFormat === REFERENCE_FORMAT && !model.importedChapters?.length) return referenceDocument(model);
   assertRenderedReport(element);
   const clone = element.cloneNode(true) as HTMLElement;
   // The in-app chrome has no meaning in a file; the sticky contents rail does.
