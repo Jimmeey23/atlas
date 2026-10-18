@@ -3,6 +3,7 @@ import { query } from "../../data/duckdb";
 import { ensureSource } from "../../data/loader";
 import { context, metricFacts } from "../../data/analytics";
 import { metricSQL, metrics } from "../../semantics/metrics";
+import { MetricInfoHint } from "../ui/MetricInfoHint";
 import { metricTable } from "../../semantics/catalogue";
 import { fmt } from "../../semantics/formats";
 import { useStore } from "../../state/store";
@@ -55,7 +56,10 @@ export function ConversionFunnel({ version }: { version: string }) {
                     {steps.map((s) => (
                       <li key={s.id} className={s.biggestDrop ? "drop" : ""}>
                         <span className="board-funnel-bar" style={{ width: `${Math.max(4, (s.ofFirst ?? 0) * 100)}%` }} aria-hidden="true" />
-                        <span className="board-funnel-label">{s.label}</span>
+                        <span className="board-funnel-label">
+                          {s.label}
+                          <MetricInfoHint id={s.id} label={s.label} />
+                        </span>
                         <strong className="number">{fmt(s.id, s.value)}</strong>
                         <small>
                           {f.sequential

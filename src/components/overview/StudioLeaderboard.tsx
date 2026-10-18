@@ -4,6 +4,7 @@ import { query } from "../../data/duckdb";
 import { ensureSource } from "../../data/loader";
 import { comparison, context, metricFacts } from "../../data/analytics";
 import { metricSQL, metrics } from "../../semantics/metrics";
+import { MetricInfoHint } from "../ui/MetricInfoHint";
 import { metricTable } from "../../semantics/catalogue";
 import { fmt } from "../../semantics/formats";
 import { useStore } from "../../state/store";
@@ -50,7 +51,8 @@ export function StudioLeaderboard({ version }: { version: string }) {
         <div className="board-tabs" role="tablist" aria-label="Leaderboard metric">
           {options.map((o) => (
             <button key={o} role="tab" aria-selected={o === id} onClick={() => setId(o)}>
-              {metrics[o].label}
+              <span>{metrics[o].label}</span>
+              <MetricInfoHint id={o} />
             </button>
           ))}
         </div>

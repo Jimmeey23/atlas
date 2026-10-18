@@ -7,6 +7,7 @@ import { acquisitionPeriodLabel } from "../data/acquisition";
 import { Fragment, useEffect, useState } from "react";
 import { query, type Row } from "../data/duckdb";
 import { where, today } from "../data/analytics";
+import { MetricInfoHint } from "./ui/MetricInfoHint";
 import { useStore } from "../state/store";
 export function RenewalCohorts({ version, onDrill }: { version: number; onDrill: (entry: TreeRow) => void }) {
   const filters = useStore((s) => s.filters);
@@ -48,19 +49,32 @@ export function RenewalCohorts({ version, onDrill }: { version: number; onDrill:
       active = false;
     };
   }, [filters, transient, version, field]);
-  const cells = (r: Row, segment?: string) => <>
-    {["due", "renewed", "lapsed", "frozen", "pending"].map(
-      (k) => (
-        <td key={k}><button className="scorecard-cell" aria-label={`Inspect ${k} memberships for ${r.month}${segment ? ` · ${segment}` : ""}`} onClick={() => drill(r, k)}>{r[k]}</button></td>
-      ),
-    )}
-    <td>
-      <button className="scorecard-cell" aria-label={`Inspect renewal rate for ${r.month}${segment ? ` · ${segment}` : ""}`} onClick={() => drill(r, 'due')}>{Number(r.due)
-        ? ((100 * Number(r.renewed)) / Number(r.due)).toFixed(1) +
-          "%"
-        : "—"}</button>
-    </td>
-  </>;
+  const cells = (r: Row, segment?: string) => {
+    const rate = Number(r.due) ? (100 * Number(r.renewed)) / Number(r.due) : null;
+    const rateTone = rate == null ? "neutral" : rate >= 60 ? "positive" : rate >= 40 ? "warning" : "negative";
+    return <>
+      {["due", "renewed", "lapsed", "frozen", "pending"].map((k) => (
+        <td key={k} className={`renewal-cell renewal-cell-${k}`}>
+          <button
+            className="scorecard-cell renewal-data-btn"
+            aria-label={`Inspect ${k} memberships for ${r.month}${segment ? ` · ${segment}` : ""}`}
+            onClick={() => drill(r, k)}
+          >
+            {Number(r[k]) ? Number(r[k]).toLocaleString("en-IN") : "0"}
+          </button>
+        </td>
+      ))}
+      <td className="renewal-cell renewal-cell-rate">
+        <button
+          className={`scorecard-cell renewal-rate-badge rate-${rateTone}`}
+          aria-label={`Inspect renewal rate for ${r.month}${segment ? ` · ${segment}` : ""}`}
+          onClick={() => drill(r, 'due')}
+        >
+          {rate != null ? `${rate.toFixed(1)}%` : "—"}
+        </button>
+      </td>
+    </>;
+  };
   return (
     <section className="panel intelligence-panel renewal-cohorts">
       <h2>Renewals by expiry month</h2>
@@ -83,15 +97,20 @@ export function RenewalCohorts({ version, onDrill }: { version: number; onDrill:
             <thead>
               <tr>
                 {[
-                  "Expiry month",
-                  "Total due",
-                  "Renewed",
-                  "Expired / lapsed",
-                  "Frozen",
-                  "Grace period (<30 days)",
-                  "Renewal rate",
-                ].map((x) => (
-                  <th key={x}>{x}</th>
+                  { label: "Expiry month", id: "" },
+                  { label: "Total due", id: "due" },
+                  { label: "Renewed", id: "renewed" },
+                  { label: "Expired / lapsed", id: "lapsed" },
+                  { label: "Frozen", id: "frozen" },
+                  { label: "Grace period (<30 days)", id: "pending" },
+                  { label: "Renewal rate", id: "renewal_rate" },
+                ].map((col) => (
+                  <th key={col.label} className={`renewal-th renewal-th-${col.id || 'month'}`}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                      {col.label}
+                      {col.id && <MetricInfoHint id={col.id} label={col.label} />}
+                    </span>
+                  </th>
                 ))}
               </tr>
             </thead>

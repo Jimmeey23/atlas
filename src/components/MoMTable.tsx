@@ -1,6 +1,7 @@
 import { DropdownField } from "./ui/DropdownField";
 import { useEffect, useMemo, useState } from "react";
 import { query, type Row } from "../data/duckdb";
+import { MetricInfoHint } from "./ui/MetricInfoHint";
 import { metrics } from "../semantics/metrics";
 import { fmt, delta } from "../semantics/formats";
 import { useStore } from "../state/store";
@@ -184,7 +185,10 @@ export function MoMTable({ ids, version }: { ids: string[]; version: string }) {
             {visibleIds.map((id) => (
               <tr key={id}>
                 <th scope="row" title={metrics[id].description}>
-                  {metrics[id].label}
+                  <span style={{ display: "inline-flex", alignItems: "center" }}>
+                    {metrics[id].label}
+                    <MetricInfoHint id={id} />
+                  </span>
                 </th>
                 {months.map((m) => {
                   const value = m.row?.[id],

@@ -3,6 +3,7 @@ import { Target } from "lucide-react";
 import type { Analysis } from "../../data/analytics";
 import { today } from "../../data/analytics";
 import { metrics } from "../../semantics/metrics";
+import { MetricInfoHint } from "../ui/MetricInfoHint";
 import { fmt } from "../../semantics/formats";
 import { useStore } from "../../state/store";
 import { goalProgress } from "../../data/overview-board";
@@ -62,7 +63,10 @@ export function GoalRings({ data }: { data: Analysis }) {
                 <text x="42" y="47" textAnchor="middle">{p.status === "none" ? "—" : `${Math.round(p.progress * 100)}%`}</text>
               </svg>
               <div>
-                <strong>{metrics[id].label}</strong>
+                <strong style={{ display: "inline-flex", alignItems: "center" }}>
+                  {metrics[id].label}
+                  <MetricInfoHint id={id} />
+                </strong>
                 <span className="number">{fmt(id, value)}</span>
                 {editing === id ? (
                   <form onSubmit={(e) => { e.preventDefault(); save(id, String(new FormData(e.currentTarget).get("target") || "")); }}>

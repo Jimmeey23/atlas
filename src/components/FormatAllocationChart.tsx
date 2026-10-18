@@ -8,6 +8,7 @@ import { fmt } from "../semantics/formats";
 import { useStore } from "../state/store";
 import { ChartControls } from "./ChartControls";
 import { formatAllocation } from "../data/format-allocation";
+import { MetricInfoHint } from "./ui/MetricInfoHint";
 import "./FormatAllocationChart.css";
 
 export function FormatAllocationChart({
@@ -146,7 +147,7 @@ export function FormatAllocationChart({
   return (
     <div className="chart-surface">
       <div className="format-allocation-controls">
-        <label>
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           Compare timetable with{" "}
           <DropdownField
             value={measure}
@@ -157,6 +158,7 @@ export function FormatAllocationChart({
             <option value="attendance">Attendance share</option>
             <option value="revenue">Revenue share</option>
           </DropdownField>
+          <MetricInfoHint id={measure === "attendance" ? "checkins" : "gross_collection"} />
         </label>
         <label>
           Minimum sessions{" "}

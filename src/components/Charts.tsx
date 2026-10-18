@@ -1,6 +1,7 @@
 import { instructorKey, instructorPortraits } from "../data/instructorPortraits";
 import { ChartControls } from "./ChartControls";
 import { usePreferences } from "../state/preferences";
+import { MetricInfoHint } from "./ui/MetricInfoHint";
 import { useEffect, useRef, useState } from "react";
 import * as echarts from "echarts";
 import { LinePath, AreaClosed } from "@visx/shape";
@@ -70,6 +71,7 @@ export function Pulse({ data }: { data: Analysis }) {
           <div className="pulse-heading">
             <span className="dot positive" />
             Payments collected, in motion
+            <MetricInfoHint id="gross_revenue" label="Gross collections" />
           </div>
           <div className="pulse-total number">
             {fmt("gross_revenue", focused ? focused.gross_revenue : data.total.gross_revenue)}
@@ -85,6 +87,7 @@ export function Pulse({ data }: { data: Analysis }) {
               style={{ background: "var(--attendance)" }}
             />
             Attendance
+            <MetricInfoHint id="attendance" />
           </span>
           <span>
             <i
@@ -92,6 +95,7 @@ export function Pulse({ data }: { data: Analysis }) {
               style={{ background: "var(--revenue)" }}
             />
             Gross collections
+            <MetricInfoHint id="gross_revenue" />
           </span>
           <span className="small">Drag to select a date range</span>
         </div>

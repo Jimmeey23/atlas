@@ -1,5 +1,6 @@
 import "./WebsiteLeadPeriods.css";
 import { DropdownField } from "./ui/DropdownField";
+import { MetricInfoHint } from "./ui/MetricInfoHint";
 import { useEffect, useMemo, useState } from "react";
 import { query, quote, health, type Row } from "../data/duckdb";
 import { historicalTransient, comparisonDates } from "../data/periods";
@@ -155,7 +156,12 @@ export function WebsiteLeadPeriods({ version, onDrill, expanded = false, website
             <tbody>
               {segments.flatMap(segment=>ids.map((id) => (
                 <tr key={segment+id}>
-                  <th scope="row">{group ? `${segment} · ` : ""}{metrics[id]?.label || id}</th>
+                  <th scope="row">
+                    <span style={{ display: "inline-flex", alignItems: "center" }}>
+                      {group ? `${segment} · ` : ""}{metrics[id]?.label || id}
+                      <MetricInfoHint id={id} label={metrics[id]?.label || id} />
+                    </span>
+                  </th>
                   {windows.flatMap((w) => {
                     const current = bucket(`${w.key}:current`,segment)?.[id];
                     const prior = bucket(`${w.key}:prior`,segment)?.[id];

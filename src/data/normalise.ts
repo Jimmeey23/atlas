@@ -507,14 +507,13 @@ export function normalise(
       intro: n("IntroOffers"),
       single: n("SingleClasses"),
       // Any Is New label containing the word new is a trial. Labels that name a
-      // known non-trial visit are explicitly false so the existing-member filter
-      // can use them; anything unrecognised stays null rather than guessing.
+      // Any Is New label containing the word new is a trial / newcomer.
       is_new: (() => {
         const label = g("Is New");
         if (label == null) return null;
         const text = String(label).trim();
         if (/^not\b/i.test(text)) return false;
-        if (/\bnew\b/i.test(text)) return true;
+        if (/new/i.test(text)) return true;
         if (/^(existing|returning|repeat|staff|family)/i.test(text)) return false;
         return boolean(text);
       })(),

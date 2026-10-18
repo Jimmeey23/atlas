@@ -1,8 +1,9 @@
 import { MetricFlip } from "./MetricFlip";
 import { metricFlipStore } from "../state/metric-flip";
+import { MetricInfoHint } from "./ui/MetricInfoHint";
 import { createPortal } from "react-dom";
 import { useEffect, useId, useRef, useState } from "react";
-import { Info, TriangleAlert, X, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { X, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { comparisonDates, comparisonLabel } from "../data/periods";
 import { simpleMetricDefinitions } from "../semantics/metric-simple-definitions";
 import { businessDefinitions } from "../semantics/metric-business-definitions";
@@ -74,7 +75,7 @@ export function MetricCard({
 
   const flipKey = useId();
   const [info, setInfo] = useState(false);
-  const anchor = useRef<HTMLButtonElement>(null);
+  const anchor = useRef<HTMLSpanElement>(null);
   const [position, setPosition] = useState({ left: 16, top: 70 });
   useEffect(() => {
     if (!info) return;
@@ -115,15 +116,12 @@ export function MetricCard({
     >
       <div className="metric-label">
         <span title={m.label}>{m.label}</span>
-        <button
+        <MetricInfoHint
           ref={anchor}
-          aria-label={`Definition of ${m.label}`}
-          aria-expanded={info}
-          aria-controls={info ? tooltipId : undefined}
+          id={id}
+          warning={warning}
           onClick={() => setInfo(true)}
-        >
-          {warning ? <TriangleAlert size={12} /> : <Info size={14} />}
-        </button>
+        />
       </div>
       <div className="metric-reading">
       <button

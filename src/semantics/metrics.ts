@@ -4,6 +4,7 @@ export interface QueryContext {
   rate: number;
   today: string;
   newWhere?: string;
+  source?: string;
 }
 export interface MetricDef {
   id: string;

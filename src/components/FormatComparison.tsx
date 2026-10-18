@@ -2,6 +2,7 @@ import { DropdownField } from "./ui/DropdownField";
 import { MonthlyTableControls, type MonthlyTableState } from "./MonthlyTableControls";
 import { Bike, Dumbbell, Activity, Trophy } from "lucide-react";
 import { InstructorName } from "./InstructorAvatar";
+import { MetricInfoHint } from "./ui/MetricInfoHint";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { query, type Row } from "../data/duckdb";
 import { metricSQL, metrics } from "../semantics/metrics";
@@ -151,7 +152,7 @@ export function FormatComparison({ version }: { version: string | number }) {
                 const raw = record?.[id];
                 const values = formats.map(f=>row(f)?.[id]).filter(v=>v!=null).map(Number).filter(Number.isFinite);
                 const max = Math.max(...values, 0);
-                return <div key={id} className="format-measure"><div><span>{metrics[id].label}</span><strong>{view === "index" && total ? delta(id,raw,total[id]) : fmt(id,raw)}</strong></div><div className="format-measure-track"><span style={{width: raw == null || max <= 0 ? "0%" : `${Math.min(100, Math.max(0, Number(raw)/max*100))}%`}}/></div>{best(id) === format && <small><Trophy size={10}/> Leads this measure</small>}</div>;
+                return <div key={id} className="format-measure"><div><span style={{ display: "inline-flex", alignItems: "center" }}>{metrics[id].label}<MetricInfoHint id={id} /></span><strong>{view === "index" && total ? delta(id,raw,total[id]) : fmt(id,raw)}</strong></div><div className="format-measure-track"><span style={{width: raw == null || max <= 0 ? "0%" : `${Math.min(100, Math.max(0, Number(raw)/max*100))}%`}}/></div>{best(id) === format && <small><Trophy size={10}/> Leads this measure</small>}</div>;
               })}</div>
               <footer>{fmt("revenue",record?.revenue)} <span>session-attributed revenue</span></footer>
             </article>;
@@ -181,7 +182,12 @@ export function FormatComparison({ version }: { version: string | number }) {
                     const leader = best(id);
                     return (
                       <tr key={id}>
-                        <th scope="row">{metrics[id]?.label || id}</th>
+                        <th scope="row">
+                          <span style={{ display: "inline-flex", alignItems: "center" }}>
+                            {metrics[id]?.label || id}
+                            <MetricInfoHint id={id} />
+                          </span>
+                        </th>
                         {formats.map((f) => (
                           <td key={f} className={leader === f ? "format-leader" : undefined}>
                             {view === "index" && total
@@ -208,7 +214,10 @@ export function FormatComparison({ version }: { version: string | number }) {
         <div className="format-share-grid">
           {SHARE_IDS.map((id) => (
             <article className="format-share" key={id}>
-              <h3>{metrics[id]?.label || id}</h3>
+              <h3 style={{ display: "inline-flex", alignItems: "center" }}>
+                {metrics[id]?.label || id}
+                <MetricInfoHint id={id} />
+              </h3>
               <div className="format-share-bar" role="img" aria-label={`${metrics[id]?.label} split by format`}>
                 {formats.map((f, i) => {
                   const part = Number(row(f)?.[id] ?? 0);

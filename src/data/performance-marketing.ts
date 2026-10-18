@@ -33,8 +33,8 @@ export function websitePeriodWindows(asOf: string) {
 // Exact source equality: Website Form and other Website-prefixed sources are
 // separate sources. Always apply this, even if source coverage is missing.
 export const websitePredicate = "lower(trim(source))='website'";
-export const trialPredicate = "lower(trim(COALESCE(trial_status,'')))='trial completed'";
-export const memberPredicate = "lower(trim(COALESCE(conversion,'')))='converted'";
+export const trialPredicate = "lower(trim(COALESCE(stage,'')))='trial completed'";
+export const memberPredicate = "lower(trim(COALESCE(stage,'')))='membership sold'";
 export const retainedPredicate = "lower(trim(COALESCE(retention,'')))='retained'";
 export const marketingMeasures = `COUNT(*) AS leads,
   COUNT(*) FILTER (WHERE touches>0) AS contacted,
@@ -50,18 +50,9 @@ export function websiteScope(scope: string) {
   return `${scope}${scope ? " AND " : " WHERE "}${websitePredicate}`;
 }
 
-// The general Leads workspace reports current stages. Marketing reports
-// recorded outcomes for the creation-date cohort, consistently in every table.
+// In the Leads tab, converted is determined by stage = 'membership sold', trial conversion by stage = 'trial completed'.
 export function marketingMetricSQL(ids: string[], ctx: QueryContext) {
-  const overrides = new Set(["trials_completed", "converted_leads", "lead_conversion_rate", "untouched_leads", "open_leads", "pipeline_value"]);
-  return ids.map(id => {
-    if (!overrides.has(id)) return metricSQL([id], ctx);
-    const expression = metrics[id].sql(ctx)
-      .replaceAll("lower(trim(stage))='trial completed'", trialPredicate)
-      .replaceAll("lower(trim(stage))='membership sold'", memberPredicate)
-      .replaceAll("lower(trim(COALESCE(stage,'')))<>'membership sold'", `NOT (${memberPredicate})`);
-    return `${expression} AS "${id}"`;
-  }).join(", ");
+  return metricSQL(ids, ctx);
 }
 
 export interface MarketingDimension { label: string; sql: string }

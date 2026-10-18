@@ -291,7 +291,7 @@
   },
   {
     "id": "revenue_per_session",
-    "label": "Revenue / session",
+    "label": "Earned revenue / session",
     "expression": "SUM(revenue)/NULLIF(SUM(sessions),0)",
     "sources": [
       "Sessions.Revenue",
@@ -304,7 +304,7 @@
   },
   {
     "id": "rev_pac",
-    "label": "Revenue / attendee",
+    "label": "Earned revenue / attendee",
     "expression": "SUM(revenue)/NULLIF(SUM(checked_in),0)",
     "sources": [
       "Sessions.Revenue",
@@ -318,7 +318,7 @@
   },
   {
     "id": "rev_pas",
-    "label": "Revenue / seat",
+    "label": "Earned revenue / seat",
     "expression": "SUM(revenue)/NULLIF(SUM(capacity),0)",
     "sources": [
       "Sessions.Revenue",
@@ -1322,7 +1322,7 @@
   },
   {
     "id": "revenue_per_checkin",
-    "label": "Revenue / check-in",
+    "label": "Earned revenue / check-in",
     "expression": "SUM(revenue) FILTER (WHERE attended)/NULLIF(COUNT(*) FILTER (WHERE attended),0)",
     "sources": [
       "Checkins.Paid",
@@ -1618,7 +1618,7 @@
   },
   {
     "id": "checkin_revenue",
-    "label": "Attributed check-in revenue",
+    "label": "Earned check-in revenue",
     "expression": "SUM(revenue) FILTER (WHERE attended)",
     "sources": [
       "Checkins.Paid"

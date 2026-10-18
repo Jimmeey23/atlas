@@ -10,6 +10,7 @@ import type { TreeRow } from "./NestedTable";
 import { groupable, groupLabel, groupValueSQL } from "../data/group-fields";
 import { useGroupFields } from "../data/group-registry";
 import { GroupByPicker, usePersistentGroups } from "./ui/GroupByPicker";
+import { MetricInfoHint } from "./ui/MetricInfoHint";
 const columns = ['leads', 'converted_leads', 'trials_completed', 'lead_conversion_rate', 'touches', 'response_time_hours'];
 export function LeadStageScorecard({ version, onDrill }: { version: number; onDrill: (row: TreeRow) => void }) {
   const filters = useStore(s => s.filters), transient = useStore(s => s.transient);
@@ -36,6 +37,6 @@ export function LeadStageScorecard({ version, onDrill }: { version: number; onDr
     onDrill({ id: `${by === 'stage' ? 'stage' : by}-${value}-${metric}`, label: `${value} · ${metrics[metric].label}`, source: 'leads', filters, metrics: [metric], path: [], predicate: `(${expression}=${quote(value)})${contributors ? ` AND (${contributors})` : ''}`, values: row, children: [] });
   }
   return <Register index="05" title="Lead stages & follow-up scorecard" subtitle="Converted: Membership Sold · Trial complete: Trial Completed · exact stage matches" actions={<button className="button" onClick={() => exportCSV('lead-stage-scorecard', rows)} disabled={!rows.length}>Export CSV</button>}>
-    {error ? <p role="alert">{error}</p> : loading ? <p role="status">Loading lead stages…</p> : <div className="intelligence-table"><GroupByPicker name="Lead scorecard" value={[by]} onChange={setGroups} fields={fields} min={1} max={1} defaults={['stage']}/><table><thead><tr><th>{by === 'stage' ? 'Stage' : groupLabel(by)}</th>{columns.map(id => <th key={id}>{metrics[id].label}</th>)}</tr></thead><tbody>{rows.map(row => <tr key={String(row[key])}><td><button className="scorecard-cell" onClick={() => drill(row, 'leads')}>{String(row[key])}</button></td>{columns.map(id => <td key={id}><button className="scorecard-cell" aria-label={`Inspect ${metrics[id].label} for ${row[key]}`} onClick={() => drill(row,id)}>{fmt(id,row[id])}</button></td>)}</tr>)}</tbody></table>{!rows.length && <p>No leads match this scope.</p>}</div>}
+    {error ? <p role="alert">{error}</p> : loading ? <p role="status">Loading lead stages…</p> : <div className="intelligence-table"><GroupByPicker name="Lead scorecard" value={[by]} onChange={setGroups} fields={fields} min={1} max={1} defaults={['stage']}/><table><thead><tr><th>{by === 'stage' ? 'Stage' : groupLabel(by)}</th>{columns.map(id => <th key={id}><span style={{display:"inline-flex",alignItems:"center"}}>{metrics[id].label}<MetricInfoHint id={id} /></span></th>)}</tr></thead><tbody>{rows.map(row => <tr key={String(row[key])}><td><button className="scorecard-cell" onClick={() => drill(row, 'leads')}>{String(row[key])}</button></td>{columns.map(id => <td key={id}><button className="scorecard-cell" aria-label={`Inspect ${metrics[id].label} for ${row[key]}`} onClick={() => drill(row,id)}>{fmt(id,row[id])}</button></td>)}</tr>)}</tbody></table>{!rows.length && <p>No leads match this scope.</p>}</div>}
   </Register>;
 }

@@ -2,6 +2,7 @@ import { useWorkspaceValue } from "./useWorkspaceValue";
 import { workspaceKey } from "../state/workspaceLayout";
 import { TABLE_ROW_HEIGHT } from "./ui/layout";
 import { GroupByPicker } from "./ui/GroupByPicker";
+import { MetricInfoHint } from "./ui/MetricInfoHint";
 import { useGroupFields } from "../data/group-registry";
 import { tree } from "../data/hierarchy";
 import { InstructorAvatar } from "./InstructorAvatar";
@@ -214,7 +215,12 @@ export function NestedTable({
       },
       ...columns.map((id) => ({
         id,
-        header: metrics[id].label,
+        header: () => (
+          <span style={{ display: "inline-flex", alignItems: "center" }}>
+            {metrics[id].label}
+            <MetricInfoHint id={id} />
+          </span>
+        ),
         accessorFn: (r: TreeRow) => r.values[id],
         size: 130,
         cell: ({ row }: { row: { original: TreeRow } }) => {

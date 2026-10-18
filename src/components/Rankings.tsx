@@ -7,6 +7,7 @@ import type { Row } from "../data/duckdb";
 import { metrics } from "../semantics/metrics";
 import { fmt } from "../semantics/formats";
 import { Register } from "./Register";
+import { MetricInfoHint } from "./ui/MetricInfoHint";
 import { useStore } from "../state/store";
 export function Rankings({
   rows,
@@ -59,18 +60,21 @@ export function Rankings({
         <>
           <label className="small">Minimum group size <input aria-label="Ranking minimum group size" type="number" min={0} value={minimum} onChange={e => setMinimum(Math.max(0, Number(e.target.value) || 0))} style={{ width: 70 }} /></label>
           <ChartControls rows={eligible} title="Rankings" />
-          <DropdownField
-            aria-label="Ranking measure"
-            value={id}
-            style={{ fontSize: 11, minHeight: 28, padding: "3px 7px" }}
-            onChange={(e) => setChosen(e.target.value)}
-          >
-            {validColumns.map((x) => (
-              <option key={x} value={x}>
-                {metrics[x].label}
-              </option>
-            ))}
-          </DropdownField>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <DropdownField
+              aria-label="Ranking measure"
+              value={id}
+              style={{ fontSize: 11, minHeight: 28, padding: "3px 7px" }}
+              onChange={(e) => setChosen(e.target.value)}
+            >
+              {validColumns.map((x) => (
+                <option key={x} value={x}>
+                  {metrics[x].label}
+                </option>
+              ))}
+            </DropdownField>
+            <MetricInfoHint id={id} />
+          </div>
         </>
       }
     >
@@ -78,8 +82,11 @@ export function Rankings({
         {[top, bottom].map((list, k) => (
           <div key={k} className={k ? "bottom" : ""}>
             <div className={`ranking-head ${k ? "bottom" : ""}`}>
-              <span className="dot" />
-              {k ? "Room to improve" : "Leading the way"}
+              <div className="ranking-head-title">
+                <span className="dot" />
+                <span>{k ? "Room to improve" : "Leading the way"} ({m.label})</span>
+              </div>
+              <MetricInfoHint id={id} />
             </div>
             {list.map((r, i) => (
               <button

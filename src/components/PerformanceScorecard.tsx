@@ -7,6 +7,7 @@ import { useStore } from "../state/store";
 import { exportCSV } from "./exports";
 import { InstructorName } from "./InstructorAvatar";
 import { Register } from "./Register";
+import { MetricInfoHint } from "./ui/MetricInfoHint";
 import type { TreeRow } from "./NestedTable";
 import { GroupByPicker, usePersistentGroups } from "./ui/GroupByPicker";
 import { useGroupFields } from "../data/group-registry";
@@ -113,6 +114,7 @@ export function PerformanceScorecard({
     <th key={id} scope="col" aria-sort={sort.id === id ? (sort.desc ? "descending" : "ascending") : "none"}>
       <button className="scorecard-sort" onClick={() => setSort((s) => ({ id, desc: s.id === id ? !s.desc : true }))}>
         {label}
+        {id !== "label" && <MetricInfoHint id={id} label={label} />}
         {sort.id === id ? (sort.desc ? " ↓" : " ↑") : ""}
       </button>
     </th>

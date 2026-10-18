@@ -14,6 +14,7 @@ import {
   type VisibilityState,
 } from "@tanstack/react-table";
 import { DropdownField } from "./ui/DropdownField";
+import { MetricInfoHint } from "./ui/MetricInfoHint";
 export interface AnalyticalRow {
   id: string;
   period: string | null;
@@ -426,7 +427,10 @@ export function AnalyticalTable({
                     }}
                   >
                     <button onClick={h.column.getToggleSortingHandler()}>
-                      {flexRender(h.column.columnDef.header, h.getContext())}
+                      <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                        {flexRender(h.column.columnDef.header, h.getContext())}
+                        <MetricInfoHint id={h.column.id} />
+                      </span>
                       {h.column.getIsSorted() === "asc"
                         ? " ↑"
                         : h.column.getIsSorted() === "desc"

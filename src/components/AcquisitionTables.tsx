@@ -3,6 +3,7 @@ import { usable } from "../data/loader";
 import { exportCSV } from "./exports";
 import { MonthlyTableControls, type MonthlyTableState } from "./MonthlyTableControls";
 import { InstructorName } from "./InstructorAvatar";
+import { MetricInfoHint } from "./ui/MetricInfoHint";
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, CalendarDays, ChevronDown, ChevronRight, CircleHelp, GraduationCap, Handshake, Route, TrendingUp, Users } from "lucide-react";
 import { query, quote, type Row, health } from "../data/duckdb";
@@ -72,7 +73,11 @@ function sortedRows(rows: Row[], sort: Sort) {
 function SortHeading({ label, name, sort, onSort, className }: { label: string; name: string; sort: Sort; onSort: (key: string) => void; className?: string }) {
   const active = sort.key === name;
   return <th className={className} scope="col" aria-sort={active ? sort.desc ? "descending" : "ascending" : "none"}>
-    <button onClick={() => onSort(name)}>{label}{active ? sort.desc ? <ArrowDown size={12} /> : <ArrowUp size={12} /> : <ArrowUpDown size={12} />}</button>
+    <button onClick={() => onSort(name)}>
+      {label}
+      {acquisitionMeasures.some(m => m[0] === name) && <MetricInfoHint id={name} label={label} />}
+      {active ? sort.desc ? <ArrowDown size={12} /> : <ArrowUp size={12} /> : <ArrowUpDown size={12} />}
+    </button>
   </th>;
 }
 function OutcomeBadge({ value }: { value: unknown }) {
