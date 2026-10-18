@@ -17,7 +17,9 @@
     "verify:report-deck": "node scripts/verify-report-deck.mjs",
     "check:report": "tsx --test tests/report-release-gate.test.ts",
     "verify:report-editorial": "node scripts/verify-report-editorial.mjs",
-    "verify:workspace": "node scripts/verify-workspace-editor.mjs"
+    "verify:workspace": "node scripts/verify-workspace-editor.mjs",
+    "docs:metrics": "tsx scripts/build-metric-reference.ts",
+    "prebuild": "npm run docs:metrics"
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.30.0",

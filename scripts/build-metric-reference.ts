@@ -1,0 +1,83 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import ts from 'typescript';
+import registry from '../src/semantics/registry.json';
+import sheets from '../server/sheets.json';
+import { metricNotes, currentSnapshotMetrics } from '../src/semantics/evidence';
+import { metrics, metricDenominatorSQL, contributorPredicate } from '../src/semantics/metrics';
+
+const esc = (v: unknown) => String(v ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+const code = (v: unknown) => `<pre><code>${esc(v)}</code></pre>`;
+const context = { rate: 1, today: '{today}', newWhere: ' WHERE {applicable_newcomer_filters}' };
+const method = (expression:string) => {
+ const operations = [
+  [/COUNT\(DISTINCT/i, 'Count unique identities rather than source rows.'],
+  [/COUNT\(\*\)/i, 'Count qualifying records.'],
+  [/SUM\(/i, 'Add the specified numeric values across qualifying rows.'],
+  [/AVG\(/i, 'Take the arithmetic mean of non-null qualifying values.'],
+  [/MEDIAN\(/i, 'Take the median of non-null qualifying values.'],
+  [/FILTER\s*\(WHERE/i, 'Apply each FILTER condition only to its associated aggregate.'],
+  [/NULLIF\(/i, 'Protect division by a zero denominator; return unavailable when it is zero.'],
+  [/CASE\s+WHEN/i, 'Apply the conditional population/value rules shown in the formula.'],
+  [/\{today\}/i, 'Evaluate relative-date rules against the application date.'],
+  [/\{rate\}/i, 'Use the configured instructor cost per session.'],
+ ] as const;
+ return operations.filter(([pattern])=>pattern.test(expression)).map(([,text])=>text).join(' ') || 'Evaluate the expression over the qualifying source population.';
+};
+const scope: Record<string,string> = {
+ sessions:'Session date; one source session per row. Instructor slot baseline is calculated before instructor filters.',
+ recurring:'Recurring session date; do not use instructor-only slot baseline measures here.',
+ sales:'Payment date; successful, non-voided payment lines. Membership balance is ranked once per membership within the selected sale cohort.',
+ checkins:'Session date; one check-in row. Attendance-based revenue uses attended rows. Teaching duration is counted once per attended session with valid duration.',
+ new:'First-visit date cohort; latest source outcomes are distinct from dated conversion events.',
+ leads:'Lead creation date cohort; latest source stages and statuses are not events occurring in the reporting period.',
+ lapsed:'Membership expiry date cohort; current-stock measures override date scope as stated.',
+ payroll:'Calendar month; partial-month selections include corresponding payroll months; source amounts may be rounded.',
+ bookings:'Booking/session date; outcome flags can overlap; exclusive outcome charts apply precedence.',
+ meta:'Meta reporting date; platform attribution and row-level reach are separate from CRM identities.'
+};
+const allFiles = ['src/App.tsx',...fs.readdirSync('src/data').filter(f=>/\.(ts|sql)$/.test(f)).map(f=>'src/data/'+f),
+ ...fs.readdirSync('src/semantics').filter(f=>f.endsWith('.ts')).map(f=>'src/semantics/'+f),
+ ...fs.readdirSync('src/report').filter(f=>/metric|ownership|evidence|scenario/.test(f)&&f.endsWith('.ts')).map(f=>'src/report/'+f),
+ ...fs.readdirSync('server').filter(f=>/^kra.*\.mjs$|^agent-(metrics|analytics)\.mjs$/.test(f)).map(f=>'server/'+f)];
+// Include calculation-bearing UI modules too: some workspace measures are local SQL or derived JS.
+const walk=(dir:string):string[]=>fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(dir,e.name)):e.name.endsWith('.tsx')?[path.join(dir,e.name)]:[]);
+allFiles.push(...walk('src/components').filter(f=>/\bSELECT\b|\bSUM\(|\bCOUNT\(|\bAVG\(|\.reduce\(|\/\s*Math\.max/.test(fs.readFileSync(f,'utf8'))));
+const appendix = [...new Set(allFiles)].sort().map(file=>{
+ const source=fs.readFileSync(file,'utf8');
+ const tree=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,file.endsWith('tsx')?ts.ScriptKind.TSX:ts.ScriptKind.TS);
+ const symbols:string[]=[];
+ const visit=(n:ts.Node)=>{if((ts.isFunctionDeclaration(n)||ts.isVariableDeclaration(n)||ts.isInterfaceDeclaration(n))&&n.name)symbols.push(n.name.getText(tree));ts.forEachChild(n,visit);};visit(tree);
+ const aliases=[...new Set([...source.matchAll(/\bAS\s+"?([a-z][a-z0-9_]*)"?/gi)].map(m=>m[1]))];
+ return {file,source,symbols,aliases};
+});
+const entries = registry.map(m=>{
+ const note=metricNotes[m.id];
+ const primary=sheets.find(s=>m.sources.some(c=>c.split('.')[0].split(' → ')[0].trim().toLowerCase()===s.title.toLowerCase()));
+ const denominator=metricDenominatorSQL(m.id,context);
+ const definition=note?.definition || `${m.label} measures the result of the registered calculation over the applicable normalized source population. ${method(m.expression)} Source fields: ${m.sources.join('; ')}.`;
+ return {...m,definition,caveat:note?.caveat || 'Source completeness, normalization and applicable workspace filters affect this measure. See the implementation appendix for exact row eligibility.',numerator:note?.numerator || contributorPredicate(m.id,context) || 'See the exact calculation; no separate numerator label is declared.',denominator:note?.denominator || denominator || 'No separately declared denominator; see calculation for nested ratios or non-ratio measures.',table:primary?.key || 'Context-dependent',scope:currentSnapshotMetrics.has(m.id)?'Current source snapshot relative to today in Asia/Kolkata. Selected period dates and historical comparisons are excluded.':scope[primary?.key || ''] || 'Applicable workspace source/date scope; consult normalization and query implementation.',runtime:metrics[m.id].sql(context)};
+});
+const rules = [
+ ['Reading the reference','Registry entries below include the exact registered SQL, executable substitutions, source columns, aggregation, output unit, polarity, minimum sample and any declared target. Specialist calculations outside the registry are indexed by implementation file and output alias in the appendix. Those aliases include intermediate fields and dimensions as well as measures; they are not additional governed registry definitions.'],
+ ['Filters and dates','Global and transient filters constrain only fields available on a source. Normalization controls date parsing, source identifiers, studio names and eligibility. Payroll uses month, membership expiry cohorts use end_date, and other standard sources use date. Dates relative to today use Asia/Kolkata. Individual workspaces can override population scope; see App.tsx, analytics.ts and specialist implementations.'],
+ ['Ratios and missing values','Weighted measures are computed from aggregate numerators and denominators, rather than by averaging displayed percentages. NULLIF(denominator,0) returns unavailable for zero denominators. AVG/MEDIAN ignore SQL nulls; explicit COALESCE rules are preserved in each formula. Percent values are stored as fractions and formatted ×100. Percentage-point deltas differ from relative percent changes.'],
+ ['Comparison and current stock','Whole calendar months compare with whole months; arbitrary ranges use the configured comparison window. Active stock and current balance values cannot reconstruct historical stock. Targets and directionality are registry metadata, not proof of causation or business-policy approval. Minimum sample is a display/evidence guardrail, not a confidence interval.'],
+ ['Revenue and estimates','Cash collection is based on payment dates, session-earned revenue on session dates, payroll on reported months, and Meta revenue on platform attribution. Do not reconcile these as the same population. Pipeline, opportunity and lost-revenue scenarios are estimates. GST uses the legacy VAT source field.'],
+ ['Specialist calculations','Renewals deduplicate eligible paid members by expiry month before scope filters. Conversion journeys and monthly outcomes use dated events and maturity/observation cutoffs. Sales rankings, active annual/private access, instructor baselines, goals, funnel steps, KRA and report metrics can have separate populations. Their exact functions and query context are included in the searchable appendix.'],
+ ['Freshness and provenance','This is implementation documentation, not a live data extract. Source links identify configured Google Sheets tabs; actual refresh status is shown by the app. Imported AI report numbers, custom SQL elements and user-created targets are dynamic content: their attachment evidence, saved SQL and configuration define them, rather than a fixed universal metric. No member records or credentials are included.']
+];
+const sourceHtml=sheets.map(s=>`<details class="entry"><summary>${esc(s.title)} · ${esc(s.key)}</summary><p>${esc(scope[s.key]||'See source normalization for row and date mapping.')}</p><a target="_blank" rel="noopener noreferrer" href="https://docs.google.com/spreadsheets/d/${esc(s.id)}/edit#gid=${esc(s.gid)}">Open source sheet</a><h3>Configured columns</h3>${code(s.columns.join(' · '))}</details>`).join('');
+const entryHtml=entries.map(m=>`<details class="entry" data-domain="${esc(m.domain)}"><summary>${esc(m.label)} <small>${esc(m.id)} · ${esc(m.domain)}</small></summary><p>${esc(m.definition)}</p><dl><dt>Source sheet & columns</dt><dd>${esc(m.sources.join(' · ')||'Workspace row population')}</dd><dt>Primary normalized table</dt><dd>${esc(m.table)}</dd><dt>Population & date basis</dt><dd>${esc(m.scope)}</dd><dt>Numerator / contributing condition</dt><dd>${esc(m.numerator)}</dd><dt>Denominator</dt><dd>${esc(m.denominator)}</dd><dt>Aggregation / unit</dt><dd>${esc(m.aggregation)} / ${esc(m.format)}</dd><dt>Direction / minimum sample / target</dt><dd>${m.higherIsBetter?'Higher':'Lower'} is preferred · ${m.minSample} · ${esc('target' in m?m.target:'No declared target')}</dd><dt>Caveat</dt><dd>${esc(m.caveat)}</dd></dl><h3>Calculation method</h3><p>${esc(method(m.expression))}</p><h3>Registered calculation</h3>${code(m.expression)}<h3>Runtime calculation template</h3>${code(m.runtime)}<p>{today} is the application date; {rate} is the configured instructor cost per session (INR). The preview substitutes rate = 1 solely to show executable structure. Applicable newcomer filters are inserted by the query layer.</p></details>`).join('');
+const appendixHtml=appendix.map(a=>`<details class="entry"><summary>${esc(a.file)} <small>${a.aliases.length} SQL output aliases</small></summary><p>Symbols: ${esc(a.symbols.join(', '))}</p><p>Output aliases (including intermediate fields): ${esc(a.aliases.join(', ')||'JavaScript calculations / shared rules')}</p>${code(a.source)}</details>`).join('');
+const css=`:root{font:15px/1.6 system-ui;color:#252525;background:#fff}body{margin:0}main{max-width:1100px;margin:auto;padding:32px 24px}h1{font-size:34px;line-height:1.15}h2{margin-top:32px}a{color:#77500a}header{border-bottom:4px solid #e6bf4b;padding-bottom:20px}.tools{position:sticky;top:0;background:#fff;padding:12px 0;display:flex;gap:10px;flex-wrap:wrap;z-index:1}input,select,button,.download{font:inherit;padding:9px 12px;border:1px solid #bbb;border-radius:6px;background:#fff;color:#252525}input{flex:1;min-width:180px}.entry{border:1px solid #ddd;border-radius:8px;padding:15px 18px;margin:10px 0;overflow-wrap:anywhere}.entry[hidden]{display:none}summary{cursor:pointer;font-weight:650}small{display:block;font-weight:400;color:#666}dl{display:grid;grid-template-columns:210px 1fr;gap:8px 18px}dt{font-weight:650}dd{margin:0}pre{background:#f6f6f6;padding:14px;border-radius:6px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;max-height:650px;overflow:auto}h3{font-size:15px}#result{color:#555}@media(max-width:600px){main{padding:20px 12px}dl{grid-template-columns:1fr;gap:4px}dd{margin-bottom:10px}h1{font-size:26px}}@media print{.tools{display:none}pre{max-height:none}details{break-inside:avoid}}`;
+const html=`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Atlas · Metric definitions</title><style>${css}</style><main><header><p>PHYSIQUE 57 INDIA / ATLAS REFERENCE</p><h1>Metric definitions & calculation methods</h1><p>${entries.length} registered metrics · ${sheets.length} source tabs · ${appendix.length} calculation and lineage modules</p><p>Generated directly from the current application implementation. Expand a metric to inspect its method and provenance.</p><a class="download" href="metric-definitions.md" download>Download full document</a> <button onclick="document.querySelectorAll('details').forEach(d=>d.open=true);window.print()">Print / save PDF</button></header><div class="tools"><input id="search" aria-label="Search metric definitions" placeholder="Search metric, source column, formula or implementation…"><select id="domain" aria-label="Filter domain"><option value="all">All sections</option>${['attendance','revenue','growth','people','risk'].map(d=>`<option>${d}</option>`).join('')}<option value="implementation">Implementation appendix</option></select><button id="collapse">Collapse all</button></div><p id="result" aria-live="polite"></p><h2>Shared definitions & interpretation</h2>${rules.map(([h,p])=>`<details class="entry"><summary>${h}</summary><p>${p}</p></details>`).join('')}<h2>Source sheet directory</h2>${sourceHtml}<h2>Registered metric dictionary</h2>${entryHtml}<h2>Specialist calculations & full lineage</h2><p>Search an output alias or function name to locate calculations that are local to a workspace. Full source context preserves joins, exclusions, windows, ranking, maturity rules and intermediate formulas. These technical entries supplement the business definitions above.</p>${appendixHtml}</main><script>const entries=[...document.querySelectorAll('.entry')],search=document.getElementById('search'),domain=document.getElementById('domain');function filter(){const q=search.value.trim().toLowerCase();let n=0;entries.forEach(e=>{const d=domain.value;const match=(!q||e.textContent.toLowerCase().includes(q))&&(d==='all'||(d==='implementation'?e.querySelector('summary').textContent.startsWith('src/')||e.querySelector('summary').textContent.startsWith('server/'):e.dataset.domain===d));e.hidden=!match;if(match)n++});document.getElementById('result').textContent=n+' matching entries'}search.addEventListener('input',filter);domain.addEventListener('change',filter);document.getElementById('collapse').onclick=()=>entries.forEach(e=>e.open=false);filter();</script></html>`;
+let md=`# Atlas metric definitions and calculation methods\n\n${entries.length} registered metrics; ${sheets.length} configured source tabs. Generated from application source by scripts/build-metric-reference.ts.\n\n`;
+for(const [h,p] of rules)md+=`## ${h}\n\n${p}\n\n`;
+md+='## Source sheet directory\n\n';
+for(const s of sheets)md+=`### ${s.title} (${s.key})\n\n[Open sheet](https://docs.google.com/spreadsheets/d/${s.id}/edit#gid=${s.gid})\n\n${scope[s.key]||'See normalization.'}\n\nColumns: ${s.columns.join(', ')}\n\n`;
+for(const m of entries)md+=`## ${m.label} — ${m.id}\n\n${m.definition}\n\n- Domain: ${m.domain}\n- Source: ${m.sources.join('; ')}\n- Table: ${m.table}\n- Date / population: ${m.scope}\n- Aggregation: ${m.aggregation}\n- Unit: ${m.format}\n- Numerator / condition: ${m.numerator}\n- Denominator: ${m.denominator}\n- Direction: ${m.higherIsBetter?'higher':'lower'} preferred\n- Minimum sample: ${m.minSample}\n- Target: ${'target' in m?m.target:'not declared'}\n- Caveat: ${m.caveat}\n\nCalculation method: ${method(m.expression)}\n\nRegistered SQL:\n\n\`\`\`sql\n${m.expression}\n\`\`\`\n\nRuntime template (rate preview = 1):\n\n\`\`\`sql\n${m.runtime}\n\`\`\`\n\n`;
+md+='## Specialist implementation and lineage appendix\n\n';
+for(const a of appendix)md+=`### ${a.file}\n\nSymbols: ${a.symbols.join(', ')}\n\nSQL output aliases: ${a.aliases.join(', ')}\n\n\`\`\`typescript\n${a.source}\n\`\`\`\n\n`;
+fs.mkdirSync('public/reference',{recursive:true});fs.writeFileSync('public/reference/metric-definitions.html',html);fs.writeFileSync('public/reference/metric-definitions.md',md);
+console.log(`Metric reference: ${entries.length} metrics, ${sheets.length} sheets, ${appendix.length} implementation modules.`);

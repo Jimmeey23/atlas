@@ -764,6 +764,9 @@ export default function App() {
             >
               <RefreshCw size={14} />
             </button>
+            <button className="button" onClick={() => setModal("metrics")}>
+              Metric definitions
+            </button>
             <button
               className="icon-button"
               aria-label="Settings"
@@ -1314,6 +1317,7 @@ export default function App() {
         >
           <section
             className="modal"
+            style={modal === "metrics" ? { width: "min(1200px, 96vw)", maxWidth: "96vw" } : undefined}
             role="dialog"
             aria-modal="true"
             aria-label={modal}
@@ -1322,6 +1326,8 @@ export default function App() {
               <h2>
                 {modal === "command"
                   ? "Find your next decision"
+                  : modal === "metrics"
+                    ? "Metric definitions & calculation methods"
                   : modal === "settings"
                     ? "Atlas settings"
                     : modal === "views"
@@ -1336,6 +1342,10 @@ export default function App() {
                 <X size={16} />
               </button>
             </div>
+            {modal === "metrics" && <>
+              <p className="small"><a href="/reference/metric-definitions.html" target="_blank" rel="noopener noreferrer">Open full reference</a> · <a href="/reference/metric-definitions.md" download>Download document</a></p>
+              <iframe title="Atlas metric definition document" src="/reference/metric-definitions.html" style={{ width: "100%", height: "70vh", border: "1px solid var(--border, #ddd)", borderRadius: 8, background: "white" }} />
+            </>}
             {modal === "command" && (
               <>
                 <input
