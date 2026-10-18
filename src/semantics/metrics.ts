@@ -36,8 +36,8 @@ export const metrics: Record<string, MetricDef> = Object.fromEntries(
 // Resolve them through the shared SUM(sessions) calculation without advertising
 // duplicate metrics in the catalogue or losing their original source identity.
 for (const [id, source, label] of [
-  ['payroll_sessions', 'Payroll.Classes', 'Payroll sessions'],
-  ['recurring_sessions', 'Recurring.Total Sessions', 'Recurring sessions'],
+  ['payroll_sessions', 'Payroll.Total Sessions', 'Payroll sessions'],
+  ['recurring_sessions', 'Recurring.TotalSessions', 'Recurring sessions'],
 ]) {
   Object.defineProperty(metrics, id, {
     value: { ...metrics.sessions, id, label, sources: [source] },
