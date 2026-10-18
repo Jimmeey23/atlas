@@ -32,8 +32,27 @@ export const metrics: Record<string, MetricDef> = Object.fromEntries(
     } as MetricDef,
   ]),
 );
+// Older reports and saved workspace selections keep source-specific session IDs.
+// Resolve them through the shared SUM(sessions) calculation without advertising
+// duplicate metrics in the catalogue or losing their original source identity.
+for (const [id, source, label] of [
+  ['payroll_sessions', 'Payroll.Classes', 'Payroll sessions'],
+  ['recurring_sessions', 'Recurring.Total Sessions', 'Recurring sessions'],
+]) {
+  Object.defineProperty(metrics, id, {
+    value: { ...metrics.sessions, id, label, sources: [source] },
+    enumerable: false,
+  });
+}
+
 export const metricSQL = (ids: string[], ctx: QueryContext) =>
-  ids.map((id) => `${metrics[id].sql(ctx)} AS "${id}"${evidenceSQL(id)}`).join(", ");
+  ids.map((id) => {
+    const metric = Object.hasOwn(metrics, id) ? metrics[id] : undefined;
+    if (!metric || typeof metric.sql !== 'function') {
+      throw new Error(`Unknown metric: ${String(id)}. Choose a current metric from the metric catalogue.`);
+    }
+    return `${metric.sql(ctx)} AS "${id}"${evidenceSQL(id)}`;
+  }).join(", ");
 
 // The records behind a single cell: a metric's first FILTER (WHERE …) clause is
 // its numerator condition, so a drill-down can show only the contributing rows.

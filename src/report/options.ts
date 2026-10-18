@@ -1,3 +1,4 @@
+import { reportTemplate } from "./templates";
 import { INSIGHT_LENSES, type ReportCustomization } from './model';
 export const FOCUS_OPTIONS = [
   {id:'commercial',label:'Revenue quality & product mix'}, {id:'demand',label:'Demand, fill & timetable'},
@@ -5,7 +6,7 @@ export const FOCUS_OPTIONS = [
   {id:'marketing',label:'Acquisition & marketing efficiency'},
 ] as const;
 export function reportOptions(c?: ReportCustomization) {
-  return { surface:c?.surface ?? 'paper', density:c?.density ?? 'compact', layout:c?.layout ?? 'adaptive', evidenceView:c?.evidenceView ?? 'auto',
+  return { reportTemplate: reportTemplate(c?.reportTemplate).id, surface:c?.surface ?? 'paper', density:c?.density ?? 'compact', layout:c?.layout ?? 'adaptive', evidenceView:c?.evidenceView ?? 'auto',
     historyMonths:c?.historyMonths ?? 12, showCover:c?.showCover ?? true, showDefinitions:c?.showDefinitions ?? false,
     showConfidence:c?.showConfidence ?? true, showSources:c?.showSources ?? true, showAppendix:c?.showAppendix ?? true,
     showCharts:c?.showCharts ?? true, accent:c?.accent ?? 'navy', focusAreas:c?.focusAreas ?? [],

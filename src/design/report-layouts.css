@@ -1,0 +1,196 @@
+/* Ten content-preserving document templates. This file also travels in offline exports. */
+.report-doc.r2.p57-report-surface[data-report-template] {
+  --rt-heading:'Segoe UI',Arial,sans-serif;--rt-cover-size:38px;--rt-cover-radius:4px;--rt-chapter-gap:32px;
+  --rt-report-width:1280px;--rt-paper:#fff;--rt-ink:#202630;--rt-muted:#526071;--rt-rule:#dce2e8;--rt-tint:#f5f7fa;
+  padding:24px!important;background:var(--rt-paper);color:var(--rt-ink);
+}
+.report-doc.r2.p57-report-surface[data-report-template] .cr-layout {max-width:var(--rt-report-width);margin-inline:auto;grid-template-columns:156px minmax(0,1fr);gap:28px;}
+.report-doc.r2.p57-report-surface[data-report-template] .cr-layout-plain {max-width:var(--rt-report-width);margin-inline:auto;}
+.report-doc.r2.p57-report-surface[data-report-template] .cr-report {
+  --text-1:var(--rt-ink);--text-2:var(--rt-muted);--text-3:var(--rt-muted);--d-line:var(--rt-rule);--hairline:var(--rt-rule);
+  --surface-1:var(--rt-paper);--surface-2:var(--rt-tint);--pm-paper:var(--rt-paper);--pm-ink:var(--rt-ink);--pm-ink-2:var(--rt-muted);
+  background:var(--rt-paper);color:var(--rt-ink);min-width:0;
+}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review :is(h1,h2,h3,h4) {font-family:var(--rt-heading);}
+.report-doc.r2.p57-report-surface[data-report-template] .leadership-front {background:var(--rt-paper);}
+.report-doc.r2.p57-report-surface[data-report-template] .leadership-front>header {padding:36px;background:var(--rt-tint);color:var(--rt-ink);border:1px solid var(--rt-rule);border-left:5px solid var(--accent);border-radius:var(--rt-cover-radius);margin-bottom:28px;}
+.report-doc.r2.p57-report-surface[data-report-template] .leadership-front>header :is(h1,p,.deck-eyebrow) {color:inherit;}
+.report-doc.r2.p57-report-surface[data-report-template] .leadership-front>header h1 {font-family:var(--rt-heading);font-size:clamp(27px,3.3vw,var(--rt-cover-size));line-height:1.12;letter-spacing:-.035em;font-weight:550;margin:16px 0;}
+.report-doc.r2.p57-report-surface[data-report-template] .leadership-front>header .deck-eyebrow {font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);}
+.report-doc.r2.p57-report-surface[data-report-template] .cr-chapter {padding-block:var(--rt-chapter-gap);background:var(--rt-paper);}
+.report-doc.r2.p57-report-surface[data-report-template] .cr-chapter-head {display:flex;background:var(--rt-paper);border:0;border-bottom:1px solid var(--rt-rule);border-radius:0;padding:0 0 20px;gap:20px;box-shadow:none;}
+.report-doc.r2.p57-report-surface[data-report-template] .cr-chapter-head h2 {font-family:var(--rt-heading);font-size:clamp(23px,2.5vw,32px);font-weight:550;line-height:1.16;}
+.report-doc.r2.p57-report-surface[data-report-template] .cr-chapter-head .cr-number {font:400 36px/1 Georgia,serif;opacity:.7;}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-editorial-finding {padding:20px;border:1px solid var(--rt-rule);background:var(--rt-paper);border-radius:5px;}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-editorial-finding h3 {font-family:var(--rt-heading);font-size:19px;line-height:1.35;}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-table-scroll,
+.report-doc.r2.p57-report-surface[data-report-template] .p57-editorial-table :is(th,td) {background:var(--rt-paper);color:var(--rt-ink);border-color:var(--rt-rule);}
+.report-doc.r2.p57-report-surface[data-report-template] .p57-editorial-table thead th {background:var(--rt-tint);color:var(--accent);}
+.report-doc.r2.p57-report-surface[data-report-template] .deck-kpi {background:var(--rt-paper);border-color:var(--rt-rule);}
+.report-doc.r2.p57-report-surface[data-report-template] .deck-metric-grid {background:transparent;}
+.report-doc.r2.p57-report-surface[data-report-template] .rp-chapter-story,
+.report-doc.r2.p57-report-surface[data-report-template] .rp-panel-prose {background:var(--rt-paper);}
+.report-doc.r2.p57-report-surface[data-report-template] .cr-rail {background:var(--rt-paper);border-color:var(--rt-rule);}
+.report-doc.r2.p57-report-surface[data-report-template] .cr-contents {background:var(--rt-tint);border:1px solid var(--rt-rule);border-radius:6px;padding:20px;}
+
+/* 01 Executive — a measured, asymmetric management document. */
+.report-doc.r2.p57-report-surface[data-report-template=executive] .leadership-front>header {display:grid;grid-template-columns:1.6fr 1fr;gap:8px 24px;}
+.report-doc.r2.p57-report-surface[data-report-template=executive] .leadership-front>header :is(.deck-eyebrow,h1) {grid-column:1;}
+.report-doc.r2.p57-report-surface[data-report-template=executive] .leadership-front>header p {grid-column:2;align-self:end;margin:0;}
+.report-doc.r2.p57-report-surface[data-report-template=executive] .leadership-front>header h1 {grid-row:2/4;margin:4px 0;}
+.report-doc.r2.p57-report-surface[data-report-template=executive] .cr-chapter-head {border-bottom:1px solid var(--rt-rule);border-top:3px solid var(--accent);padding-top:16px;}
+
+/* 02 Editorial — a literary single-column journal. */
+.report-doc.r2.p57-report-surface[data-report-template=editorial] {--rt-heading:Georgia,'Iowan Old Style',serif;--rt-report-width:1040px;--rt-cover-size:48px;--rt-chapter-gap:44px;}
+.report-doc.r2.p57-report-surface[data-report-template=editorial] .leadership-front>header {text-align:center;border:0;border-block:1px solid var(--accent);padding:44px 20px;background:var(--rt-paper);}
+.report-doc.r2.p57-report-surface[data-report-template=editorial] .p57-adaptive-grid {grid-template-columns:minmax(0,1fr);}
+.report-doc.r2.p57-report-surface[data-report-template=editorial] .p57-editorial-finding {border:0;border-top:1px solid var(--rt-rule);border-radius:0;padding:26px 0;}
+.report-doc.r2.p57-report-surface[data-report-template=editorial] .rp-prose {max-width:76ch;}
+.report-doc.r2.p57-report-surface[data-report-template=editorial] .cr-chapter-head {border-bottom:1px solid var(--accent);align-items:center;}
+
+/* 03 Boardroom — centered masthead and framed chapter folios. */
+.report-doc.r2.p57-report-surface[data-report-template=boardroom] {--rt-heading:Georgia,'Times New Roman',serif;--rt-cover-size:44px;--rt-report-width:1180px;--rt-chapter-gap:30px;}
+.report-doc.r2.p57-report-surface[data-report-template=boardroom] .leadership-front>header {background:#172b45;color:#fff;border:0;text-align:center;border-radius:0;padding:48px 30px;border-bottom:5px solid #b39561;}
+.report-doc.r2.p57-report-surface[data-report-template=boardroom] .leadership-front>header .deck-eyebrow {color:#dcc595;}
+.report-doc.r2.p57-report-surface[data-report-template=boardroom] .cr-chapter {margin-block:28px;border:1px solid var(--rt-rule);padding:28px;}
+.report-doc.r2.p57-report-surface[data-report-template=boardroom] .cr-chapter-head {border-bottom:3px double var(--rt-rule);}
+.report-doc.r2.p57-report-surface[data-report-template=boardroom] .cr-chapter-head .cr-number {background:var(--rt-tint);padding:12px;font-size:28px;}
+
+/* 04 Dashboard — modular findings and compact performance tiles. */
+.report-doc.r2.p57-report-surface[data-report-template=dashboard] {--rt-report-width:1440px;--rt-cover-size:32px;--rt-cover-radius:14px;--rt-chapter-gap:24px;}
+.report-doc.r2.p57-report-surface[data-report-template=dashboard] .cr-layout {grid-template-columns:minmax(0,1fr);}
+.report-doc.r2.p57-report-surface[data-report-template=dashboard] .cr-rail {position:static;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:12px;border:1px solid var(--rt-rule);border-radius:10px;max-height:none;}
+.report-doc.r2.p57-report-surface[data-report-template=dashboard] .cr-rail>b {flex:1 1 100%;}.report-doc.r2.p57-report-surface[data-report-template=dashboard] .cr-rail>a {padding:7px 10px;}
+.report-doc.r2.p57-report-surface[data-report-template=dashboard] .leadership-front>header {padding:24px;border-left-width:0;}
+.report-doc.r2.p57-report-surface[data-report-template=dashboard] .leadership-verdicts {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}
+.report-doc.r2.p57-report-surface[data-report-template=dashboard] .leadership-verdicts>li {border:1px solid var(--rt-rule);border-radius:10px;padding:18px;background:var(--rt-tint);}
+.report-doc.r2.p57-report-surface[data-report-template=dashboard] .p57-editorial-finding {border-radius:12px;background:var(--rt-tint);}
+.report-doc.r2.p57-report-surface[data-report-template=dashboard] .deck-kpi {border-radius:10px;border-top:3px solid var(--accent);}
+
+/* 05 Ledger — a compact analyst's register, with room for every evidence row. */
+.report-doc.r2.p57-report-surface[data-report-template=ledger] {--rt-heading:'Segoe UI',Arial,sans-serif;--rt-cover-size:30px;--rt-report-width:1280px;--rt-chapter-gap:24px;}
+.report-doc.r2.p57-report-surface[data-report-template=ledger] .leadership-front>header {padding:24px;border:1px solid var(--rt-rule);border-top:4px solid var(--accent);border-radius:0;background:var(--rt-paper);}
+.report-doc.r2.p57-report-surface[data-report-template=ledger] .cr-chapter-head {border-bottom:3px double var(--rt-rule);padding-bottom:12px;}
+.report-doc.r2.p57-report-surface[data-report-template=ledger] .cr-chapter-head :is(.cr-number,.deck-eyebrow) {font-family:ui-monospace,monospace;}
+.report-doc.r2.p57-report-surface[data-report-template=ledger] .p57-adaptive-grid {grid-template-columns:minmax(0,1fr);gap:12px;}
+.report-doc.r2.p57-report-surface[data-report-template=ledger] .p57-editorial-finding {border:0;border-block:1px solid var(--rt-rule);border-radius:0;padding:18px 0;}
+.report-doc.r2.p57-report-surface[data-report-template=ledger] .p57-editorial-table :is(th,td) {padding:6px 9px;font-size:12px;}
+.report-doc.r2.p57-report-surface[data-report-template=ledger] .deck-kpi {padding:10px 14px;border-radius:0;}.report-doc.r2.p57-report-surface[data-report-template=ledger] .deck-kpi-value{font:24px ui-monospace,monospace;}
+
+/* 06 Magazine — a statement cover and asymmetric chapter typography. */
+.report-doc.r2.p57-report-surface[data-report-template=magazine] {--rt-heading:Georgia,'Iowan Old Style',serif;--rt-cover-size:64px;--rt-report-width:1360px;--rt-chapter-gap:48px;}
+.report-doc.r2.p57-report-surface[data-report-template=magazine] .leadership-front>header {border:0;border-bottom:8px solid var(--accent);background:var(--rt-paper);padding:34px 0 42px;}
+.report-doc.r2.p57-report-surface[data-report-template=magazine] .leadership-front>header h1 {max-width:18ch;font-style:italic;}
+.report-doc.r2.p57-report-surface[data-report-template=magazine] .cr-chapter-head {display:grid;grid-template-columns:90px minmax(0,1fr);border-block:1px solid var(--accent);padding:26px 0;}
+.report-doc.r2.p57-report-surface[data-report-template=magazine] .cr-chapter-head .cr-number {font-size:66px;grid-row:1/3;}.report-doc.r2.p57-report-surface[data-report-template=magazine] .cr-chapter-head .cr-basis {grid-column:2;}
+.report-doc.r2.p57-report-surface[data-report-template=magazine] .p57-editorial-finding {border:0;border-left:1px solid var(--rt-rule);border-radius:0;padding:12px 24px;}
+
+/* 07 Essential — the quietest reading experience, without decorative boxes. */
+.report-doc.r2.p57-report-surface[data-report-template=minimal] {--rt-cover-size:38px;--rt-report-width:1120px;--rt-chapter-gap:48px;}
+.report-doc.r2.p57-report-surface[data-report-template=minimal] .leadership-front>header {border:0;background:var(--rt-paper);padding:28px 0 44px;}
+.report-doc.r2.p57-report-surface[data-report-template=minimal] .cr-layout {grid-template-columns:minmax(0,1fr);}
+.report-doc.r2.p57-report-surface[data-report-template=minimal] .cr-rail {position:static;border:0;border-block:1px solid var(--rt-rule);display:flex;flex-wrap:wrap;gap:8px;padding:16px 0;max-height:none;}
+.report-doc.r2.p57-report-surface[data-report-template=minimal] .cr-rail>b {flex-basis:100%;}
+.report-doc.r2.p57-report-surface[data-report-template=minimal] .cr-contents {border:0;background:var(--rt-paper);padding:20px 0;}
+.report-doc.r2.p57-report-surface[data-report-template=minimal] .p57-adaptive-grid {grid-template-columns:minmax(0,1fr);}
+.report-doc.r2.p57-report-surface[data-report-template=minimal] .p57-editorial-finding {border:0;border-bottom:1px solid var(--rt-rule);border-radius:0;padding:24px 0;}
+.report-doc.r2.p57-report-surface[data-report-template=minimal] .deck-kpi {border:0;border-bottom:1px solid var(--rt-rule);border-radius:0;}
+.report-doc.r2.p57-report-surface[data-report-template=minimal] .cr-chapter-head {border-bottom:1px solid var(--rt-rule);}
+
+/* 08 Dossier — indexed chapters with a deliberate reading margin. */
+.report-doc.r2.p57-report-surface[data-report-template=dossier] {--rt-report-width:1280px;--rt-cover-size:36px;--rt-chapter-gap:34px;}
+.report-doc.r2.p57-report-surface[data-report-template=dossier] .leadership-front>header {border:1px solid var(--rt-rule);border-left:8px solid var(--accent);border-radius:0;background:var(--rt-paper);}
+.report-doc.r2.p57-report-surface[data-report-template=dossier] .cr-chapter {border-left:1px solid var(--rt-rule);padding-left:32px;}
+.report-doc.r2.p57-report-surface[data-report-template=dossier] .cr-chapter-head {display:grid;grid-template-columns:72px minmax(0,1fr);border-bottom:1px solid var(--rt-rule);}
+.report-doc.r2.p57-report-surface[data-report-template=dossier] .cr-chapter-head .cr-number {font:500 42px/1 ui-monospace,monospace;grid-row:1/3;}
+.report-doc.r2.p57-report-surface[data-report-template=dossier] .cr-chapter-head .cr-basis {grid-column:2;}
+.report-doc.r2.p57-report-surface[data-report-template=dossier] .p57-editorial-finding {border-radius:0;border-left:3px solid var(--accent);}
+
+/* 09 Studio — warm journal surfaces with a softer rhythm. */
+.report-doc.r2.p57-report-surface[data-report-template=studio] {--rt-heading:Georgia,'Iowan Old Style',serif;--rt-tint:#f8f2ea;--rt-cover-size:46px;--rt-cover-radius:24px;--rt-chapter-gap:36px;}
+.report-doc.r2.p57-report-surface[data-report-template=studio] .leadership-front>header {border:0;padding:44px 36px;}
+.report-doc.r2.p57-report-surface[data-report-template=studio] .cr-chapter-head {padding:24px;background:var(--rt-tint);border:0;border-radius:18px;}
+.report-doc.r2.p57-report-surface[data-report-template=studio] .p57-editorial-finding {border-radius:16px;padding:24px;border-color:var(--rt-rule);box-shadow:0 12px 24px -24px #49372355;}
+.report-doc.r2.p57-report-surface[data-report-template=studio] .deck-kpi {border-radius:14px;background:var(--rt-tint);border:0;}
+.report-doc.r2.p57-report-surface[data-report-template=studio] .cr-contents {border-radius:16px;}
+
+/* 10 Panorama — a wide performance canvas with horizontal navigation. */
+.report-doc.r2.p57-report-surface[data-report-template=panorama] {--rt-report-width:1600px;--rt-cover-size:48px;--rt-chapter-gap:40px;}
+.report-doc.r2.p57-report-surface[data-report-template=panorama] .cr-layout {grid-template-columns:minmax(0,1fr);}
+.report-doc.r2.p57-report-surface[data-report-template=panorama] .cr-rail {position:static;display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;max-height:none;border:0;border-block:1px solid var(--rt-rule);padding:18px 0;}
+.report-doc.r2.p57-report-surface[data-report-template=panorama] .cr-rail>b {flex-basis:100%;}
+.report-doc.r2.p57-report-surface[data-report-template=panorama] .leadership-front>header {background:var(--rt-paper);border:0;border-top:5px solid var(--accent);border-bottom:1px solid var(--rt-rule);padding:36px 0;}
+.report-doc.r2.p57-report-surface[data-report-template=panorama] .cr-contents {grid-template-columns:repeat(3,minmax(0,1fr));}
+.report-doc.r2.p57-report-surface[data-report-template=panorama] .p57-adaptive-grid {grid-template-columns:repeat(3,minmax(0,1fr));}
+.report-doc.r2.p57-report-surface[data-report-template=panorama] .p57-adaptive-grid>[data-reader-span=full] {grid-column:1/-1;}
+
+/* Reader choices and narrow containers always take precedence over template columns. */
+.report-doc.r2.p57-report-surface[data-report-template] .p57-reference-review[data-reader-layout=single] .p57-adaptive-grid {grid-template-columns:minmax(0,1fr);}
+.report-doc.r2.p57-report-surface[data-report-template][data-report-theme=dark] {--rt-paper:#142238;--rt-ink:#edf1f9;--rt-muted:#bdcadd;--rt-rule:#35465c;--rt-tint:#1c2e46;}
+.report-doc.r2.p57-report-surface[data-report-template][data-report-theme=dark] .cr-report {--accent:#abcce7;}
+.report-doc.r2.p57-report-surface[data-report-template] .source-section-head {border-radius:var(--rt-cover-radius);font-family:var(--rt-heading);}
+.report-doc.r2.p57-report-surface[data-report-template] .source-hero h1 {font-family:var(--rt-heading);}
+@container p57-reader (max-width:900px) {
+  .report-doc.r2.p57-report-surface[data-report-template] .p57-adaptive-grid {grid-template-columns:minmax(0,1fr);}
+  .report-doc.r2.p57-report-surface[data-report-template] .leadership-verdicts {grid-template-columns:minmax(0,1fr);}
+}
+@media(max-width:1000px) {
+  .report-doc.r2.p57-report-surface[data-report-template] .cr-layout {grid-template-columns:minmax(0,1fr);}
+  .report-doc.r2.p57-report-surface[data-report-template] .p57-adaptive-grid {grid-template-columns:minmax(0,1fr);}
+  .report-doc.r2.p57-report-surface[data-report-template] .leadership-verdicts {grid-template-columns:minmax(0,1fr);}
+}
+@media(max-width:650px) {
+  .report-doc.r2.p57-report-surface[data-report-template] {padding:14px!important;}
+  .report-doc.r2.p57-report-surface[data-report-template] .leadership-front>header {display:block;padding:26px 20px;}
+  .report-doc.r2.p57-report-surface[data-report-template] .leadership-front>header h1 {font-size:30px;}
+  .report-doc.r2.p57-report-surface[data-report-template] .leadership-front>header p {margin-top:10px;}
+  .report-doc.r2.p57-report-surface[data-report-template] .cr-chapter {padding:24px 0;}
+  .report-doc.r2.p57-report-surface[data-report-template=boardroom] .cr-chapter {padding:18px;}
+  .report-doc.r2.p57-report-surface[data-report-template=dossier] .cr-chapter {padding-left:14px;}
+  .report-doc.r2.p57-report-surface[data-report-template] .cr-chapter-head {gap:12px;}
+  .report-doc.r2.p57-report-surface[data-report-template=magazine] .cr-chapter-head {grid-template-columns:44px minmax(0,1fr);}
+  .report-doc.r2.p57-report-surface[data-report-template=magazine] .cr-number {font-size:40px;}
+  .report-doc.r2.p57-report-surface[data-report-template=dossier] .cr-chapter-head {grid-template-columns:44px minmax(0,1fr);}
+  .report-doc.r2.p57-report-surface[data-report-template] .cr-contents {grid-template-columns:minmax(0,1fr);}
+}
+@media print {
+  .report-doc.r2.p57-report-surface[data-report-template] {padding:0!important;--rt-paper:#fff;--rt-ink:#202630;--rt-muted:#526071;--rt-rule:#dce2e8;--rt-tint:#f5f7fa;}
+  .report-doc.r2.p57-report-surface[data-report-template] .leadership-front>header {print-color-adjust:exact;-webkit-print-color-adjust:exact;break-inside:avoid;}
+  .report-doc.r2.p57-report-surface[data-report-template] .cr-layout {grid-template-columns:minmax(0,1fr);}
+  .report-doc.r2.p57-report-surface[data-report-template] .cr-rail {display:none;}
+  .report-doc.r2.p57-report-surface[data-report-template] .p57-adaptive-grid {grid-template-columns:minmax(0,1fr);}
+  .report-doc.r2.p57-report-surface[data-report-template] .p57-editorial-finding {break-inside:auto;box-shadow:none;}
+}
+
+/* Report evidence needs natural row height for comparison lines and source links. */
+:root .report-doc.r2.p57-report-surface[data-report-template] table tr > :is(th,td) {
+  height:auto!important;min-height:0!important;max-height:none!important;
+  padding-block:10px!important;line-height:1.5!important;vertical-align:top!important;
+  white-space:normal!important;overflow:visible;
+}
+:root .report-doc.r2.p57-report-surface[data-report-template] table tr > :is(th,td) > :is(div,p,span,button,a),
+:root .report-doc.r2.p57-report-surface[data-report-template] table tr > :is(th,td) :is(button,.row-name) {
+  max-height:none!important;white-space:normal!important;line-height:1.5!important;
+}
+.report-doc.r2.p57-report-surface[data-report-template] .deck-group-drill>span {display:block;margin-top:4px;}
+@media print {
+  .report-doc.r2.p57-report-surface[data-report-template] .cr-chapter-head {background:var(--rt-paper)!important;color:var(--rt-ink)!important;}
+}
+/* Paper navigation must retain readable contrast in the reader and offline document. */
+.report-doc.r2.p57-report-surface[data-report-template] .cr-rail {color:var(--rt-muted);}
+.report-doc.r2.p57-report-surface[data-report-template] .cr-rail>b {color:var(--rt-ink);}
+.report-doc.r2.p57-report-surface[data-report-template] .cr-rail :is(b span,small,a span) {color:var(--rt-muted);}
+.report-doc.r2.p57-report-surface[data-report-template] .cr-rail a {color:var(--rt-ink)!important;}
+.report-doc.r2.p57-report-surface[data-report-template] .cr-rail a:is(:hover,:focus-visible) {background:var(--rt-tint);outline-color:var(--accent);}
+.report-doc.r2.p57-report-surface:is([data-report-template=dashboard],[data-report-template=minimal],[data-report-template=panorama]) .cr-rail {flex-direction:row;}
+.report-doc.r2.p57-report-surface[data-report-template=dashboard] .leadership-front {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;}
+.report-doc.r2.p57-report-surface[data-report-template=dashboard] .leadership-front>:is(header,.p57-executive-verdict,.intelligence-scroll,p) {grid-column:1/-1;}
+.report-doc.r2.p57-report-surface[data-report-template=dashboard] .leadership-front>section:not(.p57-executive-verdict) {border:1px solid var(--rt-rule);border-radius:12px;padding:20px;background:var(--rt-tint);margin:0;}
+.report-doc.r2.p57-report-surface[data-report-template=dashboard] .leadership-verdicts {display:block;}
+.report-doc.r2.p57-report-surface[data-report-template=dashboard] .leadership-verdicts>li {border:0;padding:0;background:transparent;}
+.report-doc.r2.p57-report-surface[data-report-template=dashboard] .leadership-front>section>h2 {font-size:18px;line-height:1.3;}
+@container p57-reader (max-width:900px) {.report-doc.r2.p57-report-surface[data-report-template=dashboard] .leadership-front {grid-template-columns:minmax(0,1fr);}}
+@media(max-width:900px) {.report-doc.r2.p57-report-surface[data-report-template=dashboard] .leadership-front {grid-template-columns:minmax(0,1fr);}}
+@media print {.report-doc.r2.p57-report-surface[data-report-template] .cr-rail {display:none;}}
+.report-doc.r2.p57-report-surface[data-report-template][data-report-layout=full] .p57-adaptive-grid {grid-template-columns:minmax(0,1fr);}
+.report-doc.r2.p57-report-surface[data-report-template] .source-hero :is(h1,h2) {font-family:var(--rt-heading);}

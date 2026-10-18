@@ -178,3 +178,24 @@ test('a clicked figure narrows to the records that make it up', async () => {
   assert.ok(fill.rate && fill.where?.includes('capacity') && fill.flag?.includes('checked_in'), 'rates keep the denominator and flag the numerator');
   assert.equal(metricRecordFocus('not_a_metric'), null);
 });
+
+test('report document layouts persist without changing frozen figures or analysis', async () => {
+  const { store, cloud } = harness();
+  const app = express(); app.use(express.json()); reportRoutes(app, store, cloud, {});
+  const api = await serve(app);
+  try {
+    const { REPORT_TEMPLATES } = await import('../src/report/templates.ts');
+    const original = snapshot();
+    for (const template of REPORT_TEMPLATES) {
+      const response = await post(api.url + '/api/reports', {
+        ...original, customization: { chapterIds: ['overview'], reportTemplate: template.id },
+      });
+      assert.equal(response.status, 200);
+      const saved = await response.json();
+      const reopened = await (await fetch(`${api.url}/api/reports/${saved.id}`)).json();
+      assert.equal(reopened.customization.reportTemplate, template.id);
+      assert.deepEqual(reopened.chapters, original.chapters);
+      assert.deepEqual(reopened.narratives, original.narratives);
+    }
+  } finally { await api.close(); }
+});

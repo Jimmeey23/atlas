@@ -1,3 +1,5 @@
+import layoutsCSS from "../design/report-layouts.css?raw";
+import { reportOptions } from "./options";
 import { assertReportRelease, assertRenderedReport } from "./release-gate.mjs";
 import baseCSS from "../design/report.css?raw";
 import reviewCSS from "../design/report-review.css?raw";
@@ -55,6 +57,7 @@ export async function serialiseReport(element: HTMLElement, model: ReportModel) 
   assertRenderedReport(element);
   const clone = element.cloneNode(true) as HTMLElement;
   // The in-app chrome has no meaning in a file; the sticky contents rail does.
+  clone.setAttribute("data-report-template", reportOptions(model.customization).reportTemplate);
   clone.setAttribute("data-report-theme", model.customization?.theme ?? "light");
   clone.querySelectorAll("[data-export='omit']").forEach((node) => node.remove());
   // Export is a durable document: native links and disclosures work offline; live controls do not.
@@ -104,7 +107,7 @@ export async function serialiseReport(element: HTMLElement, model: ReportModel) 
     "html{scroll-behavior:smooth}body{margin:0;background:#fff;padding:0}",
     "@media(max-width:768px){body{padding:0}}",
     "@media print{body{padding:0;background:#fff}}",
-    safeInStyle(reportCSS + "\n" + sourceExportCSS + "\n" + modernCSS + "\n" + premiumCSS + "\n" + editorialCSS),
+    safeInStyle(reportCSS + "\n" + sourceExportCSS + "\n" + modernCSS + "\n" + premiumCSS + "\n" + editorialCSS + "\n" + layoutsCSS),
     "</style>",
     "</head>",
     "<body>",

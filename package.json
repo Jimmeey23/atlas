@@ -16,6 +16,7 @@
     "verify:report-page": "node scripts/verify-report-page.mjs",
     "verify:report-deck": "node scripts/verify-report-deck.mjs",
     "check:report": "tsx --test tests/report-release-gate.test.ts",
+    "verify:report-layouts": "node scripts/verify-report-layouts.mjs",
     "verify:report-editorial": "node scripts/verify-report-editorial.mjs",
     "verify:workspace": "node scripts/verify-workspace-editor.mjs",
     "docs:metrics": "tsx scripts/build-metric-reference.ts",

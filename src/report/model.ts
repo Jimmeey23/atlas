@@ -180,6 +180,7 @@ export interface ReportCustomization {
   chapterIds: string[]; theme: "light" | "dark";
   /** Management targets by metric id, in the metric's own units (rates as 0–1). */
   targets?: Record<string, number>;
+  reportTemplate?: import("./templates").ReportTemplate;
   density?: 'compact' | 'comfortable'; layout?: 'adaptive' | 'full' | 'grid'; surface?: 'paper' | 'warm' | 'mist'; evidenceView?: 'auto' | 'chart' | 'table';
   historyMonths?: 6 | 12 | 14; accent?: ReportAccent; focusAreas?: string[];
   showCover?: boolean; showDefinitions?: boolean; showConfidence?: boolean; showSources?: boolean;

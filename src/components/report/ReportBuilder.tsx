@@ -1,3 +1,6 @@
+import { ReportLayoutPicker } from "./ReportLayoutPicker";
+import { reportTemplate } from "../../report/templates";
+import "../../design/report-builder-studio.css";
 import { ReportAssistant } from "./deck/ReportAssistant";
 import { reportAppearance } from "../../report/appearance";
 import { ContinuousReport } from "./deck/ContinuousReport";
@@ -11,7 +14,7 @@ import { definition } from "../../report/definitions";
 import { GenerationStats } from "./GenerationStats";
 import { DropdownField } from "../ui/DropdownField";
 import { useEffect, useMemo, useState } from "react";
-import { Sparkles, RefreshCw, TriangleAlert, ExternalLink, Clock3, Database, Square, CheckCircle2, Loader2, CircleDashed, FilePlus2, Building2, CalendarDays, Layers3, Pin, PinOff, FileText, Presentation, History, Lightbulb, ArrowUpRight } from "lucide-react";
+import { Sparkles, RefreshCw, TriangleAlert, ExternalLink, Clock3, Database, Square, CheckCircle2, Loader2, CircleDashed, FilePlus2, Building2, CalendarDays, Layers3, Pin, PinOff, FileText, Presentation, History, Lightbulb, ArrowUpRight, LayoutTemplate } from "lucide-react";
 import { query } from "../../data/duckdb";
 import { useStore } from "../../state/store";
 import { themeOptions } from "../../state/preferences";
@@ -27,6 +30,7 @@ import { remainingSeconds } from "../../report/eta";
 import "../../design/report-studio.css";
 import "../../design/report-modern.css";
 import "../../design/report-premium.css";
+import "../../design/report-layouts.css";
 
 /** Measures leadership most often sets a monthly target for. Rates are entered as percentages. */
 const TARGETS_KEY = 'atlas-report-targets';
@@ -40,7 +44,7 @@ function storedPreferences(): Partial<ReportCustomization> {
   try { const parsed = JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'); return parsed && typeof parsed === 'object' ? parsed : {}; }
   catch { return {}; }
 }
-const REMEMBERED: (keyof ReportCustomization)[] = ['audience','tone','detail','surface','density','layout','evidenceView','historyMonths','accent','typography','cardStyle','lenses','insightsPerChapter','includeActions','quantifyImpact','comparisonFocus','showCover','showGlance','showContents','showInlineEvidence','showActionPlan','showCharts','showDefinitions','showConfidence','showSources','showAppendix','pageBreaks','preparedBy','confidentiality'];
+const REMEMBERED: (keyof ReportCustomization)[] = ['audience','tone','detail','surface','density','reportTemplate','layout','evidenceView','historyMonths','accent','typography','cardStyle','lenses','insightsPerChapter','includeActions','quantifyImpact','comparisonFocus','showCover','showGlance','showContents','showInlineEvidence','showActionPlan','showCharts','showDefinitions','showConfidence','showSources','showAppendix','pageBreaks','preparedBy','confidentiality'];
 
 const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.max(0, seconds) % 60).padStart(2, '0')}`;
 const when = (iso?: string) => iso ? new Date(iso).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "";
@@ -81,7 +85,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
   const patch = (value: Partial<ReportCustomization>) => {
     const next = { ...customization, ...value };
     try { localStorage.setItem(PREFS_KEY, JSON.stringify(Object.fromEntries(REMEMBERED.map(k => [k, next[k]])))); } catch { /* preferences still apply to this session */ }
-    const appearance = ['title','subtitle','preparedFor','preparedBy','theme','surface','density','layout','evidenceView','historyMonths','accent','typography','cardStyle','confidentiality','showCover','showGlance','showContents','showInlineEvidence','showActionPlan','showCharts','showDefinitions','showConfidence','showSources','showAppendix','pageBreaks','chapterIds'];
+    const appearance = ['title','subtitle','preparedFor','preparedBy','theme','surface','density','reportTemplate','layout','evidenceView','historyMonths','accent','typography','cardStyle','confidentiality','showCover','showGlance','showContents','showInlineEvidence','showActionPlan','showCharts','showDefinitions','showConfidence','showSources','showAppendix','pageBreaks','chapterIds'];
     // Presentation changes restyle the open report without rewriting it; it becomes an unsaved variant.
     const restyled = model && !running && Object.keys(value).every(key => appearance.includes(key))
       ? { ...model, customization: { ...customization, ...model.customization, ...value }, id: undefined, savedAt: undefined } : model;
@@ -179,12 +183,13 @@ export function ReportBuilder({ version }: { version: string | number }) {
 
   return (
     <div className="report-workspace rs" data-report-id={model?.id || ""}>
-      <header className="rs-workspace-head"><div><span className="eyebrow">Physique 57 India · Studio intelligence</span><h1>Monthly reports</h1><p>Build a comprehensive review from the month’s evidence.</p></div><span className="rs-state" role="status">{running ? job.mode === "rewrite" ? "Rewriting analysis" : "Generating report" : status === "stopped" ? "Stopped · completed chapters retained" : job.storageError ? "Save failed · report retained" : job.narrativeError ? "Partial analysis · review required" : model ? model.id ? "Report saved" : "Unsaved report" : "Ready to build"}</span></header>
+      <header className="rs-workspace-head"><div><span className="eyebrow">Physique 57 India · Studio intelligence</span><h1>A month of insight.<br/><em>A report worth reading.</em></h1><p>Shape your studio’s monthly review with a considered layout, focused chapters and source-backed analysis.</p></div><span className="rs-state" role="status">{running ? job.mode === "rewrite" ? "Rewriting analysis" : "Generating report" : status === "stopped" ? "Stopped · completed chapters retained" : job.storageError ? "Save failed · report retained" : job.narrativeError ? "Partial analysis · review required" : model ? model.id ? "Report saved" : "Unsaved report" : "Ready to build"}</span></header>
 
+      <div className="rt-workflow" aria-label="Report building steps"><span><b>01</b>Set the scope</span><i/><span><b>02</b>Choose a layout</span><i/><span><b>03</b>Refine the review</span><i/><span><b>04</b>Build & share</span></div>
       <div className="rs-grid">
         <div className="rs-main">
           <section className="rs-card rs-scope" aria-label="Report scope">
-            <header className="rs-card-head"><span className="rs-step">1</span><div><h3>Scope</h3><p>Choose the studio and month to review.</p></div></header>
+            <header className="rs-card-head"><span className="rs-step">01</span><div><h3>Scope</h3><p>Choose the studio and month to review.</p></div></header>
             <div className="rs-scope-fields">
               <label className="rs-field"><span><Building2 size={14}/>Studio</span>
                 <DropdownField aria-label="Studio" value={studio} onChange={(e) => job.set({ studio: e.target.value })} disabled={busy || !studios.length}>
@@ -196,15 +201,17 @@ export function ReportBuilder({ version }: { version: string | number }) {
                 </DropdownField></label>
             </div>
           </section>
+          <ReportLayoutPicker value={customization.reportTemplate} onChange={reportTemplate => patch({ reportTemplate })} disabled={busy}/>
           <details className="rs-card rs-settings-card" aria-label="Report design">
-            <summary className="rs-card-head"><span className="rs-step">2</span><div><h3>Report settings & chapters</h3><p>{customization.chapterIds.length} chapters · {customization.detail} · expand to customize</p></div></summary>
+            <summary className="rs-card-head"><span className="rs-step">03</span><div><h3>Report settings & chapters</h3><p>{customization.chapterIds.length} chapters · {customization.detail} · expand to customize</p></div></summary>
             <ReportSettings value={customization} patch={patch} busy={busy} onTarget={setTarget} moveChapter={moveChapter}/>
           </details>
         </div>
 
         <aside className="rs-side">
           <section className="rs-card rs-generate" aria-label="Generate report">
-            <header className="rs-card-head"><span className="rs-step">3</span><div><h3>Generate</h3><p>{studio || "Studio"} · {month ? monthLabel(month) : "Month"}</p></div></header>
+            <header className="rs-card-head"><span className="rs-step">04</span><div><h3>Generate</h3><p>{studio || "Studio"} · {month ? monthLabel(month) : "Month"}</p></div></header>
+            <div className="rt-build-design"><LayoutTemplate size={18}/><span><small>Report layout</small><b>{reportTemplate(customization.reportTemplate).name}</b></span><span>Selected</span></div>
             <dl className="rs-summary">
               <div><dt><Layers3 size={13}/>Chapters</dt><dd>{customization.chapterIds.length}</dd></div>
               <div><dt><Lightbulb size={13}/>Insights each</dt><dd>{options.insightsPerChapter}</dd></div>
@@ -265,7 +272,7 @@ export function ReportBuilder({ version }: { version: string | number }) {
         <header><div><span className="eyebrow">Your studio review</span><h2>{model.scope.studio} · {monthLabel(model.scope.month)}</h2><p>{running ? "Chapters appear as their analysis completes." : "Frozen monthly figures · source links identify whether records are frozen or live."}</p></div><button className="button" onClick={() => void open(model)} disabled={busy}><ExternalLink size={14}/>Open reader</button></header>
         {(studio !== model.scope.studio || month !== model.scope.month) && <p className="notice">This preview is {model.scope.studio} · {monthLabel(model.scope.month)}. Generate a report to apply the newly selected scope.</p>}
         <ReportAssistant model={model} onChange={next => job.set({ model: next })} inline/>
-        <article className="report-doc r2 deck deck-doc cr-inline p57-report-surface" style={reportAppearance(model)} data-report-theme={model.customization?.theme || "light"} data-accent={reportOptions(model.customization).accent} data-surface={reportOptions(model.customization).surface} data-report-layout={reportOptions(model.customization).layout} data-typography={reportOptions(model.customization).typography} data-density={reportOptions(model.customization).density}>
+        <article className="report-doc r2 deck deck-doc cr-inline p57-report-surface" style={reportAppearance(model)} data-report-theme={model.customization?.theme || "light"} data-accent={reportOptions(model.customization).accent} data-surface={reportOptions(model.customization).surface} data-report-template={reportOptions(model.customization).reportTemplate} data-card-style={reportOptions(model.customization).cardStyle} data-report-layout={reportOptions(model.customization).layout} data-typography={reportOptions(model.customization).typography} data-density={reportOptions(model.customization).density}>
           {model.importedChapters?.length ? <ImportedReport model={model}/> : <ContinuousReport withNavigation model={model} tabs={previewTabs} ranked={previewFindings} onNavigate={id => document.getElementById(`chapter-${id}`)?.scrollIntoView({ block: "start" })}/>}
         </article>
       </section>}

@@ -24,7 +24,7 @@ const ACCENTS: { id: ReportAccent; label: string; swatch: string }[] = [
   { id: 'navy', label: 'Navy', swatch: '#173656' }, { id: 'teal', label: 'Teal', swatch: '#087d86' }, { id: 'graphite', label: 'Graphite', swatch: '#3b475a' },
   { id: 'plum', label: 'Plum', swatch: '#6b2f6b' }, { id: 'forest', label: 'Forest', swatch: '#1f5f3f' }, { id: 'rose', label: 'Rose', swatch: '#a3324f' }, { id: 'amber', label: 'Amber', swatch: '#a8620a' }, { id: 'indigo', label: 'Indigo', swatch: '#5546b8' }, { id: 'copper', label: 'Copper', swatch: '#99522e' },
 ];
-const tabs = [{ id: 'style', label: 'Report style', icon: Wand2 }, { id: 'analysis', label: 'Analysis & insights', icon: ChartNoAxesCombined }, { id: 'appearance', label: 'Layout & design', icon: PanelsTopLeft }, { id: 'chapters', label: 'Chapters', icon: Layers3 }, { id: 'identity', label: 'Cover & identity', icon: BookOpen }] as const;
+const tabs = [{ id: 'style', label: 'Review presets', icon: Wand2 }, { id: 'analysis', label: 'Analysis & insights', icon: ChartNoAxesCombined }, { id: 'appearance', label: 'Layout & design', icon: PanelsTopLeft }, { id: 'chapters', label: 'Chapters', icon: Layers3 }, { id: 'identity', label: 'Cover & identity', icon: BookOpen }] as const;
 
 export function ReportSettings({ value, patch, busy, onTarget, moveChapter }: { value: ReportCustomization; patch: (p: Partial<ReportCustomization>) => void; busy: boolean; onTarget: (id: string, v: string) => void; moveChapter: (id: string, d: number) => void }) {
   const [active, setActive] = useState<string>('style'); const options = reportOptions(value);
@@ -34,12 +34,12 @@ export function ReportSettings({ value, patch, busy, onTarget, moveChapter }: { 
     <div className="rb-settings-heading"><div><h3>A performance review, tailored to your audience</h3><p>Pick a style, choose the insight lenses and evidence, then fine-tune design and chapters. Design changes restyle an open report instantly; analysis changes apply on the next Rewrite.</p></div><span className="rb-count"><Check size={13}/>{value.chapterIds.length} chapters · {options.insightsPerChapter} insights each</span></div>
     <div className="rb-tabs" role="group" aria-label="Report customization sections">{tabs.map(tab => <button key={tab.id} type="button" aria-pressed={active === tab.id} aria-controls={`rb-${tab.id}`} onClick={() => setActive(tab.id)}><tab.icon size={15}/>{tab.label}</button>)}</div>
 
-    <section className="rb-settings-panel" id="rb-style" hidden={active !== 'style'} aria-label="Report style">
+    <section className="rb-settings-panel" id="rb-style" hidden={active !== 'style'} aria-label="Review presets">
       <div className="rb2-style-grid">{styles.map(style => <button type="button" key={style.id} className="rb2-style" onClick={() => patch(style.patch)}
         data-active={Object.entries(style.patch).every(([k, v]) => JSON.stringify(value[k as keyof ReportCustomization] ?? options[k as keyof typeof options]) === JSON.stringify(v))}>
         <span className="rb2-style-preview" data-typography={style.patch.typography} data-card-style={style.patch.cardStyle} style={{ '--swatch': ACCENTS.find(a => a.id === style.patch.accent)?.swatch } as React.CSSProperties}><i/><i/><i/></span>
         <b>{style.label}</b><small>{style.note}</small></button>)}</div>
-      <p className="rb-help"><Wand2 size={15}/>A style sets audience, depth, typography, cards and sections together. Adjust anything afterwards in the other tabs.</p>
+      <p className="rb-help"><Wand2 size={15}/>A review preset sets the audience, depth, typography and included sections. Your chosen document layout stays selected. Adjust anything afterwards in the other tabs.</p>
     </section>
 
     <section className="rb-settings-panel" id="rb-analysis" hidden={active !== 'analysis'} aria-label="Analysis and insights">
