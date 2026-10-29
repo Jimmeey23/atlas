@@ -163,13 +163,24 @@ async function persist(key: string) {
     console.warn("Local snapshot unavailable for " + key, error);
   }
 }
-/**
- * The browser engine gets the same budget the server engine declares
- * (`server/intelligence.mjs`). Without it DuckDB-WASM takes whatever the tab can get
- * and dies with an opaque worker crash when Bookings alone is ~350 MB uncompressed.
- * An explicit limit fails as a source error we can show instead.
- */
-const BROWSER_MEMORY_LIMIT = "512MB";
+/** Current source volumes exceed the old 512 MB browser limit. OPFS gives DuckDB
+ * writable local backing where supported; the memory-only fallback gets the same
+ * larger limit so it can load the current source set too. */
+const BROWSER_MEMORY_LIMIT = "2GB";
+const BROWSER_DATABASE_SESSION_KEY = "atlas-studio-duckdb-session";
+
+function browserDatabaseSession() {
+  try {
+    let session = sessionStorage.getItem(BROWSER_DATABASE_SESSION_KEY);
+    if (!session) {
+      session = crypto.randomUUID();
+      sessionStorage.setItem(BROWSER_DATABASE_SESSION_KEY, session);
+    }
+    return session;
+  } catch {
+    return crypto.randomUUID();
+  }
+}
 
 export async function init() {
   const bundle = await duckdb.selectBundle({
@@ -179,15 +190,38 @@ export async function init() {
     throw new Error(
       `This browser cannot run the ${duckdbBundleName.toUpperCase()} analytics engine. Use a current version of Chrome, Edge, Firefox or Safari, or rebuild with DUCKDB_BUNDLE=mvp.`,
     );
-  const worker = new Worker(bundle.mainWorker!);
-  database = new duckdb.AsyncDuckDB(
-    new duckdb.ConsoleLogger(duckdb.LogLevel.WARNING),
-    worker,
-  );
-  await database.instantiate(bundle.mainModule, bundle.pthreadWorker);
+  const createDatabase = async () => {
+    const worker = new Worker(bundle.mainWorker!);
+    const instance = new duckdb.AsyncDuckDB(
+      new duckdb.ConsoleLogger(duckdb.LogLevel.WARNING),
+      worker,
+    );
+    await instance.instantiate(bundle.mainModule!, bundle.pthreadWorker);
+    return instance;
+  };
+  database = await createDatabase();
+  let persistent = false;
+  const opfsAvailable = typeof navigator.storage?.getDirectory === "function";
+  const session = opfsAvailable ? browserDatabaseSession() : null;
+  if (opfsAvailable && session) {
+    try {
+      await database.open({
+        path: `opfs://atlas-studio-${session}.duckdb`,
+        accessMode: duckdb.DuckDBAccessMode.READ_WRITE,
+      });
+      persistent = true;
+    } catch (error) {
+      // OPFS can be unavailable or locked by another open tab. Start a fresh
+      // in-memory worker in that case; don't continue with a partly opened DB.
+      console.warn("Persistent DuckDB storage unavailable; using in-memory mode.", error);
+      await database.terminate();
+      database = await createDatabase();
+    }
+  } else {
+    console.warn("Persistent DuckDB storage unavailable; this browser does not expose OPFS.");
+  }
   connection = await database.connect();
   await connection.query(`SET memory_limit='${BROWSER_MEMORY_LIMIT}'`);
-  await connection.query(`SET temp_directory='atlas_duckdb_temp'`);
   await connection.query("SET preserve_insertion_order=false");
   for (const key of [
     "sessions",
@@ -203,7 +237,7 @@ export async function init() {
     "teacher_recurring",
   ])
     await connection.query(
-      `CREATE TABLE "${key}" (${Object.entries(sqlTypes)
+      `DROP TABLE IF EXISTS "${key}"; CREATE TABLE "${key}" (${Object.entries(sqlTypes)
         .map(([k, t]) => `"${k}" ${t}`)
         .join(",")})`,
     );

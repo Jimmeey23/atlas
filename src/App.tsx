@@ -146,6 +146,9 @@ const blank: Analysis = {
   elapsed: 0,
 };
 
+const requiresDuckDbRestart = (message = "") =>
+  /database has been invalidated|must be restarted|\bfatal\b|out of memory error/i.test(message);
+
 // A drill-down is scoped to the cell that was clicked: the metric decides which
 // source table and which record predicate explain that single number.
 const DataLabLazy = lazy(() => import("./components/DataLab").then(module => ({ default: module.DataLab })));
@@ -274,6 +277,18 @@ export default function App() {
       setBusy(false);
     }
   }, []);
+  const retryWorkspace = (source?: string) => {
+    const message = source ? sourceStates[source]?.error : error;
+    if (requiresDuckDbRestart(message)) {
+      // DuckDB invalidates its worker after fatal IO/OOM failures. Retrying a
+      // query on that connection can only fail again; a page reload creates a
+      // fresh worker and restores the saved source snapshots.
+      window.location.reload();
+      return;
+    }
+    if (source) void ensureSource(source, true);
+    else void load(true);
+  };
   useEffect(() => subscribeSources(() => setVersion((v) => v + 1)), []);
   useEffect(() => {
     const loaded = () => {
@@ -907,7 +922,7 @@ export default function App() {
             additionalSources={s.tab === 0 ? ["meta", "payroll"] : marketingView && !websiteMarketingView ? ["meta"] : []}
             tab={s.tab}
             version={version}
-            onRetry={(key) => void ensureSource(key, true)}
+            onRetry={(key) => retryWorkspace(key)}
           />}
           {missingPrivateScope && <p className="notice">This link contains a member-specific scope saved in another browser. Open the saved analysis in its original browser to restore that scope.</p>}
           {s.tab !== 15 && <AnalysisNavigation />}
@@ -915,7 +930,7 @@ export default function App() {
             <div className="notice">
               <TriangleAlert size={14} />
               {error}
-              <button className="button" onClick={() => void load(true)}>
+              <button className="button" onClick={() => retryWorkspace()}>
                 Retry
               </button>
             </div>

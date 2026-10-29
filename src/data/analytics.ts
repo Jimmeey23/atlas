@@ -328,9 +328,22 @@ export async function options(tab = useStore.getState().tab) {
   const union = sourceTables
     .map((table) => `SELECT ${projection},${quote(table)} AS "__table" FROM "${table}"`)
     .join(" UNION ALL ");
-  const n = `SUM(CASE WHEN "__table"=${quote(current)} THEN 1 ELSE 0 END)`;
   const rows = await query(
-    `SELECT field,value,${n} AS n FROM (SELECT field,value,ROW_NUMBER() OVER (PARTITION BY field ORDER BY ${n} DESC,value) AS rn FROM (${union}) UNPIVOT (value FOR field IN (${fields.map((f) => `"${f}"`).join(",")})) WHERE value IS NOT NULL GROUP BY field,value) WHERE rn<=200 ORDER BY field,n DESC,value`,
+    `WITH unpivoted AS (
+      SELECT "__table",field,value
+      FROM (${union}) UNPIVOT (value FOR field IN (${fields.map((f) => `"${f}"`).join(",")}))
+      WHERE value IS NOT NULL
+    ), counts AS (
+      SELECT field,value,
+        SUM(CASE WHEN "__table"=${quote(current)} THEN 1 ELSE 0 END) AS n
+      FROM unpivoted
+      GROUP BY field,value
+    ), ranked AS (
+      SELECT field,value,n,
+        ROW_NUMBER() OVER (PARTITION BY field ORDER BY n DESC,value) AS rn
+      FROM counts
+    )
+    SELECT field,value,n FROM ranked WHERE rn<=200 ORDER BY field,n DESC,value`,
   );
   const all: Record<string, Record<string, number>> = Object.fromEntries(
     fields.map((f) => [f, {} as Record<string, number>]),
