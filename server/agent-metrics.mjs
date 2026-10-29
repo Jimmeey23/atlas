@@ -1,4 +1,4 @@
-import { metrics, metricSQL } from '../src/semantics/metrics.ts';
+import { metrics, metricSQL, describeMetric } from '../src/semantics/metrics.ts';
 import { currentSnapshotMetrics } from '../src/semantics/evidence.ts';
 import { toolScope } from './agent-scope.mjs';
 const unsupportedCrossSourceMetrics = new Set(['new_late_cancels']);
@@ -10,6 +10,17 @@ const groupsAllowed = new Set(['location','month','trainer','format','format_gro
 // A recurring class is one weekly slot: the class name on a given weekday and start time.
 export const classSlotSQL = `COALESCE(format,'Unnamed class') || ' · ' || COALESCE(day,'?') || ' ' || COALESCE(time,'?')`;
 const slotSources = new Set(['sessions','checkins','bookings']);
+/**
+ * Grain override, applied only to scoped agent queries over Sessions.
+ *
+ * Registers, tables and reports count *source rows*: the Sessions workbook holds one
+ * row per timetable session, and two rows that happen to share a Session ID are two
+ * recorded sessions (a known source artefact). The agent answers business questions
+ * ("how many sessions ran"), which is a question about session identity, so a repeated
+ * Session ID must not inflate the answer. Keeping the two grains explicit and documented
+ * is deliberate; silently sharing one expression is what let the agent over-report.
+ */
+const AGENT_OVERRIDES = { sessions: { sessions: 'COUNT(DISTINCT session_id)' } };
 export function compileMetricQuery(args, defaults, available, rate = 1200) {
   const {source,metric_ids:ids,group_by:groups=[]} = args;
   if (!available.includes(source) || !Array.isArray(ids) || !ids.length || ids.length>12 || ids.some(id=>metricSource(id)!==source)) throw new Error('Choose 1–12 metrics from the same listed source.');
@@ -30,6 +41,10 @@ export function compileMetricQuery(args, defaults, available, rate = 1200) {
     if(ids.includes('draw_premium_pp')) throw new Error('Draw premium needs an independently scoped pooled slot baseline. Use the instructor performance workspace or a baseline query; do not estimate it.');
   }
   const groupSQL=groups.map(g=>g==='month' && source==='lapsed' ? 'SUBSTR(end_date,1,7) AS month' : g==='class_slot' ? `${classSlotSQL} AS class_slot` : `"${g}"`).join(',');
-  const sql=`SELECT ${groupSQL ? groupSQL+', ' : ''}${metricSQL(ids,{today,rate,source})},COUNT(*) AS source_records FROM ${facts}${groups.length ? ' GROUP BY '+groups.map((_,i)=>i+1).join(',')+' ORDER BY '+groups.map((_,i)=>i+1).join(',') : ''}`;
-  return {sql,filters,snapshot:!!snapshots.length,definitions:ids.map(id=>({id,label:metrics[id].label,expression:metrics[id].description,format:metrics[id].format}))};
+  const overrides=AGENT_OVERRIDES[source] ?? {};
+  const sql=`SELECT ${groupSQL ? groupSQL+', ' : ''}${metricSQL(ids,{today,rate,source},overrides)},COUNT(*) AS source_records FROM ${facts}${groups.length ? ' GROUP BY '+groups.map((_,i)=>i+1).join(',')+' ORDER BY '+groups.map((_,i)=>i+1).join(',') : ''}`;
+  // Definitions are resolved with the live query context. Sending the raw registry
+  // template would leave `{cost_rate}` in front of the model, which then invents a rate.
+  const queryContext={today,rate,source};
+  return {sql,filters,snapshot:!!snapshots.length,definitions:ids.map(id=>({id,label:metrics[id].label,expression:overrides[id] ?? describeMetric(id,queryContext),format:metrics[id].format}))};
 }

@@ -35,8 +35,7 @@ const NOT_THE_SAME_AS: Record<string, [string, string][]> = {
 function basis(id: string, domain: string, aggregation: string) {
   if (currentSnapshotMetrics.has(id)) return "current snapshot of source rows evaluated relative to the application date; standard card period comparisons are unavailable, and reconstructed workspace history uses a separate method";
   if (id.startsWith("meta_")) return "Meta account reporting, network context; not studio-attributed and not CRM people";
-  if (["teacher_dependency", "trainer_depth"].includes(id)) return "maximum row-level value across selected recurring rows; not latest state";
-  if (aggregation === "last") return "source-defined snapshot aggregation; see calculation";
+  if (aggregation === "max") return "maximum row-level value across selected rows; not latest state";
   if (domain === "revenue" && id.startsWith("gross")) return "cash collected, by payment date";
   return "selected period";
 }
@@ -46,7 +45,7 @@ const AGGREGATION: Record<string, string> = {
   weighted: "ratio: recompute numerator ÷ denominator; never average, add or compare it with a mean of group rates",
   avg: "average of records; not additive and sensitive to small samples",
   median: "median of records; not additive",
-  last: "latest value; not additive over time",
+  max: "highest row-level value in scope; not additive and not a latest-state reading",
 };
 
 /**
@@ -64,7 +63,7 @@ export function metricContract(id: string): string {
   return [
     `${id} (${def.label}): ${note?.definition ?? businessDefinitions[id] ?? `Governed calculation ${formula.length > 220 ? formula.slice(0, 217) + "…" : formula}.`}`,
     note?.definition ? `Calculation: ${formula.length > 220 ? formula.slice(0, 217) + "…" : formula}.` : "",
-    `Format ${def.format}. Basis: ${basis(id, def.domain, def.aggregation)}. Aggregation: ${["teacher_dependency", "trainer_depth"].includes(id) ? "maximum across scoped rows; not latest state" : AGGREGATION[def.aggregation] ?? def.aggregation}.`,
+    `Format ${def.format}. Basis: ${basis(id, def.domain, def.aggregation)}. Aggregation: ${AGGREGATION[def.aggregation] ?? def.aggregation}.`,
     `Direction: ${def.higherIsBetter ? "a rise is favourable" : "a rise is ADVERSE (lower is better)"}. Uses the full eligible filtered dataset; any group-size cutoff must be an explicit user filter.`,
     note?.caveat ? `Caveat: ${note.caveat}` : "",
     lookalikes.length ? "Not the same as: " + lookalikes.map(([other, why]) => `${other} (${definition(other)?.label}) — ${why}`).join("; ") + "." : "",

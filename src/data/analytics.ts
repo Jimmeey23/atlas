@@ -3,7 +3,7 @@ import { compileFilters } from "./advanced-controls";
 import { sqlTypes } from "./normalise";
 import { newSheetFields } from "./new-fields";
 import { groupable, groupColumn } from "./group-fields";
-import { query, quote, health, fieldPresence, type Row } from "./duckdb";
+import { query, quote, health, fieldPresence, type Row, dataVersion } from "./duckdb";
 import { metricSQL, type QueryContext } from "../semantics/metrics";
 import { currentSnapshotMetrics } from "../semantics/evidence";
 import { comparisonDates, historicalFilters, historicalTransient } from "./periods";
@@ -158,6 +158,9 @@ export function analyse(
     state.transient,
     state.compare,
     state.rate,
+    // Bound to the data itself. Without this, a new ingest that forgets to call
+    // clearAnalyses() keeps serving numbers computed from the replaced rows.
+    dataVersion(),
   ]);
   if (analysisCache.has(key)) return analysisCache.get(key)!;
   const work = performAnalysis(tab, groups, columns);
@@ -304,8 +307,10 @@ async function performAnalysis(
   };
 }
 export async function options(tab = useStore.getState().tab) {
-  const all: Record<string, Record<string, number>> = {};
-  for (const field of [
+  // One scan of the union, unpivoted into seven field/value pairs, rather than seven
+  // scans of the same union. This runs on every tab change and was the single largest
+  // source of load latency: 7 queries x 10 tables, all serialised on one connection.
+  const fields = [
     "location",
     "trainer",
     "format",
@@ -313,17 +318,26 @@ export async function options(tab = useStore.getState().tab) {
     "category",
     "day",
     "time",
-  ]) {
-    // Offer every value any table knows about, so a choice made on one tab does
-    // not vanish on the next, but rank by how common it is on the current tab.
-    const sourceTables = ["sessions", "new", "sales", "leads", "lapsed", "checkins", "bookings", "payroll", "recurring", "teacher_recurring"];
-    const current = blueprints[tab].source;
-    const result = await query(
-      `SELECT "${field}" AS value,SUM(CASE WHEN "__table"=${quote(current)} THEN 1 ELSE 0 END) AS n FROM (${sourceTables.map((table) => `SELECT "${field}",${quote(table)} AS "__table" FROM "${table}"`).join(" UNION ALL ")}) WHERE "${field}" IS NOT NULL GROUP BY "${field}" ORDER BY n DESC,value LIMIT 200`,
-    );
-    all[field] = Object.fromEntries(
-      result.map((r) => [String(r.value), Number(r.n)]),
-    );
+  ];
+  // Offer every value any table knows about, so a choice made on one tab does
+  // not vanish on the next, but rank by how common it is on the current tab.
+  const sourceTables = ["sessions", "new", "sales", "leads", "lapsed", "checkins", "bookings", "payroll", "recurring", "teacher_recurring"];
+  const current = blueprints[tab].source;
+  // UNPIVOT refuses to mix column types, and `day` is numeric, so cast every field.
+  const projection = fields.map((f) => `CAST("${f}" AS VARCHAR) AS "${f}"`).join(",");
+  const union = sourceTables
+    .map((table) => `SELECT ${projection},${quote(table)} AS "__table" FROM "${table}"`)
+    .join(" UNION ALL ");
+  const n = `SUM(CASE WHEN "__table"=${quote(current)} THEN 1 ELSE 0 END)`;
+  const rows = await query(
+    `SELECT field,value,${n} AS n FROM (SELECT field,value,ROW_NUMBER() OVER (PARTITION BY field ORDER BY ${n} DESC,value) AS rn FROM (${union}) UNPIVOT (value FOR field IN (${fields.map((f) => `"${f}"`).join(",")})) WHERE value IS NOT NULL GROUP BY field,value) WHERE rn<=200 ORDER BY field,n DESC,value`,
+  );
+  const all: Record<string, Record<string, number>> = Object.fromEntries(
+    fields.map((f) => [f, {} as Record<string, number>]),
+  );
+  for (const r of rows) {
+    const field = String(r.field);
+    if (all[field]) all[field][String(r.value)] = Number(r.n);
   }
   return all;
 }

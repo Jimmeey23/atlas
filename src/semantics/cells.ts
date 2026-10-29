@@ -1,4 +1,4 @@
-import { metrics } from "./metrics";
+import { metrics, describeMetric, type QueryContext } from "./metrics";
 import { fmt, delta } from "./formats";
 
 /**
@@ -9,7 +9,7 @@ export function derived(id: string) {
   const m = metrics[id];
   return (
     ["percent", "ratio", "decimal", "days"].includes(m.format) ||
-    ["weighted", "median", "avg"].includes(m.aggregation)
+    ["weighted", "median", "avg", "max"].includes(m.aggregation)
   );
 }
 
@@ -39,11 +39,13 @@ export function provenance(
   value: unknown,
   n: number,
   before: unknown,
+  ctx?: QueryContext,
 ) {
   const m = metrics[id];
   const lines = [
     `${m.label}: ${fmt(id, value, true)}`,
-    `Formula: ${m.description}`,
+    // Resolved, so the tooltip shows the rate and date actually used, never a placeholder.
+    `Formula: ${describeMetric(id, ctx)}`,
     `Source columns: ${m.sources.join(", ")}`,
     `Contributing records: ${fmt("records", n)}`,
   ];

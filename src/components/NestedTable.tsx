@@ -240,7 +240,7 @@ export function NestedTable({
                     ? `color-mix(in srgb,var(--accent) ${Math.min(25, Math.max(0, Number(v) * 25))}%,transparent)`
                     : undefined,
               }}
-              title={provenance(id, v, n, before)}
+              title={provenance(id, v, n, before, context())}
               onClick={() => onDrill(row.original, id)}
             >
               <span className="cell-figure">

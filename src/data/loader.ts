@@ -1,7 +1,6 @@
 import { init, ingest, restore, query, health } from "./duckdb";
 import { sheets } from "./sheets.config";
 import { blueprints } from "./blueprints";
-import views from "./views.sql?raw";
 import { clearAnalyses } from "./analytics";
 import { useStore, PERFORMANCE_MARKETING_VIEW } from "../state/store";
 export type SourceState = {
@@ -67,19 +66,27 @@ export const dependencies = (tab: number) =>
 export const usable = (key: string) =>
   !!health[key]?.fetchedAt && health[key].status !== "error";
 /** Initialise the local query engine without fetching or refreshing source sheets. */
+/**
+ * One bootstrap, shared by every entry point.
+ *
+ * This closure used to be duplicated in `ensureEngine`, `ensureWorkspace` and
+ * `ensureSource`. Three copies meant three places to fix when initialisation changed,
+ * and they had already drifted in their error handling.
+ */
+function boot(): Promise<void> {
+  engine ||= init()
+    .then(() => undefined)
+    .catch((error) => {
+      engine = undefined;
+      throw error;
+    });
+  return engine;
+}
 export async function ensureEngine(): Promise<void> {
-  engine ||= init().then(() => query(views)).then(() => undefined).catch(error => { engine = undefined; throw error; });
-  await engine;
+  await boot();
 }
 export async function ensureWorkspace(tab: number, force = false) {
-  engine ||= init()
-    .then(() => query(views))
-    .then(() => undefined)
-    .catch((e) => {
-      engine = undefined;
-      throw e;
-    });
-  await engine;
+  await boot();
   // Independent reads run concurrently; DuckDB table replacements are serialised.
   const pending = [...dependencies(tab)];
   await Promise.all(
@@ -98,15 +105,14 @@ export async function ensureWorkspace(tab: number, force = false) {
  * 15-minute window, taking whatever newer copy the gateway already holds.
  */
 export async function ensureSource(key: string, force = false, latest = false): Promise<void> {
-  engine ||= init()
-    .then(() => query(views))
-    .then(() => undefined)
-    .catch((e) => {
-      engine = undefined;
-      throw e;
-    });
-  await engine;
-  if (jobs.has(key)) return jobs.get(key)!;
+  await boot();
+  // An in-flight load already answers a normal request. A forced refresh must still
+  // replace it, so let the running job settle first and then load again: returning the
+  // running job here made "Refresh" a no-op.
+  if (jobs.has(key)) {
+    await jobs.get(key)!;
+    if (!(force || latest)) return;
+  }
   if (usable(key) && !force && !latest && Date.now() - health[key].fetchedAt! < 900000)
     return;
   const job = (async () => {

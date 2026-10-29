@@ -22,13 +22,33 @@ export const populationKey = (spec: ChapterSpec) =>
 /** The registry table a chapter's app tab reads; recurring chapters reuse the Sessions measures on lifetime facts. */
 const tabSource = (spec: ChapterSpec) => (spec.source === "recurring" ? "sessions" : spec.source);
 
+/**
+ * Populations that report a session count of their own grain rather than the timetable
+ * one: recurring reports lifetime recurring-class sessions, payroll reports the sessions
+ * an instructor was paid to teach.
+ */
+const SESSION_ALIASES: Readonly<Record<string, string>> = {
+  recurring: "recurring_sessions",
+  payroll: "payroll_sessions",
+};
+
+/**
+ * The id a chapter uses for a measure. Chapters reading a different population report
+ * the shared `sessions` measure under their own alias. Anything resolving a metric
+ * against a chapter — ownership, drill-downs, register lookups — must go through this,
+ * or a chapter's own session figure will be treated as the timetable population's and
+ * the drill-down will open records from the wrong source.
+ */
+export const chapterMetricId = (spec: ChapterSpec, id: string): string =>
+  (id === "sessions" ? SESSION_ALIASES[spec.source] : undefined) ?? id;
+
 /** Everything the app tab's month-on-month table lists for this chapter's source. */
 export function tabMetricIds(spec: ChapterSpec): string[] {
   if (spec.derived || NEVER_OWN.has(spec.id)) return [];
   if (spec.renewal) return Object.keys(renewalMeasures);
   const source = tabSource(spec);
   return Object.keys(metrics).filter(id => id !== "records" && !(spec.source === "recurring" && id === "draw_premium_pp") && metricTable(id) === source
-    && (spec.website ? id.startsWith("website_") : !id.startsWith("website_"))).map(id => spec.source === "recurring" && id === "sessions" ? "recurring_sessions" : id);
+    && (spec.website ? id.startsWith("website_") : !id.startsWith("website_"))).map(id => chapterMetricId(spec, id));
 }
 
 const explicit = (spec: ChapterSpec) => [...new Set([...spec.metrics, ...spec.history, ...spec.groups.flatMap(g => g.columns)])];

@@ -202,7 +202,7 @@ export function MetricIndex({
                     <button
                       key={row.id}
                       className="metric-index-cell"
-                      title={provenance(row.id, row.value, row.n, row.previous)}
+                      title={provenance(row.id, row.value, row.n, row.previous, context())}
                       onClick={() => drill(row)}
                     >
                       <span className="metric-index-label">

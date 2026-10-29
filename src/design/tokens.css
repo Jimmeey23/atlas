@@ -63,8 +63,11 @@
   --raised: linear-gradient(180deg, #fff 0%, #fafbfd 100%);
 }
 :root {
-  --font-display: "Archivo", system-ui, sans-serif;
-  --font-ui: "Instrument Sans", system-ui, sans-serif;
+  /* Every stack names a metric-compatible system fallback, so a blocked or offline
+     webfont degrades to a near-identical face instead of a reflowed layout. */
+  --font-display: "Archivo", "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+  --font-ui: "Instrument Sans", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
+  --font-serif: "Newsreader", Georgia, "Times New Roman", serif;
   --r-s: 6px;
   --r-m: 10px;
   --r-l: 14px;

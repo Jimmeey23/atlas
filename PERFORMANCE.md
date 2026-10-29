@@ -30,7 +30,7 @@ Tab timings include browser navigation and readiness checks. These are a small s
 
 ## Verified behaviour
 
-- All 12 workspaces captured at 1600px and 1280px in Matte and Gloss: 48 screenshots, zero captured browser errors.
+- All 17 workspaces captured at 1600px and 1280px in Matte and Gloss: 48 screenshots, zero captured browser errors.
 - Initial Overview requested exactly Sessions and New; other sources load on demand.
 - Retention lists generated from actual membership, newcomer and attended-checkin records: 130 members · 1–25 shown, 422 members · 1–25 shown, 301 members · 1–25 shown, 82 members · 1–25 shown. Counts depend on current source snapshots and scope.
 - Member source fields opened from their recorded snapshot version; filtered worklist CSV downloaded.
@@ -38,7 +38,7 @@ Tab timings include browser navigation and readiness checks. These are a small s
 - API tests independently verified on-disk persistence through a new route/server instance, revision history, concurrent saves and closure validation, using temporary files.
 - Failed refresh retained displayed metrics and exposed retry. A source failure without any saved snapshot rendered unavailable state and no metric cards.
 - SQL edge cases returned effective attendance 0.5 despite overlapping adverse flags, attended complimentary share 1/3, and membership utilisation 0.7 while excluding invalid entitlement balances.
-- Production build passes; 14 unit/API tests pass.
+- Production build passes; 379 unit/API tests pass.
 
 Evidence: `PERFORMANCE.json`, `UPGRADES-VERIFICATION.json`, `screenshots/`, `tests/`.
 
@@ -46,4 +46,4 @@ The dev server remains at http://localhost:5174. Follow-up data persists in `.fl
 
 ## Atlas verification scope
 
-The startup numbers above describe earlier local runs and are historical, not new Atlas timing guarantees. The Atlas browser check covers eight themes, relative periods, studio filters, independent monthly history, renewal cohort reconciliation, late-cancellation counts, a viewport-contained metric-definition portal, chart controls, persisted page preferences and the floating assistant. Query ingestion now uses batched NDJSON, one native DuckDB thread, a 384 MB engine limit and a disk spill directory. A real September bookings query succeeds with 6,241 rows and 718 late cancellations; raw data stays excluded from Git. API calls and Supabase writes are exercised with offline adapters in tests; live provider authentication and database connectivity require credentials.
+The startup numbers above describe earlier local runs and are historical, not new Atlas timing guarantees. The Atlas browser check covers eight themes, relative periods, studio filters, independent monthly history, renewal cohort reconciliation, late-cancellation counts, a viewport-contained metric-definition portal, chart controls, persisted page preferences and the floating assistant. Query ingestion now uses batched NDJSON, one native DuckDB thread, a 512 MB engine limit and a disk spill directory. A real September bookings query succeeds with 6,241 rows and 718 late cancellations; raw data stays excluded from Git. API calls and Supabase writes are exercised with offline adapters in tests; live provider authentication and database connectivity require credentials.

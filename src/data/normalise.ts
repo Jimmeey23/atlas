@@ -32,7 +32,10 @@ export interface SourceData {
 const SHEETS_EPOCH = Date.UTC(1899, 11, 30);
 export const number = (v: unknown): number | null => {
   if (v == null || v === "" || v === "-") return null;
-  const serial = /^(1[89]\d\d|190\d)-(\d\d)-(\d\d), (\d\d):(\d\d):(\d\d)$/.exec(String(v));
+  // A Google Sheets cell formatted as a date arrives as "YYYY-MM-DD, HH:MM:SS". Any
+  // four-digit year is valid: the old guard stopped at 1999, so a 2000+ serial fell
+  // through to Number() and produced a nonsense value.
+  const serial = /^(\d{4})-(\d{2})-(\d{2}), (\d{2}):(\d{2}):(\d{2})$/.exec(String(v));
   if (serial) {
     const [, y, mo, d, h, mi, s] = serial.map(Number);
     return Math.round(((Date.UTC(y, mo - 1, d, h, mi, s) - SHEETS_EPOCH) / 86400000) * 100) / 100;
@@ -48,12 +51,42 @@ export const boolean = (v: unknown): boolean | null =>
       : /^(false|no|0)$/i.test(String(v))
         ? false
         : null;
+/**
+ * Which half of `D/M/YYYY` is the day.
+ *
+ * Sheets in this workspace are exported day-first. That is a property of the source
+ * workbook, not of this code, so it is named here and adjustable in one place rather
+ * than being an unexplained convention buried in a regex. An ambiguous date such as
+ * 03/04/2024 is otherwise silently mis-dated by a month.
+ */
+export let dateFormat: "DMY" | "MDY" = "DMY";
+/** Set the month/day order for ambiguous numeric dates from one place. */
+export function setDateFormat(format: "DMY" | "MDY") {
+  dateFormat = format;
+}
+
+/** Expand a two-digit year: 70-99 means 19xx, 00-69 means 20xx. */
+const expandYear = (yy: string) => {
+  const n = Number(yy);
+  return String(n >= 70 ? 1900 + n : 2000 + n);
+};
+
 export function date(v: unknown): string | null {
   if (v == null || v === "" || v === "-") return null;
   const s = String(v).trim();
-  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(.*)$/);
+  // Two-digit years used to return null, dropping the row's date entirely.
+  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})(?!\d)(.*)$/);
+  if (m) {
+    const year = expandYear(m[3]);
+    return dateFormat === "DMY"
+      ? `${year}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}${m[4]}`
+      : `${year}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}${m[4]}`;
+  }
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(.*)$/);
   if (m)
-    return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}${m[4]}`;
+    return dateFormat === "DMY"
+      ? `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}${m[4]}`
+      : `${m[3]}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}${m[4]}`;
   m = s.match(/^Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+),(\d+))?\)$/);
   if (m)
     return `${m[1]}-${String(+m[2] + 1).padStart(2, "0")}-${m[3].padStart(2, "0")} ${m[4] || "00"}:${m[5] || "00"}:${m[6] || "00"}`;

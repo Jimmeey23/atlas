@@ -41,7 +41,10 @@ export function* jsonChunks(value) {
 const DURABLE = ".floor/";
 
 export function createStore({ root, cloud = null, cacheRoot = root }) {
-  const base = key => (key.startsWith(DURABLE) ? root : cacheRoot);
+  // Durable keys are meant to survive a redeploy, but serverless has nowhere durable
+  // to write: there they fall back to the (ephemeral, but writable) cache root.
+  const durableRoot = process.env.VERCEL ? cacheRoot : root;
+  const base = key => (key.startsWith(DURABLE) ? durableRoot : cacheRoot);
   async function readLocal(key) {
     try {
       return JSON.parse(await readFile(path.join(base(key), key), "utf8"));

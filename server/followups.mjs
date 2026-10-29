@@ -1,4 +1,5 @@
-import { readFile, writeFile, rename } from "node:fs/promises";
+import { readFile, writeFile, rename, mkdir } from "node:fs/promises";
+import path from "node:path";
 export function followupRoutes(app, file, cloud = null) {
   let queue = Promise.resolve();
   const read = async () => {
@@ -109,6 +110,8 @@ export function followupRoutes(app, file, cloud = null) {
           });
         if (saved.error) throw saved.error;
       } else {
+        // The directory may not exist yet on a fresh instance.
+        await mkdir(path.dirname(file), { recursive: true });
         await writeFile(file + ".tmp", JSON.stringify(records));
         await rename(file + ".tmp", file);
       }

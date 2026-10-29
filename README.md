@@ -1,6 +1,6 @@
 # Atlas
 
-A local, source-backed analytics environment for Physique 57 India. Twelve workspaces cover Overview, Classes, Slots, Trainers, Sales, Acquisition, Retention, Bookings, Leads, Attendance, Payroll and Data health. The application reads the ten supplied tabs; it contains no demo records or generated business numbers.
+A local, source-backed analytics environment for Physique 57 India. Seventeen workspaces cover Overview, Classes, Slots, Trainers, Sales, Acquisition, Retention, Bookings, Leads, Attendance, Community, Payroll, Late cancellations, the assistant, Format comparison, the monthly board report and Data health. The application reads the eleven configured source tabs; it contains no demo records or generated business numbers.
 
 ## Run
 
@@ -39,7 +39,7 @@ Official API documentation: [workbook metadata](https://developers.google.com/wo
 
 ## Refresh and provenance
 
-Sources load on demand for the selected workspace. Overview needs Sessions and New; Retention needs Lapsed, New and Checkins. Data health loads all ten sources, with at most three concurrent reads. Existing disk snapshots or schema-versioned IndexedDB Parquet snapshots appear first, even after their 15-minute freshness window. Old snapshots carry timestamps and an explicit saved-snapshot label while a live refresh runs. The active workspace checks `/api/sheets/freshness` each minute and on focus. With Google credentials the check compares the workbook's Drive edit time, so edits load within a minute; without them it refreshes sources after the 15-minute window. A newer copy already held by the gateway is picked up on the next check without another Google read. A failed refresh preserves the last successful snapshot and displays the source error and retry control; unavailable sources do not render fabricated metrics.
+Sources load on demand for the selected workspace. Overview needs Sessions and New; Retention needs Lapsed, New and Checkins. Data health loads every configured source, with at most three concurrent reads. Existing disk snapshots or schema-versioned IndexedDB Parquet snapshots appear first, even after their 15-minute freshness window. Old snapshots carry timestamps and an explicit saved-snapshot label while a live refresh runs. The active workspace checks `/api/sheets/freshness` every five minutes and on focus. With Google credentials the check compares the workbook's Drive edit time, so edits load within one check interval; without them it refreshes sources after the 15-minute window. A newer copy already held by the gateway is picked up on the next check without another Google read. A failed refresh preserves the last successful snapshot and displays the source error and retry control; unavailable sources do not render fabricated metrics.
 
 Manual refresh reloads the active workspace's dependencies. Data health's Refresh all reloads all ten. DuckDB reads and table replacements share a serial queue; replacements roll back on failure. Original source rows are read from the exact version used by the displayed records. Versioned original snapshots stay in `.cache/snapshots/`; the newest ten per source are kept and older versions are pruned on the next fetch.
 

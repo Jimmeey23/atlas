@@ -70,16 +70,25 @@ test('Acquisition all-null outcomes return the same zero rates as registry; canc
 });
 
 test('Scorecard cancellation aliases identify Bookings and format cutoffs are controlled by the viewer', async () => {
-  const { readFile } = await import('node:fs/promises');
-  const scorecard = await readFile(new URL('../src/data/scorecard.ts',import.meta.url),'utf8');
-  const view = await readFile(new URL('../src/components/PerformanceScorecard.tsx',import.meta.url),'utf8');
-  const formats = await readFile(new URL('../src/components/FormatComparison.tsx',import.meta.url),'utf8');
-  assert.doesNotMatch(scorecard,/\blate_cancel_rate\b/);
-  assert.match(scorecard,/\["booking_late_rate", true\]/);
-  assert.match(view,/id: "booking_late_rate", label: "Booking late-cancel rate"/);
-  assert.doesNotMatch(formats,/MIN_SESSIONS/);
-  assert.match(formats,/\[minimumSessions, setMinimumSessions\] = useState\(0\)/);
-  assert.match(formats,/minimumSessions > 0 \? ` HAVING SUM\(sessions\)>=\$\{minimumSessions\}` : ""/);
-  assert.match(formats,/aria-label="Minimum sessions for format comparison"/);
-  assert.match(formats,/"late_cancel_rate"/); // Sessions source retains its own definition.
+  // Behaviour over source text: assert what the scorecard and the cutoff actually
+  // compute, so a refactor that preserves behaviour does not break this test.
+  const { COMPOSITE_INPUTS } = await import('../src/data/scorecard-config.ts');
+  const { SCORECARD_IDS, minimumSessionsClause } = await import('../src/data/format-comparison.ts');
+  const { metrics } = await import('../src/semantics/metrics.ts');
+
+  // The instructor scorecard reports late cancellations from Bookings, never from the
+  // Sessions late_cancel_rate, which has a different denominator.
+  assert.ok(COMPOSITE_INPUTS.some(([expression]) => expression === 'booking_late_rate'),
+    'the composite uses the Bookings late-cancel rate');
+  assert.ok(!COMPOSITE_INPUTS.some(([expression]) => expression === 'late_cancel_rate'),
+    'the Sessions late-cancel rate must not feed the Bookings scorecard');
+  assert.equal(metrics.booking_late_rate.label, 'Booking late-cancel rate');
+  assert.notEqual(metrics.late_cancel_rate.expression, metrics.booking_late_rate.expression,
+    'the Sessions source retains its own definition');
+
+  // A format cutoff is off by default and, when set, counts distinct session identities.
+  assert.equal(minimumSessionsClause(0), '', 'no cutoff means no built-in sample gate');
+  assert.equal(minimumSessionsClause(5).trim(), 'HAVING COUNT(DISTINCT session_id)>=5');
+  assert.ok(SCORECARD_IDS.includes('late_cancel_rate'),
+    'the Sessions scorecard keeps its own late-cancel definition');
 });

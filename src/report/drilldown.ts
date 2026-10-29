@@ -2,13 +2,15 @@ import type { GroupTable, ReportModel } from './model';
 import { chapters, type ChapterSpec } from './chapters';
 import { definition } from './definitions';
 import { metricTable } from '../semantics/catalogue';
-import { homeChapter } from './ownership';
+import { homeChapter, chapterMetricId } from './ownership';
 
 export interface RecordSelection { chapterId?: string; month?: string; metric?: string; table?: GroupTable; group?: string }
 const synthesis = new Set(['executive-summary', 'recommendations', 'predictions']);
 export function resolveRecordSelection(model: ReportModel, selection: RecordSelection, fallback: string): RecordSelection {
   if (selection.month && !/^\d{4}-(0[1-9]|1[0-2])$/.test(selection.month)) throw new Error('The selected evidence period is invalid.');
-  const supports = (spec: ChapterSpec) => !synthesis.has(spec.id) && !spec.derived && (!selection.metric || [...spec.metrics, ...spec.history, ...spec.groups.flatMap(group => group.columns)].includes(selection.metric) || (spec.source === metricTable(selection.metric) && !spec.renewal));
+  // Compare through the chapter's own alias for the measure, so a recurring chapter
+  // recognises its own session figure instead of deferring to the Sessions chapter.
+  const supports = (spec: ChapterSpec) => !synthesis.has(spec.id) && !spec.derived && (!selection.metric || [...spec.metrics, ...spec.history, ...spec.groups.flatMap(group => group.columns)].includes(chapterMetricId(spec, selection.metric)) || (spec.source === metricTable(selection.metric) && !spec.renewal));
   const tableOwner = selection.table ? chapters.find(spec => model.chapters[spec.id]?.groups.includes(selection.table!)) : undefined;
   const requested = chapters.find(spec => spec.id === (selection.chapterId ?? fallback));
   const candidates = chapters.filter(spec => supports(spec));

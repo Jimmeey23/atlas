@@ -11,10 +11,15 @@ export function funnelSteps(steps: FunnelInput[]): FunnelStep[] {
   const first = steps[0]?.value;
   const out = steps.map((s, i) => {
     const prev = i ? steps[i - 1].value : null;
+    // A later step can legitimately exceed an earlier one: a lead may be recorded as
+    // Converted without a Trial Completed record. Ratios are clamped to 1 so bar widths
+    // stay inside their track and only genuine drops are highlighted.
+    const ratio = (base: number | null) =>
+      finite(base) && base > 0 && finite(s.value) ? Math.min(1, s.value / base) : null;
     return {
       ...s,
-      ofFirst: finite(first) && first > 0 && finite(s.value) ? s.value / first : null,
-      ofPrevious: i && finite(prev) && prev > 0 && finite(s.value) ? s.value / prev : null,
+      ofFirst: ratio(first ?? null),
+      ofPrevious: i ? ratio(prev) : null,
       biggestDrop: false,
     };
   });
