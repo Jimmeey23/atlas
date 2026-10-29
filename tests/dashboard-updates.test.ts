@@ -12,10 +12,27 @@ async function database(tables:string[], work:(c:any)=>Promise<void>) {
   try { for(const table of tables) await c.run(`CREATE TABLE ${table} (${Object.entries(sqlTypes).map(([k,t])=>`"${k}" ${t}`).join(',')})`);await work(c); }
   finally {c.closeSync();db.closeSync();}
 }
-test('lead outcomes use exact stages even when status contradicts them',async()=>database(['leads'],async c=>{
-  await c.run(`INSERT INTO leads(stage,status) VALUES ('Membership Sold','Open'),('Trial Completed','Won'),('Trial Completed - Unresponsive','Trial Completed'),('Initial Contact','Won'),(' membership sold ','Lost')`);
+test('lead outcomes read the outcome columns, not pipeline stage, and match exactly',async()=>database(['leads'],async c=>{
+  // Trial outcome lives in Trial Status and conversion outcome in Conversion Status.
+  // Stage Name is a pipeline position that advances, so it is deliberately contradictory
+  // here: row 2 sits at the "Trial Completed" stage but never tried, and row 5 is a
+  // lower-case, space-padded " converted " / " trial completed " that must still match.
+  await c.run(`INSERT INTO leads(stage,conversion,trial_status,status) VALUES
+    ('Membership Sold','Converted','Trial Completed','Open'),
+    ('Trial Completed','Not Converted','Not Tried','Won'),
+    ('Trial Completed - Unresponsive','Converted','Trial Completed - Unresponsive','Trial Completed'),
+    ('Initial Contact','Not Converted','Not Tried','Won'),
+    (' converted ','Converted',' trial completed ','Lost')`);
   const [r]=(await c.runAndReadAll(`SELECT ${metricSQL(['leads','converted_leads','trials_completed','lead_conversion_rate','open_leads'],{rate:1200,today:'2026-10-06'})} FROM leads`)).getRowObjectsJS();
-  assert.equal(Number(r.converted_leads),2);assert.equal(Number(r.trials_completed),1);assert.equal(r.lead_conversion_rate,.4);assert.equal(Number(r.open_leads),3);
+  // Converted: rows 1, 3 and 5 — the near-miss row 3 value is an outcome value, not a stage.
+  assert.equal(Number(r.converted_leads),3);
+  // Trials: rows 1 and 5 only. Row 2 is at the Trial Completed stage but did not try, and
+  // row 3's "Trial Completed - Unresponsive" is a different recorded outcome.
+  assert.equal(Number(r.trials_completed),2);
+  assert.equal(r.lead_conversion_rate,.6);
+  // Open: not converted and not explicitly lost or disqualified — rows 2 and 4. Row 5 is
+  // Lost but also Converted, so it is not an open opportunity.
+  assert.equal(Number(r.open_leads),2);
 }));
 test('same-month conversion and retention include 30-day-spanning months and reject cross-month or return-only outcomes',async()=>database(['new'],async c=>{
   await c.run(`INSERT INTO new(member_id,date,month,entry_type,conversion,retention,first_purchase_date,second_visit_days) VALUES

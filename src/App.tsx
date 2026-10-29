@@ -115,7 +115,7 @@ import { exportCSV } from "./components/exports";
 import { PinnedInsights } from "./components/PinnedInsights";
 import { insights as runInsights } from "./insights/engine";
 import type { Insight } from "./insights/rules";
-import { defaults, thresholds, type Thresholds } from "./insights/thresholds";
+import { defaults, thresholds, refreshThresholds, type Thresholds } from "./insights/thresholds";
 import { fmt } from "./semantics/formats";
 import { currentSnapshotMetrics } from "./semantics/evidence";
 import { metrics, contributorPredicate } from "./semantics/metrics";
@@ -278,6 +278,7 @@ export default function App() {
   useEffect(() => {
     const loaded = () => {
       hydratePreferences();
+      refreshThresholds();
       setThresholdValues(thresholds());
       setVersion((v) => v + 1);
     };
@@ -338,11 +339,12 @@ export default function App() {
       clearTimeout(timer);
     };
   }, [ready, version, s.tab]);
+  // Was `[]`: it painted the theme once at mount and then never again, so the store
+  // subscription below was the only thing keeping the attribute honest.
   useEffect(() => {
     document.documentElement.dataset.theme = s.theme;
     document.documentElement.dataset.density = s.density;
-
-  }, []);
+  }, [s.theme, s.density]);
   useEffect(() => {
     if (lastTab.current !== s.tab) {
       lastTab.current = s.tab;
@@ -1436,6 +1438,7 @@ export default function App() {
                         "floor-thresholds",
                         JSON.stringify(thresholdValues),
                       );
+                      refreshThresholds();
                       window.dispatchEvent(new Event("p57-preferences"));
                       setVersion((v) => v + 1);
                       setModal("");

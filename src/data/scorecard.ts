@@ -3,50 +3,25 @@ import { quote } from "./duckdb";
 import { metricSQL } from "../semantics/metrics";
 import type { Filters } from "../state/store";
 import { groupColumn } from "./group-fields";
+// Configuration lives in a pure module so it can be asserted on without the engine.
+import {
+  SCORECARD_SESSION_IDS,
+  COMPOSITE_INPUTS,
+  scorecardTops,
+  type ScorecardDimension,
+} from "./scorecard-config";
 
 /**
  * One row per format or instructor, combining three sheets that the generic register
  * cannot join: Sessions (supply, demand, revenue), New (first-visit outcomes, by the
  * format or instructor of the first visit) and Bookings (late cancellations).
  */
-export type ScorecardDimension = "format_group" | "trainer" | (string & {});
+export type { ScorecardDimension };
+export { scorecardTops };
 type Transient = { field: string; value: string }[];
 
-export const scorecardSessionIds = [
-  "sessions",
-  "empty_sessions",
-  "booked",
-  "attendance",
-  "avg_class_size_excl",
-  "avg_class_size_incl",
-  "fill_rate",
-  "revenue",
-  "revenue_per_session",
-];
-
-/** The busiest value of a second dimension inside each row, by attendance. */
-const topColumns: [id: string, column: string, label: string][] = [
-  ["top_trainer", "trainer", "Top instructor"],
-  ["top_format", "format_group", "Top format"],
-  ["top_class", "format", "Top class"],
-  ["top_slot", "time", "Top time slot"],
-  ["top_day", "day", "Top day"],
-  ["top_studio", "location", "Top studio"],
-];
-/** Every other familiar session dimension; the row's own column is never its own "top". */
-export const scorecardTops = (dimension: ScorecardDimension) =>
-  topColumns.filter(([, column]) => column !== dimension).slice(0, 5);
-
-/** Inputs to the composite score; inverse measures count lower as better. */
-export const compositeInputs: [expression: string, inverse: boolean][] = [
-  ["fill_rate", false],
-  ["avg_class_size_excl", false],
-  ["revenue_per_session", false],
-  ["conversion_rate", false],
-  ["retention_rate", false],
-  ["booking_late_rate", true],
-  ["empty_share", true],
-];
+export const scorecardSessionIds = SCORECARD_SESSION_IDS;
+export const compositeInputs = COMPOSITE_INPUTS;
 
 // Any other groupable column is joined on its text value; groupColumn rejects unsafe identifiers.
 const display = (dimension: ScorecardDimension) =>

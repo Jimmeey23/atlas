@@ -12,7 +12,11 @@ async function database(tables: string[], work: (c: any) => Promise<void>) {
 }
 
 test('a cell drill-down is scoped to the metric that was clicked', async () => database(['leads'], async c => {
-  await c.run(`INSERT INTO leads(stage) VALUES ('Membership Sold'),('Membership Sold'),('Trial Completed'),('Initial Contact')`);
+  // Stage is deliberately contradictory: row 1 converted without ever sitting at the
+  // Membership Sold stage, and row 3 sits at the Trial Completed stage without having
+  // tried. Outcomes come from Conversion Status / Trial Status, so a stage reading
+  // would drill to the wrong rows.
+  await c.run(`INSERT INTO leads(stage,conversion,trial_status) VALUES ('Membership Sold','Converted','Trial Completed'),('Membership Sold','Converted','Not Tried'),('Trial Completed','Not Converted','Not Tried'),('Initial Contact','Not Converted','Not Tried')`);
   const count = async (id: string) => {
     const predicate = contributorPredicate(id, { rate: 1200, today: '2026-03-15' });
     const [row] = (await c.runAndReadAll(`SELECT COUNT(*) AS n FROM leads${predicate ? ` WHERE ${predicate}` : ''}`)).getRowObjectsJS();
@@ -23,6 +27,8 @@ test('a cell drill-down is scoped to the metric that was clicked', async () => d
   assert.equal(await count('converted_leads'), 2);
   assert.equal(await count('trials_completed'), 1);
   assert.equal(await count('leads'), 4, 'an unfiltered metric still drills to every row');
+  // A stage-based reading would drill to rows 1-2 for trials and rows 3-4 for conversion.
+  assert.equal(await count('open_leads'), 2, 'open leads are the records that did not convert');
 }));
 
 test('cell comparisons preserve evidence without automatic small-sample marks', () => {

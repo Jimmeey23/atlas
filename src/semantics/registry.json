@@ -818,7 +818,7 @@
   {
     "id": "active_memberships",
     "label": "Active memberships",
-    "expression": "COUNT(*) FILTER (WHERE status NOT IN ('Lapsed','Not Activated','Frozen') AND start_date<='{today}' AND (end_date IS NULL OR end_date >= '{today}'))",
+    "expression": "COUNT(*) FILTER (WHERE status NOT IN ('Lapsed','Not Activated','Frozen') AND start_date<='{today_ist}' AND (end_date IS NULL OR end_date >= '{today_ist}'))",
     "sources": [
       "Lapsed.Status",
       "Lapsed.End Date",
@@ -876,7 +876,7 @@
   {
     "id": "zero_usage_memberships",
     "label": "Unused memberships",
-    "expression": "COUNT(*) FILTER (WHERE status<>'Renewed' AND date_diff('day',TRY_CAST(start_date AS DATE),DATE '{today}')>7 AND (COALESCE(completed, CASE WHEN session_limit>0 AND remaining BETWEEN 0 AND session_limit THEN session_limit-remaining END)=0 OR (COALESCE(completed, CASE WHEN session_limit>0 AND remaining BETWEEN 0 AND session_limit THEN session_limit-remaining END) IS NULL AND last_visit IS NULL)))",
+    "expression": "COUNT(*) FILTER (WHERE status<>'Renewed' AND date_diff('day',TRY_CAST(start_date AS DATE),DATE '{today_ist}')>7 AND (COALESCE(completed, CASE WHEN session_limit>0 AND remaining BETWEEN 0 AND session_limit THEN session_limit-remaining END)=0 OR (COALESCE(completed, CASE WHEN session_limit>0 AND remaining BETWEEN 0 AND session_limit THEN session_limit-remaining END) IS NULL AND last_visit IS NULL)))",
     "sources": [
       "Lapsed.Total Sessions Completed",
       "Lapsed.Sessions Limit",
@@ -893,7 +893,7 @@
   {
     "id": "dormant_actives",
     "label": "Dormant active memberships",
-    "expression": "COUNT(*) FILTER (WHERE status NOT IN ('Lapsed','Not Activated','Frozen') AND start_date<='{today}' AND (end_date IS NULL OR end_date >= '{today}') AND days_absent>21)",
+    "expression": "COUNT(*) FILTER (WHERE status NOT IN ('Lapsed','Not Activated','Frozen') AND start_date<='{today_ist}' AND (end_date IS NULL OR end_date >= '{today_ist}') AND days_absent>21)",
     "sources": [
       "Lapsed.Status",
       "Lapsed.Days Since Last Visit",
@@ -908,7 +908,7 @@
   {
     "id": "revenue_at_risk_30d",
     "label": "Expiring in 30 days",
-    "expression": "SUM(amount_paid) FILTER (WHERE status NOT IN ('Renewed','Lapsed','Not Activated') AND TRY_CAST(end_date AS DATE) BETWEEN DATE '{today}' AND DATE '{today}'+INTERVAL 30 DAY)",
+    "expression": "SUM(amount_paid) FILTER (WHERE status NOT IN ('Renewed','Lapsed','Not Activated') AND TRY_CAST(end_date AS DATE) BETWEEN DATE '{today_ist}' AND DATE '{today_ist}'+INTERVAL 30 DAY)",
     "sources": [
       "Lapsed.Amount Paid",
       "Lapsed.End Date",
@@ -922,7 +922,7 @@
   {
     "id": "risk_score",
     "label": "Member risk score",
-    "expression": "AVG(100*(0.3*(1-COALESCE(LEAST(COALESCE(completed, CASE WHEN session_limit>0 AND remaining BETWEEN 0 AND session_limit THEN session_limit-remaining END)/NULLIF(session_limit,0),1),attendance_rate,0.5))+0.35*LEAST(days_absent/60,1)+0.15*cancel_rate+0.20*(1-attendance_rate)))",
+    "expression": "AVG(100*(0.30*(1-COALESCE(CASE WHEN NULLIF(session_limit,0) IS NULL THEN NULL ELSE LEAST(COALESCE(completed, CASE WHEN session_limit>0 AND remaining BETWEEN 0 AND session_limit THEN session_limit-remaining END)/NULLIF(session_limit,0),1) END,attendance_rate,0.5))+0.35*LEAST(COALESCE(days_absent,30)/60,1)+0.15*COALESCE(cancel_rate,0.5)+0.20*(1-COALESCE(attendance_rate,0.5))))",
     "sources": [
       "Lapsed.Total Sessions Completed",
       "Lapsed.Sessions Limit",
@@ -1162,9 +1162,9 @@
   {
     "id": "lead_conversion_rate",
     "label": "Lead win rate",
-    "expression": "(COUNT(*) FILTER (WHERE lower(trim(stage))='membership sold')) / NULLIF((COUNT(*)),0)",
+    "expression": "(COUNT(*) FILTER (WHERE lower(trim(COALESCE(conversion,'')))='converted')) / NULLIF((COUNT(*)),0)",
     "sources": [
-      "Leads.Stage Name"
+      "Leads.Conversion Status"
     ],
     "format": "percent",
     "domain": "people",
@@ -1187,12 +1187,15 @@
   {
     "id": "untouched_leads",
     "label": "Untouched leads",
-    "expression": "COUNT(*) FILTER (WHERE touches=0 AND date_diff('hour',TRY_CAST(date AS TIMESTAMP),TIMESTAMP '{today}')>48 AND lower(trim(COALESCE(stage,'')))<>'membership sold' AND (status NOT IN ('Lost','Disqualified') OR status IS NULL))",
+    "expression": "COUNT(*) FILTER (WHERE touches=0 AND date_diff('hour',TRY_CAST(date AS TIMESTAMP),TIMESTAMP '{today_ist}')>48 AND NOT (lower(trim(COALESCE(conversion,'')))='converted') AND (status NOT IN ('Lost','Disqualified') OR status IS NULL))",
     "sources": [
       "Leads.Follow Up 1 Date",
+      "Leads.Follow Up 2 Date",
+      "Leads.Follow Up 3 Date",
+      "Leads.Follow Up 4 Date",
       "Leads.Created At",
-      "Leads.Status",
-      "Leads.Stage Name"
+      "Leads.Conversion Status",
+      "Leads.Status"
     ],
     "format": "integer",
     "domain": "people",
@@ -1217,10 +1220,10 @@
   {
     "id": "open_leads",
     "label": "Open pipeline",
-    "expression": "COUNT(*) FILTER (WHERE lower(trim(COALESCE(stage,'')))<>'membership sold' AND (status NOT IN ('Lost','Disqualified') OR status IS NULL))",
+    "expression": "COUNT(*) FILTER (WHERE NOT (lower(trim(COALESCE(conversion,'')))='converted') AND (status NOT IN ('Lost','Disqualified') OR status IS NULL))",
     "sources": [
-      "Leads.Status",
-      "Leads.Stage Name"
+      "Leads.Conversion Status",
+      "Leads.Status"
     ],
     "format": "integer",
     "domain": "people",
@@ -1230,9 +1233,9 @@
   {
     "id": "pipeline_value",
     "label": "Estimated pipeline value",
-    "expression": "(COUNT(*) FILTER (WHERE lower(trim(COALESCE(stage,'')))<>'membership sold' AND (status NOT IN ('Lost','Disqualified') OR status IS NULL)))*(COUNT(*) FILTER (WHERE lower(trim(stage))='membership sold'))::DOUBLE/NULLIF(COUNT(*),0)*(SELECT AVG(first_purchase) FROM new WHERE is_new)",
+    "expression": "(COUNT(*) FILTER (WHERE NOT (lower(trim(COALESCE(conversion,'')))='converted') AND (status NOT IN ('Lost','Disqualified') OR status IS NULL)))*(COUNT(*) FILTER (WHERE lower(trim(COALESCE(conversion,'')))='converted'))::DOUBLE/NULLIF(COUNT(*),0)*(SELECT AVG(first_purchase) FROM new WHERE is_new)",
     "sources": [
-      "Leads.Stage Name",
+      "Leads.Conversion Status",
       "Leads.Status",
       "New.First Purchase Value",
       "New.Is New",
@@ -1379,7 +1382,7 @@
     ],
     "format": "percent",
     "domain": "people",
-    "aggregation": "last",
+    "aggregation": "max",
     "higherIsBetter": false
   },
   {
@@ -1391,7 +1394,7 @@
     ],
     "format": "integer",
     "domain": "people",
-    "aggregation": "last",
+    "aggregation": "max",
     "higherIsBetter": true
   },
   {
@@ -1409,7 +1412,7 @@
   {
     "id": "payroll_cost",
     "label": "Estimated payroll",
-    "expression": "SUM(sessions)*{rate}",
+    "expression": "SUM(sessions)*{cost_rate}",
     "sources": [
       "Payroll.Total Sessions",
       "Settings.rate_per_session"
@@ -1422,7 +1425,7 @@
   {
     "id": "contribution",
     "label": "Estimated contribution",
-    "expression": "SUM(revenue)-SUM(sessions)*{rate}",
+    "expression": "SUM(revenue)-SUM(sessions)*{cost_rate}",
     "sources": [
       "Payroll.Total Paid",
       "Payroll.Total Sessions",
@@ -1436,7 +1439,7 @@
   {
     "id": "contribution_margin",
     "label": "Estimated contribution margin",
-    "expression": "(SUM(revenue)-SUM(sessions)*{rate}) / NULLIF((SUM(revenue)),0)",
+    "expression": "(SUM(revenue)-SUM(sessions)*{cost_rate}) / NULLIF((SUM(revenue)),0)",
     "sources": [
       "Payroll.Total Paid",
       "Payroll.Total Sessions",
@@ -1450,7 +1453,7 @@
   {
     "id": "payroll_pct_of_revenue",
     "label": "Estimated payroll share",
-    "expression": "(SUM(sessions)*{rate}) / NULLIF((SUM(revenue)),0)",
+    "expression": "(SUM(sessions)*{cost_rate}) / NULLIF((SUM(revenue)),0)",
     "sources": [
       "Payroll.Total Paid",
       "Payroll.Total Sessions",
@@ -1464,7 +1467,7 @@
   {
     "id": "empty_session_cost",
     "label": "Cost of empty sessions",
-    "expression": "SUM(empty)*{rate}",
+    "expression": "SUM(empty)*{cost_rate}",
     "sources": [
       "Payroll.Total Empty Sessions",
       "Settings.rate_per_session"
@@ -1477,7 +1480,7 @@
   {
     "id": "break_even_class_size",
     "label": "Break-even class size",
-    "expression": "{rate}/NULLIF(SUM(revenue)/NULLIF(SUM(checked_in),0),0)",
+    "expression": "{cost_rate}/NULLIF(SUM(revenue)/NULLIF(SUM(checked_in),0),0)",
     "sources": [
       "Sessions.Revenue",
       "Sessions.CheckedIn",
@@ -1672,7 +1675,7 @@
   {
     "id": "gap_to_break_even",
     "label": "Attendees above break-even",
-    "expression": "SUM(checked_in)/NULLIF(SUM(sessions),0)-{rate}/NULLIF(SUM(revenue)/NULLIF(SUM(checked_in),0),0)",
+    "expression": "SUM(checked_in)/NULLIF(SUM(sessions),0)-{cost_rate}/NULLIF(SUM(revenue)/NULLIF(SUM(checked_in),0),0)",
     "sources": [
       "Sessions.Revenue",
       "Sessions.CheckedIn",
@@ -1702,9 +1705,9 @@
   {
     "id": "converted_leads",
     "label": "Converted leads",
-    "expression": "COUNT(*) FILTER (WHERE lower(trim(stage))='membership sold')",
+    "expression": "COUNT(*) FILTER (WHERE lower(trim(COALESCE(conversion,'')))='converted')",
     "sources": [
-      "Leads.Stage Name"
+      "Leads.Conversion Status"
     ],
     "format": "integer",
     "domain": "people",
@@ -1714,9 +1717,9 @@
   {
     "id": "trials_completed",
     "label": "Trials completed",
-    "expression": "COUNT(*) FILTER (WHERE lower(trim(stage))='trial completed')",
+    "expression": "COUNT(*) FILTER (WHERE lower(trim(COALESCE(trial_status,'')))='trial completed')",
     "sources": [
-      "Leads.Stage Name"
+      "Leads.Trial Status"
     ],
     "format": "integer",
     "domain": "people",
@@ -1862,7 +1865,7 @@
   {
     "id": "website_untouched",
     "label": "Untouched Website leads",
-    "expression": "COUNT(*) FILTER (WHERE touches=0 AND date_diff('hour',TRY_CAST(date AS TIMESTAMP),TIMESTAMP '{today}')>48 AND NOT (lower(trim(COALESCE(conversion,'')))='converted') AND (status NOT IN ('Lost','Disqualified') OR status IS NULL))",
+    "expression": "COUNT(*) FILTER (WHERE touches=0 AND date_diff('hour',TRY_CAST(date AS TIMESTAMP),TIMESTAMP '{today_ist}')>48 AND NOT (lower(trim(COALESCE(conversion,'')))='converted') AND (status NOT IN ('Lost','Disqualified') OR status IS NULL))",
     "sources": [
       "Leads.Follow Up 1 Date",
       "Leads.Follow Up 2 Date",

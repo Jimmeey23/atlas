@@ -1,5 +1,6 @@
 import { savedWorkspace, workspaceScopes, workspaceKey } from "./workspaceLayout";
 import { create } from "zustand";
+import { DEFAULT_THEME, THEME_KEY } from "../data/theme";
 import { filterFields, type FilterGroup } from "../data/advanced-controls";
 import { relativePeriod } from "../data/periods";
 export const tabs = [
@@ -181,7 +182,7 @@ export const useStore = create<Store>((set, get) => ({
       ? params.get("view") || ""
       : "",
   tab: parentTab(Math.min(tabs.length - 1, Math.max(0, Number(params.get("tab") || 0)))),
-  theme: localStorage.getItem("floor-theme") || "matte",
+  theme: localStorage.getItem(THEME_KEY) || DEFAULT_THEME,
   density: localStorage.getItem("floor-density") || "compact",
   filters: {
     ...emptyFilters,
@@ -230,7 +231,7 @@ if (savedWorkspace && restoringWorkspace) {
 function writeState(s: Store) {
   document.documentElement.dataset.theme = s.theme;
   document.documentElement.dataset.density = s.density;
-  localStorage.setItem("floor-theme", s.theme);
+  localStorage.setItem(THEME_KEY, s.theme);
   localStorage.setItem("floor-density", s.density);
   localStorage.setItem("floor-rate", String(s.rate));
   const p = new URLSearchParams();

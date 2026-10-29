@@ -4,6 +4,8 @@
 
 All metrics use the full eligible filtered dataset. There are no built-in minimum-sample conditions. User-selected minimum-group/session/transaction filters are view controls, not metric definitions. Mathematical validity and business eligibility still apply.
 
+Placeholders are resolved for display: the cost rate shown is 1200 INR per taught session (the operator default, editable in Settings) and the date is 2026-10-29 in Asia/Kolkata. At query time both are replaced by the operator’s own configured values.
+
 [Detailed definitions, source lineage and review findings](public/reference/metric-definitions.md). Open **Metric definitions** in the app for the searchable version. Specialist local calculations are documented in the implementation appendix.
 
 | ID | Label | Calculation | Source columns | Unit | Aggregation |
@@ -31,9 +33,9 @@ All metrics use the full eligible filtered dataset. There are no built-in minimu
 | vat | Recorded GST | SUM(vat) | Sales.Payment VAT | currency | sum |
 | transactions | Transactions | COUNT(DISTINCT sale_id) | Sales.Sale ID | integer | sum |
 | units | Units sold | SUM(units) | Sales.Sale Item Quantity | integer | sum |
-| revenue_per_session | Revenue / session | SUM(revenue)/NULLIF(SUM(sessions),0) | Sessions.Revenue; Sessions.SessionID | currency | weighted |
-| rev_pac | Revenue / attendee | SUM(revenue)/NULLIF(SUM(checked_in),0) | Sessions.Revenue; Sessions.CheckedIn; Sessions.Capacity | currency | weighted |
-| rev_pas | Revenue / seat | SUM(revenue)/NULLIF(SUM(capacity),0) | Sessions.Revenue; Sessions.CheckedIn; Sessions.Capacity | currency | weighted |
+| revenue_per_session | Earned revenue / session | SUM(revenue)/NULLIF(SUM(sessions),0) | Sessions.Revenue; Sessions.SessionID | currency | weighted |
+| rev_pac | Earned revenue / attendee | SUM(revenue)/NULLIF(SUM(checked_in),0) | Sessions.Revenue; Sessions.CheckedIn; Sessions.Capacity | currency | weighted |
+| rev_pas | Earned revenue / seat | SUM(revenue)/NULLIF(SUM(capacity),0) | Sessions.Revenue; Sessions.CheckedIn; Sessions.Capacity | currency | weighted |
 | lost_revenue | Opportunity at current yield | SUM(CASE WHEN capacity IS NOT NULL AND checked_in IS NOT NULL THEN GREATEST(capacity-checked_in,0) END)*SUM(revenue)/NULLIF(SUM(checked_in),0) | Sessions.Capacity; Sessions.CheckedIn; Sessions.Revenue | currency | weighted |
 | aov | Average order value | SUM(revenue)/NULLIF(COUNT(DISTINCT sale_id),0) | Sales.Payment Value; Sales.Sale ID; Sales.Member ID | currency | weighted |
 | arpu | Revenue / buyer | SUM(revenue)/NULLIF(COUNT(DISTINCT member_id),0) | Sales.Payment Value; Sales.Sale ID; Sales.Member ID | currency | weighted |
@@ -70,14 +72,14 @@ All metrics use the full eligible filtered dataset. There are no built-in minimu
 | active_base | Active member base | CASE WHEN COUNT(lifecycle)>0 THEN COUNT(DISTINCT member_id) FILTER (WHERE lifecycle='Active') ELSE NULL END | New.Lifecycle Status; New.Member Id | integer | sum |
 | at_risk_actives | At-risk active members | COUNT(*) FILTER (WHERE lifecycle='Active' AND days_absent>21) | New.Lifecycle Status; New.Days Since Last Visit | integer | sum |
 | visits_post_trial | Post-trial visits | SUM(visits_post) | New.Visits Post Trial | integer | sum |
-| active_memberships | Active memberships | COUNT(*) FILTER (WHERE status NOT IN ('Lapsed','Not Activated','Frozen') AND start_date<='{today}' AND (end_date IS NULL OR end_date >= '{today}')) | Lapsed.Status; Lapsed.End Date; Lapsed.Start Date | integer | sum |
+| active_memberships | Active memberships | COUNT(*) FILTER (WHERE status NOT IN ('Lapsed','Not Activated','Frozen') AND start_date<='2026-10-29' AND (end_date IS NULL OR end_date >= '2026-10-29')) | Lapsed.Status; Lapsed.End Date; Lapsed.Start Date | integer | sum |
 | churn_rate | Churn rate | (COUNT(*) FILTER (WHERE renewal_outcome='lapsed')) / NULLIF((COUNT(*) FILTER (WHERE renewal_outcome IS NOT NULL)),0) | Lapsed.Status; Lapsed.Churned Date; Lapsed.End Date | percent | weighted |
 | lapsed_members | Lapsed members | COUNT(DISTINCT member_id) FILTER (WHERE latest_lapse) | Lapsed.Churned Date; Lapsed.Member ID; Lapsed.Start Date; Lapsed.Status; Lapsed.Amount Paid; Lapsed.Membership Name | integer | sum |
 | utilisation | Membership utilisation | SUM(session_limit-remaining) FILTER (WHERE session_limit>0 AND remaining BETWEEN 0 AND session_limit)/NULLIF(SUM(session_limit) FILTER (WHERE session_limit>0 AND remaining BETWEEN 0 AND session_limit),0) | Lapsed.Sessions Limit; Lapsed.Remaining Sessions | percent | weighted |
-| zero_usage_memberships | Unused memberships | COUNT(*) FILTER (WHERE status<>'Renewed' AND date_diff('day',TRY_CAST(start_date AS DATE),DATE '{today}')>7 AND (COALESCE(completed, CASE WHEN session_limit>0 AND remaining BETWEEN 0 AND session_limit THEN session_limit-remaining END)=0 OR (COALESCE(completed, CASE WHEN session_limit>0 AND remaining BETWEEN 0 AND session_limit THEN session_limit-remaining END) IS NULL AND last_visit IS NULL))) | Lapsed.Total Sessions Completed; Lapsed.Sessions Limit; Lapsed.Remaining Sessions; Lapsed.Most Recent Visit Date; Lapsed.Status; Lapsed.Start Date | integer | sum |
-| dormant_actives | Dormant active memberships | COUNT(*) FILTER (WHERE status NOT IN ('Lapsed','Not Activated','Frozen') AND start_date<='{today}' AND (end_date IS NULL OR end_date >= '{today}') AND days_absent>21) | Lapsed.Status; Lapsed.Days Since Last Visit; Lapsed.Start Date; Lapsed.End Date | integer | sum |
-| revenue_at_risk_30d | Expiring in 30 days | SUM(amount_paid) FILTER (WHERE status NOT IN ('Renewed','Lapsed','Not Activated') AND TRY_CAST(end_date AS DATE) BETWEEN DATE '{today}' AND DATE '{today}'+INTERVAL 30 DAY) | Lapsed.Amount Paid; Lapsed.End Date; Lapsed.Status | currency | sum |
-| risk_score | Member risk score | AVG(100*(0.3*(1-COALESCE(LEAST(COALESCE(completed, CASE WHEN session_limit>0 AND remaining BETWEEN 0 AND session_limit THEN session_limit-remaining END)/NULLIF(session_limit,0),1),attendance_rate,0.5))+0.35*LEAST(days_absent/60,1)+0.15*cancel_rate+0.20*(1-attendance_rate))) | Lapsed.Total Sessions Completed; Lapsed.Sessions Limit; Lapsed.Remaining Sessions; Lapsed.Days Since Last Visit; Lapsed.Cancellation Rate %; Lapsed.Attendance Rate % | decimal | avg |
+| zero_usage_memberships | Unused memberships | COUNT(*) FILTER (WHERE status<>'Renewed' AND date_diff('day',TRY_CAST(start_date AS DATE),DATE '2026-10-29')>7 AND (COALESCE(completed, CASE WHEN session_limit>0 AND remaining BETWEEN 0 AND session_limit THEN session_limit-remaining END)=0 OR (COALESCE(completed, CASE WHEN session_limit>0 AND remaining BETWEEN 0 AND session_limit THEN session_limit-remaining END) IS NULL AND last_visit IS NULL))) | Lapsed.Total Sessions Completed; Lapsed.Sessions Limit; Lapsed.Remaining Sessions; Lapsed.Most Recent Visit Date; Lapsed.Status; Lapsed.Start Date | integer | sum |
+| dormant_actives | Dormant active memberships | COUNT(*) FILTER (WHERE status NOT IN ('Lapsed','Not Activated','Frozen') AND start_date<='2026-10-29' AND (end_date IS NULL OR end_date >= '2026-10-29') AND days_absent>21) | Lapsed.Status; Lapsed.Days Since Last Visit; Lapsed.Start Date; Lapsed.End Date | integer | sum |
+| revenue_at_risk_30d | Expiring in 30 days | SUM(amount_paid) FILTER (WHERE status NOT IN ('Renewed','Lapsed','Not Activated') AND TRY_CAST(end_date AS DATE) BETWEEN DATE '2026-10-29' AND DATE '2026-10-29'+INTERVAL 30 DAY) | Lapsed.Amount Paid; Lapsed.End Date; Lapsed.Status | currency | sum |
+| risk_score | Member risk score | AVG(100*(0.30*(1-COALESCE(CASE WHEN NULLIF(session_limit,0) IS NULL THEN NULL ELSE LEAST(COALESCE(completed, CASE WHEN session_limit>0 AND remaining BETWEEN 0 AND session_limit THEN session_limit-remaining END)/NULLIF(session_limit,0),1) END,attendance_rate,0.5))+0.35*LEAST(COALESCE(days_absent,30)/60,1)+0.15*COALESCE(cancel_rate,0.5)+0.20*(1-COALESCE(attendance_rate,0.5)))) | Lapsed.Total Sessions Completed; Lapsed.Sessions Limit; Lapsed.Remaining Sessions; Lapsed.Days Since Last Visit; Lapsed.Cancellation Rate %; Lapsed.Attendance Rate % | decimal | avg |
 | memberships_count | Memberships held | COUNT(*) | Lapsed.Member ID | integer | sum |
 | remaining_sessions | Remaining sessions | SUM(remaining) | Lapsed.Remaining Sessions | integer | sum |
 | days_absent | Days since last visit | AVG(days_absent) | Lapsed.Days Since Last Visit | days | avg |
@@ -95,31 +97,31 @@ All metrics use the full eligible filtered dataset. There are no built-in minimu
 | same_day_share | Bookings within 24 hours | (COUNT(*) FILTER (WHERE lead_time>=0 AND lead_time<1)) / NULLIF((COUNT(*) FILTER (WHERE NOT imported)),0) | Bookings.Session Date; Bookings.Sale Date | percent | weighted |
 | revenue_per_booking | Revenue / booking | SUM(revenue) FILTER (WHERE NOT imported)/NULLIF(COUNT(*) FILTER (WHERE NOT imported),0) | Bookings.Sale Value | currency | weighted |
 | leads | Leads | COUNT(*) | Leads.ID | integer | sum |
-| lead_conversion_rate | Lead win rate | (COUNT(*) FILTER (WHERE lower(trim(stage))='membership sold')) / NULLIF((COUNT(*)),0) | Leads.Stage Name | percent | weighted |
+| lead_conversion_rate | Lead win rate | (COUNT(*) FILTER (WHERE lower(trim(COALESCE(conversion,'')))='converted')) / NULLIF((COUNT(*)),0) | Leads.Conversion Status | percent | weighted |
 | response_time_hours | First response time | AVG(response_hours) FILTER (WHERE response_hours>=0) | Leads.Follow Up 1 Date; Leads.Created At | decimal | avg |
-| untouched_leads | Untouched leads | COUNT(*) FILTER (WHERE touches=0 AND date_diff('hour',TRY_CAST(date AS TIMESTAMP),TIMESTAMP '{today}')>48 AND lower(trim(COALESCE(stage,'')))<>'membership sold' AND (status NOT IN ('Lost','Disqualified') OR status IS NULL)) | Leads.Follow Up 1 Date; Leads.Created At; Leads.Status; Leads.Stage Name | integer | sum |
+| untouched_leads | Untouched leads | COUNT(*) FILTER (WHERE touches=0 AND date_diff('hour',TRY_CAST(date AS TIMESTAMP),TIMESTAMP '2026-10-29')>48 AND NOT (lower(trim(COALESCE(conversion,'')))='converted') AND (status NOT IN ('Lost','Disqualified') OR status IS NULL)) | Leads.Follow Up 1 Date; Leads.Follow Up 2 Date; Leads.Follow Up 3 Date; Leads.Follow Up 4 Date; Leads.Created At; Leads.Conversion Status; Leads.Status | integer | sum |
 | touches | Average follow-ups | AVG(touches) | Leads.Follow Up 1 Date; Leads.Follow Up 2 Date; Leads.Follow Up 3 Date; Leads.Follow Up 4 Date | decimal | avg |
-| open_leads | Open pipeline | COUNT(*) FILTER (WHERE lower(trim(COALESCE(stage,'')))<>'membership sold' AND (status NOT IN ('Lost','Disqualified') OR status IS NULL)) | Leads.Status; Leads.Stage Name | integer | sum |
-| pipeline_value | Estimated pipeline value | (COUNT(*) FILTER (WHERE lower(trim(COALESCE(stage,'')))<>'membership sold' AND (status NOT IN ('Lost','Disqualified') OR status IS NULL)))*(COUNT(*) FILTER (WHERE lower(trim(stage))='membership sold'))::DOUBLE/NULLIF(COUNT(*),0)*(SELECT AVG(first_purchase) FROM new WHERE is_new) | Leads.Stage Name; Leads.Status; New.First Purchase Value; New.Is New; New.Conversion Status | currency | weighted |
+| open_leads | Open pipeline | COUNT(*) FILTER (WHERE NOT (lower(trim(COALESCE(conversion,'')))='converted') AND (status NOT IN ('Lost','Disqualified') OR status IS NULL)) | Leads.Conversion Status; Leads.Status | integer | sum |
+| pipeline_value | Estimated pipeline value | (COUNT(*) FILTER (WHERE NOT (lower(trim(COALESCE(conversion,'')))='converted') AND (status NOT IN ('Lost','Disqualified') OR status IS NULL)))*(COUNT(*) FILTER (WHERE lower(trim(COALESCE(conversion,'')))='converted'))::DOUBLE/NULLIF(COUNT(*),0)*(SELECT AVG(first_purchase) FROM new WHERE TRUE AND is_new AND conversion='Converted' AND first_purchase>0) | Leads.Conversion Status; Leads.Status; New.First Purchase Value; New.Is New; New.Conversion Status | currency | weighted |
 | checkins | Check-ins | COUNT(*) FILTER (WHERE attended) | Checkins.Checked In | integer | sum |
 | unique_attendees | Unique attendees | COUNT(DISTINCT member_id) FILTER (WHERE attended) | Checkins.Member ID; Checkins.Checked In | integer | sum |
 | attendance_avg_class_size | Average class size | COUNT(*) FILTER (WHERE attended)/NULLIF(COUNT(DISTINCT session_id) FILTER (WHERE session_id IS NOT NULL),0) | Checkins.Session ID; Checkins.Checked In | decimal | weighted |
 | attendance_empty_sessions | Empty sessions | COUNT(DISTINCT session_id) FILTER (WHERE session_id IS NOT NULL) - COUNT(DISTINCT CASE WHEN attended THEN session_id END) | Checkins.Session ID; Checkins.Checked In | integer | sum |
 | visits_per_member | Visits / member | COUNT(*) FILTER (WHERE attended)/NULLIF(COUNT(DISTINCT member_id) FILTER (WHERE attended),0) | Checkins.Member ID; Checkins.Checked In | decimal | weighted |
 | complimentary_rate | Complimentary share | SUM(complimentary_visits)/NULLIF(SUM(checked_in),0) | Sessions.Complimentary; Sessions.CheckedIn | percent | weighted |
-| revenue_per_checkin | Revenue / check-in | SUM(revenue) FILTER (WHERE attended)/NULLIF(COUNT(*) FILTER (WHERE attended),0) | Checkins.Paid; Checkins.Checked In | currency | weighted |
+| revenue_per_checkin | Earned revenue / check-in | SUM(revenue) FILTER (WHERE attended)/NULLIF(COUNT(*) FILTER (WHERE attended),0) | Checkins.Paid; Checkins.Checked In | currency | weighted |
 | teaching_hours | Recorded teaching hours | SUM(CASE WHEN teaching_session_rank=1 THEN duration END)/60 | Checkins.Duration (Minutes) | decimal | sum |
 | revenue_per_hour | Revenue / recorded hour | SUM(revenue) FILTER (WHERE attended AND duration>0)/NULLIF(SUM(CASE WHEN teaching_session_rank=1 THEN duration END)/60,0) | Checkins.Paid; Checkins.Duration (Minutes) | currency | weighted |
 | trainers | Active instructors | COUNT(DISTINCT trainer_id) | Teacher Recurring.TrainerID | integer | sum |
-| teacher_dependency | Maximum listed-instructor share | MAX(teacher_dependency) | Recurring.Top5Trainers | percent | MAX of row-level values across scope (legacy registry tag: last); not latest state |
-| trainer_depth | Maximum listed-instructor count | MAX(trainer_depth) | Recurring.Top5Trainers | integer | MAX of row-level values across scope (legacy registry tag: last); not latest state |
+| teacher_dependency | Maximum listed-instructor share | MAX(teacher_dependency) | Recurring.Top5Trainers | percent | max |
+| trainer_depth | Maximum listed-instructor count | MAX(trainer_depth) | Recurring.Top5Trainers | integer | max |
 | payroll_revenue | Attributed revenue | SUM(revenue) | Payroll.Total Paid | currency | sum |
-| payroll_cost | Estimated payroll | SUM(sessions)*{rate} | Payroll.Total Sessions; Settings.rate_per_session | currency | sum |
-| contribution | Estimated contribution | SUM(revenue)-SUM(sessions)*{rate} | Payroll.Total Paid; Payroll.Total Sessions; Settings.rate_per_session | currency | sum |
-| contribution_margin | Estimated contribution margin | (SUM(revenue)-SUM(sessions)*{rate}) / NULLIF((SUM(revenue)),0) | Payroll.Total Paid; Payroll.Total Sessions; Settings.rate_per_session | percent | weighted |
-| payroll_pct_of_revenue | Estimated payroll share | (SUM(sessions)*{rate}) / NULLIF((SUM(revenue)),0) | Payroll.Total Paid; Payroll.Total Sessions; Settings.rate_per_session | percent | weighted |
-| empty_session_cost | Cost of empty sessions | SUM(empty)*{rate} | Payroll.Total Empty Sessions; Settings.rate_per_session | currency | sum |
-| break_even_class_size | Break-even class size | {rate}/NULLIF(SUM(revenue)/NULLIF(SUM(checked_in),0),0) | Sessions.Revenue; Sessions.CheckedIn; Settings.rate_per_session | decimal | weighted |
+| payroll_cost | Estimated payroll | SUM(sessions)*1200 | Payroll.Total Sessions; Settings.rate_per_session | currency | sum |
+| contribution | Estimated contribution | SUM(revenue)-SUM(sessions)*1200 | Payroll.Total Paid; Payroll.Total Sessions; Settings.rate_per_session | currency | sum |
+| contribution_margin | Estimated contribution margin | (SUM(revenue)-SUM(sessions)*1200) / NULLIF((SUM(revenue)),0) | Payroll.Total Paid; Payroll.Total Sessions; Settings.rate_per_session | percent | weighted |
+| payroll_pct_of_revenue | Estimated payroll share | (SUM(sessions)*1200) / NULLIF((SUM(revenue)),0) | Payroll.Total Paid; Payroll.Total Sessions; Settings.rate_per_session | percent | weighted |
+| empty_session_cost | Cost of empty sessions | SUM(empty)*1200 | Payroll.Total Empty Sessions; Settings.rate_per_session | currency | sum |
+| break_even_class_size | Break-even class size | 1200/NULLIF(SUM(revenue)/NULLIF(SUM(checked_in),0),0) | Sessions.Revenue; Sessions.CheckedIn; Settings.rate_per_session | decimal | weighted |
 | payroll_conversion | Instructor trial conversion | (SUM(converted)) / NULLIF((SUM(new_count)),0) | Payroll.Converted; Payroll.New | percent | weighted |
 | payroll_retention | Instructor retention | (SUM(retained)) / NULLIF((SUM(new_count)),0) | Payroll.Retained; Payroll.New | percent | weighted |
 | new_handled | Newcomers taught | SUM(new_count) | Payroll.New | integer | sum |
@@ -130,14 +132,14 @@ All metrics use the full eligible filtered dataset. There are no built-in minimu
 | booking_no_shows | No-show bookings | COUNT(*) FILTER (WHERE no_show) | Bookings.No Show | integer | sum |
 | booking_late_cancelled | Late-cancelled bookings | COUNT(*) FILTER (WHERE late_cancelled>0) | Bookings.Late Cancelled | integer | sum |
 | membership_revenue | Membership purchase value | SUM(revenue) | Lapsed.Amount Paid | currency | sum |
-| checkin_revenue | Attributed check-in revenue | SUM(revenue) FILTER (WHERE attended) | Checkins.Paid | currency | sum |
+| checkin_revenue | Earned check-in revenue | SUM(revenue) FILTER (WHERE attended) | Checkins.Paid | currency | sum |
 | payroll_revenue_per_session | Attributed revenue / session | SUM(revenue)/NULLIF(SUM(sessions),0) | Payroll.Total Paid; Payroll.Total Sessions | currency | weighted |
 | nonempty_reliability | Non-empty reliability | 1-SUM(empty)/NULLIF(SUM(sessions),0) | Sessions.CheckedIn; Sessions.SessionID | percent | weighted |
 | active_slots | Active schedule slots | COUNT(DISTINCT CONCAT_WS('\|',location,format,day,time)) | Sessions.Location; Sessions.Class; Sessions.Day; Sessions.Time | integer | sum |
-| gap_to_break_even | Attendees above break-even | SUM(checked_in)/NULLIF(SUM(sessions),0)-{rate}/NULLIF(SUM(revenue)/NULLIF(SUM(checked_in),0),0) | Sessions.Revenue; Sessions.CheckedIn; Sessions.SessionID; Settings.rate_per_session | decimal | weighted |
+| gap_to_break_even | Attendees above break-even | SUM(checked_in)/NULLIF(SUM(sessions),0)-1200/NULLIF(SUM(revenue)/NULLIF(SUM(checked_in),0),0) | Sessions.Revenue; Sessions.CheckedIn; Sessions.SessionID; Settings.rate_per_session | decimal | weighted |
 | booking_pending | Pending / unconfirmed | COUNT(*) FILTER (WHERE NOT COALESCE(attended,FALSE) AND NOT COALESCE(cancelled,FALSE) AND NOT COALESCE(no_show,FALSE) AND NOT COALESCE(late_cancelled>0,FALSE)) | Bookings.Attended; Bookings.Cancelled; Bookings.No Show; Bookings.Late Cancelled | integer | sum |
-| converted_leads | Converted leads | COUNT(*) FILTER (WHERE lower(trim(stage))='membership sold') | Leads.Stage Name | integer | sum |
-| trials_completed | Trials completed | COUNT(*) FILTER (WHERE lower(trim(stage))='trial completed') | Leads.Stage Name | integer | sum |
+| converted_leads | Converted leads | COUNT(*) FILTER (WHERE lower(trim(COALESCE(conversion,'')))='converted') | Leads.Conversion Status | integer | sum |
+| trials_completed | Trials completed | COUNT(*) FILTER (WHERE lower(trim(COALESCE(trial_status,'')))='trial completed') | Leads.Trial Status | integer | sum |
 | complimentary_visits | Complimentary visits | SUM(complimentary_visits) | Sessions.Complimentary | integer | sum |
 | session_complimentary_rate | Complimentary share | SUM(complimentary_visits)/NULLIF(SUM(checked_in),0) | Sessions.Complimentary; Sessions.CheckedIn | percent | weighted |
 | late_affected_sessions | Affected sessions | COUNT(DISTINCT COALESCE(session_id,unique_id1,unique_id2,date\|\|'\|'\|\|time\|\|'\|'\|\|format\|\|'\|'\|\|location)) FILTER (WHERE late_cancelled>0) | Bookings.Session ID; Bookings.UniqueID1; Bookings.UniqueID2; Bookings.Session Date; Bookings.Time; Bookings.Class; Bookings.Location; Bookings.Late Cancelled | integer | sum |
@@ -148,13 +150,13 @@ All metrics use the full eligible filtered dataset. There are no built-in minimu
 | website_retained | Retained leads | COUNT(*) FILTER (WHERE lower(trim(COALESCE(retention,'')))='retained') | Leads.Retention Status | integer | sum |
 | website_trial_members | Converted trial leads | COUNT(*) FILTER (WHERE lower(trim(COALESCE(trial_status,'')))='trial completed' AND lower(trim(COALESCE(conversion,'')))='converted') | Leads.Trial Status; Leads.Conversion Status | integer | sum |
 | website_open | Open Website pipeline | COUNT(*) FILTER (WHERE NOT (lower(trim(COALESCE(conversion,'')))='converted') AND (status NOT IN ('Lost','Disqualified') OR status IS NULL)) | Leads.Conversion Status; Leads.Status | integer | sum |
-| website_untouched | Untouched Website leads | COUNT(*) FILTER (WHERE touches=0 AND date_diff('hour',TRY_CAST(date AS TIMESTAMP),TIMESTAMP '{today}')>48 AND NOT (lower(trim(COALESCE(conversion,'')))='converted') AND (status NOT IN ('Lost','Disqualified') OR status IS NULL)) | Leads.Follow Up 1 Date; Leads.Follow Up 2 Date; Leads.Follow Up 3 Date; Leads.Follow Up 4 Date; Leads.Created At; Leads.Conversion Status; Leads.Status | integer | sum |
+| website_untouched | Untouched Website leads | COUNT(*) FILTER (WHERE touches=0 AND date_diff('hour',TRY_CAST(date AS TIMESTAMP),TIMESTAMP '2026-10-29')>48 AND NOT (lower(trim(COALESCE(conversion,'')))='converted') AND (status NOT IN ('Lost','Disqualified') OR status IS NULL)) | Leads.Follow Up 1 Date; Leads.Follow Up 2 Date; Leads.Follow Up 3 Date; Leads.Follow Up 4 Date; Leads.Created At; Leads.Conversion Status; Leads.Status | integer | sum |
 | website_contact_rate | Followed-up rate | (COUNT(*) FILTER (WHERE touches>0)) / NULLIF((COUNT(*)),0) | Leads.Follow Up 1 Date; Leads.Follow Up 2 Date; Leads.Follow Up 3 Date; Leads.Follow Up 4 Date | percent | weighted |
 | website_trial_rate | Lead to trial | (COUNT(*) FILTER (WHERE lower(trim(COALESCE(trial_status,'')))='trial completed')) / NULLIF((COUNT(*)),0) | Leads.Trial Status | percent | weighted |
 | website_win_rate | Lead to member | (COUNT(*) FILTER (WHERE lower(trim(COALESCE(conversion,'')))='converted')) / NULLIF((COUNT(*)),0) | Leads.Conversion Status | percent | weighted |
 | website_trial_win_rate | Trial to member | (COUNT(*) FILTER (WHERE lower(trim(COALESCE(trial_status,'')))='trial completed' AND lower(trim(COALESCE(conversion,'')))='converted')) / NULLIF((COUNT(*) FILTER (WHERE lower(trim(COALESCE(trial_status,'')))='trial completed')),0) | Leads.Trial Status; Leads.Conversion Status | percent | weighted |
 | website_ltv | LTV per converted lead | AVG(ltv) FILTER (WHERE lower(trim(COALESCE(conversion,'')))='converted' AND ltv>0) | Leads.LTV; Leads.Conversion Status | currency | avg |
-| website_pipeline_value | Estimated Website pipeline value | (COUNT(*) FILTER (WHERE NOT (lower(trim(COALESCE(conversion,'')))='converted') AND (status NOT IN ('Lost','Disqualified') OR status IS NULL)))*(COUNT(*) FILTER (WHERE lower(trim(COALESCE(conversion,'')))='converted'))::DOUBLE/NULLIF(COUNT(*),0)*(SELECT AVG(first_purchase) FROM new WHERE is_new) | Leads.Conversion Status; Leads.Status; New.First Purchase Value; New.Is New; New.Conversion Status | currency | weighted |
+| website_pipeline_value | Estimated Website pipeline value | (COUNT(*) FILTER (WHERE NOT (lower(trim(COALESCE(conversion,'')))='converted') AND (status NOT IN ('Lost','Disqualified') OR status IS NULL)))*(COUNT(*) FILTER (WHERE lower(trim(COALESCE(conversion,'')))='converted'))::DOUBLE/NULLIF(COUNT(*),0)*(SELECT AVG(first_purchase) FROM new WHERE TRUE AND is_new AND conversion='Converted' AND first_purchase>0) | Leads.Conversion Status; Leads.Status; New.First Purchase Value; New.Is New; New.Conversion Status | currency | weighted |
 | meta_records | Meta source records | COUNT(*) | Meta.date | integer | sum |
 | meta_spend | Meta spend | SUM(spend) | Meta.spend | currency | sum |
 | meta_impressions | Impressions | SUM(impressions) | Meta.impressions | integer | sum |

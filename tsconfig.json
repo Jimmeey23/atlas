@@ -7,6 +7,8 @@
     "moduleResolution": "Bundler",
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": { "duckdb-bundle": ["./src/data/duckdb-bundle.eh.ts"] },
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",

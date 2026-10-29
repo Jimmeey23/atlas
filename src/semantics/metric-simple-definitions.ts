@@ -278,7 +278,7 @@ export const simpleMetricDefinitions: Record<string, { meaning: string; calculat
   },
   "risk_score": {
     "meaning": "An uncalibrated score combining credit usage, absence and booking behaviour.",
-    "calculation": "Average a score weighted 30% to unused allowance, 35% to absence scaled to 60 days, 15% to cancellation rate and 20% to inverse attendance rate, then multiply by 100."
+    "calculation": "Average a score weighted 30% to unused allowance, 35% to absence scaled to 60 days, 15% to cancellation rate and 20% to inverse attendance rate, then multiply by 100. A missing input counts as the neutral midpoint, not as the worst case."
   },
   "memberships_count": {
     "meaning": "How many selected membership records appear in Lapsed.",
@@ -349,8 +349,8 @@ export const simpleMetricDefinitions: Record<string, { meaning: string; calculat
     "calculation": "Count selected lead rows without deduplicating people."
   },
   "lead_conversion_rate": {
-    "meaning": "The percentage of selected lead records currently at Membership Sold stage.",
-    "calculation": "Membership Sold stage records divided by all creation-date cohort lead records, multiplied by 100."
+    "meaning": "The percentage of selected lead records recorded as Converted.",
+    "calculation": "Converted records divided by all creation-date cohort lead records, multiplied by 100."
   },
   "response_time_hours": {
     "meaning": "Average recorded hours from lead creation to first follow-up.",
@@ -358,19 +358,19 @@ export const simpleMetricDefinitions: Record<string, { meaning: string; calculat
   },
   "untouched_leads": {
     "meaning": "Open lead records over 48 hours old with no recorded follow-up dates.",
-    "calculation": "Count records with no Follow Up 1–4 dates, created over 48 hours before today's midnight, excluding Membership Sold, Lost and Disqualified records."
+    "calculation": "Count records with no Follow Up 1–4 dates, created over 48 hours before today's midnight, excluding Converted, Lost and Disqualified records."
   },
   "touches": {
     "meaning": "Average number of recorded follow-up date fields per lead.",
     "calculation": "Count populated Follow Up 1–4 dates per row, then average across selected leads."
   },
   "open_leads": {
-    "meaning": "Lead records not recorded as sold, lost or disqualified.",
-    "calculation": "Count records outside Membership Sold stage whose status is not Lost or Disqualified; missing status can qualify."
+    "meaning": "Lead records not recorded as converted, lost or disqualified.",
+    "calculation": "Count records whose Conversion Status is not Converted and whose status is not Lost or Disqualified; missing status can qualify."
   },
   "pipeline_value": {
     "meaning": "Estimated value of the open lead pipeline.",
-    "calculation": "Open lead count multiplied by the cohort Membership Sold rate and average positive first purchase of converted newcomers in the applicable scope."
+    "calculation": "Open lead count multiplied by the cohort conversion rate and average positive first purchase of converted newcomers in the applicable scope."
   },
   "checkins": {
     "meaning": "How many Checkins records are explicitly marked attended.",
@@ -513,12 +513,12 @@ export const simpleMetricDefinitions: Record<string, { meaning: string; calculat
     "calculation": "Count rows without Attended, Cancelled, No Show or Late Cancelled flags; missing flags count as absent."
   },
   "converted_leads": {
-    "meaning": "How many lead records currently have Membership Sold as their stage.",
-    "calculation": "Count records whose Stage Name is Membership Sold, ignoring case and surrounding spaces."
+    "meaning": "How many lead records are recorded as Converted.",
+    "calculation": "Count records whose Conversion Status is Converted, ignoring case and surrounding spaces. Stage Name is not used, so records converted at any stage are counted."
   },
   "trials_completed": {
-    "meaning": "How many lead records currently have Trial Completed as their stage.",
-    "calculation": "Count records whose Stage Name is Trial Completed; later stages are not included automatically."
+    "meaning": "How many lead records completed a trial.",
+    "calculation": "Count records whose Trial Status is Trial Completed, ignoring case and surrounding spaces. Stage Name is not used, so records that completed a trial and then advanced are counted."
   },
   "complimentary_visits": {
     "meaning": "How many complimentary visits are recorded in Sessions.",

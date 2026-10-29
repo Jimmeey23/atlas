@@ -2,10 +2,9 @@ import { latestLapseSQL } from "../semantics/membership-eligibility";
 import { renewalStateSQL } from "./renewals";
 import { today } from "./periods";
 import * as duckdb from "@duckdb/duckdb-wasm";
-import wasmMVP from "@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url";
-import wasmEH from "@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url";
-import workerMVP from "@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?url";
-import workerEH from "@duckdb/duckdb-wasm/dist/duckdb-browser-eh.worker.js?url";
+// Resolved by the alias in vite.config.ts to one of the two modules beside this file,
+// so exactly one WASM build reaches dist.
+import { duckdbBundle, duckdbBundleName } from "duckdb-bundle";
 import { readSnapshot, writeSnapshot } from "./cache";
 import { sqlTypes, normalise, type SourceData, type Defect } from "./normalise";
 const resultCache = new Map<string, Promise<Row[]>>();
@@ -46,6 +45,11 @@ const presenceFields = [
   "session_type",
   "is_new",
 ];
+/** Bump to invalidate every persisted snapshot. Read on both write and restore, so the
+ * two can never disagree and silently discard a snapshot.
+ */
+export const SCHEMA_VERSION = 21;
+
 // Bumped whenever a table is (re)loaded, so schema-derived views (group-by
 // fields) can recompute once per data version rather than per render.
 let version = 0;
@@ -126,7 +130,7 @@ async function restoreSnapshot(key: string) {
           savedAt: number;
         }
       | undefined;
-    if (!entry || entry.schema !== 21) return false;
+    if (!entry || entry.schema !== SCHEMA_VERSION) return false;
     resultCache.clear();
     await database.registerFileBuffer(key + ".parquet", entry.buffer);
     await connection.query(
@@ -148,7 +152,7 @@ async function persist(key: string) {
     );
     const buffer = await database.copyFileToBuffer(key + ".parquet");
     await writeSnapshot({
-      schema: 21,
+      schema: SCHEMA_VERSION,
       key,
       buffer,
       meta: health[key],
@@ -159,11 +163,22 @@ async function persist(key: string) {
     console.warn("Local snapshot unavailable for " + key, error);
   }
 }
+/**
+ * The browser engine gets the same budget the server engine declares
+ * (`server/intelligence.mjs`). Without it DuckDB-WASM takes whatever the tab can get
+ * and dies with an opaque worker crash when Bookings alone is ~350 MB uncompressed.
+ * An explicit limit fails as a source error we can show instead.
+ */
+const BROWSER_MEMORY_LIMIT = "512MB";
+
 export async function init() {
   const bundle = await duckdb.selectBundle({
-    mvp: { mainModule: wasmMVP, mainWorker: workerMVP },
-    eh: { mainModule: wasmEH, mainWorker: workerEH },
-  });
+    [duckdbBundleName]: duckdbBundle,
+  } as Parameters<typeof duckdb.selectBundle>[0]);
+  if (!bundle.mainWorker || !bundle.mainModule)
+    throw new Error(
+      `This browser cannot run the ${duckdbBundleName.toUpperCase()} analytics engine. Use a current version of Chrome, Edge, Firefox or Safari, or rebuild with DUCKDB_BUNDLE=mvp.`,
+    );
   const worker = new Worker(bundle.mainWorker!);
   database = new duckdb.AsyncDuckDB(
     new duckdb.ConsoleLogger(duckdb.LogLevel.WARNING),
@@ -171,6 +186,9 @@ export async function init() {
   );
   await database.instantiate(bundle.mainModule, bundle.pthreadWorker);
   connection = await database.connect();
+  await connection.query(`SET memory_limit='${BROWSER_MEMORY_LIMIT}'`);
+  await connection.query(`SET temp_directory='atlas_duckdb_temp'`);
+  await connection.query("SET preserve_insertion_order=false");
   for (const key of [
     "sessions",
     "new",

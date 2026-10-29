@@ -33,8 +33,13 @@ export function websitePeriodWindows(asOf: string) {
 // Exact source equality: Website Form and other Website-prefixed sources are
 // separate sources. Always apply this, even if source coverage is missing.
 export const websitePredicate = "lower(trim(source))='website'";
-export const trialPredicate = "lower(trim(COALESCE(stage,'')))='trial completed'";
-export const memberPredicate = "lower(trim(COALESCE(stage,'')))='membership sold'";
+// Outcomes come from the outcome columns, not from Stage Name. Stage Name is a pipeline
+// position that advances: a lead who completed a trial and was then sold a membership sits
+// at "Membership Sold", so a stage-based trial count silently drops everyone who progressed.
+// Trial Status records whether a trial happened; Conversion Status records whether the lead
+// converted. This is what trials_completed / converted_leads use, so cards and journey agree.
+export const trialPredicate = "lower(trim(COALESCE(trial_status,'')))='trial completed'";
+export const memberPredicate = "lower(trim(COALESCE(conversion,'')))='converted'";
 export const retainedPredicate = "lower(trim(COALESCE(retention,'')))='retained'";
 export const marketingMeasures = `COUNT(*) AS leads,
   COUNT(*) FILTER (WHERE touches>0) AS contacted,
@@ -50,7 +55,8 @@ export function websiteScope(scope: string) {
   return `${scope}${scope ? " AND " : " WHERE "}${websitePredicate}`;
 }
 
-// In the Leads tab, converted is determined by stage = 'membership sold', trial conversion by stage = 'trial completed'.
+// In the Leads tab, converted is determined by Conversion Status = 'converted' and trial
+// completion by Trial Status = 'trial completed'. Stage Name records pipeline position only.
 export function marketingMetricSQL(ids: string[], ctx: QueryContext) {
   return metricSQL(ids, ctx);
 }

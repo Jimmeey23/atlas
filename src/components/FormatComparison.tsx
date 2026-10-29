@@ -15,22 +15,15 @@ import { exportCSV } from "./exports";
 import { GroupByPicker, usePersistentGroups } from "./ui/GroupByPicker";
 import { useGroupFields } from "../data/group-registry";
 import { groupable, groupValueSQL } from "../data/group-fields";
-
-// Every section groups by format_group, derived from the class name in
-// normalise.ts. Formats come from the data rather than a fixed list so a
-// renamed or retired format does not leave an empty column behind.
-const SCORECARD = [
-  { heading: "Supply", ids: ["sessions", "capacity", "trainers", "active_slots", "overbooked_sessions"] },
-  { heading: "Demand", ids: ["booked", "attendance", "paid_attendance", "avg_class_size_incl", "avg_class_size_excl", "intro_penetration", "complimentary_visits", "session_complimentary_rate"] },
-  { heading: "Efficiency", ids: ["fill_rate", "booking_fill_rate", "show_up_rate", "empty_sessions", "empty_session_rate", "unsold_seats", "attendance_cv", "nonempty_reliability"] },
-  { heading: "Leakage", ids: ["late_cancel_rate", "no_shows", "no_show_rate", "non_paid_rate", "complimentary_rate"] },
-  { heading: "Yield", ids: ["revenue", "revenue_per_session", "rev_pac", "rev_pas", "lost_revenue", "membership_att_share"] },
-];
-const SCORECARD_IDS = SCORECARD.flatMap((s) => s.ids);
-const SHARE_IDS = ["sessions", "capacity", "attendance", "revenue"];
-const TREND_IDS = SCORECARD_IDS.filter(id => id !== "trainers");
-const SLOT_IDS = ["sessions", "attendance", "fill_rate", "avg_class_size_incl", "revenue_per_session", "show_up_rate", "late_cancel_rate", "no_show_rate", "empty_session_rate", "rev_pas"];
-const SLICE_DEFAULTS = { slots: ["day", "time"], trainers: ["trainer"], studios: ["location"] };
+import {
+  SCORECARD_SECTIONS as SCORECARD,
+  SCORECARD_IDS,
+  SHARE_IDS,
+  TREND_IDS,
+  SLOT_IDS,
+  SLICE_DEFAULTS,
+  minimumSessionsClause,
+} from "../data/format-comparison";
 
 type Section = { rows: Row[]; trend: Row[]; slots: Row[]; trainers: Row[]; studios: Row[] };
 const empty: Section = { rows: [], trend: [], slots: [], trainers: [], studios: [] };
@@ -46,7 +39,7 @@ export function FormatComparison({ version }: { version: string | number }) {
 
   const sql = useMemo(() => {
     const facts = metricFacts(s.filters, "sessions", s.transient);
-    const minimumClause = minimumSessions > 0 ? ` HAVING COUNT(DISTINCT session_id)>=${minimumSessions}` : "";
+    const minimumClause = minimumSessionsClause(minimumSessions);
     const labelled = `WITH f AS (SELECT *, COALESCE(format_group,'Barre') AS fg FROM ${facts})`;
     // The trend ignores the page date filter so the shape of a format over the
     // year stays readable while the rest of the tab is scoped to a period.

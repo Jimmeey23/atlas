@@ -1,11 +1,13 @@
 import { stickyNoteRoutes } from "./sticky-notes.mjs";
 import "dotenv/config";
 import express from "express";
+import compression from "compression";
 import { authenticatedSheet } from "./sheets-auth.mjs";
 import { publicSheet, missingColumns, snapshotsToPrune } from "./sheets-public.mjs";
 import { readFile, mkdir, copyFile, readdir, unlink, stat } from "node:fs/promises";
 import path from "node:path";
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import v8 from "node:v8";
 import { createClient } from "@supabase/supabase-js";
 import WebSocket from "ws";
@@ -41,20 +43,23 @@ export async function createApp({ serveStatic = false } = {}) {
   presentationRoutes(app, store);
   stickyNoteRoutes(app, store, cloud);
   const ttl = 15 * 60 * 1000;
+  // Durable state follows the same root as the cache. Serverless has no writable
+  // project directory, so on Vercel both live in /tmp rather than alongside the code.
+  const floorRoot = cacheRoot;
   await mkdir(path.join(cacheRoot, ".cache"), { recursive: true });
+  await mkdir(path.join(floorRoot, ".floor"), { recursive: true });
   if (!process.env.VERCEL) {
-    await mkdir(path.join(root, ".floor"), { recursive: true });
     try {
       await copyFile(
         path.join(root, ".cache", "retention-followups.json"),
-        path.join(root, ".floor", "retention-followups.json"),
+        path.join(floorRoot, ".floor", "retention-followups.json"),
         1,
       );
     } catch (error) {
       if (!["ENOENT", "EEXIST"].includes(error.code)) throw error;
     }
   }
-  followupRoutes(app, path.join(root, ".floor", "retention-followups.json"), cloud);
+  followupRoutes(app, path.join(floorRoot, ".floor", "retention-followups.json"), cloud);
   intelligenceRoutes(app, root, config, load, { store });
   kraRoutes(app, root, config, load, store);
   const inflight = new Map();
@@ -356,8 +361,43 @@ export async function createApp({ serveStatic = false } = {}) {
   );
   app.use("/api", (_req,res)=>res.status(404).json({error:"Unknown API endpoint. Refresh the app after updating the gateway."}));
     if (serveStatic) {
-      app.use(express.static(path.join(root, "dist")));
-      app.get("*", (_, res) => res.sendFile(path.join(root, "dist/index.html")));
+      // Text assets compress ~4x; the DuckDB bundles are already compressed by the
+      // browser, so skip those and let them stream.
+      app.use(
+        compression({
+          filter: (req) =>
+            !/\.(wasm|png|jpe?g|gif|webp|mp3|woff2?)$/i.test(req.path || ""),
+        }),
+      );
+      // Vite fingerprints asset filenames, so anything under /assets is immutable and can be
+      // cached for a year. index.html must always be revalidated or a deploy is invisible.
+      app.use(
+        "/assets",
+        express.static(path.join(root, "dist/assets"), {
+          maxAge: "1y",
+          immutable: true,
+          etag: false,
+        }),
+      );
+      app.use(
+        express.static(path.join(root, "dist"), {
+          maxAge: "1h",
+          setHeaders: (res, filePath) => {
+            if (filePath.endsWith("index.html"))
+              res.setHeader("Cache-Control", "no-cache");
+          },
+        }),
+      );
+      app.get("*", (_, res) => {
+        const index = path.join(root, "dist/index.html");
+        if (!existsSync(index))
+          return res
+            .status(503)
+            .type("text/plain")
+            .send("Atlas has not been built yet. Run `npm run build`, then start the gateway.");
+        res.setHeader("Cache-Control", "no-cache");
+        res.sendFile(index);
+      });
     }
 
   return app;

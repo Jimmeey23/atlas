@@ -1,0 +1,50 @@
+name: CI
+
+# The suite protected nothing before this existed: four tests had been failing with
+# no signal. Every push and pull request is now gated on types, tests and a build.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Types, tests and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Types
+        run: npx tsc -b
+
+      - name: Tests
+        run: npm test
+
+      - name: Definition guards
+        run: npm run verify:definitions
+
+      # `check:metric-consistency` is deliberately absent: it reads the local data cache
+      # (.cache/new.json), which does not exist on a fresh checkout or in CI.
+
+      - name: Report release gate
+        run: npm run check:report
+
+      - name: Build
+        run: npm run build
+
+# `npm run build` regenerates METRICS.md via its prebuild hook. It is committed so the
+# dictionary is readable on GitHub, but it embeds the generation date, so it cannot be
+# diffed for staleness here. The definition guards above cover registry parity instead.

@@ -1,4 +1,5 @@
-import { metrics } from './metrics';
+import { metrics, DEFAULT_COST_RATE } from './metrics';
+import { today as kolkataToday } from '../data/periods';
 import { metricNotes, currentSnapshotMetrics } from './evidence';
 import { metricTable } from './catalogue';
 import { sheets } from '../data/sheets.config';
@@ -46,7 +47,7 @@ export function metricReference(id: string) {
   const metric = metrics[id];
   const note = metricNotes[id];
   const table = metricTable(id);
-  const runtime = metric.sql({ rate: 1, today: '{today}', newWhere: ' WHERE {applicable_newcomer_filters}' });
+  const runtime = metric.sql({ rate: DEFAULT_COST_RATE, today: kolkataToday() });
   const ratio = referenceRatio(runtime);
   const sampleUnit = table === 'payroll' ? 'teaching sessions (SUM(sessions)) in the standard Payroll workspace' : 'source records in standard grouped queries; specialist views can use a different evidence population';
   const population = id === 'new_late_cancels' ? 'Acquisition first-visit cohort from New; all-time Bookings matched by member ID. Uses the same shared formula in Acquisition and the metric catalogue.'
@@ -56,10 +57,10 @@ export function metricReference(id: string) {
     table, runtime, population, sampleUnit,
     sources: metric.sources.map(sourceReference),
     numerator: note?.numerator || ratio?.numerator || 'Not a single outer ratio; see full formula and definition.',
-    denominator: note?.denominator || ratio?.denominator || (['avg', 'median'].includes(metric.aggregation) ? 'Observation population: non-null qualifying values; median is an order statistic, not a ratio.' : 'No single outer denominator; nested divisions and compound calculations are preserved in the full formula.'),
-    aggregation: ['teacher_dependency', 'trainer_depth'].includes(id) ? 'MAX of row-level values across scope (legacy registry tag: last); not latest state' : metric.aggregation,
+    denominator: note?.denominator || ratio?.denominator || (['avg', 'median', 'max'].includes(metric.aggregation) ? 'Observation population: non-null qualifying values; median and maximum are order statistics, not ratios.' : 'No single outer denominator; nested divisions and compound calculations are preserved in the full formula.'),
+    aggregation: metric.aggregation,
     runtimeNote: id === 'new_late_cancels' ? 'Matches each group’s distinct newcomer member IDs to all-time Bookings. Load both sources. AI scoped queries do not offer this cross-source calculation.'
-      : 'The runtime template substitutes rate=1 for illustration and today/newcomer filters as placeholders. Actual values use configured context. Source normalization and documented view scope also apply.',
+      : 'This is the expression the engine actually runs, shown with the operator default cost rate and today’s Asia/Kolkata date. Both are replaced by the configured values at query time, and the newcomer subquery is scoped by the active filters. Source normalization and documented view scope also apply.',
 
   };
 }

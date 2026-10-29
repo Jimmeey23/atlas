@@ -168,7 +168,8 @@ export function MetricCard({
             ? "Weighted"
             : m.aggregation === "sum"
               ? "Total"
-              : m.aggregation === "median" ? "Median" : m.aggregation === "avg" ? "Average" : "Snapshot"}
+              : m.aggregation === "median" ? "Median" : m.aggregation === "avg" ? "Average"
+              : m.aggregation === "max" ? "Highest" : "Snapshot"}
         </span>
       </div>
       {info &&
