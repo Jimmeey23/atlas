@@ -1,6 +1,6 @@
 import { GitBranch } from "lucide-react";
 import { query } from "../../data/duckdb";
-import { ensureSource } from "../../data/loader";
+import { ensureSource, usable, sourceStates } from "../../data/loader";
 import { context, metricFacts } from "../../data/analytics";
 import { metricSQL, metrics } from "../../semantics/metrics";
 import { MetricInfoHint } from "../ui/MetricInfoHint";
@@ -28,6 +28,7 @@ export function ConversionFunnel({ version }: { version: string }) {
           const table = metricTable(f.ids[0]);
           if (!table) throw new Error(`${f.title} has no source sheet.`);
           await ensureSource(table);
+          if (!usable(table)) throw new Error(sourceStates[table]?.error || `${table} source unavailable`);
           const rows = await query(`SELECT ${metricSQL(f.ids, context(filters, transient))} FROM ${metricFacts(filters, table, transient)}`);
           const steps = funnelSteps(f.ids.map((id) => ({ id, label: metrics[id].label, value: rows[0]?.[id] == null ? null : Number(rows[0][id]) })));
           return f.sequential ? steps : steps.map((s) => ({ ...s, ofPrevious: null, biggestDrop: false }));

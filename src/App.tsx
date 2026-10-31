@@ -1,3 +1,4 @@
+import { AccountMenu } from "./components/AccountMenu";
 import { WorkspaceEditor } from "./components/WorkspaceEditor";
 import { useSectionNumbers } from "./components/useSectionNumbers";
 import { useWorkspaceDrag } from "./components/useWorkspaceDrag";
@@ -269,7 +270,7 @@ export default function App() {
     try {
       await ensureWorkspace(useStore.getState().tab, force);
       if (useStore.getState().tab === 0)
-        await Promise.all([ensureSource("meta", force), ensureSource("payroll", force)]);
+        await Promise.all([ensureSource("meta", force), ensureSource("payroll", force), ...(force ? ["leads", "bookings", "checkins"].map(key => ensureSource(key, true)) : [])]);
       else if (useStore.getState().view === PERFORMANCE_MARKETING_VIEW)
         await ensureSource("meta", force);
     } catch (e) {
@@ -799,6 +800,7 @@ export default function App() {
               <Settings2 size={15} />
             </button>
           </div>
+          <AccountMenu />
           {s.view !== "kra" && <button className="button toolbar-primary" aria-label="Export" onClick={() => setModal("export")}>
             <Download size={12} />
             Export
@@ -919,7 +921,7 @@ export default function App() {
             </div>
           </div>}
           {s.view !== "kra" && <SourceStatus
-            additionalSources={s.tab === 0 ? ["meta", "payroll"] : marketingView && !websiteMarketingView ? ["meta"] : []}
+            additionalSources={s.tab === 0 ? ["leads", "bookings", "checkins", "meta", "payroll"] : marketingView && !websiteMarketingView ? ["meta"] : []}
             tab={s.tab}
             version={version}
             onRetry={(key) => retryWorkspace(key)}

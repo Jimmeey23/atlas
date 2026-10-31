@@ -82,3 +82,12 @@ export function createFreshness({ env = process.env, request = fetch, client: cl
 
   return { revision, revisions, reset: () => { cache.clear(); unavailable = ""; client = undefined; } };
 }
+
+/** Reuse an unchanged snapshot indefinitely only when Drive proves its revision.
+ * Without proof, the ordinary TTL (or short force coalescing window) applies. */
+export function canReuseSnapshot(snapshot, revision, { force = false, now = Date.now(), ttl = 15 * 60 * 1000 } = {}) {
+  if (!snapshot?.fetchedAt) return false;
+  if (revision && snapshot.revision) return revision === snapshot.revision;
+  if (force) return !revision && now - snapshot.fetchedAt < 60000;
+  return now - snapshot.fetchedAt < ttl;
+}

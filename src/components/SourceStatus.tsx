@@ -6,6 +6,7 @@ import { sheets } from "../data/sheets.config";
 export function SourceStatus({
   tab,
   onRetry,
+  additionalSources = [],
 }: {
   tab: number;
   version: number;
@@ -14,7 +15,7 @@ export function SourceStatus({
 }) {
   return (
     <div role="status">
-      {dependencies(tab)
+      {[...new Set([...dependencies(tab), ...additionalSources])]
         .filter((k) => sourceStates[k].state === "error")
         .map((k) => (
           <p className="notice warn" key={k}>
