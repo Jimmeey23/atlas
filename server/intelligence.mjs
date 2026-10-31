@@ -216,6 +216,7 @@ export function intelligenceRoutes(
   const versions = new Map();
   const sourceFields = new Map();
   const rawVersions = new Map();
+  let lapsedAsOf = "";
   const metadata = new Map();
   async function connection() {
     if (!engine)
@@ -349,6 +350,7 @@ export function intelligenceRoutes(
               if (source.key === "lapsed") {
                 await c.run(latestLapseSQL("facts_lapsed", kolkataToday()));
                 for (const sql of renewalStateSQL(kolkataToday(), "facts_lapsed")) await c.run(sql);
+                lapsedAsOf = kolkataToday();
               }
               sourceFields.set(source.key, present);
               versions.set(source.key, data.fetchedAt);
@@ -389,6 +391,12 @@ export function intelligenceRoutes(
             await rm(rawFile, { force: true });
           }
         }
+        if (source.key === 'lapsed' && lapsedAsOf !== kolkataToday()) {
+          const date = kolkataToday();
+          await c.run(latestLapseSQL('facts_lapsed', date));
+          for (const sql of renewalStateSQL(date, 'facts_lapsed')) await c.run(sql);
+          lapsedAsOf = date;
+        }
         const terms = [];
         const carries = field => sourceCarries(sourceFields.get(source.key), field);
         const advanced = compileFilters(filters.advanced, sqlTypes);
@@ -414,7 +422,7 @@ export function intelligenceRoutes(
           terms.push(
             `is_new=${filters.memberType === "new" ? "TRUE" : "FALSE"}`,
           );
-        if (filters.sessionType && filters.sessionType !== "all")
+        if (filters.sessionType && filters.sessionType !== "all" && carries("session_type"))
           terms.push(`session_type=${lit(filters.sessionType)}`);
         if (filters.capacityBand && filters.capacityBand !== "all" && carries("capacity"))
           terms.push(
@@ -481,11 +489,13 @@ export function intelligenceRoutes(
       try {
         const resultSets = [];
         for (const statement of analyticalStatements(sql)) {
-          const reader = await c.runAndReadAll(`SELECT * FROM (${statement}) AS answer LIMIT 500`);
+          const reader = await c.runAndReadAll(`SELECT * FROM (${statement}) AS answer LIMIT 501`);
           resultSets.push(reader.getRowObjectsJson());
         }
-        const rows = resultSets.at(-1) || [];
-        return { rows, limit: 500, provenance, filters, ...(resultSets.length > 1 ? { resultSets } : {}) };
+        const truncated = resultSets.some(set => set.length > 500);
+        const bounded = resultSets.map(set => set.slice(0, 500));
+        const rows = bounded.at(-1) || [];
+        return { rows, limit: 500, truncated, ...(truncated ? { limitation: 'Result exceeds 500 rows; returned rows are incomplete. Narrow or aggregate the query.' } : {}), provenance, filters, ...(bounded.length > 1 ? { resultSets: bounded } : {}) };
       } finally {
         clearTimeout(timeout);
       }
@@ -890,14 +900,17 @@ export function intelligenceRoutes(
     "/api/intelligence/documents",
     route(async (req) => {
       if (!db) throw new Error("Cloud persistence is not configured.");
-      let q = db
-        .from("p57_documents")
-        .select("*")
-        .order("updated_at", { ascending: false });
-      if (req.query.kind) q = q.eq("kind", req.query.kind);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data.map(doc=>({...doc,page:doc.body?.workspacePage ?? doc.page}));
+      const documents = [];
+      const pageSize = 100;
+      for (let offset = 0; ; offset += pageSize) {
+        let q = db.from("p57_documents").select("*").order("updated_at", { ascending: false }).order("id", { ascending: true });
+        if (req.query.kind) q = q.eq("kind", req.query.kind);
+        const { data, error } = await q.range(offset, offset + pageSize - 1);
+        if (error) throw error;
+        documents.push(...data);
+        if (data.length < pageSize) break;
+      }
+      return documents.map(doc=>({...doc,page:doc.body?.workspacePage ?? doc.page}));
     }),
   );
   app.post(
@@ -1300,7 +1313,7 @@ BUILD MODE — the user wants one or more elements saved on page ${page}. Get th
                     throw new Error(`${args.source} does not populate ${unpopulated.join(", ")} — every value is null, so grouping by it can only return zero rows. This is a schema mismatch, not an absence of activity. Re-run grouped by a column this source populates: format_group for PowerCycle / Strength Lab / Barre, or location, trainer, day, time, month.`);
                 }
               }
-              evidence.push({sql:compiled.sql,provenance:output.provenance,rows:output.rows.length,result:output.rows.slice(0,40),filters:compiled.filters,definitions:compiled.definitions});
+              evidence.push({sql:compiled.sql,provenance:output.provenance,rows:output.rows.length,truncated:output.truncated,result:output.rows.slice(0,40),filters:compiled.filters,definitions:compiled.definitions});
             } else if (call.name === "query_sales") {
               const groups = {total:[],studio:["location"],month:["month"],studio_month:["location","month"]}[args.group_by];
               if (!groups) throw new Error("Unknown sales grouping.");
@@ -1314,6 +1327,8 @@ BUILD MODE — the user wants one or more elements saved on page ${page}. Get th
                 sql: args.sql,
                 provenance: output.provenance,
                 rows: output.rows.length,
+                truncated: output.truncated,
+                limitation: output.limitation,
                 result: output.rows.slice(0,40),
                 filters: output.filters,
               });

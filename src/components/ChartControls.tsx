@@ -115,6 +115,7 @@ export function ChartControls({
       </div>
       {table && (
         <div className="chart-data-preview">
+          {rows.length > 500 && <p className="small">Showing the first 500 of {rows.length.toLocaleString()} chart rows. Export includes the chart data.</p>}
           <table>
             <thead>
               <tr>

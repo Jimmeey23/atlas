@@ -1,0 +1,22 @@
+# Audit remediation status
+
+This describes the changes after the point-in-time [audit](app-audit-2026-10-31.md), not a certification of a deployed system.
+
+## Implemented
+
+- Added Google OAuth via Supabase, with server-side verification for all application APIs, an optional server-side email allowlist, and a login/access screen. Revision snapshots and freshness responses are no longer public CDN responses. Historical report contracts and metric-reference files are fetched through authenticated APIs instead of being deployed under public reference URLs. See [deployment instructions](authentication.md), including purging old CDN entries and protecting the original Google workbooks.
+- KRA calculations now load via the source freshness path, check workbook revisions even within the result TTL, refuse failed/missing sources, and key cached results by Kolkata business date. Browser and server agent renewal states refresh for a new business date; browser analyses include the date in their cache key.
+- The lead flow chart now shows recorded trial status rather than treating current pipeline stage as a trial outcome. The lead scorecard subtitle and renewal methodology documentation now describe the existing formulas. Filter controls warn when loaded source fields cannot apply active filters; session-type filtering now respects field availability.
+- Report history enumerates pages beyond 500 before retention; sticky notes, follow-ups and agent document listings page database results. Sticky notes are read in batches rather than one database request per note. Source-row requests are explicitly bounded and the client batches them. Filter choices no longer stop at 200 values; bounded charts and previews have labels. AI queries report truncation and higher-level comparisons reject truncated group results.
+- Added a database transaction function for cloud follow-up updates, serializing each member's writes and preserving their history. Apply the included migration before deployment. This protects the follow-up update path, not other document types.
+- Deferred the main app until after sign-in, moving its code out of the initial login chunk. Large one-off DuckDB results are no longer retained in the query cache; old failed queries cannot evict newer entries.
+
+## Still requires work or a business/deployment decision
+
+- **Supabase and Google OAuth must be configured and the migration applied.** The app fails closed when server authentication is missing. This checkout has no live credentials, so OAuth, hosted database behavior, migration execution and Vercel deployment were not verified here. See `docs/authentication.md`.
+- All permitted users share the same application data and capabilities; no per-user roles, per-tenant separation, application-wide distributed rate limit or AI spend quota was implemented. Use the email allowlist and infrastructure-level protections, and agree an authorization/spend policy before rolling out broadly.
+- KRA scorecard/training and report edits/notes/pins still have cross-instance read-modify-write races. Follow-up RPC was improved, but its migration needs live verification and existing duplicates need reconciliation. Coordinate simultaneous editing until atomic version checks are added to the remaining paths.
+- Business owners still need to approve whether the dashboard's renewal rate and KRA churn should be harmonized. They have intentionally different eligible populations and denominators; the historical reference report retains its historical figures and internal inconsistencies rather than silently changing evidence.
+- Some bounded analytics (including raw previews and 50,000-row rollups) and report views can still be incomplete. Further pagination, explicit completeness indicators and per-card/export filter-applicability reporting are needed.
+- Large chart/WASM assets, repeated query scans, server/browser duplicate normalization and pinned-report loading remain optimization opportunities. Production profiling, cost telemetry and representative live-data reconciliation are still needed before choosing changes or claiming savings. Historical performance figures are not a new benchmark.
+- Browser IndexedDB/OPFS data can persist after sign-out; clear site data on shared devices. Static assets or snapshots exposed by older deployments and publicly shared Sheets remain accessible until separately secured or purged.

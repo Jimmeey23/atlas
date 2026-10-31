@@ -73,10 +73,19 @@ export function reportRoutes(app, store, cloud, env = process.env) {
   const idOf = key => key.slice(PREFIX.length, -".json".length);
   const pins = async () => { const saved = await store.read(PINS); return new Set(Array.isArray(saved) ? saved.filter(id => uuid.test(id)) : []); };
   async function keys() {
-    const { data, error } = await cloud.from("atlas_store").select("key,updated_at")
-      .like("key", `${PREFIX}%`).order("updated_at", { ascending: false }).limit(500);
-    if (error) throw new Error(`Report history could not be read: ${error.message}`);
-    return data.map(row => row.key).filter(key => key.endsWith(".json"));
+    // Read every page before applying retention: otherwise older pinned reports
+    // disappear and old unpinned documents are never considered for pruning.
+    const rows = [];
+    const pageSize = 100;
+    for (let offset = 0; ; offset += pageSize) {
+      const { data, error } = await cloud.from("atlas_store").select("key,updated_at")
+        .like("key", `${PREFIX}%`).order("updated_at", { ascending: false }).order("key", { ascending: true })
+        .range(offset, offset + pageSize - 1);
+      if (error) throw new Error(`Report history could not be read: ${error.message}`);
+      rows.push(...data);
+      if (data.length < pageSize) break;
+    }
+    return rows.map(row => row.key).filter(key => key.endsWith(".json"));
   }
   /** Retention: the newest KEEP_RECENT unpinned reports survive; pinned reports always do. */
   async function prune(all, pinned) {

@@ -21,7 +21,7 @@ const snapshot = () => ({ scope: { studio: 'Kenkere House', month: '2026-09' }, 
 test('report database snapshots survive a new route instance and preserve immutable versions', async () => {
   const documents = new Map<string, any>();
   const store = { read: async (k: string) => documents.get(k) ?? null, write: async (k: string, v: any) => { documents.set(k, v); return v; } };
-  const cloud = { from: () => ({ select: () => ({ like: () => ({ order: () => ({ limit: async () => ({ data: [...documents.keys()].map(key => ({ key })), error: null }) }) }) }) }) };
+  const cloud = { from: () => ({ select: () => ({ like: () => { const q: any = { order: () => q, range: async (a: number,b: number) => ({ data: [...documents.keys()].slice(a,b+1).map(key => ({ key })), error: null }) }; return q; } }) }) };
   const start = async () => { const app = express(); app.use(express.json()); reportRoutes(app, store, cloud); return serve(app); };
   let api = await start();
   try {

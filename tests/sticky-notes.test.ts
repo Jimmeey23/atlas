@@ -15,14 +15,11 @@ test("sticky notes validate placement and persist independent documents across g
     },
   };
   const cloud = {
-    from: () => ({
-      select: () => ({
-        like: async () => ({
-          data: [...docs.keys()].map((key) => ({ key })),
-          error: null,
-        }),
+    from: () => ({ select: () => ({ like: () => ({ order: () => ({
+      range: async (a: number, b: number) => ({
+        data: [...docs.entries()].slice(a, b + 1).map(([key, value]) => ({ key, value })), error: null,
       }),
-    }),
+    }) }) }) }),
   };
   const id = randomUUID(),
     note = {

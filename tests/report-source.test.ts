@@ -21,7 +21,7 @@ test('AI and presenter contexts use source month cards and source prose rather t
 test('imported evidence survives saving and unsafe source markup is rejected', async () => {
   const documents = new Map();
   const store = { read: async (k: string) => documents.get(k), write: async (k: string, v: unknown) => documents.set(k,v) };
-  const cloud = { from: () => ({ select: () => ({ like: () => ({ order: () => ({ limit: async () => ({data: [...documents.keys()].map(key => ({key})), error:null}) }) }) }) }) };
+  const cloud = { from: () => ({ select: () => ({ like: () => { const q: any = {order: () => q, range: async (a: number,b: number) => ({data: [...documents.keys()].slice(a,b+1).map(key => ({key})), error:null})}; return q; } }) }) };
   const app = express(); app.use(express.json()); reportRoutes(app,store,cloud);
   const server = app.listen(0,'127.0.0.1'); await new Promise<void>(r => server.once('listening',r));
   const url = `http://127.0.0.1:${(server.address() as any).port}/api/reports`;

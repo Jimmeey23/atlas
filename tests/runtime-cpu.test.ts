@@ -97,13 +97,17 @@ test('expired KRA results are reused while every workbook revision is unchanged'
     docs.get('.floor/kra-result-direct.json').computedAt = Date.now() - 60 * 60 * 1000;
     assert.equal((await fetch(base)).status, 200);
     assert.equal(loads, 5, 'unchanged workbooks must not recompute');
+    docs.get('.floor/kra-result-direct.json').computedAt = Date.now();
     revision = 'r2';
     assert.equal((await fetch(base)).status, 200);
-    assert.equal(loads, 10, 'an edited workbook must recompute');
+    assert.equal(loads, 10, 'an edited workbook must recompute even inside the TTL');
+    docs.get('.floor/kra-result-direct.json').asOf = '2000-01-01';
+    assert.equal((await fetch(base)).status, 200);
+    assert.equal(loads, 15, 'a changed business date must recompute even when revisions are unchanged');
   } finally { await new Promise<void>(resolve => server.close(() => resolve())); }
 });
 
-test('a revision snapshot is gzipped and CDN-cacheable; ordinary snapshots stay private', async () => {
+test('revision snapshots are gzipped but never shared by the CDN', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'atlas-shared-'));
   await mkdir(path.join(root, '.cache'));
   const bytes = JSON.stringify({ key: 'bookings', rows: Array.from({ length: 2000 }, (_, i) => ['Member ' + i, 'Barre 57']), hash: 'h', fetchedAt: 1 });
@@ -116,8 +120,8 @@ test('a revision snapshot is gzipped and CDN-cacheable; ordinary snapshots stay 
   try {
     const shared = await fetch(base + '/shared', { headers: { 'Accept-Encoding': 'gzip' } });
     assert.equal(shared.headers.get('content-encoding'), 'gzip');
-    assert.equal(shared.headers.get('vercel-cdn-cache-control'), 'max-age=31536000, immutable');
-    assert.doesNotMatch(shared.headers.get('cache-control')!, /private|no-cache|no-store/);
+    assert.equal(shared.headers.get('vercel-cdn-cache-control'), null);
+    assert.match(shared.headers.get('cache-control')!, /private/);
     assert.equal(await shared.text(), bytes, 'decompresses to the exact snapshot');
     const own = await fetch(base + '/own', { headers: { 'Accept-Encoding': 'gzip' } });
     assert.equal(own.headers.get('cache-control'), 'private, no-cache');

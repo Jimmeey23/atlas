@@ -1,6 +1,7 @@
 import ReactDOM from "react-dom/client";
 import { lazy, Suspense } from "react";
-import App from "./App";
+import { AuthGate } from "./auth";
+const App = lazy(() => import("./App"));
 import { DEFAULT_THEME, THEME_KEY } from "./data/theme";
 
 // The report deck and the KRA page are separate destinations with their own heavy
@@ -31,4 +32,4 @@ const boot = (
   </Suspense>
 );
 
-ReactDOM.createRoot(document.getElementById("root")!).render(boot);
+ReactDOM.createRoot(document.getElementById("root")!).render(<AuthGate>{boot}</AuthGate>);

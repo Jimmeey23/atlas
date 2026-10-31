@@ -72,7 +72,7 @@ export function where(
   ] as const)
     if (filters[field].length && carries(source, field))
       terms.push(`"${field}" IN (${filters[field].map(quote).join(",")})`);
-  if (filters.sessionType && filters.sessionType !== "all")
+  if (filters.sessionType && filters.sessionType !== "all" && carries(source, "session_type"))
     terms.push(`session_type=${quote(filters.sessionType)}`);
   if (filters.capacityBand && filters.capacityBand !== "all" && carries(source, "capacity"))
     terms.push(
@@ -158,6 +158,7 @@ export function analyse(
     state.transient,
     state.compare,
     state.rate,
+    today(),
     // Bound to the data itself. Without this, a new ingest that forgets to call
     // clearAnalyses() keeps serving numbers computed from the replaced rows.
     dataVersion(),
@@ -167,7 +168,7 @@ export function analyse(
   if (analysisCache.size > 40)
     analysisCache.delete(analysisCache.keys().next().value!);
   analysisCache.set(key, work);
-  work.catch(() => analysisCache.delete(key));
+  work.catch(() => { if (analysisCache.get(key) === work) analysisCache.delete(key); });
   return work;
 }
 async function performAnalysis(
@@ -343,7 +344,7 @@ export async function options(tab = useStore.getState().tab) {
         ROW_NUMBER() OVER (PARTITION BY field ORDER BY n DESC,value) AS rn
       FROM counts
     )
-    SELECT field,value,n FROM ranked WHERE rn<=200 ORDER BY field,n DESC,value`,
+    SELECT field,value,n FROM ranked ORDER BY field,n DESC,value`,
   );
   const all: Record<string, Record<string, number>> = Object.fromEntries(
     fields.map((f) => [f, {} as Record<string, number>]),

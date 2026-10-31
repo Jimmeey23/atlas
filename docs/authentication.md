@@ -1,0 +1,18 @@
+# Atlas sign-in and deployment
+
+Atlas requires a verified Supabase session for **all `/api/*` routes**. The browser offers Google OAuth; the backend validates each bearer token with Supabase Auth and requires a linked Google provider before accessing data. All allowed Google-authenticated users share the same studio workspace and server-side data; this is **not** per-user row isolation or role-based authorization. Report editing retains its separate admin gate.
+
+## Setup
+
+1. Create a Supabase project, run the existing migrations, configure the Google provider in Supabase Auth with your Google OAuth client ID and secret, and enable Google sign-in. Google OAuth configuration is done in Supabase and Google Cloud, not in this repository.
+2. Set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` on the server. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to the **same project**, using its publishable/anon key, at frontend build time. Never expose the service-role key through `VITE_` variables. Rebuild/redeploy after changes.
+3. Add each actual app origin and its `/`, `/report`, `/kra`, and `/kra/jimmeey-gondaa` redirect URL to Supabase Auth's allowed redirect URLs. Set the correct site URL. Add the Supabase Google callback URL to the Google OAuth client's allowed redirect URIs. Include local and preview origins as appropriate.
+4. Optionally set `ATLAS_ALLOWED_EMAILS` to a comma-separated list of allowed email addresses on the server. **Without this list every Google-authenticated account in this Supabase project can access the shared studio data and run actions.** Restrict Supabase's enabled providers/signup policies and use the allowlist when data is confidential. A 403 for an otherwise valid login means the account is not on the list.
+5. Verify anonymous API requests return 401 and valid, allowed users can access sheets, reports, KRA and AI. Check that a disallowed account receives 403. If server auth is not configured APIs fail closed with 503. On the client, missing Vite configuration displays a setup message.
+6. Purge any previously public CDN entries for revision-addressed sheet snapshots. The application now marks snapshots private; a response already cached by an intermediary before this change may remain exposed until purged or expired. Check the edge configuration also respects the new cache policy.
+
+Sign out on shared devices. Local browser analytics snapshots may remain in IndexedDB/OPFS after sign-out; use a private browser profile or clear site data on shared devices. Google sign-in does not itself impose application roles or per-user spend limits. KRA scorecard/training edits and report edits/notes/pins still use read-modify-write storage without a cross-instance atomic check; coordinate concurrent edits until transactional version checks are deployed. Configure external rate limits, spend alerts and access monitoring as appropriate.
+
+Apply `20261031000000_atomic_followups.sql` before deploying the new server: cloud follow-up saves use its transactional RPC and will fail safely until it is installed. Existing duplicate follow-up documents should be reviewed and reconciled before rollout; the function updates the most recent one.
+
+Historical reference contracts and metric-reference documents are fetched from authenticated API routes, not shipped as public Vite assets. Purge old public `/reference/*` and application asset caches from previous deployments as well. Protect the source workbooks themselves: if they are publicly shared, app login cannot prevent direct access to Google Sheets. For private sources, disable public reads and configure a service account with access to the workbooks.

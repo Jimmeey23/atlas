@@ -1,4 +1,4 @@
-import { init, ingest, restore, query, health } from "./duckdb";
+import { init, ingest, restore, query, health, refreshDateDependent } from "./duckdb";
 import { sheets } from "./sheets.config";
 import { blueprints } from "./blueprints";
 import { clearAnalyses } from "./analytics";
@@ -240,6 +240,7 @@ async function currentRevision(key: string, force: boolean) {
  * keys that were reloaded, so the caller can say so.
  */
 export async function revalidate(tab: number, minInterval = 10000) {
+  if (await refreshDateDependent()) { clearAnalyses(); publish(); }
   const report = await probeFreshness(minInterval);
   if (!report) return [];
   const watched = new Set(dependencies(tab));

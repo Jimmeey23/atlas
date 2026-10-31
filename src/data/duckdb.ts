@@ -16,6 +16,7 @@ const pendingQueries = new Map<
 let querySequence = 0;
 let connection: duckdb.AsyncDuckDBConnection;
 let database: duckdb.AsyncDuckDB;
+let lapsedAsOf = "";
 export const health: Record<
   string,
   SourceData & { defects: Defect[]; recordsCount: number }
@@ -107,7 +108,11 @@ export function query(sql: string): Promise<Row[]> {
     if (resultCache.size > 80)
       resultCache.delete(resultCache.keys().next().value!);
     resultCache.set(sql, promise);
-    promise.catch(() => resultCache.delete(sql));
+    // Entry count alone is not a memory budget: do not retain large one-off
+    // result sets, and never let an older completion evict a newer entry.
+    promise.then(rows => {
+      if (rows.length > 5000 && resultCache.get(sql) === promise) resultCache.delete(sql);
+    }, () => { if (resultCache.get(sql) === promise) resultCache.delete(sql); });
   }
   return promise;
 }
@@ -137,7 +142,11 @@ async function restoreSnapshot(key: string) {
       `DROP TABLE IF EXISTS "${key}";CREATE TABLE "${key}" AS SELECT * FROM read_parquet('${key}.parquet')`,
     );
     await database.dropFile(key + ".parquet");
-    if (key === "lapsed") for (const sql of [latestLapseSQL("lapsed", today()), ...renewalStateSQL(today())]) await connection.query(sql);
+    if (key === "lapsed") {
+      const date = today();
+      for (const sql of [latestLapseSQL("lapsed", date), ...renewalStateSQL(date)]) await connection.query(sql);
+      lapsedAsOf = date;
+    }
     health[key] = entry.meta;
     await measureFields(key);
     return true;
@@ -303,11 +312,33 @@ async function ingestSource(data: SourceData) {
     await database.dropFile(data.key + ".json");
   }
   if (data.key === "lapsed") {
-    await connection.query(latestLapseSQL("lapsed", today()));
-    for (const sql of renewalStateSQL(today())) await connection.query(sql);
+    const date = today();
+    await connection.query(latestLapseSQL("lapsed", date));
+    for (const sql of renewalStateSQL(date)) await connection.query(sql);
+    lapsedAsOf = date;
   }
   await persist(data.key);
   await measureFields(data.key);
+}
+/** Refresh time-dependent derived membership states without re-fetching unchanged sheets. */
+export async function refreshDateDependent(): Promise<boolean> {
+  if (!health.lapsed?.fetchedAt || lapsedAsOf === today()) return false;
+  return exclusive(async () => {
+    const date = today();
+    if (!health.lapsed?.fetchedAt || lapsedAsOf === date) return false;
+    await connection.query('BEGIN TRANSACTION');
+    try {
+      for (const sql of [latestLapseSQL('lapsed', date), ...renewalStateSQL(date)]) await connection.query(sql);
+      await connection.query('COMMIT');
+    } catch (error) {
+      await connection.query('ROLLBACK');
+      throw error;
+    }
+    lapsedAsOf = date;
+    resultCache.clear();
+    await measureFields('lapsed');
+    return true;
+  });
 }
 export const quote = (s: string) => `'${s.replaceAll("'", "''")}'`;
 if (import.meta.env.DEV)

@@ -20,11 +20,13 @@ import { intelligenceRoutes } from "./intelligence.mjs";
 import { followupRoutes } from "./followups.mjs";
 import { fileURLToPath } from "node:url";
 import { sendSnapshot } from "./snapshot-response.mjs";
+import { apiAuth } from "./auth.mjs";
+import referenceContracts from "../src/report/reference-contracts.json" with { type: "json" };
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const config = JSON.parse(
   await readFile(path.join(root, "server/sheets.json"), "utf8"),
 );
-export async function createApp({ serveStatic = false } = {}) {
+export async function createApp({ serveStatic = false, authClient } = {}) {
   const cloud =
     process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
       ? createClient(
@@ -37,6 +39,17 @@ export async function createApp({ serveStatic = false } = {}) {
   const cacheRoot = process.env.VERCEL ? "/tmp/atlas" : root;
   const store = createStore({ root, cloud, cacheRoot });
   const app = express();
+  // Verify every API request before parsing bodies or invoking privileged services.
+  // Supplying an authClient is useful for isolated integration tests; production
+  // uses the same configured Supabase project as the server store.
+  app.use('/api', apiAuth(authClient === undefined ? cloud : authClient));
+  app.get('/api/session', (req, res) => res.json({ user: req.atlasUser }));
+  app.get('/api/reference-contracts', (_req, res) => res.json(referenceContracts));
+  app.get('/api/reference/:name', (req, res) => {
+    const allowed = new Set(['metric-definitions.html', 'metric-definitions.md', 'metric-consistency.json', 'sample-size-comparison.md', 'sample-size-comparison.json']);
+    if (!allowed.has(req.params.name)) return res.status(404).end();
+    res.sendFile(path.join(root, 'public', 'reference', req.params.name));
+  });
   app.use("/api/reports", express.json({ limit: "8mb" }));
   app.use(express.json({ limit: "96kb" }));
   reportRoutes(app, store, cloud);
@@ -217,7 +230,7 @@ export async function createApp({ serveStatic = false } = {}) {
     });
     // Shared briefly by the CDN: every open browser polls this, and a 30-second-old answer
     // only delays noticing an edit. A forced check adds a unique query to bypass it.
-    res.set({ "Cache-Control": "public, max-age=0, must-revalidate", "Vercel-CDN-Cache-Control": "max-age=30" })
+    res.set({ "Cache-Control": "private, no-store" })
       .json({ checkedAt: Date.now(), sources });
   });
   app.get("/api/sheets/:key", async (req, res, next) => {
@@ -316,8 +329,9 @@ export async function createApp({ serveStatic = false } = {}) {
   app.get("/api/source-rows/:key", async (req, res) => {
     const source = config.find((s) => s.key === req.params.key);
     if (!source) return res.status(404).json({ error: "Unknown source" });
-    const ids = String(req.query.rows || "")
-      .split(",")
+    const requestedRows = String(req.query.rows || "").split(",");
+    if (requestedRows.length > 500) return res.status(400).json({ error: "Request at most 500 source rows per batch." });
+    const ids = requestedRows
       .map(Number)
       .filter((n) => Number.isInteger(n) && n >= 2)
       .slice(0, 500);

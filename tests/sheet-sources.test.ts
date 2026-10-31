@@ -42,11 +42,11 @@ test("the freshness probe is routed before the per-source endpoint", async () =>
   // No cloud store or Google credentials: the probe must answer from local state only.
   Object.assign(process.env, { SUPABASE_URL: "", SUPABASE_SERVICE_ROLE_KEY: "", GOOGLE_CREDENTIALS_JSON: "", GOOGLE_APPLICATION_CREDENTIALS: "", GOOGLE_CLIENT_ID: "" });
   const { createApp } = await import("../server/app.mjs");
-  const app = await createApp();
+  const app = await createApp({authClient: {auth: {getUser: async () => ({data: {user: {id: "test", email: "test@example.com", app_metadata: {providers: ["google"]}}}, error: null})}}});
   const server = app.listen(0);
   try {
     const { port } = server.address() as any;
-    const response = await fetch(`http://127.0.0.1:${port}/api/sheets/freshness`);
+    const response = await fetch(`http://127.0.0.1:${port}/api/sheets/freshness`, {headers: {Authorization: "Bearer test"}});
     assert.equal(response.status, 200);
     const body = await response.json();
     assert.ok(Array.isArray(body.sources) && body.sources.some((s: any) => s.key === "sessions"));

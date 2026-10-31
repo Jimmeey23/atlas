@@ -3,17 +3,15 @@ import { pipeline } from "node:stream/promises";
 import path from "node:path";
 import { createGzip } from "node:zlib";
 
-// One snapshot per Drive revision never changes, so the CDN may keep it for good. Gzipped, the
-// largest sheet stays under the CDN's 20MB cacheable-response limit; uncompressed it does not.
-const SHARED = {
-  "Cache-Control": "public, max-age=0, must-revalidate",
-  "Vercel-CDN-Cache-Control": "max-age=31536000, immutable",
-};
+// Revision snapshots can be compressed, but are never shared through a public CDN.
+// Source rows can contain personal data. Never place them in a shared CDN cache,
+// including revision-addressed URLs; every request must pass authorization.
+const SHARED = { "Cache-Control": "private, no-cache" };
 
 // Stream the JSON already written by the loader. Repeated reads of a 100MB sheet
 // should not allocate, parse and stringify another 100MB object per reader.
-// `shared` marks a response that is exactly one revision of the sheet and may be cached by
-// the CDN for everyone; every other response stays private to the requesting browser.
+// `shared` identifies revision-addressed responses eligible for compression;
+// all responses remain private to the authenticated browser.
 export async function sendSnapshot(req, res, cacheRoot, source, metadata, { shared = false } = {}) {
   let file;
   try {

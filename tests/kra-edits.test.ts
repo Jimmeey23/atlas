@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';import express from 'express';
-import {mkdtemp,mkdir,writeFile,rm} from 'node:fs/promises';import {tmpdir} from 'node:os';import path from 'node:path';
+import {mkdtemp,mkdir,writeFile,readFile,rm} from 'node:fs/promises';import {tmpdir} from 'node:os';import path from 'node:path';
 import {kraRoutes} from '../server/kra.mjs';import {acquisitionCounts} from '../server/kra-acquisition.mjs';import {kraPerformance} from '../server/kra-metrics.mjs';
 test('trials count Is New contains new; referrals require exactly New - Referral Class',()=>{
  const rows=[{date:'2026-06-01',member_id:'same',entry_type:'New - Trial Class'},{date:'2026-06-02',member_id:'same',entry_type:'NEW - Trial Class'},{date:'2026-06-03',entry_type:'New - Referral Class'},{date:'2026-06-04',entry_type:'NEW - REFERRAL CLASS'},{date:'2026-06-05',entry_type:'Referral Class'},{date:'2026-07-01',entry_type:'New - Referral Class'},{date:null,entry_type:'new'}];
@@ -9,7 +9,7 @@ test('trials count Is New contains new; referrals require exactly New - Referral
 test('protected KRA edits persist across server reinitialisation, retain revision history and reject stale writes',async()=>{
  const root=await mkdtemp(path.join(tmpdir(),'p57-kra-edits-'));await mkdir(path.join(root,'.floor'));await mkdir(path.join(root,'.cache'));
  for(const key of ['sales','leads','bookings','lapsed','new'])await writeFile(path.join(root,'.cache',key+'.json'),JSON.stringify({key,columns:[],rows:[],status:'ok',fetchedAt:Date.now()}));
- let server;const start=async()=>{const app=express();app.use(express.json());kraRoutes(app,root,[],async()=>{throw Error('No remote reads');});server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));return 'http://127.0.0.1:'+server.address().port;};
+ let server;const start=async()=>{const app=express();app.use(express.json());kraRoutes(app,root,['sales','leads','bookings','lapsed','new'].map(key=>({key})),async source=>JSON.parse(await readFile(path.join(root,'.cache',source.key+'.json'),'utf8')));server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));return 'http://127.0.0.1:'+server.address().port;};
  const data={current:'55 trials · 4 referrals',lastYear:'50 trials · 3 referrals',preceding:'48 trials · 2 referrals',yoy:.1,previousGrowth:.15,status:'On track',explanation:'Manually reconciled source counts',note:'Follow up on referrals',annotation:'Reconciled on 6 Oct'};
  const body={info:{area:'Trials & Referrals',target:'Reviewed target',weight:15},data,expectedUpdatedAt:null};
  try{
@@ -24,7 +24,7 @@ test('protected KRA edits persist across server reinitialisation, retain revisio
 test('bulk training progress applies to every selected topic in one write and rejects unknown ids',async()=>{
  const root=await mkdtemp(path.join(tmpdir(),'p57-kra-bulk-'));await mkdir(path.join(root,'.floor'));await mkdir(path.join(root,'.cache'));
  for(const key of ['sales','leads','bookings','lapsed','new'])await writeFile(path.join(root,'.cache',key+'.json'),JSON.stringify({key,columns:[],rows:[],status:'ok',fetchedAt:Date.now()}));
- const app=express();app.use(express.json());kraRoutes(app,root,[],async()=>{throw Error('No remote reads');});
+ const app=express();app.use(express.json());kraRoutes(app,root,['sales','leads','bookings','lapsed','new'].map(key=>({key})),async source=>JSON.parse(await readFile(path.join(root,'.cache',source.key+'.json'),'utf8')));
  const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));const base='http://127.0.0.1:'+server.address().port;
  try{
   const put=body=>fetch(base+'/api/kra/training',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
