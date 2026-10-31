@@ -1,3 +1,4 @@
+import { AccountMenu } from "../AccountMenu";
 import { useEffect, useRef, useState } from "react";
 import { Loader2, TriangleAlert } from "lucide-react";
 import { loadReport, saveReport } from "../../report/storage";
@@ -52,6 +53,7 @@ export function ReportPage() {
   }, [draftId]);
 
   if (!model) return <div className="report-page deck-loading-page" role="status">
+    <div className="auth-page-toolbar"><AccountMenu /></div>
     {error ? <><TriangleAlert size={22}/><h1>Report could not be opened</h1><p>{error}</p></> : <><Loader2 size={22} className="rb2-spin"/><h1>Opening your report…</h1></>}
   </div>;
   if (notesOnly) return <PoppedNotes model={model} />;

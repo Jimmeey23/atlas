@@ -52,3 +52,18 @@ test('a probe that cannot read Drive degrades instead of failing', async () => {
   assert.equal(result.revision, null, 'no credentials means no revision, not a crash');
   assert.match(result.reason!, /credentials/i);
 });
+
+test('snapshot reuse requires a matching revision or a bounded fallback TTL', async () => {
+  const { canReuseSnapshot } = await import('../server/freshness.mjs');
+  const now = 2_000_000;
+  const old = { fetchedAt: now - 1_000_000, revision: 'r1' };
+  assert.equal(canReuseSnapshot(old, 'r1', { now }), true, 'matching revision stays valid beyond TTL');
+  assert.equal(canReuseSnapshot(old, 'r2', { now }), false, 'changed workbook always refetches');
+  assert.equal(canReuseSnapshot(old, null, { now }), false, 'unverifiable old snapshot expires');
+  assert.equal(canReuseSnapshot({ ...old, fetchedAt: now - 1000 }, null, { now }), true);
+  assert.equal(canReuseSnapshot({ ...old, revision: null }, 'r1', { now }), false, 'unknown snapshot revision is not proof');
+  assert.equal(canReuseSnapshot({ ...old, revision: null, fetchedAt: now - 1000 }, 'r1', { now }), true, 'recent unknown revision uses the TTL only');
+  assert.equal(canReuseSnapshot({ ...old, fetchedAt: now - 61000 }, null, { now, force: true }), false);
+  assert.equal(canReuseSnapshot({ ...old, fetchedAt: now - 1000 }, null, { now, force: true }), true);
+  assert.equal(canReuseSnapshot({ ...old, revision: null, fetchedAt: now - 1000 }, 'r1', { now, force: true }), false);
+});

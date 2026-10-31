@@ -1,6 +1,7 @@
+import { prepareSource } from "./source-preparation";
 import { init, ingest, restore, query, health, refreshDateDependent } from "./duckdb";
 import { sheets } from "./sheets.config";
-import { blueprints } from "./blueprints";
+import { dependencies } from "./workspace-dependencies";
 import { clearAnalyses } from "./analytics";
 import { useStore, PERFORMANCE_MARKETING_VIEW } from "../state/store";
 export type SourceState = {
@@ -54,15 +55,7 @@ export const subscribeSources = (fn: () => void) => {
 const publish = () => {
   listeners.forEach((fn) => fn());
 };
-export const dependencies = (tab: number) =>
-  tab === 11
-    ? sheets.map((s) => s.key)
-    : [
-        ...new Set([
-          blueprints[tab].source,
-          ...(tab === 1 ? ["bookings", "checkins"] : tab === 0 ? ["new", "sales", "lapsed", "leads", "bookings", "checkins"] : tab === 3 ? ["payroll", "new", "bookings", "checkins"] : tab === 5 ? ["sales", "bookings", "checkins"] : tab === 14 ? ["new", "bookings"] : tab === 8 ? ["new"] : tab === 9 ? ["sessions"] : tab === 6 ? ["new", "checkins"] : tab === 15 ? ["sales", "new", "lapsed", "leads", "payroll", "recurring", "bookings"] : []),
-        ]),
-      ];
+export { dependencies } from "./workspace-dependencies";
 export const usable = (key: string) =>
   !!health[key]?.fetchedAt && health[key].status !== "error";
 /** Initialise the local query engine without fetching or refreshing source sheets. */
@@ -119,22 +112,28 @@ export async function ensureSource(key: string, force = false, latest = false): 
     sourceStates[key] = { state: usable(key) ? "refreshing" : "loading" };
     publish();
     try {
-      if (!force && !usable(key) && (await restore(key))) { clearAnalyses(); publish(); }
-      // With a Drive revision, the rows for it come from one CDN-cached URL and a copy that
-      // already matches needs no request at all, however old it is.
-      const revision = await currentRevision(key, force);
+      if (!force && !usable(key) && (await restore(key))) { clearAnalyses(); sourceStates[key] = { state: "refreshing" }; publish(); }
+      const revision = await prepareSource({
+        force,
+        hasData: () => usable(key),
+        revision: () => currentRevision(key, force),
+        loadSnapshot: async () => {
+          const saved = await liveRead(async () => {
+            const response = await fetch(`/api/sheets/${key}?snapshot=true`);
+            return response.ok ? response.json() : null;
+          }).catch(() => null);
+          if (saved) {
+            await ingest(saved);
+            clearAnalyses();
+            if (usable(key)) sourceStates[key] = { state: "refreshing" };
+            publish();
+          }
+        },
+      });
       if (revision && usable(key) && health[key]?.revision === revision) {
         sourceStates[key] = { state: "ready" };
         publish();
         return;
-      }
-      if (!revision && !force && !usable(key)) {
-        const snapshot = await fetch(`/api/sheets/${key}?snapshot=true`);
-        if (snapshot.ok) {
-          await ingest(await snapshot.json());
-          clearAnalyses();
-          publish();
-        }
       }
       const stale =
         !health[key]?.fetchedAt ||
@@ -244,6 +243,7 @@ export async function revalidate(tab: number, minInterval = 10000) {
   const report = await probeFreshness(minInterval);
   if (!report) return [];
   const watched = new Set(dependencies(tab));
+  if (tab === 0) ["leads", "bookings", "checkins", "meta", "payroll"].forEach(key => watched.add(key));
   if (tab===8 && useStore.getState().view===PERFORMANCE_MARKETING_VIEW) watched.add("meta");
   // A source we have never loaded is handled by the normal load path.
   const loaded = report.sources.filter((s) => watched.has(s.key) && usable(s.key));

@@ -1,6 +1,6 @@
 import { ChartPie } from "lucide-react";
 import { query } from "../../data/duckdb";
-import { ensureSource } from "../../data/loader";
+import { ensureSource, usable, sourceStates } from "../../data/loader";
 import { context, metricFacts } from "../../data/analytics";
 import { metricSQL } from "../../semantics/metrics";
 import { fmt } from "../../semantics/formats";
@@ -16,6 +16,7 @@ export function RevenueMix({ version }: { version: string }) {
   const transient = useStore((s) => s.transient);
   const { data, loading, error } = useBoardData(async () => {
     await ensureSource("sales");
+    if (!usable("sales")) throw new Error(sourceStates.sales?.error || "Sales source unavailable");
     const rows = await query(
       `SELECT COALESCE(NULLIF(TRIM(CAST(category AS VARCHAR)),''),'Uncategorised') AS label, ${metricSQL(["gross_revenue"], context(filters, transient))} FROM ${metricFacts(filters, "sales", transient)} GROUP BY 1`,
     );
