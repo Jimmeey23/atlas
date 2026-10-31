@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ArrowDownRight, ArrowUpRight, Building2 } from "lucide-react";
 import { query } from "../../data/duckdb";
-import { ensureSource } from "../../data/loader";
+import { ensureSource, usable, sourceStates } from "../../data/loader";
 import { comparison, context, metricFacts } from "../../data/analytics";
 import { metricSQL, metrics } from "../../semantics/metrics";
 import { MetricInfoHint } from "../ui/MetricInfoHint";
@@ -24,6 +24,7 @@ export function StudioLeaderboard({ version }: { version: string }) {
     const table = metricTable(id);
     if (!table) throw new Error("This metric has no source sheet.");
     await ensureSource(table);
+    if (!usable(table)) throw new Error(sourceStates[table]?.error || `${table} source unavailable`);
     const run = (f: typeof filters) =>
       query(
         `SELECT COALESCE(NULLIF(TRIM(CAST(location AS VARCHAR)),''),'Unspecified') AS label, ${metricSQL([id], context(f, transient))} FROM ${metricFacts(f, table, transient)} GROUP BY 1`,

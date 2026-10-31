@@ -15,7 +15,7 @@ import { kraRoutes } from "./kra.mjs";
 import { presentationRoutes } from "./presentation.mjs";
 import { reportRoutes } from "./reports.mjs";
 import { createStore, jsonChunks } from "./store.mjs";
-import { createFreshness } from "./freshness.mjs";
+import { canReuseSnapshot, createFreshness } from "./freshness.mjs";
 import { intelligenceRoutes } from "./intelligence.mjs";
 import { followupRoutes } from "./followups.mjs";
 import { fileURLToPath } from "node:url";
@@ -123,23 +123,12 @@ export async function createApp({ serveStatic = false, authClient } = {}) {
     try {
       cached = remember(await store.read(cacheKey));
     } catch {}
-    if (cached && (force || Date.now() - cached.fetchedAt < ttl)) {
-      // Inside the TTL the cache is only trustworthy while the workbook has not
-      // been edited. One metadata call decides it; the TTL is just the fallback
-      // for when no revision can be read.
+    if (cached) {
       const { revision } = await freshness.revision(source.id, force ? { maxAge: 0 } : undefined);
-      const edited =
-        revision && cached.revision && revision !== cached.revision;
-      // A forced refresh exists to pick up an edit. Every browser that notices the same edit
-      // sends one, and each refetch of Bookings costs tens of CPU-seconds, so it is skipped
-      // when Drive proves this copy is already the current revision, or (unverifiable) when
-      // the copy was fetched moments ago.
-      const reuse = force
-        ? (revision && cached.revision === revision) || (!revision && Date.now() - cached.fetchedAt < 60000)
-        : !edited;
-      if (reuse) {
+      if (canReuseSnapshot(cached, revision, { force, ttl })) {
         await saveMetadata(cached).catch(() => {});
-        return { ...cached, cached: true, revision: revision ?? cached.revision ?? null };
+        // Never attach an unverified revision to old rows.
+        return { ...cached, cached: true };
       }
     }
     try {
@@ -261,12 +250,10 @@ export async function createApp({ serveStatic = false, authClient } = {}) {
     const meta = await store.read(`.cache/${source.key}.meta.json`).catch(() => null);
     if (meta && req.query.refresh !== "true") {
       const snapshot = req.query.snapshot === "true";
-      if (snapshot || Date.now() - meta.fetchedAt < ttl) {
-        const probe = snapshot ? null : await freshness.revision(source.id);
-        if (snapshot || !probe?.revision || !meta.revision || probe.revision === meta.revision) {
-          known.set(source.key, meta);
-          if (await sendSnapshot(req, res, cacheRoot, source, meta)) return;
-        }
+      const probe = snapshot ? null : await freshness.revision(source.id);
+      if (snapshot || canReuseSnapshot(meta, probe?.revision, { ttl })) {
+        known.set(source.key, meta);
+        if (await sendSnapshot(req, res, cacheRoot, source, meta)) return;
       }
     }
     if (req.query.snapshot === "true") {

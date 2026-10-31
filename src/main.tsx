@@ -1,6 +1,7 @@
 import ReactDOM from "react-dom/client";
 import { lazy, Suspense } from "react";
 import { AuthGate } from "./auth";
+import { AccountMenu } from "./components/AccountMenu";
 const App = lazy(() => import("./App"));
 import { DEFAULT_THEME, THEME_KEY } from "./data/theme";
 
@@ -24,6 +25,7 @@ const boot = (
       <ReportPage />
     ) : standalone ? (
       <main className="kra-standalone">
+        <header className="standalone-account"><a href="/">Atlas overview</a><AccountMenu /></header>
         <KraPerformance />
       </main>
     ) : (

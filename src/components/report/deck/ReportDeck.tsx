@@ -1,3 +1,4 @@
+import { AccountMenu } from "../../AccountMenu";
 import { ImportedContentElement } from './ImportedContentElement';
 import { ReferenceEdition } from './ReferenceEdition';
 import { REFERENCE_FORMAT, referenceTemplate } from '../../../report/reference-standard.mjs';
@@ -257,6 +258,7 @@ export function ReportDeck({ initial, storageError }: { initial: ReportModel; st
             <button className="icon-button" title="Fullscreen (F)" aria-label="Toggle fullscreen" onClick={() => void toggleFull()}>{full ? <Minimize size={16}/> : <Maximize size={16}/>}</button>
             <button className="button deck-notes-toggle" aria-pressed={drawer} title="Speaker notes (N)" onClick={() => setDrawer(d => !d)}><Mic size={14}/>Notes</button>
           </div>
+          <AccountMenu />
       </header>
       <div className="deck-body">
         <nav className="deck-tabs" aria-label="Report chapters" style={sidebarAccent(model) as CSSProperties}>

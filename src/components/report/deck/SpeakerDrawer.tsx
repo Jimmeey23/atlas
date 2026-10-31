@@ -1,3 +1,4 @@
+import { AccountMenu } from "../../AccountMenu";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { Mic, Sparkles, Loader2, Timer, Play, Pause, RotateCcw, X, ExternalLink, AArrowUp, AArrowDown, MessageCircleQuestion, Hash, ArrowRight, NotebookPen, ScrollText, ChevronRight, Quote } from "lucide-react";
 import type { ReportModel, SpeakerNotes } from "../../../report/model";
@@ -179,7 +180,7 @@ export function PoppedNotes({ model }: { model: ReportModel }) {
   return <div className="deck-popped">
     <header><Mic size={16}/><b>{model.scope.studio} · speaker notes</b>{state && <span>{clock(state.elapsed)}</span>}
       <button className="icon-button" aria-label="Smaller text" onClick={() => setScale(s => Math.max(.8, s - .1))}><AArrowDown size={15}/></button>
-      <button className="icon-button" aria-label="Larger text" onClick={() => setScale(s => Math.min(2.2, s + .1))}><AArrowUp size={15}/></button></header>
+      <button className="icon-button" aria-label="Larger text" onClick={() => setScale(s => Math.min(2.2, s + .1))}><AArrowUp size={15}/></button><AccountMenu /></header>
     {state ? <><h2>{SECTION_LABEL[state.section]}</h2><SpeakerNotesView notes={state.notes} fontScale={scale} teleprompter={false} /></> : <p className="deck-loading">Waiting for the presenting window… navigate a page there to sync.</p>}
   </div>;
 }
