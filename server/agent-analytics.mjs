@@ -34,6 +34,7 @@ function checkMetrics(source, ids, available) {
 async function metricRows(ctx, source, ids, groups, scope, extra = {}) {
   const compiled = compileMetricQuery({ source, metric_ids: ids, group_by: groups, scope_json: scope, ...extra }, ctx.defaults, ctx.available, ctx.rate);
   const result = await ctx.run(compiled.sql, compiled.filters);
+  if (result.truncated) throw new Error('Analysis exceeds 500 groups. Narrow the scope or group differently; partial groups cannot support a complete comparison.');
   return { ...result, sql: compiled.sql, filters: compiled.filters, snapshot: compiled.snapshot };
 }
 

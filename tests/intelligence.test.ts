@@ -75,6 +75,14 @@ test("agent queries real raw fields with global filters and reports missing conf
     assert.equal(Number(multi.body.resultSets[0][0].n), 2);
     assert.equal(Number(multi.body.rows[0].late), 1);
     assert.equal(multi.body.rows[0].label, 'update; from unknown');
+    const values = Array.from({length: 501}, (_, i) => `(${i})`).join(',');
+    const bounded = await q(`WITH v(i) AS (VALUES ${values}) SELECT i FROM v`);
+    assert.equal(bounded.response.status, 200, JSON.stringify(bounded.body));
+    assert.equal(bounded.body.rows.length, 500);
+    assert.equal(bounded.body.truncated, true);
+    assert.match(bounded.body.limitation, /incomplete/);
+    const complete = await q(`WITH v(i) AS (VALUES ${values}) SELECT i FROM v LIMIT 500`);
+    assert.equal(complete.body.truncated, false);
     const blocked = await q("SELECT * FROM facts_bookings");
     assert.equal(blocked.response.status, 400);
     const dates = await q("SELECT COUNT(*) AS n FROM bookings", {

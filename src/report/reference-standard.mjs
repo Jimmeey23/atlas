@@ -1,5 +1,11 @@
 import { parseFragment, serializeOuter } from 'parse5';
-import templates from './reference-contracts.json' with { type: 'json' };
+import initialTemplates from './reference-contracts.json' with { type: 'json' };
+// Vite substitutes an empty module: the browser receives contracts only after API authentication.
+let templates = initialTemplates;
+export function setReferenceTemplates(value) {
+  if (!Array.isArray(value)) throw new Error('Invalid reference contracts');
+  templates = value;
+}
 
 export const REFERENCE_FORMAT = 'reference-v1';
 export const REFERENCE_CHAPTERS = ['instructors', 'sessions', 'revenue-performance'];

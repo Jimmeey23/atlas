@@ -8,10 +8,9 @@ import {kraPerformance,kraDefinitions} from './kra-metrics.mjs';
 import {createFreshness} from './freshness.mjs';
 export function kraRoutes(app,root,config,load,store=createStore({root}),freshness=createFreshness()) {
   const file='.floor/kra-jimmeey-jun-nov-2026.json';
-  const cache=key=>`.cache/${key}.json`;
   const asOf=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
-  // The passcode gate was removed at the owner's request: these routes are open to anyone who
-  // can reach them. Responses stay uncacheable so no proxy retains KRA records.
+  // The KRA-specific passcode was removed. createApp gates these routes with the
+  // shared Supabase login, and responses remain uncacheable.
   const auth=(_req,res,next)=>{res.set('Cache-Control','no-store');next();};
   app.get('/api/kra/session',(_req,res)=>res.set('Cache-Control','no-store').json({unlocked:true}));
   const evidence=async()=>await store.read(file)??{};
@@ -25,16 +24,16 @@ export function kraRoutes(app,root,config,load,store=createStore({root}),freshne
   // Recomputing it anyway re-normalises ~300k rows, the costliest thing this gateway does.
   const UNCHANGED_TTL=12*60*60*1000;
   const KEYS=['sales','leads','bookings','lapsed','new'];
-  async function unchanged(cached) {
-    if(!cached?.revisions||Date.now()-cached.computedAt>=UNCHANGED_TTL)return false;
+  async function revisionState(cached) {
     const sources=KEYS.map(key=>config.find(item=>item.key===key));
-    if(sources.some(source=>!source?.id||!cached.revisions[source.key]))return false;
+    if(sources.some(source=>!source?.id||!cached?.revisions?.[source.key]))return 'unknown';
     const current=await freshness.revisions(sources);
-    return sources.every(source=>current.get(source.id)?.revision===cached.revisions[source.key]);
+    if(sources.some(source=>!current.get(source.id)?.revision))return 'unknown';
+    return sources.every(source=>current.get(source.id).revision===cached.revisions[source.key])?'same':'changed';
   }
   const computations=new Map();
   function computeOnce(imports,refresh) {
-    const key=String(imports);
+    const key=`${imports}:${refresh}:${asOf()}`;
     if(!computations.has(key))computations.set(key,compute(imports,refresh).finally(()=>computations.delete(key)));
     return computations.get(key);
   }
@@ -42,17 +41,18 @@ export function kraRoutes(app,root,config,load,store=createStore({root}),freshne
     const sources={},revisions={};
     await Promise.all(KEYS.map(async key=>{
       const source=config.find(item=>item.key===key);
-      let data;
-      if(!refresh)try{data=await store.read(cache(key));if(data)data.stale=Date.now()-data.fetchedAt>=15*60*1000;}catch{}
-      if(!data)data=await load(source,refresh);
+      if(!source) throw new Error(`Missing KRA source configuration: ${key}`);
+      const data=await load(source,refresh);
+      if(!data || data.status==='error' || !data.fetchedAt) throw new Error(`KRA source unavailable: ${key}`);
       revisions[key]=data.revision??null;
       const normalized=normalise(data,false).rows;
       if(key==='leads'){const index=data.columns.indexOf('ID');normalized.forEach((row,i)=>{row.lead_id=index>=0?String(data.rows[i][index]??'').trim()||null:null;});}
       sources[key]={...data,rows:normalized};
     }));
-    const result=kraPerformance(sources,asOf(),{imports});
+    const computedAsOf=asOf();
+    const result=kraPerformance(sources,computedAsOf,{imports});
     // Caching is an optimisation: a failed write must never fail the request.
-    await store.write(resultKey(imports),{computedAt:Date.now(),revisions,result}).catch(error=>console.error('KRA result cache write skipped:',error?.message??error));
+    await store.write(resultKey(imports),{computedAt:Date.now(),asOf:computedAsOf,revisions,result}).catch(error=>console.error('KRA result cache write skipped:',error?.message??error));
     return result;
   }
   const decorate=(result,saved,computedAt)=>({...result,definitions:result.definitions.map(definition=>{const info=saved.scorecardInfo?.[definition.id];return {...definition,...info,targetEdited:!!info&&info.target!==definition.target,manual:!!info&&(info.area!==definition.area||info.target!==definition.target||info.weight!==definition.weight)};}),evidence:saved,scorecardEdits:saved.scorecardEdits??{},scorecardHistory:saved.scorecardHistory??[],trainingTopics:performanceMarketingTopics,computedAt:computedAt??Date.now()});
@@ -65,9 +65,13 @@ export function kraRoutes(app,root,config,load,store=createStore({root}),freshne
       const saved=await evidence();
       if(!refresh){
         const cached=await store.read(resultKey(imports)).catch(()=>null);
-        if(cached?.result&&(Date.now()-cached.computedAt<RESULT_TTL||await unchanged(cached).catch(()=>false))){
-          res.json(decorate(cached.result,saved,cached.computedAt));
-          return;
+        if(cached?.result && cached.asOf===asOf()) {
+          const age=Date.now()-cached.computedAt;
+          const revision=await revisionState(cached).catch(()=> 'unknown');
+          if((revision==='same' && age<UNCHANGED_TTL) || (revision==='unknown' && age<RESULT_TTL)) {
+            res.json(decorate(cached.result,saved,cached.computedAt));
+            return;
+          }
         }
       }
       res.json(decorate(await computeOnce(imports,refresh),saved));

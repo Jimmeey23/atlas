@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
-import {mkdtemp,mkdir,writeFile,rm} from 'node:fs/promises';
+import {mkdtemp,mkdir,writeFile,readFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {kraPerformance,kraDefinitions} from '../server/kra-metrics.mjs';
@@ -69,7 +69,7 @@ test('KRA churn uses Status with a 30-day Churned Date grace across eligible mem
 test('open KRA API serves records without a passcode, still validates evidence writes',async()=>{
   const root=await mkdtemp(path.join(tmpdir(),'p57-kra-'));await mkdir(path.join(root,'.floor'));await mkdir(path.join(root,'.cache'));
   for(const key of ['sales','leads','bookings','lapsed','new'])await writeFile(path.join(root,'.cache',key+'.json'),JSON.stringify({key,columns:[],rows:[],status:'ok',fetchedAt:Date.now()}));
-  const app=express();app.use(express.json());kraRoutes(app,root,[],async()=>{throw Error('Unexpected remote read');});
+  const app=express();app.use(express.json());kraRoutes(app,root,['sales','leads','bookings','lapsed','new'].map(key=>({key})),async source=>JSON.parse(await readFile(path.join(root,'.cache',source.key+'.json'),'utf8')));
   const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));const base='http://127.0.0.1:'+server.address().port;
   try {
     // The passcode gate was removed deliberately: these endpoints answer without any session.

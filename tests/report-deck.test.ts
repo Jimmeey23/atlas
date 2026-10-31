@@ -23,8 +23,10 @@ function harness() {
     write: async (k: string, v: any) => { documents.set(k, v); updated.set(k, ++tick); return v; },
     remove: async (k: string) => { documents.delete(k); updated.delete(k); },
   };
-  const cloud = { from: () => ({ select: () => ({ like: (_c: string, pattern: string) => ({ order: () => ({ limit: async () => ({
-    data: [...documents.keys()].filter(k => k.startsWith(pattern.replace('%', ''))).sort((a, b) => updated.get(b)! - updated.get(a)!).map(key => ({ key })), error: null }) }) }) }) }) };
+  const cloud = { from: () => ({ select: () => ({ like: (_c: string, pattern: string) => {
+    const q: any = { order: () => q, range: async (a: number,b: number) => ({
+      data: [...documents.keys()].filter(k => k.startsWith(pattern.replace('%', ''))).sort((a, b) => updated.get(b)! - updated.get(a)!).slice(a,b+1).map(key => ({ key })), error: null }) }; return q;
+  } }) }) };
   return { documents, store, cloud };
 }
 const post = (url: string, body: unknown, headers: Record<string, string> = {}, method = 'POST') => fetch(url, { method, headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body) });
@@ -197,5 +199,24 @@ test('report document layouts persist without changing frozen figures or analysi
       assert.deepEqual(reopened.chapters, original.chapters);
       assert.deepEqual(reopened.narratives, original.narratives);
     }
+  } finally { await api.close(); }
+});
+
+test('report history finds pinned entries beyond 500 and prunes older unpinned entries', async () => {
+  const { store, cloud, documents } = harness();
+  const ids = Array.from({length: 520}, () => crypto.randomUUID());
+  for (const [i,id] of ids.entries()) {
+    await store.write(`.floor/reports/${id}.json`, {...snapshot('2026-01'), id, savedAt: new Date(1000+i).toISOString()});
+  }
+  await store.write('.floor/report-pins.json', [ids[0]]);
+  const app = express(); app.use(express.json()); reportRoutes(app,store,cloud,{});
+  const api = await serve(app);
+  try {
+    const response = await fetch(api.url + '/api/reports');
+    assert.equal(response.status,200);
+    const list = await response.json();
+    assert.equal(list.length,6);
+    assert.ok(list.some((row:any)=>row.id===ids[0] && row.pinned));
+    assert.equal([...documents.keys()].filter(k=>k.startsWith('.floor/reports/')).length,6);
   } finally { await api.close(); }
 });

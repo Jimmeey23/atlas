@@ -9,7 +9,8 @@ import {
   emptyFilters,
   type Filters as FilterType,
 } from "../state/store";
-import { query } from "../data/duckdb";
+import { fieldPresence, query } from "../data/duckdb";
+import { dependencies } from "../data/loader";
 import { where } from "../data/analytics";
 import { blueprints } from "../data/blueprints";
 import { today } from "../data/analytics";
@@ -46,6 +47,18 @@ export function Filters({
           ? v !== "all"
           : v),
   ).length;
+  const activeFields = [
+    ...(["location", "trainer", "format", "source", "category", "day", "time"] as const).filter(field => s.filters[field].length > 0),
+    ...(s.filters.memberType !== "all" ? ["is_new"] : []),
+    ...(s.filters.sessionType !== "all" ? ["session_type"] : []),
+    ...(s.filters.capacityBand !== "all" ? ["capacity"] : []),
+  ];
+  const ignored = dependencies(s.tab).flatMap(source => {
+    const presence = fieldPresence[source];
+    if (!presence) return [];
+    const absent = activeFields.filter(field => !presence.has(field));
+    return absent.length ? [`${source}: ${absent.join(', ')}`] : [];
+  });
   return (
     <>
       <div className="filterbar">
@@ -110,6 +123,7 @@ export function Filters({
           <X size={13} />
         </button>
       </div>
+      {ignored.length > 0 && <p className="small" role="status">Some active filters cannot be applied where fields are unavailable ({ignored.join(' · ')}). Multi-source figures may therefore use different scopes.</p>}
       {s.filterOpen && (
         <div className="drawer">
           <label>

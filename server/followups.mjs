@@ -4,14 +4,16 @@ export function followupRoutes(app, file, cloud = null) {
   let queue = Promise.resolve();
   const read = async () => {
     if (cloud) {
-      const { data, error } = await cloud
-        .from("p57_documents")
-        .select("body")
-        .eq("kind", "followup");
-      if (error) throw error;
-      return Object.fromEntries(
-        data.map((d) => [d.body.memberId, d.body.record]),
-      );
+      const all = [];
+      const pageSize = 100;
+      for (let offset = 0; ; offset += pageSize) {
+        const { data, error } = await cloud.from("p57_documents").select("body")
+          .eq("kind", "followup").order("id", { ascending: true }).range(offset, offset + pageSize - 1);
+        if (error) throw error;
+        all.push(...data);
+        if (data.length < pageSize) break;
+      }
+      return Object.fromEntries(all.map(d => [d.body.memberId, d.body.record]));
     }
     try {
       return JSON.parse(await readFile(file, "utf8"));
@@ -73,8 +75,8 @@ export function followupRoutes(app, file, cloud = null) {
         .status(400)
         .json({ error: "Record an outcome before closing." });
     const work = queue.then(async () => {
-      const records = await read(),
-        old = records[id];
+      const records = cloud ? null : await read(),
+        old = records?.[id];
       const record = {
         owner: b.owner.trim(),
         status: b.status,
@@ -86,35 +88,17 @@ export function followupRoutes(app, file, cloud = null) {
         closedReasons: b.status === "Closed" ? b.closedReasons || [] : [],
         updatedAt: new Date().toISOString(),
       };
-      records[id] = {
-        ...record,
-        history: [...(old?.history || []), record].slice(-100),
-      };
       if (cloud) {
-        const { data, error } = await cloud
-          .from("p57_documents")
-          .select("id")
-          .eq("kind", "followup")
-          .eq("title", id)
-          .limit(1);
+        // The database function serializes updates for this member across all
+        // serverless instances and appends history within the same transaction.
+        const { data, error } = await cloud.rpc('atlas_save_followup', { p_member_id: id, p_record: record });
         if (error) throw error;
-        const saved = await cloud
-          .from("p57_documents")
-          .upsert({
-            ...(data[0] ? { id: data[0].id } : {}),
-            kind: "followup",
-            title: id,
-            page: 6,
-            body: { memberId: id, record: records[id] },
-            updated_at: new Date().toISOString(),
-          });
-        if (saved.error) throw saved.error;
-      } else {
-        // The directory may not exist yet on a fresh instance.
-        await mkdir(path.dirname(file), { recursive: true });
-        await writeFile(file + ".tmp", JSON.stringify(records));
-        await rename(file + ".tmp", file);
+        return data;
       }
+      records[id] = { ...record, history: [...(old?.history || []), record].slice(-100) };
+      await mkdir(path.dirname(file), { recursive: true });
+      await writeFile(file + ".tmp", JSON.stringify(records));
+      await rename(file + ".tmp", file);
       return records[id];
     });
     queue = work.catch(() => undefined);

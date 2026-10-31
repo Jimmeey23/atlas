@@ -320,7 +320,7 @@ export function Chart({
         }
         else if (tab === 8)
           r = await query(
-            `SELECT COALESCE(source,'Unknown') AS source,COALESCE(stage,'Unspecified stage') AS stage,CASE WHEN lower(trim(stage))='membership sold' THEN 'Membership sold' WHEN lower(trim(stage))='trial completed' THEN 'Trial completed' ELSE COALESCE(status,'Open') END AS outcome,COUNT(*) AS n FROM leads${w} GROUP BY source,stage,status ORDER BY n DESC LIMIT 35`,
+            `SELECT COALESCE(source,'Unknown') AS source,COALESCE(stage,'Unspecified stage') AS stage,COALESCE(NULLIF(trim(trial_status),''),'Trial status unavailable') AS outcome,COUNT(*) AS n FROM leads${w} GROUP BY source,stage,trial_status ORDER BY n DESC LIMIT 35`,
           );
         else if (tab === 9)
           r = await query(
@@ -666,7 +666,7 @@ export function Chart({
           chartRows.flatMap((r) => [
             "Source: " + r.source,
             "Stage: " + r.stage,
-            "Outcome: " + r.outcome,
+            "Trial status: " + r.outcome,
           ]),
         ),
       ];
@@ -677,7 +677,7 @@ export function Chart({
       for (const row of chartRows) {
         for (const [source, target] of [
           ["Source: " + row.source, "Stage: " + row.stage],
-          ["Stage: " + row.stage, "Outcome: " + row.outcome],
+          ["Stage: " + row.stage, "Trial status: " + row.outcome],
         ]) {
           const key = source + target;
           const prev = links.get(key);
@@ -708,7 +708,7 @@ export function Chart({
               color: c["text-2"],
               fontSize: 10,
               formatter: (p: { name: string }) =>
-                p.name.replace(/^(Source|Stage|Outcome): /, ""),
+                p.name.replace(/^(Source|Stage|Trial status): /, ""),
             },
             lineStyle: { color: "source", opacity: 0.18, curveness: 0.5 },
             data: names.map((name) => ({ name })),
@@ -1090,7 +1090,7 @@ export function Chart({
         <span>
           {secondary
             ? "Completed-month observations; missing values remain unavailable"
-            : tab === 4 && salesActivity ? "Daily gross collections (left axis) and transactions (right axis); average order value in tooltips. Only dates with source records are shown." : tab === 5 ? "Bars: newcomers per first-visit month · lines: share of each cohort that returned, converted and is retained (latest recorded outcome)" : tab === 7 || tab === 12 ? "Late cancellations by weekday and class time · hover a cell for its share of that slot's bookings, members and classes affected" : "Actual source observations, aggregated in SQL"}
+            : tab === 4 && salesActivity ? "Daily gross collections (left axis) and transactions (right axis); average order value in tooltips. Only dates with source records are shown." : tab === 8 ? "Top 35 source, current stage and trial-status combinations; trial status is not the current stage." : tab === 6 ? "Up to 1,200 members, ordered by recorded revenue; points are not the full population when more qualify." : tab === 5 ? "Bars: newcomers per first-visit month · lines: share of each cohort that returned, converted and is retained (latest recorded outcome)" : tab === 7 || tab === 12 ? "Late cancellations by weekday and class time · hover a cell for its share of that slot's bookings, members and classes affected" : "Actual source observations, aggregated in SQL"}
         </span>
         <span>Hover for details / Click to filter</span>
       </div>

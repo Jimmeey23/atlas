@@ -87,3 +87,28 @@ test("local follow-ups persist, preserve history and require a closing outcome",
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('cloud follow-up writes use atomic RPC and lists retrieve multiple pages', async () => {
+  const docs = new Map<string, any>();
+  for (let i = 0; i < 205; i++) docs.set(`m${String(i).padStart(3,'0')}`, {status:'Not started',history:[]});
+  let rpcCalls = 0;
+  const cloud = {
+    from: () => ({ select: () => ({ eq: () => ({ order: () => ({
+      range: async (start: number, end: number) => ({data:[...docs.entries()].slice(start,end+1).map(([memberId,record])=>({body:{memberId,record}})),error:null})
+    }) }) }) }),
+    rpc: async (name: string, args: any) => {
+      assert.equal(name,'atlas_save_followup'); rpcCalls++;
+      const old = docs.get(args.p_member_id);
+      const record = {...args.p_record, history:[...(old?.history || []),args.p_record].slice(-100)};
+      docs.set(args.p_member_id,record); return {data:record,error:null};
+    },
+  };
+  const app=express();app.use(express.json());followupRoutes(app,'unused',cloud);
+  const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));
+  const base=`http://127.0.0.1:${(server.address() as any).port}/api/retention-followups`;
+  try {
+    const all=await(await fetch(base)).json(); assert.equal(Object.keys(all).length,205);
+    const response=await fetch(base+'/m001',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:'Operator',status:'Contacted',preference:'Email',nextDate:'',note:'Called',memberVoice:'',observation:''})});
+    assert.equal(response.status,200); assert.equal(rpcCalls,1); assert.equal((await response.json()).history.length,1);
+  } finally {await new Promise<void>(resolve=>server.close(()=>resolve()));}
+});

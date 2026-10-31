@@ -1,3 +1,4 @@
+import { decodeStoredValue } from "./store.mjs";
 const PREFIX = ".floor/sticky-notes/";
 const COLORS = ["lemon", "rose", "mint", "sky"];
 export function validateNote(body) {
@@ -99,14 +100,16 @@ export function stickyNoteRoutes(app, store, cloud) {
   );
   app.get("/api/sticky-notes", async (req, res) => {
     try {
-      const { data, error } = await cloud
-        .from("atlas_store")
-        .select("key")
-        .like("key", `${PREFIX}%`);
-      if (error) throw error;
-      const notes = await Promise.all(
-        (data ?? []).map((row) => store.read(row.key)),
-      );
+      const all = [];
+      const pageSize = 100;
+      for (let offset = 0; ; offset += pageSize) {
+        const { data, error } = await cloud.from("atlas_store").select("key,value")
+          .like("key", `${PREFIX}%`).order("key", { ascending: true }).range(offset, offset + pageSize - 1);
+        if (error) throw error;
+        all.push(...data);
+        if (data.length < pageSize) break;
+      }
+      const notes = await Promise.all(all.map(row => decodeStoredValue(row.value)));
       res.json({
         notes: notes.filter((note) => note && !note.deleted && (!req.query.reportId || note.reportId === req.query.reportId)),
         backend: "supabase",

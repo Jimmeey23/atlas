@@ -22,6 +22,12 @@ const COMPRESS_OVER = 512 * 1024;
 
 const TABLE = "atlas_store";
 
+export async function decodeStoredValue(saved) {
+  if (saved && typeof saved === "object" && typeof saved.__gz === "string")
+    return JSON.parse((await inflate(Buffer.from(saved.__gz, "base64"))).toString("utf8"));
+  return saved ?? null;
+}
+
 /**
  * Serialises a sheet snapshot in pieces. JSON.stringify of Bookings builds one ~170MB string
  * on top of the parsed rows, which is enough to push a 2GB serverless instance out of memory.
@@ -73,10 +79,7 @@ export function createStore({ root, cloud = null, cacheRoot = root }) {
       .eq("key", key)
       .maybeSingle();
     if (error) throw new Error(`Store read failed for ${key}: ${error.message}`);
-    const saved = data?.value ?? null;
-    if (saved && typeof saved === "object" && typeof saved.__gz === "string")
-      return JSON.parse((await inflate(Buffer.from(saved.__gz, "base64"))).toString("utf8"));
-    return saved;
+    return decodeStoredValue(data?.value);
   }
   async function writeCloud(key, value) {
     const encoded = JSON.stringify(value);

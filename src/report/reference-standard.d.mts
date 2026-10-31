@@ -1,3 +1,4 @@
+export function setReferenceTemplates(value: unknown): void;
 import type { ReportModel } from './model';
 export interface ReferenceSectionTemplate { id: string; anchor: string; title: string; words: number; subheadings: string[]; tableHeaders: string[][]; charts: number; layout: string; dynamicTitle: boolean }
 export interface ReferenceTemplate { id: string; title: string; sha256: string; filename: string; bodyWords: number; css: string; coverHtml: string; coverTitle: string; sections: ReferenceSectionTemplate[] }
