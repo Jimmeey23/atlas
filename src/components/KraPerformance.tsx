@@ -56,7 +56,9 @@ export function KraPerformance() {
     try {const response=await fetch('/api/kra/performance?imports='+imports+(refresh?'&refresh=true':''));if(request!==generation.current)return;const result=await response.json();if(request!==generation.current)return;if(!response.ok)throw Error(result.error);setData(result);}catch(error){if(request===generation.current)setError(error instanceof Error?error.message:String(error));}finally{if(request===generation.current)setLoading(false);}
   }
   useEffect(()=>{void load();return()=>{generation.current++;};},[imports]);
-  if(!data)return <p role="status">Loading verified KRA performance…</p>;
+  if(!data)return error
+    ? <section className="kra-panel" role="alert"><h2>KRA performance could not load</h2><p>{error}</p><button className="button" disabled={loading} onClick={()=>void load()}>{loading?'Retrying…':'Retry loading data'}</button></section>
+    : <p role="status">Loading verified KRA performance…</p>;
   const evidenceFor=(id:string)=>data.evidence[id] as Evidence|undefined;
   const marketingRecords=(data.evidence.marketingTopics??{}) as Record<string,TopicRecord>;
   // The KRA period view stitches every month's source rows together so a drill-down matches the headline period.
