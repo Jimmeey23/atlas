@@ -11,8 +11,8 @@ import { DEFAULT_THEME, THEME_KEY } from "./data/theme";
 const ReportPage = lazy(() =>
   import("./components/report/ReportPage").then((m) => ({ default: m.ReportPage })),
 );
-const KraPerformance = lazy(() =>
-  import("./components/KraPerformance").then((m) => ({ default: m.KraPerformance })),
+const KraReport = lazy(() =>
+  import("./components/kra/KraReport").then((m) => ({ default: m.KraReport })),
 );
 
 const path = window.location.pathname.replace(/\/$/, "");
@@ -26,7 +26,7 @@ const boot = (
     ) : standalone ? (
       <main className="kra-standalone">
         <header className="standalone-account"><a href="/">Atlas overview</a><AccountMenu /></header>
-        <KraPerformance />
+        <KraReport />
       </main>
     ) : (
       <App />

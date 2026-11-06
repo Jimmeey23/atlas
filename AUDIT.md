@@ -650,8 +650,8 @@ serverless cold-start path from **1.03 MB to 633 KB**.
 **C3** — 16 unreachable `CUSTOM_METRIC_FORMULAS` keys removed; the remainder moved to
 `src/semantics/metric-formula-overrides.ts` where a test can police them.
 **D1** — One DuckDB-WASM build is shipped instead of both: **dist 144 MB → 106 MB**
-(`DUCKDB_BUNDLE=mvp` opts back in). `manualChunks` is now path-based, and ReportPage /
-KraPerformance are route-split.
+(`DUCKDB_BUNDLE=mvp` opts back in). `manualChunks` is now path-based, and the report deck /
+KRA report are route-split.
 **D3** — `options()` is one unpivoted scan instead of 7 serialised scans of the same union.
 **D4** — Thresholds resolve once and are invalidated on write, not read per rule per row.
 **D9** — The browser engine declares the same 512 MB budget and spill path as the server.
