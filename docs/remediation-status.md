@@ -20,3 +20,15 @@ This describes the changes after the point-in-time [audit](app-audit-2026-10-31.
 - Some bounded analytics (including raw previews and 50,000-row rollups) and report views can still be incomplete. Further pagination, explicit completeness indicators and per-card/export filter-applicability reporting are needed.
 - Large chart/WASM assets, repeated query scans, server/browser duplicate normalization and pinned-report loading remain optimization opportunities. Production profiling, cost telemetry and representative live-data reconciliation are still needed before choosing changes or claiming savings. Historical performance figures are not a new benchmark.
 - Browser IndexedDB/OPFS data can persist after sign-out; clear site data on shared devices. Static assets or snapshots exposed by older deployments and publicly shared Sheets remain accessible until separately secured or purged.
+
+## November 2026 follow-up
+
+- Staff/Family Class visits (Payment Method or Membership Used) are excluded from check-in, booking and newcomer scope by default, with an "Include Staff/Family Class visits" filter. Member attendance complimentary visits come from check-ins, exclude staff/family and drill into the contributing visits.
+- One hosted-class definition (`src/semantics/hosted.ts`) and one promotional-access definition (`promotionalAccessSQL` in `membership-eligibility.ts`) replace the per-page copies. `complimentary_rate` is an alias of `session_complimentary_rate`.
+- Is New labels match the word "new", so Renewal/Renewed are returning members.
+- Workspace SQL allowlists its table sources, and the server DuckDB engine can only read the workspace cache (configuration locked).
+- AI routes have per-user per-minute and per-day limits (`ATLAS_AI_*` env). Counters are per server instance; set a provider spend cap too.
+- KRA, report edit, notes and pin writes use `store.update()` (compare-and-swap on Supabase `updated_at`). Report edits return 409 on a stale copy.
+- Sign-out purges IndexedDB, OPFS DuckDB files, session storage, private scopes and Cache Storage at the next boot.
+- Slim ECharts build; `/assets` cached immutably on Vercel.
+- Still open: the remaining page-specific layout branches in `App.tsx`, the agent system prompt as one long string, distributed (cross-instance) AI quota, and the member-level lapsed scatter's 1,200-row cap has no partial badge yet.
