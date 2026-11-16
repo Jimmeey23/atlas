@@ -126,6 +126,7 @@ export function analyticalStatements(input) {
   if (sql.slice(start).trim()) statements.push(sql.slice(start).trim());
   return statements;
 }
+const SAFE_TABLE_FUNCTIONS = new Set(["range", "generate_series", "unnest"]);
 export function validateSQL(sql) {
   if (typeof sql !== 'string' || !sql.trim()) throw new Error('Enter a query to preview.');
   if (sql.length > 100000) throw new Error('Query exceeds 100,000 characters.');
@@ -134,6 +135,13 @@ export function validateSQL(sql) {
   if ([...cleaned.tokens.matchAll(/\b(?:from|join)\b/gi)].some(match => /^\s*'/.test(cleaned.sql.slice(match.index + match[0].length)))) throw new Error('Use a workspace table name instead of an external file path.');
   if (/\b(insert|update|delete|drop|alter|create|attach|detach|copy|pragma|call|install|load|export|import|read_\w+|http\w*|sqlite\w*|postgres\w*|glob|query|query_table|getenv)\b/i.test(cleaned.tokens))
     throw new Error('This query uses a database-changing command or external-access function. Interface elements support analytical queries over workspace data.');
+  // Allowlist what a query may read from: workspace tables, subqueries and a few pure
+  // row generators. Any other table function (sniff_csv, parquet_scan, duckdb_settings…)
+  // is refused, wherever it appears, and so are engine introspection functions.
+  for (const match of cleaned.tokens.matchAll(/\b(?:from|join)\s+(?:lateral\s+)?([a-z_][\w.]*)\s*\(/gi))
+    if (!SAFE_TABLE_FUNCTIONS.has(match[1].toLowerCase())) throw new Error(`Read from a workspace table instead of ${match[1]}().`);
+  const unsafe = cleaned.tokens.match(/\b(duckdb_\w+|pragma_\w+|\w+_scan|sniff_\w+|current_setting|which_secret|getvariable|set_variable|load_extension|range_files|parquet_\w+|json_execute_serialized_sql)\s*\(/i);
+  if (unsafe) throw new Error(`${unsafe[1]}() reads engine or file state and is not available in workspace queries.`);
   return cleaned.sql;
 }
 export function intelligenceRoutes(

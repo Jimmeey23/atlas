@@ -12,9 +12,15 @@ test("agent refuses writes, file reads, environmental access", () => {
     "SELECT * FROM '/etc/passwd'",
     "SELECT * FROM read_json('/etc/passwd')",
     "SELECT getenv('OPENAI_API_KEY')",
+    "SELECT * FROM sniff_csv('/etc/passwd')",
+    "SELECT * FROM parquet_scan('/x.parquet')",
+    "SELECT * FROM sales, sniff_csv('/etc/passwd')",
+    "SELECT current_setting('home_directory')",
+    "SELECT * FROM duckdb_settings()",
   ])
     assert.throws(() => validateSQL(sql));
   assert.equal(validateSQL("SELECT 1; SELECT 2;"), "SELECT 1; SELECT 2");
+  assert.equal(validateSQL("SELECT * FROM range(3) r JOIN sales ON TRUE"), "SELECT * FROM range(3) r JOIN sales ON TRUE");
   assert.equal(
     validateSQL("SELECT COUNT(*) FROM sales"),
     "SELECT COUNT(*) FROM sales",
