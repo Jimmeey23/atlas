@@ -969,7 +969,7 @@ export default function App() {
               <span className="small">/ session</span>
             </div>
           )}
-          {analysis.groups.length >= 50000 && (
+          {analysis.groupsTruncated && (
             <div className="notice">
               <TriangleAlert size={13} />
               This hierarchy exceeds 50,000 groups. Top-level totals remain

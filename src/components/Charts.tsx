@@ -338,9 +338,7 @@ export function Chart({
           r = data.trend.map(row => ({ ...row, g0: row.month }));
         else {
           const ids = [...new Set([...bp.kpis, ...bp.columns])].filter(
-            (id) =>
-              tab !== 0 ||
-              !["new_clients", "conversion_rate", "active_base", "gross_revenue", "net_revenue"].includes(id),
+            (id) => !bp.cardSources?.[id],
           );
           const facts =
             metricFacts(state.filters, bp.source);

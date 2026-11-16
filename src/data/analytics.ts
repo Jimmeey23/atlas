@@ -111,6 +111,8 @@ export interface Analysis {
   previousGroups: Row[];
   heat: Row[];
   raw: Row[];
+  /** True when the grouping hit its 50,000-group cap and leaf rows are incomplete. */
+  groupsTruncated?: boolean;
   count: number;
   elapsed: number;
 }
@@ -197,7 +199,7 @@ async function performAnalysis(
   end.setUTCDate(0);
   const wide = { ...filters, from: "", to: end.toISOString().slice(0, 10) };
   const rollup = (f: Filters, ctx = context(f, useStore.getState().transient, b.source)) =>
-    `SELECT ${groupExpressions.map((g, i) => `${g} AS g${i}`).join(",")}, ${metricSQL(ids, ctx)}, ${sample} AS n, GROUPING_ID(${groupExpressions.join(",")}) AS level FROM ${facts(f)} GROUP BY ROLLUP(${groupExpressions.join(",")}) HAVING GROUPING_ID(${groupExpressions.join(",")}) < ${2 ** parts.length - 1} ORDER BY level DESC,g0 LIMIT 50000`;
+    `SELECT ${groupExpressions.map((g, i) => `${g} AS g${i}`).join(",")}, ${metricSQL(ids, ctx)}, ${sample} AS n, GROUPING_ID(${groupExpressions.join(",")}) AS level FROM ${facts(f)} GROUP BY ROLLUP(${groupExpressions.join(",")}) HAVING GROUPING_ID(${groupExpressions.join(",")}) < ${2 ** parts.length - 1} ORDER BY level DESC,g0 LIMIT 50001`;
   const [total, previous, groupRows, previousGroups, trend, heat, raw] = await Promise.all([
     query(
       `SELECT ${aggregate},${sample} AS n,COUNT(*) AS records_n FROM ${facts(filters)}`,
@@ -290,7 +292,8 @@ async function performAnalysis(
     total: total[0],
     previous: previous[0],
     trend,
-    groups: groupRows,
+    groups: groupRows.slice(0, 50000),
+    groupsTruncated: groupRows.length > 50000,
     previousGroups,
     heat,
     raw,

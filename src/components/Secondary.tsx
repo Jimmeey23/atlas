@@ -8,6 +8,7 @@ import { where, context, metricFacts } from "../data/analytics";
 import { metricSQL, metrics } from "../semantics/metrics";
 import { fmt } from "../semantics/formats";
 import { useStore } from "../state/store";
+import { PartialBadge, capRows, ROW_PROBE } from "./ui/PartialBadge";
 import { exportCSV } from "./exports";
 import { GroupByPicker, usePersistentGroups } from "./ui/GroupByPicker";
 import { useGroupFields } from "../data/group-registry";
@@ -37,6 +38,7 @@ export function Secondary({
 }) {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
+  const [truncated, setTruncated] = useState(false);
   const [error, setError] = useState("");
   const state = useStore();
   const bp = blueprints[tab];
@@ -72,11 +74,13 @@ export function Secondary({
           )
         : w;
     query(
-      `SELECT ${groups.map((g, i) => `CAST("${g}" AS VARCHAR) AS ${i ? `g${i}` : "entity"}`).join(",")},${metricSQL(columns, context(state.filters, state.transient, bp.source))},COUNT(*) AS n FROM ${metricFacts(state.filters, bp.source, [], effective)}${predicate ? (!["sessions", "sales", "checkins"].includes(bp.source) && effective ? " AND " : " WHERE ") + predicate : ""} GROUP BY ${groups.map((g) => `"${g}"`).join(",")} ORDER BY n DESC LIMIT 100`,
+      `SELECT ${groups.map((g, i) => `CAST("${g}" AS VARCHAR) AS ${i ? `g${i}` : "entity"}`).join(",")},${metricSQL(columns, context(state.filters, state.transient, bp.source))},COUNT(*) AS n FROM ${metricFacts(state.filters, bp.source, [], effective)}${predicate ? (!["sessions", "sales", "checkins"].includes(bp.source) && effective ? " AND " : " WHERE ") + predicate : ""} GROUP BY ${groups.map((g) => `"${g}"`).join(",")} ORDER BY n DESC LIMIT ${100 + ROW_PROBE}`,
     )
       .then((r) => {
         if (active) {
-          setRows(r);
+          const capped = capRows(r, 100);
+          setRows(capped.rows);
+          setTruncated(capped.truncated);
           setError("");
         }
       })
@@ -114,6 +118,7 @@ export function Secondary({
               <span className="small">
                 {rows.length} groups / Active global filters apply
               </span>
+              {truncated && <PartialBadge shown={rows.length} what="groups, largest first" />}
               <button
                 className="icon-button"
                 aria-label={`Export ${title}`}
