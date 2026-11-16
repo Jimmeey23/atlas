@@ -51,3 +51,11 @@ test('member attendance complimentary visits exclude staff/family and are drilla
   assert.ok(attendance.kpis.includes('member_complimentary_visits'));
   assert.ok(!attendance.kpis.includes('complimentary_visits'), 'Sessions-level comps cannot exclude staff/family');
 });
+
+test('Is New labels that only contain the letters "new" are not newcomers', () => {
+  const { rows } = normalise({
+    key: 'checkins', title: 'Checkins', id: 't', status: 'ok', fetchedAt: 0, loadMs: 0,
+    columns: ['Is New'], rows: [['Renewal'], ['Renewed member'], ['New'], ['Newcomer'], ['Not New'], ['Existing']],
+  });
+  assert.deepEqual(rows.map((r) => r.is_new), [false, false, true, true, false, false]);
+});

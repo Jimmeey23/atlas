@@ -553,15 +553,15 @@ export function normalise(
       packages: n("Packages"),
       intro: n("IntroOffers"),
       single: n("SingleClasses"),
-      // Any Is New label containing the word new is a trial. Labels that name a
       // Any Is New label containing the word new is a trial / newcomer.
       is_new: (() => {
         const label = g("Is New");
         if (label == null) return null;
         const text = String(label).trim();
         if (/^not\b/i.test(text)) return false;
-        if (/new/i.test(text)) return true;
-        if (/^(existing|returning|repeat|staff|family)/i.test(text)) return false;
+        // The word new, not the letters: "Renewal" / "Renewed" are returning members.
+        if (/\bnew/i.test(text)) return true;
+        if (/^(existing|returning|repeat|renew|staff|family)/i.test(text)) return false;
         return boolean(text);
       })(),
       entry_type: str("Is New"),
