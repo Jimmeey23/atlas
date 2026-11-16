@@ -1752,6 +1752,53 @@
     "higherIsBetter": false
   },
   {
+    "id": "member_complimentary_visits",
+    "label": "Complimentary visits",
+    "expression": "COUNT(*) FILTER (WHERE attended AND (complimentary OR regexp_matches(lower(COALESCE(category,'')),'complimentary|complementary')) AND NOT COALESCE(staff_family,FALSE))",
+    "sources": [
+      "Checkins.Checked In",
+      "Checkins.Complementary",
+      "Checkins.Cleaned Category",
+      "Checkins.Is New",
+      "Checkins.Cleaned Product"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": false
+  },
+  {
+    "id": "member_complimentary_rate",
+    "label": "Complimentary share",
+    "expression": "COUNT(*) FILTER (WHERE attended AND (complimentary OR regexp_matches(lower(COALESCE(category,'')),'complimentary|complementary')) AND NOT COALESCE(staff_family,FALSE))/NULLIF(COUNT(*) FILTER (WHERE attended AND NOT COALESCE(staff_family,FALSE)),0)",
+    "sources": [
+      "Checkins.Checked In",
+      "Checkins.Complementary",
+      "Checkins.Cleaned Category",
+      "Checkins.Is New",
+      "Checkins.Cleaned Product"
+    ],
+    "format": "percent",
+    "domain": "attendance",
+    "aggregation": "weighted",
+    "higherIsBetter": false
+  },
+  {
+    "id": "staff_family_visits",
+    "label": "Staff & family visits",
+    "expression": "COUNT(*) FILTER (WHERE attended AND staff_family)",
+    "sources": [
+      "Checkins.Checked In",
+      "Checkins.Is New",
+      "Checkins.Cleaned Product",
+      "Checkins.Cleaned Category"
+    ],
+    "format": "integer",
+    "domain": "attendance",
+    "aggregation": "sum",
+    "higherIsBetter": false
+  },
+  {
     "id": "late_affected_sessions",
     "label": "Affected sessions",
     "expression": "COUNT(DISTINCT COALESCE(session_id,unique_id1,unique_id2,date||'|'||time||'|'||format||'|'||location)) FILTER (WHERE late_cancelled>0)",

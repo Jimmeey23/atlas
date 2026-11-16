@@ -9,6 +9,6 @@ export const dependencies = (tab: number) =>
     : [
         ...new Set([
           blueprints[tab].source,
-          ...(tab === 1 ? ["bookings", "checkins"] : tab === 0 ? ["new", "sales", "lapsed"] : tab === 3 ? ["payroll", "new", "bookings", "checkins"] : tab === 5 ? ["sales", "bookings", "checkins"] : tab === 14 ? ["new", "bookings"] : tab === 8 ? ["new"] : tab === 9 ? ["sessions"] : tab === 6 ? ["new", "checkins"] : tab === 15 ? ["sales", "new", "lapsed", "leads", "payroll", "recurring", "bookings"] : []),
+          ...(tab === 1 ? ["bookings", "checkins"] : tab === 0 ? ["new", "sales", "lapsed"] : tab === 3 ? ["payroll", "new", "bookings", "checkins"] : tab === 5 ? ["sales", "bookings", "checkins"] : tab === 14 ? ["new", "bookings"] : tab === 8 ? ["new"] : tab === 6 ? ["new", "checkins"] : tab === 15 ? ["sales", "new", "lapsed", "leads", "payroll", "recurring", "bookings"] : []),
         ]),
       ];

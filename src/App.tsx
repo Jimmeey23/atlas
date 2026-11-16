@@ -179,9 +179,7 @@ function metricScope(
   fallback: string,
 ) {
   const source =
-    tab === 9 && ["complimentary_visits", "session_complimentary_rate"].includes(id)
-      ? "sessions"
-      : tab === 0 && ["gross_revenue", "net_revenue"].includes(id)
+    tab === 0 && ["gross_revenue", "net_revenue"].includes(id)
         ? "sales"
         : tab === 0 && ["new_clients", "conversion_rate", "active_base"].includes(id)
           ? "new"
@@ -1038,7 +1036,7 @@ export default function App() {
                       analysis.previous[id]
                     }
                     trend={analysis.trend}
-                    n={Number(s.tab === 9 && ["complimentary_visits", "session_complimentary_rate"].includes(id) ? analysis.total.complimentary_source_records : s.tab === 0 && ["gross_revenue", "net_revenue"].includes(id) ? analysis.total.sales_records : s.tab === 0 && id === "lapsed_members" ? analysis.total.lapsed_records : id === "active_base" ? analysis.total.active_records : currentSnapshotMetrics.has(id) && s.tab === 6 ? analysis.total.current_records : ["new_clients", "conversion_rate"].includes(id) && s.tab === 0 ? analysis.total.growth_records : analysis.total.n || analysis.count)}
+                    n={Number(s.tab === 0 && ["gross_revenue", "net_revenue"].includes(id) ? analysis.total.sales_records : s.tab === 0 && id === "lapsed_members" ? analysis.total.lapsed_records : id === "active_base" ? analysis.total.active_records : currentSnapshotMetrics.has(id) && s.tab === 6 ? analysis.total.current_records : ["new_clients", "conversion_rate"].includes(id) && s.tab === 0 ? analysis.total.growth_records : analysis.total.n || analysis.count)}
                     evidence={analysis.total}
                     compare={s.compare !== "none"}
                     warning={
@@ -1058,7 +1056,7 @@ export default function App() {
                       main.current
                         ?.querySelector("#main-register")
                         ?.scrollIntoView({ behavior: "smooth" });
-                      if (recordGroups.length || currentSnapshotMetrics.has(id) || s.tab === 0 && ["gross_revenue", "net_revenue", "lapsed_members"].includes(id))
+                      if (recordGroups.length || currentSnapshotMetrics.has(id) || contributorPredicate(id, context(s.filters)) || s.tab === 0 && ["gross_revenue", "net_revenue", "lapsed_members"].includes(id))
                         setDrill({
                           id: "all",
                           label: metrics[id].label + " in scope",

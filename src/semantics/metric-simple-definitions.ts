@@ -528,6 +528,18 @@ export const simpleMetricDefinitions: Record<string, { meaning: string; calculat
     "meaning": "The percentage of Sessions attendance recorded as complimentary.",
     "calculation": "Sessions Complimentary visits divided by Sessions CheckedIn attendance, multiplied by 100."
   },
+  "member_complimentary_visits": {
+    "meaning": "How many attended check-ins used complimentary access, excluding studio staff and their families.",
+    "calculation": "Count attended Checkins rows flagged Complementary or with a complimentary Cleaned Category, leaving out rows whose Is New, Cleaned Product or Cleaned Category label names staff or family."
+  },
+  "member_complimentary_rate": {
+    "meaning": "The percentage of member attendance that was complimentary, with staff and family visits removed from both sides.",
+    "calculation": "Complimentary visits (staff and family excluded) divided by attended check-ins that are not staff or family, multiplied by 100."
+  },
+  "staff_family_visits": {
+    "meaning": "How many attended check-ins belong to studio staff or their families.",
+    "calculation": "Count attended Checkins rows whose Is New, Cleaned Product or Cleaned Category label names staff or family."
+  },
   "late_affected_sessions": {
     "meaning": "How many booking-source sessions have at least one late cancellation.",
     "calculation": "Count different session identities among late-cancelled booking rows."
