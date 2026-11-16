@@ -17,6 +17,7 @@ import { reportRoutes } from "./reports.mjs";
 import { createStore, jsonChunks } from "./store.mjs";
 import { canReuseSnapshot, createFreshness } from "./freshness.mjs";
 import { intelligenceRoutes } from "./intelligence.mjs";
+import { aiQuota, AI_ROUTES } from "./ai-quota.mjs";
 import { followupRoutes } from "./followups.mjs";
 import { fileURLToPath } from "node:url";
 import { sendSnapshot } from "./snapshot-response.mjs";
@@ -52,6 +53,10 @@ export async function createApp({ serveStatic = false, authClient } = {}) {
   });
   app.use("/api/reports", express.json({ limit: "8mb" }));
   app.use(express.json({ limit: "96kb" }));
+  // Spend protection on every AI-backed route, keyed by the verified user.
+  const quota = aiQuota();
+  app.post(AI_ROUTES.chat, quota("chat"));
+  app.post(AI_ROUTES.report, quota("report"));
   reportRoutes(app, store, cloud);
   presentationRoutes(app, store);
   stickyNoteRoutes(app, store, cloud);
