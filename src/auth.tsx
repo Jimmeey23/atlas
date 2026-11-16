@@ -2,6 +2,7 @@ import { createClient, type Session } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import './design/tokens.css';
 import './design/auth.css';
+import { requestLocalDataPurge } from "./data/clear-local-data";
 import { SignInPage } from './components/auth/SignInPage';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
@@ -75,9 +76,11 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (loading) return <main className="auth-screen"><p role="status">Checking your session…</p></main>;
   if (!session) return null;
   if (access === 'checking') return <main className="auth-screen"><p role="status">Verifying access…</p></main>;
-  if (access === 'denied') return <main className="auth-screen"><section className="auth-card"><h1>Access unavailable</h1><p role="alert">{error}</p><button onClick={() => setAttempt(n => n + 1)}>Retry</button>{' '}<button onClick={() => void supabase.auth.signOut()}>Sign out</button></section></main>;
+  if (access === 'denied') return <main className="auth-screen"><section className="auth-card"><h1>Access unavailable</h1><p role="alert">{error}</p><button onClick={() => setAttempt(n => n + 1)}>Retry</button>{' '}<button onClick={() => void supabase.auth.signOut().then(() => { requestLocalDataPurge(); location.reload(); })}>Sign out</button></section></main>;
   return <AccountContext.Provider value={{ email: session.user.email || 'Signed in', signOut: async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+    requestLocalDataPurge();
+    location.reload();
   } }}>{children}</AccountContext.Provider>;
 }

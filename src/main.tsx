@@ -4,6 +4,7 @@ import { AuthGate } from "./auth";
 import { AccountMenu } from "./components/AccountMenu";
 const App = lazy(() => import("./App"));
 import { DEFAULT_THEME, THEME_KEY } from "./data/theme";
+import { runPendingLocalDataPurge } from "./data/clear-local-data";
 
 // The report deck and the KRA page are separate destinations with their own heavy
 // dependencies (the deck alone pulls in the whole report engine). Only one of the
@@ -34,4 +35,7 @@ const boot = (
   </Suspense>
 );
 
-ReactDOM.createRoot(document.getElementById("root")!).render(<AuthGate>{boot}</AuthGate>);
+// A sign-out on this device leaves a purge request; honour it before any data loads.
+void runPendingLocalDataPurge().finally(() =>
+  ReactDOM.createRoot(document.getElementById("root")!).render(<AuthGate>{boot}</AuthGate>),
+);

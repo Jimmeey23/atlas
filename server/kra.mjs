@@ -1,6 +1,6 @@
 import {randomBytes} from 'node:crypto';
 import path from 'node:path';
-import {createStore} from './store.mjs';
+import {createStore,updateDocument} from './store.mjs';
 import {normalise} from '../src/data/normalise.ts';
 import {performanceMarketingTopics} from './kra-curriculum.mjs';
 import {validateKraEdit} from './kra-edits.mjs';
@@ -81,18 +81,19 @@ export function kraRoutes(app,root,config,load,store=createStore({root}),freshne
     const error=validateKraEdit(req.params.period,req.params.id,req.body);
     if(error)return res.status(400).json({error});
     const {info,data,expectedUpdatedAt}=req.body,key=req.params.period+'/'+req.params.id;
-    const job=writes.then(async()=>{
-      const saved=await evidence(),before=saved.scorecardEdits?.[key]??null;
+    let outcome;
+    const job=writes.then(()=>updateDocument(store,file,saved=>{
+      saved=structuredClone(saved??{});const before=saved.scorecardEdits?.[key]??null;
       if((before?.updatedAt??null)!==expectedUpdatedAt){const conflict=Error('This KRA was changed in another session. Reload before saving.');conflict.status=409;throw conflict;}
       const updatedAt=new Date(Math.max(Date.now(),before?Date.parse(before.updatedAt)+1:0)).toISOString(),record={...data,updatedAt,basis:'Manual KRA edit'};
       saved.scorecardInfo??={};saved.scorecardEdits??={};saved.scorecardHistory??=[];
       const previousInfo=saved.scorecardInfo[req.params.id]??null;
       saved.scorecardInfo[req.params.id]={area:info.area.trim(),target:info.target.trim(),weight:info.weight};saved.scorecardEdits[key]=record;
       saved.scorecardHistory.push({id:randomBytes(12).toString('hex'),key,updatedAt,before,after:record,previousInfo,info:saved.scorecardInfo[req.params.id]});
-      await store.write(file,saved);
       const base=kraDefinitions.find(definition=>definition.id===req.params.id),editedInfo=saved.scorecardInfo[req.params.id];
-      return {key,record,info:{...editedInfo,targetEdited:editedInfo.target!==base.target,manual:editedInfo.area!==base.area||editedInfo.target!==base.target||editedInfo.weight!==base.weight},history:saved.scorecardHistory};
-    });writes=job.catch(()=>undefined);
+      outcome={key,record,info:{...editedInfo,targetEdited:editedInfo.target!==base.target,manual:editedInfo.area!==base.area||editedInfo.target!==base.target||editedInfo.weight!==base.weight},history:saved.scorecardHistory};
+      return saved;
+    })).then(()=>outcome);writes=job.catch(()=>undefined);
     try{res.json(await job);}catch(error){res.status(error.status??500).json({error:error.status===409?error.message:'The KRA edit could not be saved. Retry.'});}
   });
   // Bulk progress update: one queued write for the whole selection instead of a request per topic.
@@ -101,12 +102,12 @@ export function kraRoutes(app,root,config,load,store=createStore({root}),freshne
     const ids=Array.isArray(body.ids)?[...new Set(body.ids)]:null;
     if(!ids?.length||ids.length>performanceMarketingTopics.length||!ids.every(id=>performanceMarketingTopics.some(topic=>topic.id===id))||!['Not started','In progress','Completed'].includes(body.status)||(body.note!=null&&(typeof body.note!=='string'||body.note.length>4000)))return res.status(400).json({error:'Invalid bulk training progress.'});
     const stamp={status:body.status,date:asOf(),updatedAt:new Date().toISOString(),basis:'Manually reported by user · bulk update'};
-    const job=writes.then(async()=>{
-      const records=await evidence();records.marketingTopics??={};
-      const written={};
+    let written={};
+    const job=writes.then(()=>updateDocument(store,file,records=>{
+      records=structuredClone(records??{});records.marketingTopics??={};written={};
       for(const id of ids){const record={...stamp,note:(body.note??records.marketingTopics[id]?.note??'').trim()};records.marketingTopics[id]=record;written[id]=record;}
-      await store.write(file,records);return written;
-    });
+      return records;
+    })).then(()=>written);
     writes=job.catch(()=>undefined);
     try{res.json(await job);}catch{res.status(500).json({error:'Training progress could not be saved.'});}
   });
@@ -114,7 +115,7 @@ export function kraRoutes(app,root,config,load,store=createStore({root}),freshne
     const body=req.body??{};
     if(!performanceMarketingTopics.some(topic=>topic.id===req.params.id)||!['Not started','In progress','Completed'].includes(body.status)||typeof body.note!=='string'||body.note.length>4000)return res.status(400).json({error:'Invalid training progress.'});
     const record={status:body.status,note:body.note.trim(),date:asOf(),updatedAt:new Date().toISOString(),basis:'Manually reported by user'};
-    const job=writes.then(async()=>{const records=await evidence();records.marketingTopics??={};records.marketingTopics[req.params.id]=record;await store.write(file,records);return record;});
+    const job=writes.then(()=>updateDocument(store,file,records=>{records=structuredClone(records??{});records.marketingTopics??={};records.marketingTopics[req.params.id]=record;return records;})).then(()=>record);
     writes=job.catch(()=>undefined);
     try{res.json(await job);}catch{res.status(500).json({error:'Training progress could not be saved.'});}
   });
@@ -125,7 +126,7 @@ export function kraRoutes(app,root,config,load,store=createStore({root}),freshne
       return res.status(400).json({error:'Provide valid review-period evidence fields and a date no later than today.'});
     if(body.status==='Completed'&&(!body.note.trim()||!body.date||!expected.every(item=>body.checks.includes(item))))return res.status(400).json({error:'Completion requires a dated outcome note and every required milestone.'});
     const record={status:body.status,note:body.note.trim(),url:body.url.trim(),date:body.date,checks:[...new Set(body.checks)],updatedAt:new Date().toISOString(),basis:'Self-reported evidence'};
-    const job=writes.then(async()=>{const records=await evidence();records[req.params.id]=record;await store.write(file,records);return record;});
+    const job=writes.then(()=>updateDocument(store,file,records=>{records=structuredClone(records??{});records[req.params.id]=record;return records;})).then(()=>record);
     writes=job.catch(()=>undefined);
     try{res.json(await job);}catch{res.status(500).json({error:'Evidence could not be saved.'});}
   });

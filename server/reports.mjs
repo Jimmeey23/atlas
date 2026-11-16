@@ -1,6 +1,7 @@
 import { validateContentBlock } from '../src/report/content-import.ts';
 import { assertReportRelease } from "../src/report/release-gate.mjs";
 import { randomUUID } from "node:crypto";
+import { updateDocument } from "./store.mjs";
 import { adminConfigured, requireAdmin, unlockAdmin, verifyAdmin } from "./report-admin.mjs";
 const PREFIX = ".floor/reports/";
 const PINS = ".floor/report-pins.json";
@@ -144,30 +145,45 @@ export function reportRoutes(app, store, cloud, env = process.env) {
   /** Admin edit: prose, layout choices and replaced components. Recorded figures stay frozen. */
   app.put("/api/reports/:id", route(async req => {
     requireAdmin(req, env);
-    const current = await readReport(req.params.id);
+    const existing = await readReport(req.params.id);
     const body = req.body ?? {};
-    const next = { ...current, documentEdits: body.documentEdits ?? current.documentEdits, narratives: body.narratives ?? current.narratives, customization: body.customization ?? current.customization,
+    // An editor that sends the editedAt it loaded is refused if someone saved in between,
+    // instead of silently overwriting their work.
+    let next;
+    await updateDocument(store, keyOf(existing.id), (current) => {
+      current ??= existing;
+      if (body.expectedEditedAt !== undefined && (current.editedAt ?? null) !== body.expectedEditedAt)
+        throw fail("This report was edited in another session. Reload it before saving.", 409);
+      next = { ...current, documentEdits: body.documentEdits ?? current.documentEdits, narratives: body.narratives ?? current.narratives, customization: body.customization ?? current.customization,
       replacements: body.replacements ?? current.replacements, presenterNotes: body.presenterNotes ?? current.presenterNotes,
       speakerNotes: body.speakerNotes ?? current.speakerNotes, importedChapters: body.importedChapters ?? current.importedChapters, editedAt: new Date().toISOString() };
-    validate(next);
-    await store.write(keyOf(current.id), next);
-    return { ...next, pinned: (await pins()).has(current.id) };
+      validate(next);
+      return next;
+    });
+    return { ...next, pinned: (await pins()).has(existing.id) };
   }));
   /** Presenter notes and talk tracks belong to whoever presents; no admin unlock required. */
   app.patch("/api/reports/:id/notes", route(async req => {
-    const current = await readReport(req.params.id);
-    // A null value removes that page's entry.
+    const existing = await readReport(req.params.id);
+    // A null value removes that page's entry. Merged against the latest saved notes so two
+    // presenters editing different pages both keep their changes.
     const merge = (saved, patch) => Object.fromEntries(Object.entries({ ...(saved ?? {}), ...(plainRecord(patch) ? patch ?? {} : {}) }).filter(([, v]) => v != null));
-    const next = { ...current, presenterNotes: merge(current.presenterNotes, req.body?.presenterNotes), speakerNotes: merge(current.speakerNotes, req.body?.speakerNotes) };
-    validateExtras(next);
-    await store.write(keyOf(current.id), next);
+    let next;
+    await updateDocument(store, keyOf(existing.id), (current) => {
+      current ??= existing;
+      next = { ...current, presenterNotes: merge(current.presenterNotes, req.body?.presenterNotes), speakerNotes: merge(current.speakerNotes, req.body?.speakerNotes) };
+      validateExtras(next);
+      return next;
+    });
     return { presenterNotes: next.presenterNotes, speakerNotes: next.speakerNotes };
   }));
   app.post("/api/reports/:id/pin", route(async req => {
     const report = await readReport(req.params.id);
-    const pinned = await pins();
-    if (req.body?.pinned === false) pinned.delete(report.id); else pinned.add(report.id);
-    await store.write(PINS, [...pinned]);
-    return { id: report.id, pinned: pinned.has(report.id) };
+    const saved = await updateDocument(store, PINS, (list) => {
+      const pinned = new Set(Array.isArray(list) ? list.filter(id => uuid.test(id)) : []);
+      if (req.body?.pinned === false) pinned.delete(report.id); else pinned.add(report.id);
+      return [...pinned];
+    });
+    return { id: report.id, pinned: saved.includes(report.id) };
   }));
 }

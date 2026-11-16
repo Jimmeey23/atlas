@@ -50,6 +50,8 @@ export const updateReport = (model: ReportModel) => request<ReportModel>(`/api/r
   importedChapters: model.importedChapters, documentEdits: model.documentEdits,
   narratives: model.narratives, customization: model.customization, replacements: model.replacements ?? {},
   presenterNotes: model.presenterNotes ?? {}, speakerNotes: model.speakerNotes ?? {},
+  // Refused with 409 if another session saved after this copy was loaded.
+  expectedEditedAt: model.editedAt ?? null,
 }));
 export const saveNotes = (id: string, notes: { presenterNotes?: Record<string, string>; speakerNotes?: Record<string, SpeakerNotes | null> }) =>
   request<{ presenterNotes: Record<string, string>; speakerNotes: Record<string, SpeakerNotes> }>(`/api/reports/${encodeURIComponent(id)}/notes`, json("PATCH", notes));

@@ -103,11 +103,51 @@ export function createStore({ root, cloud = null, cacheRoot = root }) {
     return local;
   }
   const durable = key => !!cloud && key.startsWith(DURABLE);
+  // Read-modify-write without lost updates. Within one process, writes to a key queue
+  // behind each other; across server instances, a cloud write only lands if the row still
+  // carries the updated_at it was read with, otherwise the change is re-applied to the
+  // newer value. `change(current)` must be a pure function of the value it is given.
+  const queues = new Map();
+  const encode = async (value) => {
+    const encoded = JSON.stringify(value);
+    return encoded.length > COMPRESS_OVER ? { __gz: (await deflate(encoded)).toString("base64") } : value;
+  };
+  async function updateCloud(key, change) {
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const { data, error } = await cloud.from(TABLE).select("value,updated_at").eq("key", key).maybeSingle();
+      if (error) throw new Error(`Store read failed for ${key}: ${error.message}`);
+      let current = data ? await decodeStoredValue(data.value) : null;
+      if (!data) current = await readLocal(key);
+      const next = await change(current);
+      const updated_at = new Date().toISOString();
+      if (!data) {
+        const { error: insertError } = await cloud.from(TABLE).insert({ key, value: await encode(next), updated_at });
+        if (!insertError) return next;
+        if (insertError.code !== "23505") throw new Error(`Store write failed for ${key}: ${insertError.message}`);
+      } else {
+        const { data: rows, error: updateError } = await cloud.from(TABLE)
+          .update({ value: await encode(next), updated_at }).eq("key", key).eq("updated_at", data.updated_at).select("key");
+        if (updateError) throw new Error(`Store write failed for ${key}: ${updateError.message}`);
+        if (rows?.length) return next;
+      }
+      await new Promise((r) => setTimeout(r, 25 * 2 ** attempt + Math.random() * 25));
+    }
+    const conflict = new Error("This document is being changed in another session. Retry.");
+    conflict.status = 409;
+    throw conflict;
+  }
+  function update(key, change) {
+    const run = (queues.get(key) ?? Promise.resolve()).then(() =>
+      durable(key) ? updateCloud(key, change) : readLocal(key).then(change).then((next) => writeLocal(key, next)));
+    queues.set(key, run.catch(() => undefined));
+    return run;
+  }
   return {
     durable: !!cloud,
     backend: cloud ? "supabase documents + local cache" : "filesystem",
     read: key => (durable(key) ? readMigrating(key) : readLocal(key)),
     write: (key, value) => (durable(key) ? writeCloud(key, value) : writeLocal(key, value)),
+    update,
     /** Deletes the document everywhere it may live: the cloud row and any local copy. */
     async remove(key) {
       if (durable(key)) {
@@ -118,3 +158,7 @@ export function createStore({ root, cloud = null, cacheRoot = root }) {
     },
   };
 }
+
+/** store.update when the store provides it (test doubles may not), else read-then-write. */
+export const updateDocument = (store, key, change) =>
+  store.update ? store.update(key, change) : Promise.resolve(store.read(key)).then(change).then(async (next) => { await store.write(key, next); return next; });
