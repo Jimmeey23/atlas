@@ -7,26 +7,26 @@ import { blueprints } from '../src/data/blueprints.ts';
 
 const ctx = { rate: 1200, today: '2026-11-16' };
 
-test('staff and family access labels are recognised; unlabelled rows stay unknown', () => {
-  assert.equal(staffFamily('Staff', null), true);
-  assert.equal(staffFamily(null, 'Friends & Family Complimentary'), true);
-  assert.equal(staffFamily('Existing', 'Studio Staff Membership'), true);
-  assert.equal(staffFamily('Existing', 'Studio 8 Class Package'), false);
-  assert.equal(staffFamily('New', 'Complimentary Class'), false);
+test('only the Staff/Family Class label marks a staff visit; unrecorded rows stay unknown', () => {
+  assert.equal(staffFamily('Staff/Family Class', null), true);
+  assert.equal(staffFamily(null, 'staff / family class'), true);
+  assert.equal(staffFamily('Studio 8 Class Package', 'Staff/Family Class'), true);
+  assert.equal(staffFamily('Family Membership'), false, 'a paid family plan is not staff');
+  assert.equal(staffFamily('Complimentary Class'), false);
   assert.equal(staffFamily(null, ''), null);
 });
 
 test('member attendance complimentary visits exclude staff/family and are drillable', async () => {
   const { rows } = normalise({
     key: 'checkins', title: 'Checkins', id: 't', status: 'ok', fetchedAt: 0, loadMs: 0,
-    columns: ['Member ID', 'Checked In', 'Complementary', 'Is New', 'Cleaned Product', 'Cleaned Category', 'Date (IST)'],
+    columns: ['Member ID', 'Checked In', 'Complementary', 'Payment Method Name', 'Cleaned Product', 'Cleaned Category', 'Date (IST)'],
     rows: [
-      ['1', 'TRUE', 'TRUE', 'New', 'Complimentary Class', 'Complimentary/Promotional', '2026-10-02'],
-      ['2', 'TRUE', 'TRUE', 'Staff', 'Staff Membership', 'Membership', '2026-10-02'],
-      ['3', 'TRUE', 'FALSE', 'Existing', 'Friends & Family', 'Complimentary/Promotional', '2026-10-03'],
-      ['4', 'TRUE', 'FALSE', 'Existing', 'Studio 8 Class Package', 'Package', '2026-10-03'],
-      ['5', 'TRUE', 'FALSE', 'Existing', 'Hosted Guest', 'Complimentary/Promotional', '2026-10-04'],
-      ['6', 'FALSE', 'TRUE', 'Existing', 'Complimentary Class', 'Complimentary/Promotional', '2026-10-04'],
+      ['1', 'TRUE', 'TRUE', 'Complimentary', 'Complimentary Class', 'Complimentary/Promotional', '2026-10-02'],
+      ['2', 'TRUE', 'TRUE', 'Staff/Family Class', 'Staff/Family Class', 'Complimentary/Promotional', '2026-10-02'],
+      ['3', 'TRUE', 'FALSE', 'Staff/Family Class', 'Staff/Family Class', 'Complimentary/Promotional', '2026-10-03'],
+      ['4', 'TRUE', 'FALSE', 'Studio 8 Class Package', 'Family Membership', 'Package', '2026-10-03'],
+      ['5', 'TRUE', 'FALSE', 'Complimentary', 'Hosted Guest', 'Complimentary/Promotional', '2026-10-04'],
+      ['6', 'FALSE', 'TRUE', 'Complimentary', 'Complimentary Class', 'Complimentary/Promotional', '2026-10-04'],
     ],
   });
   assert.deepEqual(rows.map((r) => r.staff_family), [false, true, true, false, false, false]);

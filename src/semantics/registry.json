@@ -1759,8 +1759,7 @@
       "Checkins.Checked In",
       "Checkins.Complementary",
       "Checkins.Cleaned Category",
-      "Checkins.Is New",
-      "Checkins.Cleaned Product"
+      "Checkins.Payment Method Name"
     ],
     "format": "integer",
     "domain": "attendance",
@@ -1775,8 +1774,7 @@
       "Checkins.Checked In",
       "Checkins.Complementary",
       "Checkins.Cleaned Category",
-      "Checkins.Is New",
-      "Checkins.Cleaned Product"
+      "Checkins.Payment Method Name"
     ],
     "format": "percent",
     "domain": "attendance",
@@ -1789,9 +1787,7 @@
     "expression": "COUNT(*) FILTER (WHERE attended AND staff_family)",
     "sources": [
       "Checkins.Checked In",
-      "Checkins.Is New",
-      "Checkins.Cleaned Product",
-      "Checkins.Cleaned Category"
+      "Checkins.Payment Method Name"
     ],
     "format": "integer",
     "domain": "attendance",

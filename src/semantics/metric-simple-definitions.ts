@@ -530,7 +530,7 @@ export const simpleMetricDefinitions: Record<string, { meaning: string; calculat
   },
   "member_complimentary_visits": {
     "meaning": "How many attended check-ins used complimentary access, excluding studio staff and their families.",
-    "calculation": "Count attended Checkins rows flagged Complementary or with a complimentary Cleaned Category, leaving out rows whose Is New, Cleaned Product or Cleaned Category label names staff or family."
+    "calculation": "Count attended Checkins rows flagged Complementary or with a complimentary Cleaned Category, leaving out Staff/Family Class visits (Payment Method or Membership Used)."
   },
   "member_complimentary_rate": {
     "meaning": "The percentage of member attendance that was complimentary, with staff and family visits removed from both sides.",
@@ -538,7 +538,7 @@ export const simpleMetricDefinitions: Record<string, { meaning: string; calculat
   },
   "staff_family_visits": {
     "meaning": "How many attended check-ins belong to studio staff or their families.",
-    "calculation": "Count attended Checkins rows whose Is New, Cleaned Product or Cleaned Category label names staff or family."
+    "calculation": "Count attended Checkins rows whose Payment Method or Membership Used is Staff/Family Class."
   },
   "late_affected_sessions": {
     "meaning": "How many booking-source sessions have at least one late cancellation.",

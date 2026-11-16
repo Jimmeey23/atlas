@@ -308,13 +308,13 @@ export const sqlTypes: Record<string, string> = {
   membership_count: "DOUBLE",
 };
 /**
- * Studio staff and their families visit on complimentary access. Those visits are an
- * employee benefit, not a member or prospect being hosted, so complimentary-visit
- * measures leave them out. A row is staff/family when any access label names it.
- * Null when the row carries no access label at all (unknown, never assumed false).
+ * Studio staff and their families book on the "Staff/Family Class" access, which the
+ * source records in Payment Method / Membership Used. Those visits are an employee
+ * benefit, not a member or prospect being hosted, so complimentary-visit measures leave
+ * them out. Only that label counts: a paid "Family" plan is not a staff visit.
+ * Null when neither field is recorded (unknown, never assumed false).
  */
-export const STAFF_FAMILY_PATTERN =
-  /\b(staff|employees?|family|families|team\s*members?|f\s*&\s*f|friends?\s*(?:and|&|n)\s*family)\b/i;
+export const STAFF_FAMILY_PATTERN = /\bstaff\s*[\/&]\s*family\b/i;
 export function staffFamily(...labels: Cell[]): boolean | null {
   const present = labels.filter((v) => v != null && String(v).trim() !== "");
   if (!present.length) return null;
@@ -578,13 +578,9 @@ export function normalise(
       refunded: boolean(g("Refunded")),
       complimentary: boolean(g("Complementary", "Complimentary")),
       staff_family: staffFamily(
-        g("Is New"),
-        g("Cleaned Product"),
-        g("Cleaned Category"),
-        g("Membership Used"),
-        g("Membership Name"),
-        g("Sale Item"),
         g("Payment Method Name"),
+        g("Payment Method"),
+        g("Membership Used"),
       ),
       voided: boolean(g("Sec. Is Voided")),
       ltv: n("Ltv", "LTV"),
