@@ -3,7 +3,7 @@ import { ChartControls } from "./ChartControls";
 import { usePreferences } from "../state/preferences";
 import { MetricInfoHint } from "./ui/MetricInfoHint";
 import { useEffect, useRef, useState } from "react";
-import * as echarts from "echarts";
+import * as echarts from "./echarts";
 import { LinePath, AreaClosed } from "@visx/shape";
 import { scaleLinear } from "@visx/scale";
 import { Download, Table2, ChartNoAxesCombined } from "lucide-react";

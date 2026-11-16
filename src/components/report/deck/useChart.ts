@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import * as echarts from "echarts";
+import * as echarts from "../../echarts";
 
 /** App chart colours, read from the live theme so report charts match the dashboard. */
 export function chartPalette() {

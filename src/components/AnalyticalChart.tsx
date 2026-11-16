@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import * as echarts from "echarts";
+import * as echarts from "./echarts";
 import { DropdownField } from "./ui/DropdownField";
 import type { AnalyticalRow } from "./AnalyticalTable";
 export function AnalyticalChart({

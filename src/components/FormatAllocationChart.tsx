@@ -1,6 +1,6 @@
 import { DropdownField } from "./ui/DropdownField";
 import { useEffect, useMemo, useRef, useState } from "react";
-import * as echarts from "echarts";
+import * as echarts from "./echarts";
 import { query, type Row } from "../data/duckdb";
 import { context, metricFacts } from "../data/analytics";
 import { metricSQL } from "../semantics/metrics";

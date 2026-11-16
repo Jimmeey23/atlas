@@ -1,5 +1,5 @@
 import {useRef,useState} from 'react';
-import * as echarts from 'echarts';
+import * as echarts from "../../echarts";
 import {Download,Maximize2,RotateCcw,Table2,ZoomIn,ZoomOut} from 'lucide-react';
 import type {ReportModel} from '../../../report/model';
 import {exportReportCSV} from '../../../report/csv';

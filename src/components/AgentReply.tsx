@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import * as echarts from "echarts";
+import * as echarts from "./echarts";
 import { ArrowUpRight, Check, Copy, Download, LayoutDashboard, GitCompareArrows, Pin, ChartNoAxesCombined, ThumbsDown, ThumbsUp, TriangleAlert } from "lucide-react";
 import { ChatAnswer } from "./ChatAnswer";
 import { InstructorName } from "./InstructorAvatar";

@@ -14,7 +14,7 @@ import { usePreferences, hydratePreferences } from "../state/preferences";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LabResult } from "./LabResult";
 import { labSQL } from "../data/data-lab";
-import * as echarts from "echarts";
+import * as echarts from "./echarts";
 import { tabs, useStore } from "../state/store";
 import { DataInsightAction } from "./DataInsightAction";
 type Doc = { id: string; kind: string; title: string; page: number; body: any };

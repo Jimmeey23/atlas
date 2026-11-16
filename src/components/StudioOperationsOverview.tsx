@@ -1,6 +1,6 @@
 import { DropdownField } from "./ui/DropdownField";
 import { useEffect, useMemo, useRef, useState } from "react";
-import * as echarts from "echarts";
+import * as echarts from "./echarts";
 import { Download, RotateCcw, Table2, ChartNoAxesCombined } from "lucide-react";
 import { query, type Row } from "../data/duckdb";
 import {

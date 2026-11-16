@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import * as echarts from "echarts";
+import * as echarts from "./echarts";
 import type { Row } from "../data/duckdb";
 import "./DataLab.css";
 import type { LabField, LabSpec } from "../data/data-lab";

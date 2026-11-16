@@ -7,7 +7,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import * as echarts from "echarts";
+import * as echarts from "./echarts";
 import { formatField } from "../semantics/formats";
 import { exportCSV } from "./exports";
 import { DataInsightAction } from "./DataInsightAction";
