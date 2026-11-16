@@ -1,3 +1,4 @@
+import { hostedSQL } from "../semantics/hosted";
 import {
   referenceGroupings,
   referenceMetadataSQL,
@@ -295,8 +296,7 @@ export function scheduleChanges(rows: Row[]): ScheduleChange[] {
   return changes.reverse();
 }
 
-export const hostedPredicate =
-  "NOT regexp_matches(lower(COALESCE(session_type,'') || ' ' || COALESCE(format,'')), 'hosted|partnership|influencer')";
+export const hostedPredicate = `NOT (COALESCE(session_type,'')='Hosted' OR ${hostedSQL("format")})`;
 export function operationsSQL(
   facts: string,
   fields: string[],

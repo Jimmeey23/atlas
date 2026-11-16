@@ -1,3 +1,4 @@
+import { hostedSQL } from "../semantics/hosted";
 import { metrics } from '../semantics/metrics';
 import { assertGroupable, groupable, groupColumn, groupLabel, groupValueSQL } from './group-fields';
 
@@ -51,7 +52,7 @@ export function acquisitionFactsSQL(scope: string, today: string, bookings = fal
     (len(list_filter(regexp_split_to_array(COALESCE(purchase_journey,''), '[,;|/]+|\\s-\\s'), token -> trim(token)<>''))=0
       OR len(list_filter(regexp_split_to_array(COALESCE(purchase_journey,''), '[,;|/]+|\\s-\\s'), token -> trim(token)<>'' AND NOT regexp_matches(lower(regexp_replace(trim(token),'\\s+',' ','g')), '^money credits($| )')))>0) AS ref_membership_eligible,
     trim(COALESCE(retention,''))='Retained' AS ref_retained,
-    regexp_matches(lower(COALESCE(format,'')), 'host|p57|birthday|rugby|lrs') AS ref_hosted,
+    (COALESCE(session_type,'')='Hosted' OR ${hostedSQL('format')}) AS ref_hosted,
     TRY_CAST(date AS DATE) <= DATE '${today}' - INTERVAL 30 DAY AS mature
     FROM new${scope}), outcomes AS (SELECT *, trim(COALESCE(conversion,''))='Converted' AS ref_converted FROM flags)
     SELECT *, ref_converted AND TRY_CAST(first_purchase_date AS DATE)>=TRY_CAST(date AS DATE) AND substr(first_purchase_date,1,7)=substr(date,1,7) AS converted_in_30,

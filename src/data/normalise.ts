@@ -1,3 +1,4 @@
+import { isHostedClass } from "../semantics/hosted";
 import { newSheetFields } from "./new-fields";
 import { getCleanedClass } from "./class-intelligence-cleaners";
 import { marketingChannel } from "./marketing-channels";
@@ -640,8 +641,9 @@ export function normalise(
       cycle_revenue: n("Cycle Paid"),
       barre_revenue: n("Barre Paid"),
       strength_revenue: n("Strength Paid"),
-      session_type: /hosted|partnership| x /i.test(
-        String(g("Class", "Cleaned Class", "SessionName", "Session Name", "First Visit Entity Name")) + " " + String(g("Is New")),
+      session_type: isHostedClass(
+        g("Class", "Cleaned Class", "SessionName", "Session Name", "First Visit Entity Name"),
+        g("Is New"),
       )
         ? "Hosted"
         : "Regular",

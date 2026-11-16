@@ -1,8 +1,8 @@
+import { HOSTED_PATTERN } from "../semantics/hosted";
 // Cache for cleaned values to improve performance
 const cleaningCache = new Map<string, string>();
 
-export const HOSTED_CLASS_PATTERN =
-  /\b(hosted|guest|workshop|bridal|olympics|soundrise|outdoor|wework|rugby|raheja|birthday|shower|laani|physique|peakst8hosted)\b|(?:\bx\s*p57\b)|(?:\bp57\s*x\b)|(?:\bphysique\s*57\b)|(?:\bstudio\s*sweat\s*in\s*30\b)|(?:\bsweat\s*in\s*30\b)|(?:\bx\b)|(?:\bp57\b)/i;
+export const HOSTED_CLASS_PATTERN = HOSTED_PATTERN;
 
 // Class name patterns
 const CLASS_PATTERNS = {

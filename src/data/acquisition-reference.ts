@@ -1,3 +1,4 @@
+import { isHostedClass } from "../semantics/hosted";
 /**
  * Adapted from physique57-analytics-hub's clientRetention.ts and retentionRates.ts.
  * Verified against GitHub main: clientRetention.ts blob 7dbaf74fae5d95795aa5edf5414c55cbdd04b0fb.
@@ -21,7 +22,7 @@ export const eligibleMembership = (row: Row) => {
 };
 export const referenceConverted = (row: Row) => String(row.conversion ?? '').trim() === 'Converted';
 export const referenceRetained = (row: Row) => String(row.retention ?? '').trim() === 'Retained';
-export const referenceHosted = (row: Row) => /host|p57|birthday|rugby|lrs/i.test(String(row.format ?? ''));
+export const referenceHosted = (row: Row) => row.session_type === 'Hosted' || isHostedClass(row.format);
 export const membershipUsed = (row: Row) => {
   try { return (JSON.parse(String(row.membership_sequence ?? '[]')) as string[]).join(', ') || 'Unspecified'; }
   catch { return 'Unspecified'; }
