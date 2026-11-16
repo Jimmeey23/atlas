@@ -1,4 +1,4 @@
-import { confirmedLapseSQL, paidMembershipSQL } from "../semantics/membership-eligibility";
+import { confirmedLapseSQL, paidMembershipSQL, promotionalAccessSQL } from "../semantics/membership-eligibility";
 import { groupValueSQL } from "./group-fields";
 /**
  * The table, drills and the Lapsed membership card share exactly the same deduplicated expiry cohort.
@@ -15,7 +15,7 @@ import { groupValueSQL } from "./group-fields";
  *  - pending: Status is Lapsed within 30 days of the Churned Date (grace period).
  */
 export function renewalFactsSQL(scope: string, asOf: string, table = "lapsed") {
-  const ongoing = `member_id IS NOT NULL AND end_date IS NOT NULL AND start_date IS NOT NULL AND ${paidMembershipSQL} AND (session_limit>1 OR regexp_matches(lower(product),'membership|unlimited|u/l|pack')) AND NOT regexp_matches(lower(product),'complimentary|free|intro|newcomer')`;
+  const ongoing = `member_id IS NOT NULL AND end_date IS NOT NULL AND start_date IS NOT NULL AND ${paidMembershipSQL} AND (session_limit>1 OR regexp_matches(lower(product),'membership|unlimited|u/l|pack')) AND NOT ${promotionalAccessSQL()}`;
   const status = "lower(trim(COALESCE(status,'')))";
   return `WITH cohort AS (SELECT * FROM "${table}" WHERE ${ongoing} AND end_date<'${asOf}' AND ${status} IN ('renewed','lapsed','frozen') QUALIFY ROW_NUMBER() OVER(PARTITION BY member_id,SUBSTR(end_date,1,7) ORDER BY ${status}='lapsed' DESC,end_date DESC,source_row DESC)=1),
     facts AS (SELECT *, SUBSTR(end_date,1,7) AS expiry_month, CASE WHEN ${status}='frozen' THEN 'frozen' WHEN ${status}='renewed' THEN 'renewed' WHEN ${confirmedLapseSQL(asOf)} THEN 'lapsed' ELSE 'pending' END AS renewal_state FROM cohort)

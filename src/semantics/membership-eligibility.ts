@@ -15,6 +15,18 @@ export const paidMembershipSQL = [
   ...EXCLUDED_MEMBERSHIP_PATTERNS.map((pattern) => `NOT regexp_matches(${name},${sqlString(pattern.source)})`),
 ].join(" AND ");
 
+/**
+ * Promotional or unpaid access: complimentary, free, intro / newcomer and 2-for-1 offers.
+ * One pattern for every page (renewals, retention worklists, at-risk lists), written with
+ * \s classes that JavaScript and DuckDB (RE2) both understand.
+ */
+export const PROMOTIONAL_ACCESS_SOURCE =
+  "complimentary|free|intro|newcomer|2[\\s-]*(for|:)[\\s-]*1|2\\s*[-/]\\s*1|two[\\s-]*for[\\s-]*one";
+export const PROMOTIONAL_ACCESS = new RegExp(PROMOTIONAL_ACCESS_SOURCE, "i");
+export const isPromotionalAccess = (product: unknown) => PROMOTIONAL_ACCESS.test(String(product ?? ""));
+export const promotionalAccessSQL = (expression = "product") =>
+  `regexp_matches(lower(COALESCE(${expression},'')), '${PROMOTIONAL_ACCESS_SOURCE}')`;
+
 /** Days after the Churned Date before a Lapsed membership counts as lapsed; until then it is in grace. */
 export const LAPSE_GRACE_DAYS = 30;
 const recordedStatus = (alias = "") => `lower(trim(COALESCE(${alias}status,'')))`;
