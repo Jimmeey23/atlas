@@ -85,6 +85,14 @@ test("agent queries real raw fields with global filters and reports missing conf
     assert.equal(complete.body.truncated, false);
     const blocked = await q("SELECT * FROM facts_bookings");
     assert.equal(blocked.response.status, 400);
+    // The engine itself refuses file access outside the workspace cache, whatever the SQL guard misses.
+    for (const sql of ["SELECT * FROM sniff_csv('/etc/passwd')", "SELECT * FROM parquet_scan('/etc/hostname')"]) {
+      const escaped = await q(sql);
+      assert.notEqual(escaped.response.status, 200, sql);
+      assert.doesNotMatch(JSON.stringify(escaped.body), /root:/);
+    }
+    const unlocked = await q("SELECT current_setting('enable_external_access') AS on");
+    if (unlocked.response.status === 200) assert.equal(unlocked.body.rows[0].on, false);
     const dates = await q("SELECT COUNT(*) AS n FROM bookings", {
       from: "2026-10-01",
     });
