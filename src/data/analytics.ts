@@ -84,6 +84,8 @@ export function where(
     );
   if (filters.memberType !== "all" && carries(source, "is_new"))
     terms.push(`is_new=${filters.memberType === "new" ? "TRUE" : "FALSE"}`);
+  if (!filters.staffFamily && carries(source, "staff_family") && ["checkins", "bookings", "new"].includes(source))
+    terms.push("NOT COALESCE(staff_family,FALSE)");
   if (!filters.imports && ["bookings", "new", "sales"].includes(source))
     terms.push("NOT imported");
   if (source === "sales")

@@ -441,6 +441,8 @@ export function intelligenceRoutes(
                 ? "capacity>10 AND capacity<=20"
                 : "capacity>20",
           );
+        if (!filters.staffFamily && ["checkins", "bookings", "new"].includes(source.key) && carries("staff_family"))
+          terms.push("NOT COALESCE(staff_family,FALSE)");
         if (
           !filters.imports &&
           ["bookings", "new", "sales"].includes(source.key)

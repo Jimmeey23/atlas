@@ -112,6 +112,7 @@ export function DataInsightAction({ subject, detail, buttonLabel = "Section insi
     if (filters.sessionType !== "all") filterLabels.push(`Session type: ${filters.sessionType}`);
     if (filters.capacityBand !== "all") filterLabels.push(`Capacity: ${filters.capacityBand}`);
     filterLabels.push(filters.imports ? "Imports included" : "Imports excluded");
+    filterLabels.push(filters.staffFamily ? "Staff/family included" : "Staff/family excluded");
     const scope = `${tabs[store.tab]} · ${filters.location.join(", ") || "All studios"} · ${filters.from || "all dates"}${filters.to ? ` to ${filters.to}` : ""} · ${filterLabels.join(" · ")}`;
     const shown = captureElement(owner.current);
     const supplied = rows?.length

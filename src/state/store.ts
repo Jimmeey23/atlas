@@ -49,6 +49,8 @@ export interface Filters {
   time: string[];
   memberType: string;
   imports: boolean;
+  /** Include Staff/Family Class visits. Off by default: staff visits are not member demand. */
+  staffFamily?: boolean;
   sessionType: string;
   capacityBand: string;
 }
@@ -118,6 +120,7 @@ export const emptyFilters: Filters = {
   time: [],
   memberType: "all",
   imports: false,
+  staffFamily: false,
   sessionType: "all",
   capacityBand: "all",
 };

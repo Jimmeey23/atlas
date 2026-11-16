@@ -412,7 +412,6 @@ export const blueprints: Blueprint[] = [
       "visits_per_member",
       "member_complimentary_visits",
       "member_complimentary_rate",
-      "staff_family_visits",
       "revenue_per_checkin",
       "teaching_hours",
       "revenue_per_hour",

@@ -236,6 +236,14 @@ export function Filters({
             />
             Include imported attendance
           </label>
+          <label style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <input
+              type="checkbox"
+              checked={!!s.filters.staffFamily}
+              onChange={(e) => s.filter({ staffFamily: e.target.checked })}
+            />
+            Include Staff/Family Class visits
+          </label>
           <button
             className="button"
             onClick={() => s.set({ filterOpen: false })}
