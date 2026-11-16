@@ -215,7 +215,7 @@ try {
     },
     {
       effective: expr("effective_attendance"),
-      complimentary: expr("complimentary_rate"),
+      complimentary: expr("session_complimentary_rate"),
       utilisation: expr("utilisation"),
     },
   );

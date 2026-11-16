@@ -98,7 +98,6 @@ export const businessDefinitions: Record<string, string> = {
   "attendance_avg_class_size": "Attended Checkins rows per distinct known Session ID represented in the source, including sessions represented only by unattended rows. Attended rows missing Session ID still contribute to the numerator.",
   "attendance_empty_sessions": "Distinct known Session IDs represented in Checkins without an attended row. Sessions absent from the source and missing-ID records cannot be classified.",
   "visits_per_member": "Attended Checkins rows per distinct known attendee Member ID. Attended rows without an ID contribute visits but no person to the denominator.",
-  "complimentary_rate": "Numeric Sessions Complimentary visits as a percentage of Sessions CheckedIn attendance. Member attendance supplies this from Sessions rather than boolean check-in complimentary flags.",
   "revenue_per_checkin": "Recorded Paid value in INR on attended Checkins rows divided by attended row count. Missing Paid values are ignored in revenue but their attended rows remain in the denominator.",
   "teaching_hours": "Recorded valid duration in hours counted once per attended, known Session ID within the selected Checkins scope. Sessions lacking valid duration or a known ID do not supply teaching time.",
   "revenue_per_hour": "Recorded attended revenue with positive valid duration divided by deduplicated recorded teaching hours. Revenue rows lacking a Session ID can contribute revenue without adding hours; this is not a complete payroll productivity measure.",

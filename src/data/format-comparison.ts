@@ -13,7 +13,7 @@ export const SCORECARD_SECTIONS: { heading: string; ids: string[] }[] = [
   // late_cancel_rate here is the Sessions definition, read from the Sessions source.
   // The instructor scorecard reads Bookings instead (booking_late_rate); the two are
   // different measures with different denominators and must not be swapped.
-  { heading: "Leakage", ids: ["late_cancel_rate", "no_shows", "no_show_rate", "non_paid_rate", "complimentary_rate"] },
+  { heading: "Leakage", ids: ["late_cancel_rate", "no_shows", "no_show_rate", "non_paid_rate"] },
   { heading: "Yield", ids: ["revenue", "revenue_per_session", "rev_pac", "rev_pas", "lost_revenue", "membership_att_share"] },
 ];
 

@@ -95,6 +95,14 @@ for (const [id, source, label] of [
   });
 }
 
+// complimentary_rate was an exact duplicate of session_complimentary_rate (same formula,
+// same label). Saved views that still name it resolve to the one definition, but it is no
+// longer listed in the catalogue.
+Object.defineProperty(metrics, "complimentary_rate", {
+  value: { ...metrics.session_complimentary_rate, id: "complimentary_rate" },
+  enumerable: false,
+});
+
 /**
  * Renders one SQL column per metric.
  *

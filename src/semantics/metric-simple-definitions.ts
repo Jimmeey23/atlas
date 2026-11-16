@@ -392,10 +392,6 @@ export const simpleMetricDefinitions: Record<string, { meaning: string; calculat
     "meaning": "Average attended check-ins per identified attendee.",
     "calculation": "Attended Checkins rows divided by different known attended Member IDs."
   },
-  "complimentary_rate": {
-    "meaning": "Complimentary Sessions visits as a percentage of Sessions attendance.",
-    "calculation": "Total numeric Sessions Complimentary visits divided by Sessions CheckedIn attendance, multiplied by 100."
-  },
   "revenue_per_checkin": {
     "meaning": "Average attributed revenue per attended check-in.",
     "calculation": "Recorded Paid value on attended Checkins rows divided by attended Checkins row count."

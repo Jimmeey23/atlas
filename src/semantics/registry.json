@@ -1311,19 +1311,6 @@
     "higherIsBetter": true
   },
   {
-    "id": "complimentary_rate",
-    "label": "Complimentary share",
-    "expression": "SUM(complimentary_visits)/NULLIF(SUM(checked_in),0)",
-    "sources": [
-      "Sessions.Complimentary",
-      "Sessions.CheckedIn"
-    ],
-    "format": "percent",
-    "domain": "attendance",
-    "aggregation": "weighted",
-    "higherIsBetter": false
-  },
-  {
     "id": "revenue_per_checkin",
     "label": "Earned revenue / check-in",
     "expression": "SUM(revenue) FILTER (WHERE attended)/NULLIF(COUNT(*) FILTER (WHERE attended),0)",
