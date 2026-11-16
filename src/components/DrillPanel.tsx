@@ -141,7 +141,7 @@ export function DrillPanel({
       ),
       query(
         `SELECT month,${metricSQL(
-          entry.metrics || [...new Set([...blueprints[tab].kpis, ...blueprints[tab].columns])].filter((id) => !["new_clients", "conversion_rate", "active_base"].includes(id) || tab !== 0),
+          entry.metrics || [...new Set([...blueprints[tab].kpis, ...blueprints[tab].columns])].filter((id) => !blueprints[tab].cardSources?.[id]),
           metricContext,
         )} FROM ${metricFacts(filters, source, transient)}${summaryPath ? (!["sessions", "sales", "checkins"].includes(source) && w ? " AND " : " WHERE ") + summaryPath : ""} GROUP BY month ORDER BY month DESC LIMIT 14`,
       ),

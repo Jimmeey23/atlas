@@ -182,9 +182,8 @@ async function performAnalysis(
   const b = blueprints[tab];
   const { filters, compare } = useStore.getState();
   const ids = [...new Set([...b.kpis, ...b.columns, ...columns])].filter(
-    (x) =>
-      (tab !== 0 ||
-      !["new_clients", "conversion_rate", "active_base", "lapsed_members", "gross_revenue", "net_revenue"].includes(x)),
+    // Cards declared on another sheet are computed from that sheet below, not from b.source.
+    (x) => !b.cardSources?.[x],
   );
   const w = where(filters, b.source);
   const prev = comparison(filters, compare === "none" ? "prior" : compare);

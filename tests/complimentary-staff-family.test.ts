@@ -59,3 +59,10 @@ test('Is New labels that only contain the letters "new" are not newcomers', () =
   });
   assert.deepEqual(rows.map((r) => r.is_new), [false, false, true, true, false, false]);
 });
+
+test('cards backed by another sheet are declared once on the page blueprint', async () => {
+  const { cardSource } = await import('../src/data/blueprints.ts');
+  assert.deepEqual(cardSource(0, 'gross_revenue'), { source: 'sales', records: 'sales_records' });
+  assert.deepEqual(cardSource(0, 'lapsed_members'), { source: 'lapsed', records: 'lapsed_records' });
+  assert.equal(cardSource(9, 'member_complimentary_visits'), undefined, 'Member attendance cards use its own check-ins');
+});

@@ -80,7 +80,7 @@ import {
   context,
   type Analysis,
 } from "./data/analytics";
-import { blueprints } from "./data/blueprints";
+import { blueprints, cardSource } from "./data/blueprints";
 import { MetricCard } from "./components/MetricCard";
 import { LeadStageScorecard } from "./components/LeadStageScorecard";
 import { SalesScorecards } from "./components/SalesScorecards";
@@ -178,14 +178,7 @@ function metricScope(
   filters: ReturnType<typeof useStore.getState>["filters"],
   fallback: string,
 ) {
-  const source =
-    tab === 0 && ["gross_revenue", "net_revenue"].includes(id)
-        ? "sales"
-        : tab === 0 && ["new_clients", "conversion_rate", "active_base"].includes(id)
-          ? "new"
-          : tab === 0 && id === "lapsed_members"
-            ? "lapsed"
-            : fallback;
+  const source = cardSource(tab, id)?.source ?? fallback;
   const predicate = contributorPredicate(id, context(filters));
   return {
     source,
@@ -1036,7 +1029,7 @@ export default function App() {
                       analysis.previous[id]
                     }
                     trend={analysis.trend}
-                    n={Number(s.tab === 0 && ["gross_revenue", "net_revenue"].includes(id) ? analysis.total.sales_records : s.tab === 0 && id === "lapsed_members" ? analysis.total.lapsed_records : id === "active_base" ? analysis.total.active_records : currentSnapshotMetrics.has(id) && s.tab === 6 ? analysis.total.current_records : ["new_clients", "conversion_rate"].includes(id) && s.tab === 0 ? analysis.total.growth_records : analysis.total.n || analysis.count)}
+                    n={Number(cardSource(s.tab, id) ? analysis.total[cardSource(s.tab, id)!.records] : currentSnapshotMetrics.has(id) && s.tab === 6 ? analysis.total.current_records : analysis.total.n || analysis.count)}
                     evidence={analysis.total}
                     compare={s.compare !== "none"}
                     warning={
@@ -1056,7 +1049,7 @@ export default function App() {
                       main.current
                         ?.querySelector("#main-register")
                         ?.scrollIntoView({ behavior: "smooth" });
-                      if (recordGroups.length || currentSnapshotMetrics.has(id) || contributorPredicate(id, context(s.filters)) || s.tab === 0 && ["gross_revenue", "net_revenue", "lapsed_members"].includes(id))
+                      if (recordGroups.length || currentSnapshotMetrics.has(id) || contributorPredicate(id, context(s.filters)) || cardSource(s.tab, id))
                         setDrill({
                           id: "all",
                           label: metrics[id].label + " in scope",

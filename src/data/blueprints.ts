@@ -9,6 +9,13 @@ export interface Blueprint {
   chart: string;
   chartTitle: string;
   secondary: string[];
+  /**
+   * Cards whose number comes from a different sheet than the page's own source. Each names
+   * the sheet that explains (and drills into) the number and the analysis field holding its
+   * record count, so App, analytics and the drill-down read one declaration instead of
+   * page-number special cases.
+   */
+  cardSources?: Record<string, { source: string; records: string }>;
 }
 const sessionColumns = [
   "sessions",
@@ -27,6 +34,8 @@ const sessionColumns = [
   "unsold_seats",
   "lost_revenue",
 ];
+/** The sheet and record-count field behind a card on a page, when it differs from the page. */
+export const cardSource = (tab: number, id: string) => blueprints[tab]?.cardSources?.[id];
 export const blueprints: Blueprint[] = [
   {
     title: "The business, in perspective.",
@@ -34,6 +43,14 @@ export const blueprints: Blueprint[] = [
       "A clear view of your studio community. Every number, one decision closer.",
     source: "sessions",
     domain: "attendance",
+    cardSources: {
+      gross_revenue: { source: "sales", records: "sales_records" },
+      net_revenue: { source: "sales", records: "sales_records" },
+      new_clients: { source: "new", records: "growth_records" },
+      conversion_rate: { source: "new", records: "growth_records" },
+      active_base: { source: "new", records: "active_records" },
+      lapsed_members: { source: "lapsed", records: "lapsed_records" },
+    },
     kpis: [
       "gross_revenue",
       "net_revenue",
